@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/spf13/pflag"
 )
@@ -18,6 +19,7 @@ type mainProcess struct {
 
 	ctx   context.Context
 	wg    sync.WaitGroup
+	conf  *config.Config
 	front *frontproxy.FrontendProxy
 }
 
@@ -27,6 +29,21 @@ func newMainProcess() *mainProcess {
 
 	m.signalHandling()
 	return m
+}
+
+func (m *mainProcess) readConfig(p string) error {
+	f, err := os.Open(p)
+	if err != nil {
+		return err
+	}
+
+	conf, err := config.ReadConfig(f)
+	if err != nil {
+		return err
+	}
+	m.conf = conf
+
+	return nil
 }
 
 func (m *mainProcess) shutdown(ctx context.Context) {
@@ -72,14 +89,19 @@ func (m *mainProcess) Wait() {
 }
 
 func command(args []string) error {
+	confFile := ""
 	fs := pflag.NewFlagSet("lagrangian-proxy", pflag.ContinueOnError)
+	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	mainProcess := newMainProcess()
-	mainProcess.Wait()
+	if err := mainProcess.readConfig(confFile); err != nil {
+		return err
+	}
 
+	mainProcess.Wait()
 	return nil
 }
 

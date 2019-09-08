@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["config.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/config",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@in_gopkg_yaml_v2//:go_default_library",
+        "@org_golang_x_xerrors//:go_default_library",
+    ],
+)
