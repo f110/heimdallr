@@ -1,0 +1,6 @@
+datastore:
+  url: etcd://embed
+  data_dir: ./data
+logger:
+  level: debug
+  encoding: console

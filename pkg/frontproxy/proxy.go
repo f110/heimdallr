@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"golang.org/x/net/http2"
 )
 
@@ -24,7 +25,9 @@ func (p *FrontendProxy) Serve() error {
 	}
 	listener := tls.NewListener(l, &tls.Config{})
 
-	server := &http.Server{}
+	server := &http.Server{
+		ErrorLog: logger.LogCompatible,
+	}
 	if err := http2.ConfigureServer(server, &http2.Server{}); err != nil {
 		return err
 	}

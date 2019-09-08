@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "journal.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/coreos/etcd/pkg/systemd",
+    importpath = "github.com/coreos/etcd/pkg/systemd",
+    visibility = ["//visibility:public"],
+)

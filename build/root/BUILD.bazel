@@ -1,5 +1,6 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
+# gazelle:proto disable_global
 # gazelle:prefix github.com/f110/lagrangian-proxy
 
 gazelle(name = "gazelle")

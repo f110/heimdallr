@@ -9,6 +9,7 @@
         <function importPath="fmt" name="Println" />
         <function importPath="fmt" name="Print" />
         <function importPath="fmt" name="Fprintln" />
+        <function importPath="fmt" name="Fprintf" />
       </functions>
     </inspection_tool>
   </profile>

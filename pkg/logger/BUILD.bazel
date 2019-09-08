@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "log.go",
+        "logger.go",
+    ],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/logger",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/config:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/go.uber.org/zap/zapcore:go_default_library",
+    ],
+)

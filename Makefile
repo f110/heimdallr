@@ -1,6 +1,10 @@
+run:
+	bazel run //cmd/lagrangian-proxy -- -c $(CURDIR)/config_debug.yaml
+
 update-deps:
 	go mod tidy
+	go mod vendor
+	find vendor -name BUILD.bazel -delete
 	bazel run //:gazelle -- update
-	bazel run //:gazelle -- update-repos -from_file=go.mod -to_macro=build/deps.bzl%project_deps
 
-.PHONY: update-deps
+.PHONY: run update-deps
