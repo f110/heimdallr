@@ -10,10 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
-
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/spf13/pflag"

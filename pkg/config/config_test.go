@@ -26,7 +26,6 @@ logger:
 	}
 	f.WriteString(b)
 	f.Sync()
-	f.Seek(0, 0)
 
 	conf, err := ReadConfig(f.Name())
 	if err != nil {

@@ -122,8 +122,10 @@ func ReadConfig(filename string) (*Config, error) {
 	if err := yaml.NewDecoder(f).Decode(conf); err != nil {
 		return nil, xerrors.Errorf("config: file parse error: %v", err)
 	}
-	if err := conf.General.inflate(dir); err != nil {
-		return nil, err
+	if conf.General != nil {
+		if err := conf.General.inflate(dir); err != nil {
+			return nil, err
+		}
 	}
 	if conf.Datastore != nil {
 		if err := conf.Datastore.inflate(dir); err != nil {
