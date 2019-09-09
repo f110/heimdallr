@@ -1,0 +1,6 @@
+- name: admin
+  title: administrator
+  description: for administrator
+  bindings:
+    - backend: test.local-proxy.f110.dev
+      permission: all

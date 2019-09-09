@@ -1,3 +1,6 @@
+general:
+  role_file: ./roles.yaml
+  proxy_file: ./proxies.yaml
 datastore:
   url: etcd://embed
   data_dir: ./data

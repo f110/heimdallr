@@ -18,8 +18,8 @@ func NewUserDatabase(client *clientv3.Client) *UserDatabase {
 	return &UserDatabase{client: client}
 }
 
-func (d *UserDatabase) Get(ctx context.Context, email string) (*database.User, error) {
-	res, err := d.client.Get(ctx, d.key(email))
+func (d *UserDatabase) Get(ctx context.Context, id string) (*database.User, error) {
+	res, err := d.client.Get(ctx, d.key(id))
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

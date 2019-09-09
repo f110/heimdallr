@@ -108,6 +108,10 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/google/btree
 # github.com/google/uuid v1.1.1
 github.com/google/uuid
+# github.com/gorilla/mux v1.7.3
+github.com/gorilla/mux
+# github.com/gorilla/securecookie v1.1.1
+github.com/gorilla/securecookie
 # github.com/gorilla/websocket v1.4.1
 github.com/gorilla/websocket
 # github.com/grpc-ecosystem/go-grpc-middleware v1.0.0

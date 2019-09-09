@@ -7,6 +7,6 @@ var (
 )
 
 type User struct {
-	Email string   `yaml:"email"`
+	Id    string   `yaml:"id"`
 	Roles []string `yaml:"roles"`
 }
