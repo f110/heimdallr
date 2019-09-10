@@ -1,0 +1,10 @@
+filegroup(
+    name = "all",
+    srcs = glob(["*"]),
+    visibility = ["//visibility:public"],
+)
+
+exports_files(
+    ["vendor.bash"],
+    visibility = ["//visibility:public"],
+)

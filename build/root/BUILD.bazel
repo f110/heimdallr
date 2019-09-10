@@ -1,6 +1,8 @@
-load("@bazel_gazelle//:def.bzl", "gazelle")
+load("//build/rules/go:vendor.bzl", "go_vendor")
 
 # gazelle:proto disable_global
 # gazelle:prefix github.com/f110/lagrangian-proxy
 
-gazelle(name = "gazelle")
+go_vendor(
+    name = "vendor",
+)
