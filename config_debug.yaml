@@ -1,9 +1,20 @@
 general:
   role_file: ./roles.yaml
   proxy_file: ./proxies.yaml
+  certificate_authority:
+    cert_file: ./ca.crt
+    key_file: ./ca.key
 datastore:
   url: etcd://embed
   data_dir: ./data
+frontend_proxy:
+  bind: :4000
+  cert_file: ./tls.crt
+  key_file: ./tls.key
+  signing_secret_key_file: ./privatekey.pem
+  session:
+    type: secure_cookie
+    key_file: ./cookie_secret
 logger:
   level: debug
   encoding: console

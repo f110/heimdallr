@@ -34,14 +34,18 @@ type authenticator struct {
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init() {}
+func Init(conf *config.Config, sessionStore SessionStore, userDatabase UserDatabase) {
+	defaultAuthenticator.Conf = conf.General
+	defaultAuthenticator.sessionStore = sessionStore
+	defaultAuthenticator.userDatabase = userDatabase
+}
 
 func Authenticate(req *http.Request) (*database.User, error) {
 	return defaultAuthenticator.Authenticate(req)
 }
 
 func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) {
-	backend, ok := a.Conf.GetBackendByHostname(req.Host)
+	backend, ok := a.Conf.GetBackendByHost(req.Host)
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}

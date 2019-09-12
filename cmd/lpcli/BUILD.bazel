@@ -3,25 +3,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/f110/lagrangian-proxy/cmd/lagrangian-proxy",
+    importpath = "github.com/f110/lagrangian-proxy/cmd/lpcli",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
-        "//pkg/config/configreader:go_default_library",
-        "//pkg/database/etcd:go_default_library",
-        "//pkg/frontproxy:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/session:go_default_library",
-        "//vendor/github.com/coreos/etcd/embed:go_default_library",
+        "//vendor/github.com/gorilla/securecookie:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/gopkg.in/yaml.v2:go_default_library",
     ],
 )
 
 go_binary(
-    name = "lagrangian-proxy",
+    name = "lpcli",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )

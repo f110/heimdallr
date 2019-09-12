@@ -16,7 +16,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	u := memory.NewUserDatabase()
 	a := &authenticator{
 		Conf: &config.General{
-			Backends: []config.Backend{
+			Backends: []*config.Backend{
 				{Name: "test.example.com", Permissions: []*config.Permission{
 					{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
 					{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},

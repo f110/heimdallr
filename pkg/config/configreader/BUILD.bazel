@@ -2,28 +2,22 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "auth.go",
-        "ca.go",
-    ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/auth",
+    srcs = ["reader.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/config/configreader",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/session:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/gopkg.in/yaml.v2:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["auth_test.go"],
+    srcs = ["reader_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/database/memory:go_default_library",
-        "//pkg/session:go_default_library",
     ],
 )

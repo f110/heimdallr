@@ -1,3 +1,7 @@
 /data
+/ca.*
+/tls.*
+/privatekey.pem
+/cookie_secret
 
 /bazel-*

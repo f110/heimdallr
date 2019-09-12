@@ -11,10 +11,13 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/embed"
+	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -40,7 +43,7 @@ func newMainProcess() *mainProcess {
 }
 
 func (m *mainProcess) ReadConfig(p string) error {
-	conf, err := config.ReadConfig(p)
+	conf, err := configreader.ReadConfig(p)
 	if err != nil {
 		return err
 	}
@@ -79,7 +82,7 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) startFrontendProxy() {
-	m.front = frontproxy.NewFrontendProxy()
+	m.front = frontproxy.NewFrontendProxy(m.conf)
 	if err := m.front.Serve(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
@@ -111,22 +114,31 @@ func (m *mainProcess) startEmbedEtcd() error {
 }
 
 func (m *mainProcess) Setup() error {
-	return logger.Init(m.conf.Logger)
-}
+	if err := logger.Init(m.conf.Logger); err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
 
-func (m *mainProcess) Start() error {
 	if m.conf.Datastore.Embed {
 		if err := m.startEmbedEtcd(); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-
 	client, err := m.conf.Datastore.GetEtcdClient()
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	_ = etcd.NewUserDatabase(client)
+	userDatabase := etcd.NewUserDatabase(client)
+	var sessionStore auth.SessionStore
+	switch m.conf.FrontendProxy.Session.Type {
+	case config.SessionTypeSecureCookie:
+		sessionStore = session.NewSecureCookieStore(m.conf.FrontendProxy.Session.HashKey, m.conf.FrontendProxy.Session.BlockKey)
+	}
 
+	auth.Init(m.conf, sessionStore, userDatabase)
+	return nil
+}
+
+func (m *mainProcess) Start() error {
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()

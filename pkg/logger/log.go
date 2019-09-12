@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"log"
 	"os"
 )
@@ -13,7 +14,7 @@ type msgWriter struct{}
 
 func (m *msgWriter) Write(p []byte) (int, error) {
 	if Log != nil {
-		Log.Debug(string(p))
+		Log.Debug(string(bytes.TrimRight(p, "\n")))
 		return len(p), nil
 	} else {
 		return os.Stderr.Write(p)

@@ -1,11 +1,11 @@
 - name: test.local-proxy.f110.dev
-  upstream: http://localhost:4001
+  upstream: http://localhost:4501
   permissions:
     - name: all
       locations:
         - get: /
 - name: content.local-proxy.f110.dev
-  upstream: http://localhost:4002
+  upstream: http://localhost:4502
   permissions:
     - name: all
       locations:

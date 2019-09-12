@@ -1,6 +1,11 @@
 package config
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -20,7 +25,8 @@ import (
 )
 
 const (
-	embedEtcdUrlFilename = "embed_etcd_url"
+	EmbedEtcdUrlFilename    = "embed_etcd_url"
+	SessionTypeSecureCookie = "secure_cookie"
 )
 
 var (
@@ -32,18 +38,31 @@ type Config struct {
 	IdentityProvider *IdentityProvider `yaml:"identity_provider"`
 	Datastore        *Datastore        `yaml:"datastore"`
 	Logger           *Logger           `yaml:"logger"`
+	FrontendProxy    *FrontendProxy    `yaml:"frontend_proxy"`
 }
 
 type General struct {
-	RoleFile  string `yaml:"role_file"`
-	ProxyFile string `yaml:"proxy_file"`
+	RoleFile             string                `yaml:"role_file"`
+	ProxyFile            string                `yaml:"proxy_file"`
+	CertificateAuthority *CertificateAuthority `yaml:"certificate_authority"`
 
-	Roles    []Role    `yaml:"-"`
-	Backends []Backend `yaml:"-"`
+	Roles    []Role     `yaml:"-"`
+	Backends []*Backend `yaml:"-"`
 
-	mu                sync.RWMutex       `yaml:"-"`
-	hostnameToBackend map[string]Backend `yaml:"-"`
-	roleNameToRole    map[string]Role    `yaml:"-"`
+	mu                sync.RWMutex        `yaml:"-"`
+	hostnameToBackend map[string]*Backend `yaml:"-"`
+	roleNameToRole    map[string]Role     `yaml:"-"`
+}
+
+type CertificateAuthority struct {
+	CertFile         string `yaml:"cert_file"`
+	KeyFile          string `yaml:"key_file"`
+	Organization     string `yaml:"organization"`
+	OrganizationUnit string `yaml:"organization_unit"`
+	Country          string `yaml:"country"`
+
+	Certificate *x509.Certificate `yaml:"-"`
+	PrivateKey  crypto.PrivateKey `yaml:"-"`
 }
 
 type IdentityProvider struct {
@@ -83,7 +102,9 @@ type Binding struct {
 type Backend struct {
 	Name        string        `yaml:"name"` // Name is an identifier
 	Upstream    string        `yaml:"upstream"`
-	Permissions []*Permission `yaml:"permission"`
+	Permissions []*Permission `yaml:"permissions"`
+
+	Url *url.URL `yaml:"-"`
 }
 
 type Permission struct {
@@ -106,34 +127,108 @@ type Location struct {
 	Patch   string `yaml:"patch"`
 }
 
-func ReadConfig(filename string) (*Config, error) {
-	a, err := filepath.Abs(filename)
-	if err != nil {
-		return nil, err
-	}
-	dir := filepath.Dir(a)
+type FrontendProxy struct {
+	Bind                 string   `yaml:"bind"`
+	CertFile             string   `yaml:"cert_file"`
+	KeyFile              string   `yaml:"key_file"`
+	SigningSecretKeyFile string   `yaml:"signing_secret_key_file"`
+	Session              *Session `yaml:"session"`
 
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
+	Certificate       tls.Certificate   `yaml:"-"`
+	SigningPrivateKey crypto.PrivateKey `yaml:"-"`
+}
 
-	conf := &Config{}
-	if err := yaml.NewDecoder(f).Decode(conf); err != nil {
-		return nil, xerrors.Errorf("config: file parse error: %v", err)
-	}
-	if conf.General != nil {
-		if err := conf.General.inflate(dir); err != nil {
-			return nil, err
+type Session struct {
+	Type    string `yaml:"type"`
+	KeyFile string `yaml:"key_file"`
+
+	HashKey  []byte `yaml:"-"`
+	BlockKey []byte `yaml:"-"`
+}
+
+func (ca *CertificateAuthority) inflate(dir string) error {
+	if ca.CertFile != "" && ca.KeyFile != "" {
+		b, err := ioutil.ReadFile(absPath(ca.CertFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		block, _ := pem.Decode(b)
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		ca.Certificate = cert
+
+		b, err = ioutil.ReadFile(absPath(ca.KeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		block, _ = pem.Decode(b)
+		switch block.Type {
+		case "EC PRIVATE KEY":
+			privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			ca.PrivateKey = privateKey
+		case "RSA PRIVATE KEY":
+			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			ca.PrivateKey = privateKey
+		case "PRIVATE KEY":
+			privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			ca.PrivateKey = privateKey
 		}
 	}
-	if conf.Datastore != nil {
-		if err := conf.Datastore.inflate(dir); err != nil {
-			return nil, err
+
+	return nil
+}
+
+func (f *FrontendProxy) Inflate(dir string) error {
+	if f.CertFile != "" && f.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(absPath(f.CertFile, dir), absPath(f.KeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f.Certificate = cert
+	}
+	if f.SigningSecretKeyFile != "" {
+		privateKey, err := readPrivateKey(absPath(f.SigningSecretKeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f.SigningPrivateKey = privateKey
+	}
+	if f.Session != nil {
+		if err := f.Session.Inflate(dir); err != nil {
+			return xerrors.Errorf(": %v", err)
 		}
 	}
 
-	return conf, nil
+	return nil
+}
+
+func (s *Session) Inflate(dir string) error {
+	switch s.Type {
+	case SessionTypeSecureCookie:
+		b, err := ioutil.ReadFile(absPath(s.KeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		b = bytes.TrimRight(b, "\n")
+		keys := bytes.Split(b, []byte("\n"))
+		if len(keys) != 2 {
+			return xerrors.New("config: invalid cookie secret file")
+		}
+		s.HashKey = keys[0]
+		s.BlockKey = keys[1]
+	}
+	return nil
 }
 
 func (p *Permission) inflate() {
@@ -144,12 +239,23 @@ func (p *Permission) inflate() {
 	p.router = r
 }
 
-func (g *General) GetBackendByHostname(hostname string) (Backend, bool) {
+func (g *General) GetBackendByHostname(hostname string) (*Backend, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	v, ok := g.hostnameToBackend[hostname]
 	return v, ok
+}
+
+// GetBackendByHost is finding Backend by Host header
+func (g *General) GetBackendByHost(host string) (*Backend, bool) {
+	h := host
+	if strings.Contains(host, ":") {
+		s := strings.SplitN(host, ":", 2)
+		h = s[0]
+	}
+
+	return g.GetBackendByHostname(h)
 }
 
 func (g *General) GetRole(name string) (Role, error) {
@@ -163,35 +269,42 @@ func (g *General) GetRole(name string) (Role, error) {
 	return Role{}, ErrRoleNotFound
 }
 
-func (g *General) inflate(dir string) error {
+func (g *General) Inflate(dir string) error {
+	g.mu = sync.RWMutex{}
+
 	if g.RoleFile != "" {
 		roles := make([]Role, 0)
 		f, err := os.Open(absPath(g.RoleFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := yaml.NewDecoder(f).Decode(roles); err != nil {
+		if err := yaml.NewDecoder(f).Decode(&roles); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		g.Roles = roles
 	}
 	if g.ProxyFile != "" {
-		backends := make([]Backend, 0)
+		backends := make([]*Backend, 0)
 		f, err := os.Open(absPath(g.ProxyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := yaml.NewDecoder(f).Decode(backends); err != nil {
+		if err := yaml.NewDecoder(f).Decode(&backends); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		g.Backends = backends
+	}
+	if g.CertificateAuthority != nil {
+		if err := g.CertificateAuthority.inflate(dir); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
 	}
 
 	return g.Load()
 }
 
 func (g *General) Load() error {
-	g.hostnameToBackend = make(map[string]Backend)
+	g.hostnameToBackend = make(map[string]*Backend)
 	for _, v := range g.Backends {
 		if err := v.inflate(); err != nil {
 			return err
@@ -207,7 +320,7 @@ func (g *General) Load() error {
 	return nil
 }
 
-func (d *Datastore) inflate(dir string) error {
+func (d *Datastore) Inflate(dir string) error {
 	if d.RawUrl != "" {
 		u, err := url.Parse(d.RawUrl)
 		if err != nil {
@@ -233,7 +346,7 @@ func (d *Datastore) inflate(dir string) error {
 	switch d.Url.Scheme {
 	case "etcd":
 		if d.Embed {
-			if _, err := os.Stat(filepath.Join(d.DataDir, embedEtcdUrlFilename)); os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(d.DataDir, EmbedEtcdUrlFilename)); os.IsNotExist(err) {
 				// first time
 				l, err := net.Listen("tcp", ":0")
 				if err != nil {
@@ -248,13 +361,13 @@ func (d *Datastore) inflate(dir string) error {
 				if err := os.MkdirAll(filepath.Join(d.DataDir), 0755); err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
-				err = ioutil.WriteFile(filepath.Join(d.DataDir, embedEtcdUrlFilename), []byte(u.String()), 0600)
+				err = ioutil.WriteFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename), []byte(u.String()), 0600)
 				if err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
 				d.EtcdUrl = u
 			} else {
-				b, err := ioutil.ReadFile(filepath.Join(d.DataDir, embedEtcdUrlFilename))
+				b, err := ioutil.ReadFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename))
 				if err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
@@ -299,6 +412,11 @@ func (b *Backend) inflate() error {
 	for _, p := range b.Permissions {
 		p.inflate()
 	}
+	u, err := url.Parse(b.Upstream)
+	if err != nil {
+		return xerrors.Errorf("%s: %v", b.Name, err)
+	}
+	b.Url = u
 
 	return nil
 }
@@ -358,4 +476,34 @@ func absPath(path, dir string) string {
 		return a
 	}
 	return path
+}
+
+func readPrivateKey(path string) (crypto.PrivateKey, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	block, _ := pem.Decode(b)
+	switch block.Type {
+	case "EC PRIVATE KEY":
+		privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		return privateKey, nil
+	case "RSA PRIVATE KEY":
+		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		return privateKey, nil
+	case "PRIVATE KEY":
+		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		return privateKey, nil
+	default:
+		return nil, xerrors.Errorf("config: Unknown Type: %s", block.Type)
+	}
 }
