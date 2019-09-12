@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	LogCompatible *log.Logger
+	CompatibleLogger *log.Logger
 )
 
 type msgWriter struct{}
@@ -22,5 +22,5 @@ func (m *msgWriter) Write(p []byte) (int, error) {
 }
 
 func init() {
-	LogCompatible = log.New(&msgWriter{}, "", log.LstdFlags)
+	CompatibleLogger = log.New(&msgWriter{}, "", log.LstdFlags)
 }

@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/f110/lagrangian-proxy/pkg/identityprovider"
+
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -26,11 +28,14 @@ import (
 type mainProcess struct {
 	Stop context.CancelFunc
 
-	ctx  context.Context
-	wg   sync.WaitGroup
-	conf *config.Config
+	ctx          context.Context
+	wg           sync.WaitGroup
+	config       *config.Config
+	userDatabase *etcd.UserDatabase
+	sessionStore session.Store
 
 	front *frontproxy.FrontendProxy
+	idp   *identityprovider.Server
 	etcd  *embed.Etcd
 }
 
@@ -47,7 +52,7 @@ func (m *mainProcess) ReadConfig(p string) error {
 	if err != nil {
 		return err
 	}
-	m.conf = conf
+	m.config = conf
 
 	return nil
 }
@@ -55,6 +60,11 @@ func (m *mainProcess) ReadConfig(p string) error {
 func (m *mainProcess) shutdown(ctx context.Context) {
 	if m.front != nil {
 		if err := m.front.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		}
+	}
+	if m.idp != nil {
+		if err := m.idp.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
@@ -70,7 +80,7 @@ func (m *mainProcess) signalHandling() {
 	go func() {
 		for sig := range signalCh {
 			switch sig {
-			case syscall.SIGTERM, syscall.SIGINT:
+			case syscall.SIGTERM, os.Interrupt:
 				m.Stop()
 				ctx, cancelFunc := context.WithTimeout(m.ctx, 30*time.Second)
 				m.shutdown(ctx)
@@ -82,18 +92,31 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) startFrontendProxy() {
-	m.front = frontproxy.NewFrontendProxy(m.conf)
+	m.front = frontproxy.NewFrontendProxy(m.config)
 	if err := m.front.Serve(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	}
+}
+
+func (m *mainProcess) startIdentityProviderServer() {
+	server, err := identityprovider.NewServer(m.config.IdentityProvider, m.userDatabase, m.sessionStore)
+	if err != nil {
+		m.Stop()
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		return
+	}
+	m.idp = server
+	if err := m.idp.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
 
 func (m *mainProcess) startEmbedEtcd() error {
 	c := embed.NewConfig()
-	c.Dir = m.conf.Datastore.DataDir
+	c.Dir = m.config.Datastore.DataDir
 	c.LogPkgLevels = "*=C"
 	c.LPUrls[0].Host = "localhost:0"
-	c.LCUrls[0] = *m.conf.Datastore.EtcdUrl
+	c.LCUrls[0] = *m.config.Datastore.EtcdUrl
 	c.SetupLogging()
 
 	e, err := embed.StartEtcd(c)
@@ -114,27 +137,26 @@ func (m *mainProcess) startEmbedEtcd() error {
 }
 
 func (m *mainProcess) Setup() error {
-	if err := logger.Init(m.conf.Logger); err != nil {
+	if err := logger.Init(m.config.Logger); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if m.conf.Datastore.Embed {
+	if m.config.Datastore.Embed {
 		if err := m.startEmbedEtcd(); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-	client, err := m.conf.Datastore.GetEtcdClient()
+	client, err := m.config.Datastore.GetEtcdClient()
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	userDatabase := etcd.NewUserDatabase(client)
-	var sessionStore auth.SessionStore
-	switch m.conf.FrontendProxy.Session.Type {
+	m.userDatabase = etcd.NewUserDatabase(client)
+	switch m.config.FrontendProxy.Session.Type {
 	case config.SessionTypeSecureCookie:
-		sessionStore = session.NewSecureCookieStore(m.conf.FrontendProxy.Session.HashKey, m.conf.FrontendProxy.Session.BlockKey)
+		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
 	}
 
-	auth.Init(m.conf, sessionStore, userDatabase)
+	auth.Init(m.config, m.sessionStore, m.userDatabase)
 	return nil
 }
 
@@ -144,6 +166,13 @@ func (m *mainProcess) Start() error {
 		defer m.wg.Done()
 
 		m.startFrontendProxy()
+	}()
+
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+
+		m.startIdentityProviderServer()
 	}()
 
 	return nil

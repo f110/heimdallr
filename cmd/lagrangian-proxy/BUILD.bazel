@@ -11,6 +11,7 @@ go_library(
         "//pkg/config/configreader:go_default_library",
         "//pkg/database/etcd:go_default_library",
         "//pkg/frontproxy:go_default_library",
+        "//pkg/identityprovider:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/session:go_default_library",
         "//vendor/github.com/coreos/etcd/embed:go_default_library",

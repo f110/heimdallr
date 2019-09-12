@@ -39,19 +39,19 @@ var allowCipherSuites = []uint16{
 var TokenExpiration = 5 * time.Minute
 
 type FrontendProxy struct {
-	Conf         *config.Config
+	Config       *config.Config
 	server       *http.Server
 	reverseProxy *httputil.ReverseProxy
 }
 
 func NewFrontendProxy(conf *config.Config) *FrontendProxy {
 	p := &FrontendProxy{
-		Conf: conf,
+		Config: conf,
 		server: &http.Server{
-			ErrorLog: logger.LogCompatible,
+			ErrorLog: logger.CompatibleLogger,
 		},
 		reverseProxy: &httputil.ReverseProxy{
-			ErrorLog: logger.LogCompatible,
+			ErrorLog: logger.CompatibleLogger,
 		},
 	}
 	p.server.Handler = p
@@ -61,20 +61,21 @@ func NewFrontendProxy(conf *config.Config) *FrontendProxy {
 }
 
 func (p *FrontendProxy) Serve() error {
-	l, err := net.Listen("tcp", p.Conf.FrontendProxy.Bind)
+	l, err := net.Listen("tcp", p.Config.FrontendProxy.Bind)
 	if err != nil {
 		return err
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:   tls.VersionTLS12,
 		CipherSuites: allowCipherSuites,
-		Certificates: []tls.Certificate{p.Conf.FrontendProxy.Certificate},
+		Certificates: []tls.Certificate{p.Config.FrontendProxy.Certificate},
 	})
 
 	if err := http2.ConfigureServer(p.server, &http2.Server{}); err != nil {
 		return err
 	}
 
+	logger.Log.Info("Start FrontendProxy", zap.String("listen", p.Config.FrontendProxy.Bind))
 	return p.server.Serve(listener)
 }
 
@@ -83,6 +84,7 @@ func (p *FrontendProxy) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
+	logger.Log.Info("Shutdown FrontendProxy")
 	return p.server.Shutdown(ctx)
 }
 
@@ -91,9 +93,10 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch err {
 	case auth.ErrSessionNotFound:
 		logger.Log.Debug("Session not found")
-		http.Redirect(w, req, "", http.StatusSeeOther)
+		http.Redirect(w, req, p.Config.IdentityProvider.EndpointUrl, http.StatusSeeOther)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed:
+		logger.Log.Debug("Unauthorize", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	case auth.ErrHostnameNotFound:
@@ -112,7 +115,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
 	})
-	token, err := claim.SignedString(p.Conf.FrontendProxy.SigningPrivateKey)
+	token, err := claim.SignedString(p.Config.FrontendProxy.SigningPrivateKey)
 	if err != nil {
 		logger.Log.Debug("Failed sign jwt", zap.Error(err))
 		return
@@ -124,7 +127,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *FrontendProxy) director(req *http.Request) {
-	if backend, ok := p.Conf.General.GetBackendByHost(req.Host); ok {
+	if backend, ok := p.Config.General.GetBackendByHost(req.Host); ok {
 		q := backend.Url.RawQuery
 		req.URL.Host = backend.Url.Host
 		req.URL.Scheme = backend.Url.Scheme

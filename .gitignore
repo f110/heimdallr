@@ -3,5 +3,6 @@
 /tls.*
 /privatekey.pem
 /cookie_secret
+/client_secret
 
 /bazel-*

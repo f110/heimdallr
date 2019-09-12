@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["identity_provider.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/identityprovider",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/auth:go_default_library",
+        "//pkg/config:go_default_library",
+        "//pkg/database:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/session:go_default_library",
+        "//vendor/github.com/coreos/go-oidc:go_default_library",
+        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/golang.org/x/net/http2:go_default_library",
+        "//vendor/golang.org/x/oauth2:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+    ],
+)

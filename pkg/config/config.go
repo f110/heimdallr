@@ -66,9 +66,19 @@ type CertificateAuthority struct {
 }
 
 type IdentityProvider struct {
-	Provider     string `yaml:"provider"`
-	ClientId     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
+	Bind             string   `yaml:"bind"`
+	EndpointUrl      string   `yaml:"endpoint_url"`
+	Provider         string   `yaml:"provider"`
+	ClientId         string   `yaml:"client_id"`
+	ClientSecretFile string   `yaml:"client_secret_file"`
+	ExtraScopes      []string `yaml:"extra_scopes"`
+	RedirectUrl      string   `yaml:"redirect_url"`
+
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+
+	ClientSecret string          `yaml:"-"`
+	Certificate  tls.Certificate `yaml:"-"`
 }
 
 type Datastore struct {
@@ -91,7 +101,7 @@ type Role struct {
 	Name        string    `yaml:"name"`
 	Title       string    `yaml:"title"`
 	Description string    `yaml:"description"`
-	Bindings    []Binding `yaml:"binding"`
+	Bindings    []Binding `yaml:"bindings"`
 }
 
 type Binding struct {
@@ -108,7 +118,7 @@ type Backend struct {
 }
 
 type Permission struct {
-	Name      string     `yaml:"all"` // Name is an identifier
+	Name      string     `yaml:"name"` // Name is an identifier
 	Locations []Location `yaml:"locations"`
 
 	router *mux.Router `yaml:"-"`
@@ -144,6 +154,26 @@ type Session struct {
 
 	HashKey  []byte `yaml:"-"`
 	BlockKey []byte `yaml:"-"`
+}
+
+func (idp *IdentityProvider) Inflate(dir string) error {
+	if idp.ClientSecretFile != "" {
+		b, err := ioutil.ReadFile(absPath(idp.ClientSecretFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		b = bytes.TrimRight(b, "\n")
+		idp.ClientSecret = string(b)
+	}
+	if idp.CertFile != "" && idp.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(absPath(idp.CertFile, dir), absPath(idp.KeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		idp.Certificate = cert
+	}
+
+	return nil
 }
 
 func (ca *CertificateAuthority) inflate(dir string) error {

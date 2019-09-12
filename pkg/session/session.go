@@ -12,12 +12,23 @@ const (
 	cookieName = "lagrangian"
 )
 
+var (
+	Expiration        = 24 * time.Hour
+	ErrSessionExpired = xerrors.New("session: expired")
+)
+
 type Session struct {
-	Id string
+	Id       string
+	IssuedAt time.Time
 }
 
-type SecureCookie struct {
-	Id string
+func New(id string) *Session {
+	return &Session{Id: id, IssuedAt: time.Now()}
+}
+
+type Store interface {
+	GetSession(req *http.Request) (*Session, error)
+	SetSession(w http.ResponseWriter, sess *Session) error
 }
 
 type SecureCookieStore struct {
@@ -34,12 +45,15 @@ func (s *SecureCookieStore) GetSession(req *http.Request) (*Session, error) {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	co := &SecureCookie{}
+	co := &Session{}
 	if err := s.s.Decode(c.Name, c.Value, co); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
+	if co.IssuedAt.Add(Expiration).Before(time.Now()) {
+		return nil, ErrSessionExpired
+	}
 
-	return &Session{Id: co.Id}, nil
+	return co, nil
 }
 
 func (s *SecureCookieStore) SetSession(w http.ResponseWriter, sess *Session) error {
@@ -62,7 +76,7 @@ func (s *SecureCookieStore) Cookie(sess *Session) (*http.Cookie, error) {
 		Name:     cookieName,
 		Value:    v,
 		Path:     "/",
-		Domain:   "",
+		Domain:   "local-proxy.f110.dev",
 		HttpOnly: true,
 		Expires:  time.Now().Add(24 * time.Hour),
 		Secure:   true,

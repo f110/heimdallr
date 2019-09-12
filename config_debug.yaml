@@ -4,9 +4,20 @@ general:
   certificate_authority:
     cert_file: ./ca.crt
     key_file: ./ca.key
+identity_provider:
+  bind: :4001
+  endpoint_url: https://local-proxy.f110.dev:4001/auth
+  provider: google
+  client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
+  client_secret_file: ./client_secret
+  extra_scopes: ["email"]
+  redirect_url: https://local-proxy.f110.dev:4001/auth/callback
+  cert_file: ./tls.crt
+  key_file: ./tls.key
 datastore:
   url: etcd://embed
   data_dir: ./data
+  namespace: /lp
 frontend_proxy:
   bind: :4000
   cert_file: ./tls.crt

@@ -19,22 +19,18 @@ var (
 	ErrNotAllowed       = xerrors.New("auth: not allowed")
 )
 
-type SessionStore interface {
-	GetSession(req *http.Request) (*session.Session, error)
-}
-
 type UserDatabase interface {
 	Get(ctx context.Context, id string) (*database.User, error)
 }
 
 type authenticator struct {
 	Conf         *config.General
-	sessionStore SessionStore
+	sessionStore session.Store
 	userDatabase UserDatabase
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init(conf *config.Config, sessionStore SessionStore, userDatabase UserDatabase) {
+func Init(conf *config.Config, sessionStore session.Store, userDatabase UserDatabase) {
 	defaultAuthenticator.Conf = conf.General
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase

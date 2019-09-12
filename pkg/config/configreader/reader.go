@@ -30,6 +30,11 @@ func ReadConfig(filename string) (*config.Config, error) {
 			return nil, err
 		}
 	}
+	if conf.IdentityProvider != nil {
+		if err := conf.IdentityProvider.Inflate(dir); err != nil {
+			return nil, err
+		}
+	}
 	if conf.Datastore != nil {
 		if err := conf.Datastore.Inflate(dir); err != nil {
 			return nil, err
