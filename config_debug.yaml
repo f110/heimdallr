@@ -29,3 +29,9 @@ frontend_proxy:
 logger:
   level: debug
   encoding: console
+dashboard:
+  enable: true
+  bind: :4100
+  template:
+    loader: shotgun
+    dir: tmpl/dashboard

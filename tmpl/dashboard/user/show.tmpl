@@ -1,0 +1,42 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <table class="ui definition table">
+    <thead></thead>
+    <tbody>
+      <tr>
+        <td>Id</td>
+        <td>{{ .Id }}</td>
+      </tr>
+      <tr>
+        <td>Role</td>
+        <td>
+          <ol class="ui list">
+            {{ range .Roles }}
+            <li>
+            {{ if eq (index $.MaintainRoles .) true -}}
+            <i class="edit icon"></i>
+            {{ end -}}
+            {{ . }}
+            </li>
+            {{ end }}
+          </ol>
+        </td>
+      </tr>
+      <tr>
+        <td>Last Logged-in</td>
+        <td>### TODO ###</td>
+      </tr>
+      <tr>
+        <td>Allowed URLs</td>
+        <td>
+          <div class="ui list">
+            <a href="" class="item">### TODO ###</a>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{{ template "include/footer.tmpl" }}

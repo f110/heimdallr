@@ -96,7 +96,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, p.Config.IdentityProvider.EndpointUrl, http.StatusSeeOther)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed:
-		logger.Log.Debug("Unauthorize", zap.Error(err))
+		logger.Log.Debug("Unauthorized", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	case auth.ErrHostnameNotFound:

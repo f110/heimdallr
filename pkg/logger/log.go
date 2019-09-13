@@ -22,5 +22,5 @@ func (m *msgWriter) Write(p []byte) (int, error) {
 }
 
 func init() {
-	CompatibleLogger = log.New(&msgWriter{}, "", log.LstdFlags)
+	CompatibleLogger = log.New(&msgWriter{}, "", 0)
 }

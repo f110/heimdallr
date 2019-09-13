@@ -1,6 +1,13 @@
 - name: admin
-  title: administrator
+  title: Administrator
   description: for administrator
+  bindings:
+    - backend: test.local-proxy.f110.dev
+      permission: all
+    - backend: dashboard.local-proxy.f110.dev
+      permission: all
+- name: user
+  title: User
   bindings:
     - backend: test.local-proxy.f110.dev
       permission: all

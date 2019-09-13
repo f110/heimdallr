@@ -10,14 +10,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/identityprovider"
-
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
+	"github.com/f110/lagrangian-proxy/pkg/dashboard"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
+	"github.com/f110/lagrangian-proxy/pkg/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/spf13/pflag"
@@ -34,9 +34,10 @@ type mainProcess struct {
 	userDatabase *etcd.UserDatabase
 	sessionStore session.Store
 
-	front *frontproxy.FrontendProxy
-	idp   *identityprovider.Server
-	etcd  *embed.Etcd
+	front     *frontproxy.FrontendProxy
+	idp       *identityprovider.Server
+	dashboard *dashboard.Server
+	etcd      *embed.Etcd
 }
 
 func newMainProcess() *mainProcess {
@@ -65,6 +66,11 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 	}
 	if m.idp != nil {
 		if err := m.idp.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		}
+	}
+	if m.dashboard != nil {
+		if err := m.dashboard.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
@@ -107,6 +113,14 @@ func (m *mainProcess) startIdentityProviderServer() {
 	}
 	m.idp = server
 	if err := m.idp.Start(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	}
+}
+
+func (m *mainProcess) startDashboard() {
+	server := dashboard.NewServer(m.config, m.userDatabase)
+	m.dashboard = server
+	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
@@ -174,6 +188,15 @@ func (m *mainProcess) Start() error {
 
 		m.startIdentityProviderServer()
 	}()
+
+	if m.config.Dashboard.Enable {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+
+			m.startDashboard()
+		}()
+	}
 
 	return nil
 }

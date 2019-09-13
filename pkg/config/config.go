@@ -21,7 +21,7 @@ import (
 	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/gorilla/mux"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -34,126 +34,149 @@ var (
 )
 
 type Config struct {
-	General          *General          `yaml:"general"`
-	IdentityProvider *IdentityProvider `yaml:"identity_provider"`
-	Datastore        *Datastore        `yaml:"datastore"`
-	Logger           *Logger           `yaml:"logger"`
-	FrontendProxy    *FrontendProxy    `yaml:"frontend_proxy"`
+	General          *General          `json:"general"`
+	IdentityProvider *IdentityProvider `json:"identity_provider"`
+	Datastore        *Datastore        `json:"datastore"`
+	Logger           *Logger           `json:"logger"`
+	FrontendProxy    *FrontendProxy    `json:"frontend_proxy"`
+	Dashboard        *Dashboard        `json:"dashboard"`
 }
 
 type General struct {
-	RoleFile             string                `yaml:"role_file"`
-	ProxyFile            string                `yaml:"proxy_file"`
-	CertificateAuthority *CertificateAuthority `yaml:"certificate_authority"`
+	RoleFile             string                `json:"role_file"`
+	ProxyFile            string                `json:"proxy_file"`
+	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
 
-	Roles    []Role     `yaml:"-"`
-	Backends []*Backend `yaml:"-"`
+	Roles    []Role     `json:"-"`
+	Backends []*Backend `json:"-"`
 
-	mu                sync.RWMutex        `yaml:"-"`
-	hostnameToBackend map[string]*Backend `yaml:"-"`
-	roleNameToRole    map[string]Role     `yaml:"-"`
+	mu                sync.RWMutex        `json:"-"`
+	hostnameToBackend map[string]*Backend `json:"-"`
+	roleNameToRole    map[string]Role     `json:"-"`
 }
 
 type CertificateAuthority struct {
-	CertFile         string `yaml:"cert_file"`
-	KeyFile          string `yaml:"key_file"`
-	Organization     string `yaml:"organization"`
-	OrganizationUnit string `yaml:"organization_unit"`
-	Country          string `yaml:"country"`
+	CertFile         string `json:"cert_file"`
+	KeyFile          string `json:"key_file"`
+	Organization     string `json:"organization"`
+	OrganizationUnit string `json:"organization_unit"`
+	Country          string `json:"country"`
 
-	Certificate *x509.Certificate `yaml:"-"`
-	PrivateKey  crypto.PrivateKey `yaml:"-"`
+	Certificate *x509.Certificate `json:"-"`
+	PrivateKey  crypto.PrivateKey `json:"-"`
 }
 
 type IdentityProvider struct {
-	Bind             string   `yaml:"bind"`
-	EndpointUrl      string   `yaml:"endpoint_url"`
-	Provider         string   `yaml:"provider"`
-	ClientId         string   `yaml:"client_id"`
-	ClientSecretFile string   `yaml:"client_secret_file"`
-	ExtraScopes      []string `yaml:"extra_scopes"`
-	RedirectUrl      string   `yaml:"redirect_url"`
+	Bind             string   `json:"bind"`
+	EndpointUrl      string   `json:"endpoint_url"`
+	Provider         string   `json:"provider"`
+	ClientId         string   `json:"client_id"`
+	ClientSecretFile string   `json:"client_secret_file"`
+	ExtraScopes      []string `json:"extra_scopes"`
+	RedirectUrl      string   `json:"redirect_url"`
 
-	CertFile string `yaml:"cert_file"`
-	KeyFile  string `yaml:"key_file"`
+	CertFile string `json:"cert_file"`
+	KeyFile  string `json:"key_file"`
 
-	ClientSecret string          `yaml:"-"`
-	Certificate  tls.Certificate `yaml:"-"`
+	ClientSecret string          `json:"-"`
+	Certificate  tls.Certificate `json:"-"`
 }
 
 type Datastore struct {
-	RawUrl    string `yaml:"url"`
-	DataDir   string `yaml:"data_dir"`  // use only embed etcd
-	Namespace string `yaml:"namespace"` // use only etcd
+	RawUrl    string `json:"url"`
+	DataDir   string `json:"data_dir"`  // use only embed etcd
+	Namespace string `json:"namespace"` // use only etcd
 
-	Url        *url.URL         `yaml:"-"`
-	Embed      bool             `yaml:"-"`
-	EtcdUrl    *url.URL         `yaml:"-"`
-	etcdClient *clientv3.Client `yaml:"-"`
+	Url        *url.URL         `json:"-"`
+	Embed      bool             `json:"-"`
+	EtcdUrl    *url.URL         `json:"-"`
+	etcdClient *clientv3.Client `json:"-"`
 }
 
 type Logger struct {
-	Level    string `yaml:"level"`
-	Encoding string `yaml:"encoding"` // json or console
+	Level    string `json:"level"`
+	Encoding string `json:"encoding"` // json or console
 }
 
 type Role struct {
-	Name        string    `yaml:"name"`
-	Title       string    `yaml:"title"`
-	Description string    `yaml:"description"`
-	Bindings    []Binding `yaml:"bindings"`
+	Name        string    `json:"name"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Bindings    []Binding `json:"bindings"`
 }
 
 type Binding struct {
-	Backend    string `yaml:"backend"`    // Backend is Backend.Name
-	Permission string `yaml:"permission"` // Permission is Permission.Name
+	Backend    string `json:"backend"`    // Backend is Backend.Name
+	Permission string `json:"permission"` // Permission is Permission.Name
 }
 
 type Backend struct {
-	Name        string        `yaml:"name"` // Name is an identifier
-	Upstream    string        `yaml:"upstream"`
-	Permissions []*Permission `yaml:"permissions"`
+	Name        string        `json:"name"` // Name is an identifier
+	Upstream    string        `json:"upstream"`
+	Permissions []*Permission `json:"permissions"`
 
-	Url *url.URL `yaml:"-"`
+	Url *url.URL `json:"-"`
 }
 
 type Permission struct {
-	Name      string     `yaml:"name"` // Name is an identifier
-	Locations []Location `yaml:"locations"`
+	Name      string     `json:"name"` // Name is an identifier
+	Locations []Location `json:"locations"`
 
-	router *mux.Router `yaml:"-"`
+	router *mux.Router `json:"-"`
 }
 
 type Location struct {
-	Any     string `yaml:"any"`
-	Get     string `yaml:"get"`
-	Post    string `yaml:"post"`
-	Put     string `yaml:"put"`
-	Delete  string `yaml:"delete"`
-	Head    string `yaml:"head"`
-	Connect string `yaml:"connect"`
-	Options string `yaml:"options"`
-	Trace   string `yaml:"trace"`
-	Patch   string `yaml:"patch"`
+	Any     string `json:"any"`
+	Get     string `json:"get"`
+	Post    string `json:"post"`
+	Put     string `json:"put"`
+	Delete  string `json:"delete"`
+	Head    string `json:"head"`
+	Connect string `json:"connect"`
+	Options string `json:"options"`
+	Trace   string `json:"trace"`
+	Patch   string `json:"patch"`
 }
 
 type FrontendProxy struct {
-	Bind                 string   `yaml:"bind"`
-	CertFile             string   `yaml:"cert_file"`
-	KeyFile              string   `yaml:"key_file"`
-	SigningSecretKeyFile string   `yaml:"signing_secret_key_file"`
-	Session              *Session `yaml:"session"`
+	Bind                 string   `json:"bind"`
+	CertFile             string   `json:"cert_file"`
+	KeyFile              string   `json:"key_file"`
+	SigningSecretKeyFile string   `json:"signing_secret_key_file"`
+	Session              *Session `json:"session"`
 
-	Certificate       tls.Certificate   `yaml:"-"`
-	SigningPrivateKey crypto.PrivateKey `yaml:"-"`
+	Certificate       tls.Certificate   `json:"-"`
+	SigningPrivateKey crypto.PrivateKey `json:"-"`
 }
 
 type Session struct {
-	Type    string `yaml:"type"`
-	KeyFile string `yaml:"key_file"`
+	Type    string `json:"type"`
+	KeyFile string `json:"key_file"`
 
-	HashKey  []byte `yaml:"-"`
-	BlockKey []byte `yaml:"-"`
+	HashKey  []byte `json:"-"`
+	BlockKey []byte `json:"-"`
+}
+
+type Dashboard struct {
+	Enable   bool      `json:"enable"`
+	Bind     string    `json:"bind"`
+	Template *Template `json:"template"`
+}
+
+type Template struct {
+	Loader string `json:"loader"` // shotgun or embed
+	Dir    string `json:"dir"`
+}
+
+func (d *Dashboard) Inflate(dir string) error {
+	return d.Template.inflate(dir)
+}
+
+func (t *Template) inflate(dir string) error {
+	if t.Dir != "" {
+		t.Dir = filepath.Join(dir, t.Dir)
+	}
+	return nil
 }
 
 func (idp *IdentityProvider) Inflate(dir string) error {
@@ -288,6 +311,13 @@ func (g *General) GetBackendByHost(host string) (*Backend, bool) {
 	return g.GetBackendByHostname(h)
 }
 
+func (g *General) GetAllRoles() []Role {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	return g.Roles
+}
+
 func (g *General) GetRole(name string) (Role, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -304,22 +334,22 @@ func (g *General) Inflate(dir string) error {
 
 	if g.RoleFile != "" {
 		roles := make([]Role, 0)
-		f, err := os.Open(absPath(g.RoleFile, dir))
+		b, err := ioutil.ReadFile(absPath(g.RoleFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := yaml.NewDecoder(f).Decode(&roles); err != nil {
+		if err := yaml.Unmarshal(b, &roles); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		g.Roles = roles
 	}
 	if g.ProxyFile != "" {
 		backends := make([]*Backend, 0)
-		f, err := os.Open(absPath(g.ProxyFile, dir))
+		b, err := ioutil.ReadFile(absPath(g.ProxyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := yaml.NewDecoder(f).Decode(&backends); err != nil {
+		if err := yaml.Unmarshal(b, &backends); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		g.Backends = backends

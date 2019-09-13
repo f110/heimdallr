@@ -1,0 +1,105 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <div class="ui floating labeled icon dropdown button right floated" id="filter">
+    <i class="filter icon"></i>
+    <span class="text">Role</span>
+    <div class="menu">
+      <div class="item" data-value="_all">All</div>
+      {{ range .Roles -}}
+      <div class="item" data-value="{{ .Name }}">{{ .Title }}</div>
+      {{ end -}}
+    </div>
+  </div>
+
+  <div style="padding-top: 2em">
+    {{ range $roleAndUsers := .Users -}}
+    <div id="{{ .Role.Name }}" class="userlist">
+      <h3 class="ui header">{{ .Role.Title }}</h3>
+      <table class="ui table striped">
+        <thead>
+          <th>Id</th>
+          <th></th>
+        </thead>
+        <tbody>
+          {{ range $user := .Users -}}
+          <tr>
+            <td>
+              <a href="/user/{{ $user.Id }}">{{ $user.Id }}</a>
+              {{ if $user.Maintainer -}}
+              <button class="ui button basic green mini" style="margin-left: 1em">Maintainer</button>
+              {{ end -}}
+            </td>
+            <td>
+              <form method="POST">
+                <input type="hidden" name="role" value="{{ $user.Role }}">
+                <div class="ui buttons right floated">
+                  {{ if not $user.Maintainer -}}
+                  <button type="submit" class="ui tiny button" formaction="/user/{{ $user.Id }}/maintainer">Maintainer</button>
+                  {{ end -}}
+                  <button type="submit" class="ui tiny button red" formaction="/user/{{ $user.Id }}/delete">Delete</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {{ end -}}
+        </tbody>
+        <tfoot class="full-width">
+          <tr>
+            <th colspan="2">
+              <div class="addform" style="display: none">
+              <form class="ui right floated form" method="POST" action="/user">
+                <div class="inline fields">
+                  <div class="field">
+                    <label>Id</label>
+                    <input type="text" name="id" placeholder="Email">
+                  </div>
+                  <div class="field">
+                    <label>Role</label>
+                    <input type="text" class="ui disabled input" name="role" value="{{ .Role.Name }}" readonly>
+                  </div>
+                  <input type="submit" class="ui submit small button primary" value="Submit">
+                </div>
+                </form>
+              </div>
+
+              <div class="addbutton">
+                <div class="ui right floated small primary labeled icon button adduser" data-role="{{ .Role.Name }}">
+                  <i class="user icon"></i>Add User
+                </div>
+              </div>
+            </th>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="ui divider"></div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+
+<script>
+$("#filter").dropdown({
+  onChange: function(val) {
+    if (val == "_all") {
+      $(".userlist:hidden").each(function() {
+        $(this).show();
+      });
+    } else {
+      $(".userlist:visible").each(function() {
+        $(this).hide();
+      });
+      console.log(val);
+      $("#"+val).show();
+    }
+  },
+});
+
+$(".adduser").on('click', function() {
+  var obj = $(this);
+  $("#"+obj.data()["role"]+" > table > tfoot > tr > th > .addform").show();
+  obj.hide();
+});
+</script>
+
+{{ template "include/footer.tmpl" }}

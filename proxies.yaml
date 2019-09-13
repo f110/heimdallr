@@ -3,10 +3,16 @@
   permissions:
     - name: all
       locations:
-        - get: /
+        - any: /
 - name: content.local-proxy.f110.dev
   upstream: http://localhost:4502
   permissions:
     - name: all
       locations:
         - get: /
+- name: dashboard.local-proxy.f110.dev
+  upstream: http://localhost:4100
+  permissions:
+    - name: all
+      locations:
+        - any: /

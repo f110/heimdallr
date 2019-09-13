@@ -41,7 +41,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/ok", nil)
-		c, err := s.Cookie(&session.Session{Id: "foobar@example.com"})
+		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,7 +70,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/ok", nil)
-		c, err := s.Cookie(&session.Session{Id: "foo@example.com"})
+		c, err := s.Cookie(session.New("foo@example.com"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,7 +96,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/no_good", nil)
-		c, err := s.Cookie(&session.Session{Id: "foobar@example.com"})
+		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +111,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/no_bind", nil)
-		c, err := s.Cookie(&session.Session{Id: "foobar@example.com"})
+		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
 		}
