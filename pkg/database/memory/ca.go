@@ -52,7 +52,7 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*databa
 	return nil, xerrors.New("etcd: not found certificate")
 }
 
-func (c *CA) GetRevokedCertificates(ctx context.Context) []*database.RevokedCertificate {
+func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

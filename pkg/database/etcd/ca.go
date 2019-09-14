@@ -94,7 +94,7 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*databa
 	return signedCertificate, nil
 }
 
-func (c *CA) GetRevokedCertificates(ctx context.Context) []*database.RevokedCertificate {
+func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -213,6 +213,7 @@ func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
 }
 
 func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
+	logger.Log.Debug("Start watching revoke list")
 	watchCh := c.client.Watch(ctx, "ca/revoke/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 	for {
 		select {

@@ -42,17 +42,13 @@ type Server struct {
 	Config *config.IdentityProvider
 
 	server       *http.Server
-	database     userDatabase
+	database     database.UserDatabase
 	sessionStore session.Store
 	oauth2Config oauth2.Config
 	verifier     *oidc.IDTokenVerifier
 }
 
-type userDatabase interface {
-	Get(ctx context.Context, id string) (*database.User, error)
-}
-
-func NewServer(conf *config.IdentityProvider, database userDatabase, store session.Store) (*Server, error) {
+func NewServer(conf *config.IdentityProvider, database database.UserDatabase, store session.Store) (*Server, error) {
 	issuer := ""
 	switch conf.Provider {
 	case "google":
@@ -158,7 +154,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
-	user, err := s.database.Get(req.Context(), c.Email)
+	user, err := s.database.Get(c.Email)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return

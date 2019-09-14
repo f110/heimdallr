@@ -13,11 +13,13 @@ type UserDatabase struct {
 	data map[string]*database.User
 }
 
+var _ database.UserDatabase = &UserDatabase{}
+
 func NewUserDatabase() *UserDatabase {
 	return &UserDatabase{data: make(map[string]*database.User)}
 }
 
-func (u *UserDatabase) Get(_ctx context.Context, id string) (*database.User, error) {
+func (u *UserDatabase) Get(id string) (*database.User, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
@@ -28,10 +30,30 @@ func (u *UserDatabase) Get(_ctx context.Context, id string) (*database.User, err
 	return v, nil
 }
 
+func (u *UserDatabase) GetAll() []*database.User {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	users := make([]*database.User, 0, len(u.data))
+	for _, v := range u.data {
+		users = append(users, v)
+	}
+
+	return users
+}
+
 func (u *UserDatabase) Set(_ctx context.Context, user *database.User) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
 	u.data[user.Id] = user
+	return nil
+}
+
+func (u *UserDatabase) Delete(_ctx context.Context, id string) error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	delete(u.data, id)
 	return nil
 }

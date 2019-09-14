@@ -104,7 +104,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked := s.ca.GetRevokedCertificates(req.Context())
+	revoked := s.ca.GetRevokedCertificates()
 	sort.Slice(revoked, func(i, j int) bool {
 		return revoked[i].RevokedAt.After(revoked[j].RevokedAt)
 	})
@@ -212,12 +212,7 @@ type roleAndUser struct {
 }
 
 func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
-	users, err := s.userDatabase.GetAll(req.Context())
-	if err != nil {
-		logger.Log.Info("Failed fetch user list", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	users := s.userDatabase.GetAll()
 
 	userMap := make(map[string][]*database.User)
 	for _, v := range users {
@@ -261,7 +256,7 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 		return
 	}
 
-	u, err := s.userDatabase.Get(req.Context(), id)
+	u, err := s.userDatabase.Get(id)
 	if err != nil {
 		logger.Log.Info("User not found", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -282,7 +277,7 @@ func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httpr
 		return
 	}
 
-	u, err := s.userDatabase.Get(req.Context(), req.FormValue("id"))
+	u, err := s.userDatabase.Get(req.FormValue("id"))
 	if err != nil && err != database.ErrUserNotFound {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -315,7 +310,7 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, para
 		return
 	}
 
-	u, err := s.userDatabase.Get(req.Context(), params.ByName("id"))
+	u, err := s.userDatabase.Get(params.ByName("id"))
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -349,7 +344,7 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 		return
 	}
 
-	u, err := s.userDatabase.Get(req.Context(), params.ByName("id"))
+	u, err := s.userDatabase.Get(params.ByName("id"))
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)

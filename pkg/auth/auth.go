@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"crypto/x509"
 	"net/http"
 	"time"
@@ -22,19 +21,15 @@ var (
 	ErrNotAllowed         = xerrors.New("auth: not allowed")
 )
 
-type UserDatabase interface {
-	Get(ctx context.Context, id string) (*database.User, error)
-}
-
 type authenticator struct {
 	Config       *config.General
 	sessionStore session.Store
-	userDatabase UserDatabase
+	userDatabase database.UserDatabase
 	ca           database.CertificateAuthority
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init(conf *config.Config, sessionStore session.Store, userDatabase UserDatabase, ca database.CertificateAuthority) {
+func Init(conf *config.Config, sessionStore session.Store, userDatabase database.UserDatabase, ca database.CertificateAuthority) {
 	defaultAuthenticator.Config = conf.General
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase
@@ -95,12 +90,12 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 			return nil, ErrInvalidCertificate
 		}
 
-		u, err := a.userDatabase.Get(req.Context(), cert.Subject.CommonName)
+		u, err := a.userDatabase.Get(cert.Subject.CommonName)
 		if err != nil {
 			return nil, ErrUserNotFound
 		}
 
-		revoked := a.ca.GetRevokedCertificates(req.Context())
+		revoked := a.ca.GetRevokedCertificates()
 		for _, r := range revoked {
 			if r.SerialNumber.Cmp(cert.SerialNumber) == 0 {
 				return nil, ErrInvalidCertificate
@@ -114,7 +109,7 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 	if err != nil {
 		return nil, ErrSessionNotFound
 	}
-	u, err := a.userDatabase.Get(req.Context(), s.Id)
+	u, err := a.userDatabase.Get(s.Id)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}

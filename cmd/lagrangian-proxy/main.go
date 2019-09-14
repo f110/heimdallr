@@ -167,7 +167,10 @@ func (m *mainProcess) Setup() error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	m.userDatabase = etcd.NewUserDatabase(client)
+	m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
 	m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
