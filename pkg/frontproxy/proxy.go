@@ -12,6 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"go.uber.org/zap"
@@ -113,6 +114,29 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	p.setHeader(req, user)
+
+	p.reverseProxy.ServeHTTP(w, req)
+}
+
+func (p *FrontendProxy) director(req *http.Request) {
+	if backend, ok := p.Config.General.GetBackendByHost(req.Host); ok {
+		q := backend.Url.RawQuery
+		req.URL.Host = backend.Url.Host
+		req.URL.Scheme = backend.Url.Scheme
+		req.URL.Path = joinPath(backend.Url.Path, req.URL.Path)
+		if q == "" || req.URL.RawQuery == "" {
+			req.URL.RawQuery = q + req.URL.RawQuery
+		} else {
+			req.URL.RawQuery = q + "&" + req.URL.RawQuery
+		}
+		if _, ok := req.Header["User-Agent"]; !ok {
+			req.Header.Set("User-Agent", "")
+		}
+	}
+}
+
+func (p *FrontendProxy) setHeader(req *http.Request, user *database.User) {
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
 		Id:        user.Id,
 		IssuedAt:  time.Now().Unix(),
@@ -134,24 +158,8 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.AddCookie(c)
 	}
 
-	p.reverseProxy.ServeHTTP(w, req)
-}
-
-func (p *FrontendProxy) director(req *http.Request) {
-	if backend, ok := p.Config.General.GetBackendByHost(req.Host); ok {
-		q := backend.Url.RawQuery
-		req.URL.Host = backend.Url.Host
-		req.URL.Scheme = backend.Url.Scheme
-		req.URL.Path = joinPath(backend.Url.Path, req.URL.Path)
-		if q == "" || req.URL.RawQuery == "" {
-			req.URL.RawQuery = q + req.URL.RawQuery
-		} else {
-			req.URL.RawQuery = q + "&" + req.URL.RawQuery
-		}
-		if _, ok := req.Header["User-Agent"]; !ok {
-			req.Header.Set("User-Agent", "")
-		}
-	}
+	req.Header.Set("X-Forwarded-Host", req.Host)
+	req.Header.Set("X-Forwarded-Proto", "https")
 }
 
 func joinPath(base, path string) string {
