@@ -13,6 +13,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/session"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
@@ -124,6 +125,14 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	req.Header.Set(TokenHeaderName, token)
 	req.Header.Set(UserIdHeaderName, user.Id)
+	cookies := req.Cookies()
+	req.Header.Del("Cookie")
+	for _, c := range cookies {
+		if c.Name == session.CookieName {
+			continue
+		}
+		req.AddCookie(c)
+	}
 
 	p.reverseProxy.ServeHTTP(w, req)
 }

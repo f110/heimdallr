@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	cookieName = "lagrangian"
+	CookieName = "lagrangian"
 )
 
 var (
@@ -40,7 +40,7 @@ func NewSecureCookieStore(hasKey, blockKey []byte) *SecureCookieStore {
 }
 
 func (s *SecureCookieStore) GetSession(req *http.Request) (*Session, error) {
-	c, err := req.Cookie(cookieName)
+	c, err := req.Cookie(CookieName)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -67,13 +67,13 @@ func (s *SecureCookieStore) SetSession(w http.ResponseWriter, sess *Session) err
 }
 
 func (s *SecureCookieStore) Cookie(sess *Session) (*http.Cookie, error) {
-	v, err := s.s.Encode(cookieName, sess)
+	v, err := s.s.Encode(CookieName, sess)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
 	return &http.Cookie{
-		Name:     cookieName,
+		Name:     CookieName,
 		Value:    v,
 		Path:     "/",
 		Domain:   "local-proxy.f110.dev",

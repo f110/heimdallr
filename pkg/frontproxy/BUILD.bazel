@@ -9,6 +9,7 @@ go_library(
         "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/logger:go_default_library",
+        "//pkg/session:go_default_library",
         "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/net/http2:go_default_library",
