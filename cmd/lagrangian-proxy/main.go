@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/f110/lagrangian-proxy/pkg/database"
+
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -32,7 +34,7 @@ type mainProcess struct {
 	wg           sync.WaitGroup
 	config       *config.Config
 	userDatabase *etcd.UserDatabase
-	caDatabase   *etcd.CA
+	caDatabase   database.CertificateAuthority
 	sessionStore session.Store
 
 	front     *frontproxy.FrontendProxy
@@ -172,7 +174,7 @@ func (m *mainProcess) Setup() error {
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
 	}
 
-	auth.Init(m.config, m.sessionStore, m.userDatabase)
+	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase)
 	return nil
 }
 

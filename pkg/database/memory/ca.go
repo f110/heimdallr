@@ -42,7 +42,7 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*databa
 	defer c.mu.Unlock()
 
 	for _, v := range c.signedCertificates {
-		if v.Certificate.SerialNumber.Int64() == serial.Int64() {
+		if v.Certificate.SerialNumber.Cmp(serial) == 0 {
 			return v, nil
 		}
 	}
@@ -102,7 +102,7 @@ func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate
 
 	c.revokedCertificates = append(c.revokedCertificates, revokeCertificate)
 	for i, v := range c.signedCertificates {
-		if v.Certificate.SerialNumber.Int64() == certificate.Certificate.SerialNumber.Int64() {
+		if v.Certificate.SerialNumber.Cmp(certificate.Certificate.SerialNumber) == 0 {
 			c.signedCertificates = append(c.signedCertificates[:i], c.signedCertificates[i+1:]...)
 		}
 	}

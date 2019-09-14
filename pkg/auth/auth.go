@@ -30,13 +30,15 @@ type authenticator struct {
 	Config       *config.General
 	sessionStore session.Store
 	userDatabase UserDatabase
+	ca           database.CertificateAuthority
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init(conf *config.Config, sessionStore session.Store, userDatabase UserDatabase) {
+func Init(conf *config.Config, sessionStore session.Store, userDatabase UserDatabase, ca database.CertificateAuthority) {
 	defaultAuthenticator.Config = conf.General
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase
+	defaultAuthenticator.ca = ca
 }
 
 func Authenticate(req *http.Request) (*database.User, error) {
@@ -97,6 +99,17 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 		if err != nil {
 			return nil, ErrUserNotFound
 		}
+
+		revoked, err := a.ca.GetRevokedCertificates(req.Context())
+		if err != nil {
+			return nil, ErrUserNotFound
+		}
+		for _, r := range revoked {
+			if r.SerialNumber.Cmp(cert.SerialNumber) == 0 {
+				return nil, ErrInvalidCertificate
+			}
+		}
+
 		return u, nil
 	}
 

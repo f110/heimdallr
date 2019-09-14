@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -17,6 +18,14 @@ import (
 const (
 	CertificateExpiration = 10 // year
 )
+
+type CertificateAuthority interface {
+	GetSignedCertificates(ctx context.Context) ([]*SignedCertificate, error)
+	GetSignedCertificate(ctx context.Context, serial *big.Int) (*SignedCertificate, error)
+	GetRevokedCertificates(ctx context.Context) ([]*RevokedCertificate, error)
+	NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error)
+	Revoke(ctx context.Context, certificate *SignedCertificate) error
+}
 
 type SignedCertificate struct {
 	Certificate *x509.Certificate

@@ -25,10 +25,10 @@ type Server struct {
 	loader       *template.Loader
 	server       *http.Server
 	userDatabase *etcd.UserDatabase
-	ca           *etcd.CA
+	ca           database.CertificateAuthority
 }
 
-func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca *etcd.CA) *Server {
+func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca database.CertificateAuthority) *Server {
 	s := &Server{
 		userDatabase: userDatabase,
 		ca:           ca,
