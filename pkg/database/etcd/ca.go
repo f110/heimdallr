@@ -11,26 +11,51 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
 
 type CA struct {
 	config *config.CertificateAuthority
 	client *clientv3.Client
+
+	mu          sync.RWMutex
+	revokedList []*database.RevokedCertificate
 }
+
+var _ database.CertificateAuthority = &CA{}
 
 func init() {
 	gob.Register(ecdsa.PublicKey{})
 	gob.Register(elliptic.P256())
 }
 
-func NewCA(config *config.CertificateAuthority, client *clientv3.Client) *CA {
-	return &CA{config: config, client: client}
+func NewCA(ctx context.Context, config *config.CertificateAuthority, client *clientv3.Client) (*CA, error) {
+	res, err := client.Get(ctx, "ca/revoke/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	revoked := make([]*database.RevokedCertificate, 0, res.Count)
+	for _, v := range res.Kvs {
+		r := &database.RevokedCertificate{}
+		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		revoked = append(revoked, r)
+	}
+
+	ca := &CA{config: config, client: client, revokedList: revoked}
+	go ca.watchRevokeList(ctx, res.Header.Revision)
+	return ca, nil
 }
 
 func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
@@ -69,23 +94,11 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*databa
 	return signedCertificate, nil
 }
 
-func (c *CA) GetRevokedCertificates(ctx context.Context) ([]*database.RevokedCertificate, error) {
-	res, err := c.client.Get(ctx, "ca/revoke", clientv3.WithPrefix())
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
+func (c *CA) GetRevokedCertificates(ctx context.Context) []*database.RevokedCertificate {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
-	revoked := make([]*database.RevokedCertificate, 0, res.Count)
-	for _, v := range res.Kvs {
-		r := &database.RevokedCertificate{}
-		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
-		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
-		}
-		revoked = append(revoked, r)
-	}
-
-	return revoked, nil
+	return c.revokedList
 }
 
 func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {
@@ -197,4 +210,32 @@ func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
 	}
 
 	return serial, nil
+}
+
+func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
+	watchCh := c.client.Watch(ctx, "ca/revoke/", clientv3.WithPrefix(), clientv3.WithRev(revision))
+	for {
+		select {
+		case res := <-watchCh:
+			for _, event := range res.Events {
+				if event.Type != clientv3.EventTypePut {
+					continue
+				}
+
+				r := &database.RevokedCertificate{}
+				err := gob.NewDecoder(bytes.NewReader(event.Kv.Value)).Decode(r)
+				if err != nil {
+					logger.Log.Warn("Failed parse revoked event", zap.Error(err))
+					continue
+				}
+
+				c.mu.Lock()
+				c.revokedList = append(c.revokedList, r)
+				c.mu.Unlock()
+				logger.Log.Debug("Add new revoked certificate", zap.String("serial", r.SerialNumber.Text(16)))
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

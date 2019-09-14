@@ -22,6 +22,8 @@ type CA struct {
 	revokedCertificates []*database.RevokedCertificate
 }
 
+var _ database.CertificateAuthority = &CA{}
+
 func NewCA(config *config.CertificateAuthority) *CA {
 	return &CA{
 		config:              config,
@@ -50,11 +52,11 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*databa
 	return nil, xerrors.New("etcd: not found certificate")
 }
 
-func (c *CA) GetRevokedCertificates(ctx context.Context) ([]*database.RevokedCertificate, error) {
+func (c *CA) GetRevokedCertificates(ctx context.Context) []*database.RevokedCertificate {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	return c.revokedCertificates, nil
+	return c.revokedCertificates
 }
 
 func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {

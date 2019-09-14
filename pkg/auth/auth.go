@@ -100,10 +100,7 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 			return nil, ErrUserNotFound
 		}
 
-		revoked, err := a.ca.GetRevokedCertificates(req.Context())
-		if err != nil {
-			return nil, ErrUserNotFound
-		}
+		revoked := a.ca.GetRevokedCertificates(req.Context())
 		for _, r := range revoked {
 			if r.SerialNumber.Cmp(cert.SerialNumber) == 0 {
 				return nil, ErrInvalidCertificate

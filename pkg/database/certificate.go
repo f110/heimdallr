@@ -22,7 +22,7 @@ const (
 type CertificateAuthority interface {
 	GetSignedCertificates(ctx context.Context) ([]*SignedCertificate, error)
 	GetSignedCertificate(ctx context.Context, serial *big.Int) (*SignedCertificate, error)
-	GetRevokedCertificates(ctx context.Context) ([]*RevokedCertificate, error)
+	GetRevokedCertificates(ctx context.Context) []*RevokedCertificate
 	NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error)
 	Revoke(ctx context.Context, certificate *SignedCertificate) error
 }

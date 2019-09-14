@@ -104,12 +104,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked, err := s.ca.GetRevokedCertificates(req.Context())
-	if err != nil {
-		logger.Log.Info("Can't get revoked certificates", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	revoked := s.ca.GetRevokedCertificates(req.Context())
 	sort.Slice(revoked, func(i, j int) bool {
 		return revoked[i].RevokedAt.After(revoked[j].RevokedAt)
 	})

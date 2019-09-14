@@ -168,7 +168,10 @@ func (m *mainProcess) Setup() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	m.userDatabase = etcd.NewUserDatabase(client)
-	m.caDatabase = etcd.NewCA(m.config.General.CertificateAuthority, client)
+	m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
 	switch m.config.FrontendProxy.Session.Type {
 	case config.SessionTypeSecureCookie:
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
