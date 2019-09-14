@@ -69,6 +69,8 @@ func (p *FrontendProxy) Serve() error {
 		MinVersion:   tls.VersionTLS12,
 		CipherSuites: allowCipherSuites,
 		Certificates: []tls.Certificate{p.Config.FrontendProxy.Certificate},
+		ClientAuth:   tls.RequestClientCert,
+		ClientCAs:    p.Config.General.CertificateAuthority.CertPool,
 	})
 
 	if err := http2.ConfigureServer(p.server, &http2.Server{}); err != nil {
@@ -95,7 +97,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		logger.Log.Debug("Session not found")
 		http.Redirect(w, req, p.Config.IdentityProvider.EndpointUrl, http.StatusSeeOther)
 		return
-	case auth.ErrUserNotFound, auth.ErrNotAllowed:
+	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
 		logger.Log.Debug("Unauthorized", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return

@@ -19,8 +19,23 @@
 </div>
 
 <div class="ui container">
-  <h1 class="ui header">Lagrangian Proxy Dashboard</h1>
+  <h2 class="ui header">Issue new client certificate</h2>
   <div class="ui divider"></div>
+  <form class="ui form" action="/ca/new" method="POST">
+    <div class="field">
+      <label>Id</label>
+      <input type="text" name="id" placeholder="Email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="text" name="password" placeholder="Password">
+    </div>
+    <div class="field">
+      <label>Comment</label>
+      <textarea rows="2"></textarea>
+    </div>
+    <button class="ui button primary" type="submit">Issue</button>
+  </form>
 </div>
 
 </body>

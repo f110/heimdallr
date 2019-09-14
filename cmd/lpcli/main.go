@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 func commandBootstrap(args []string) error {
@@ -38,12 +38,12 @@ func commandBootstrap(args []string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 	dir := filepath.Dir(p)
-	f, err := os.Open(p)
+	confBuf, err := ioutil.ReadFile(p)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	conf := &config.Config{}
-	if err := yaml.NewDecoder(f).Decode(conf); err != nil {
+	if err := yaml.Unmarshal(confBuf, conf); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	if conf.General == nil || conf.General.CertificateAuthority == nil {

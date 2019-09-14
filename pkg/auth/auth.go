@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"crypto/x509"
 	"net/http"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
@@ -13,10 +15,11 @@ import (
 var defaultAuthenticator = &authenticator{}
 
 var (
-	ErrHostnameNotFound = xerrors.New("auth: hostname not found")
-	ErrSessionNotFound  = xerrors.New("auth: session not found")
-	ErrUserNotFound     = xerrors.New("auth: user not found")
-	ErrNotAllowed       = xerrors.New("auth: not allowed")
+	ErrHostnameNotFound   = xerrors.New("auth: hostname not found")
+	ErrSessionNotFound    = xerrors.New("auth: session not found")
+	ErrInvalidCertificate = xerrors.New("auth: invalid certificate")
+	ErrUserNotFound       = xerrors.New("auth: user not found")
+	ErrNotAllowed         = xerrors.New("auth: not allowed")
 )
 
 type UserDatabase interface {
@@ -24,14 +27,14 @@ type UserDatabase interface {
 }
 
 type authenticator struct {
-	Conf         *config.General
+	Config       *config.General
 	sessionStore session.Store
 	userDatabase UserDatabase
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
 func Init(conf *config.Config, sessionStore session.Store, userDatabase UserDatabase) {
-	defaultAuthenticator.Conf = conf.General
+	defaultAuthenticator.Config = conf.General
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase
 }
@@ -41,7 +44,7 @@ func Authenticate(req *http.Request) (*database.User, error) {
 }
 
 func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) {
-	backend, ok := a.Conf.GetBackendByHost(req.Host)
+	backend, ok := a.Config.GetBackendByHost(req.Host)
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}
@@ -56,7 +59,7 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 		return nil, ErrNotAllowed
 	}
 	for _, r := range user.Roles {
-		role, err := a.Conf.GetRole(r)
+		role, err := a.Config.GetRole(r)
 		if err == config.ErrRoleNotFound {
 			continue
 		}
@@ -76,6 +79,27 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 }
 
 func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
+	if len(req.TLS.PeerCertificates) > 0 {
+		// Client Certificate Authorization
+		cert := req.TLS.PeerCertificates[0]
+		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
+			return nil, ErrInvalidCertificate
+		}
+		_, err := cert.Verify(x509.VerifyOptions{
+			Roots:     a.Config.CertificateAuthority.CertPool,
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		})
+		if err != nil {
+			return nil, ErrInvalidCertificate
+		}
+
+		u, err := a.userDatabase.Get(req.Context(), cert.Subject.CommonName)
+		if err != nil {
+			return nil, ErrUserNotFound
+		}
+		return u, nil
+	}
+
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
 		return nil, ErrSessionNotFound

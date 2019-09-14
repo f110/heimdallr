@@ -32,6 +32,7 @@ type mainProcess struct {
 	wg           sync.WaitGroup
 	config       *config.Config
 	userDatabase *etcd.UserDatabase
+	caDatabase   *etcd.CA
 	sessionStore session.Store
 
 	front     *frontproxy.FrontendProxy
@@ -118,7 +119,7 @@ func (m *mainProcess) startIdentityProviderServer() {
 }
 
 func (m *mainProcess) startDashboard() {
-	server := dashboard.NewServer(m.config, m.userDatabase)
+	server := dashboard.NewServer(m.config, m.userDatabase, m.caDatabase)
 	m.dashboard = server
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -165,6 +166,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	m.userDatabase = etcd.NewUserDatabase(client)
+	m.caDatabase = etcd.NewCA(m.config.General.CertificateAuthority, client)
 	switch m.config.FrontendProxy.Session.Type {
 	case config.SessionTypeSecureCookie:
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)

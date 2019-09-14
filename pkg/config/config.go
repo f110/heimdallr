@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -62,8 +63,10 @@ type CertificateAuthority struct {
 	OrganizationUnit string `json:"organization_unit"`
 	Country          string `json:"country"`
 
+	Subject     pkix.Name         `json:"-"`
 	Certificate *x509.Certificate `json:"-"`
 	PrivateKey  crypto.PrivateKey `json:"-"`
+	CertPool    *x509.CertPool    `json:"-"`
 }
 
 type IdentityProvider struct {
@@ -211,6 +214,8 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 		ca.Certificate = cert
+		ca.CertPool = x509.NewCertPool()
+		ca.CertPool.AddCert(cert)
 
 		b, err = ioutil.ReadFile(absPath(ca.KeyFile, dir))
 		if err != nil {
@@ -237,6 +242,13 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 			}
 			ca.PrivateKey = privateKey
 		}
+	}
+
+	ca.Subject = pkix.Name{
+		Organization:       []string{ca.Organization},
+		OrganizationalUnit: []string{ca.OrganizationUnit},
+		Country:            []string{ca.Country},
+		CommonName:         "Lagrangian Proxy CA",
 	}
 
 	return nil

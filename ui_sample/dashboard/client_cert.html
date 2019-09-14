@@ -1,0 +1,101 @@
+<html>
+<head>
+  <title>Lagrangian Proxy Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+  <style type="text/css">
+    body > .ui.container {
+      padding-top: 2em;
+      padding-left: 210px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ui sidebar inverted vertical menu left visible">
+  <a href="./manage_user.html" class="item">Manage User</a>
+  <a href="./client_cert.html" class="item">Manage Certificate</a>
+</div>
+
+<div class="ui container">
+  <a href="./cert_new.html" class="ui button basic green">
+    <i class="icon certificate"></i>New
+  </a>
+  <h1 class="ui header">Signed Certificates</h1>
+  <table class="ui table celled striped">
+    <thead>
+      <tr>
+        <th>Serial Number</th>
+        <th>CommonName</th>
+        <th>Issued Time</th>
+        <th></th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>2</td>
+        <td>test2@example.com</td>
+        <td>2019/09/14 00:00:00</td>
+        <td>Issued by human</td>
+        <td><a href="/"><i class="icon download"></i>Cert</a></td>
+        <td>
+          <button class="ui button red mini basic">Revoke</button>
+        </td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>test@example.com</td>
+        <td>2019/09/13 00:00:00</td>
+        <td>Issued by UMA</td>
+        <td><a href="/"><i class="icon download"></i>p12</a></td>
+        <td>
+          <button class="ui button red mini basic">Revoke</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="ui divider"></div>
+
+  <h1 class="ui header">Revoked Certificates</h1>
+  <table class="ui table celled striped">
+    <thead>
+    <tr>
+      <th>Serial Number</th>
+      <th>CommonName</th>
+      <th>Issued Time</th>
+      <th>Revoked At</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td>3</td>
+      <td>test2@example.com</td>
+      <td>2019/09/14 00:00:00</td>
+      <td>2019/09/15 00:00:00</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>test@example.com</td>
+      <td>2019/09/13 00:00:00</td>
+      <td>2019/09/15 00:00:00</td>
+    </tr>
+    </tbody>
+  </table>
+
+  <div class="ui divider"></div>
+  <h1 class="ui header">Certificate Authority</h1>
+  <table class="ui table definition">
+    <tbody>
+      <tr>
+        <td>CommonName</td>
+        <td>Lagrangian Proxy</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

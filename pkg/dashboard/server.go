@@ -2,9 +2,13 @@ package dashboard
 
 import (
 	"context"
+	"crypto/x509"
+	"fmt"
+	"math/big"
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
@@ -21,11 +25,13 @@ type Server struct {
 	loader       *template.Loader
 	server       *http.Server
 	userDatabase *etcd.UserDatabase
+	ca           *etcd.CA
 }
 
-func NewServer(config *config.Config, userDatabase *etcd.UserDatabase) *Server {
+func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca *etcd.CA) *Server {
 	s := &Server{
 		userDatabase: userDatabase,
+		ca:           ca,
 		config:       config,
 		loader:       template.New(dashboard.Data, config.Dashboard.Template.Loader, config.Dashboard.Template.Dir),
 		server: &http.Server{
@@ -39,6 +45,11 @@ func NewServer(config *config.Config, userDatabase *etcd.UserDatabase) *Server {
 	mux.GET("/user/:id", s.handleGetUser)
 	mux.POST("/user/:id/delete", s.handleDeleteUser)
 	mux.POST("/user/:id/maintainer", s.handleMakeMaintainer)
+	mux.GET("/cert", s.handleCertIndex)
+	mux.GET("/cert/new", s.handleNewCert)
+	mux.POST("/cert/new", s.handleNewClientCert)
+	mux.POST("/cert/revoke", s.handleRevokeCert)
+	mux.GET("/cert/download", s.handleDownloadCert)
 	s.server.Handler = mux
 
 	return s
@@ -58,8 +69,140 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
+func (s *Server) handleIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "index.tmpl", nil)
+}
+
+type signedCertificate struct {
+	SerialNumber string
+	CommonName   string
+	IssuedAt     time.Time
+	Comment      string
+	DownloadUrl  string
+	P12          bool
+}
+
+func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	signed, err := s.ca.GetSignedCertificates(req.Context())
+	if err != nil {
+		logger.Log.Info("Can't get signed certificates", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	signedCertificates := make([]*signedCertificate, 0, len(signed))
+	for _, v := range signed {
+		signedCertificates = append(signedCertificates, &signedCertificate{
+			SerialNumber: v.Certificate.SerialNumber.Text(16),
+			CommonName:   v.Certificate.Subject.CommonName,
+			IssuedAt:     v.IssuedAt,
+			Comment:      v.Comment,
+			P12:          len(v.P12) > 0,
+		})
+	}
+
+	sort.Slice(signedCertificates, func(i, j int) bool {
+		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
+	})
+
+	revoked, err := s.ca.GetRevokedCertificates(req.Context())
+	if err != nil {
+		logger.Log.Info("Can't get revoked certificates", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	sort.Slice(revoked, func(i, j int) bool {
+		return revoked[i].RevokedAt.After(revoked[j].RevokedAt)
+	})
+
+	s.RenderTemplate(w, "cert/index.tmpl", struct {
+		CertificateAuthority *x509.Certificate
+		SignedCertificates   []*signedCertificate
+		RevokedCertificates  []*database.RevokedCertificate
+	}{
+		CertificateAuthority: s.config.General.CertificateAuthority.Certificate,
+		SignedCertificates:   signedCertificates,
+		RevokedCertificates:  revoked,
+	})
+}
+
+func (s *Server) handleNewCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	s.RenderTemplate(w, "cert/new.tmpl", nil)
+}
+
+func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, err := s.ca.NewClientCertificate(req.Context(), req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
+	if err != nil {
+		logger.Log.Info("Failed create new client certificate", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/cert", http.StatusFound)
+}
+
+func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	i := &big.Int{}
+	i, ok := i.SetString(req.FormValue("serial"), 16)
+	if !ok {
+		logger.Log.Info("Can't convert to integer", zap.String("serial", req.FormValue("serial")))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	signedCertificate, err := s.ca.GetSignedCertificate(req.Context(), i)
+	if err != nil {
+		logger.Log.Info("Can't get signed certificate", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = s.ca.Revoke(req.Context(), signedCertificate)
+	if err != nil {
+		logger.Log.Info("Failed revoke certificate", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, req, "/cert", http.StatusFound)
+}
+
+func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	i := &big.Int{}
+	i, ok := i.SetString(req.FormValue("serial"), 16)
+	if !ok {
+		logger.Log.Info("Can't convert to integer", zap.String("serial", req.FormValue("serial")))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	certificate, err := s.ca.GetSignedCertificate(req.Context(), i)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	ext := "crt"
+	if len(certificate.P12) > 0 {
+		ext = "p12"
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", certificate.Certificate.SerialNumber.Text(16), ext))
+	if len(certificate.P12) > 0 {
+		w.Write(certificate.P12)
+	} else {
+		w.Write(certificate.Certificate.Raw)
+	}
 }
 
 type user struct {

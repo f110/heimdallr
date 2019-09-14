@@ -1,0 +1,23 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <h2 class="ui header">Issue new client certificate</h2>
+  <div class="ui divider"></div>
+  <form class="ui form" action="/cert/new" method="POST">
+    <div class="field">
+      <label>Id</label>
+      <input type="text" name="id" placeholder="Email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="text" name="password" placeholder="Password">
+    </div>
+    <div class="field">
+      <label>Comment</label>
+      <textarea rows="2" name="comment"></textarea>
+    </div>
+    <button class="ui button primary" type="submit">Issue</a>
+  </form>
+</div>
+
+{{ template "include/footer.tmpl" }}

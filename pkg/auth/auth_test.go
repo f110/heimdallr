@@ -15,7 +15,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"))
 	u := memory.NewUserDatabase()
 	a := &authenticator{
-		Conf: &config.General{
+		Config: &config.General{
 			Backends: []*config.Backend{
 				{Name: "test.example.com", Permissions: []*config.Permission{
 					{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
@@ -31,7 +31,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		sessionStore: s,
 		userDatabase: u,
 	}
-	err := a.Conf.Load()
+	err := a.Config.Load()
 	if err != nil {
 		t.Fatal(err)
 	}

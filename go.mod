@@ -38,6 +38,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	google.golang.org/grpc v1.23.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	gopkg.in/yaml.v2 v2.2.1
 	sigs.k8s.io/yaml v1.1.0
+	software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
 )

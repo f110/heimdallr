@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -14,8 +15,17 @@ import (
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"golang.org/x/xerrors"
 )
+
+type CertificateAuthority struct {
+	store *etcd.CA
+}
+
+func (ca *CertificateAuthority) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {
+	return ca.store.NewClientCertificate(ctx, name, password, comment)
+}
 
 func CreateCertificateAuthority(conf *config.Config) ([]byte, crypto.PrivateKey, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

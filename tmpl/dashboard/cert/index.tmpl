@@ -1,0 +1,75 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <a href="/cert/new" class="ui button basic green">
+    <i class="icon certificate"></i>New
+  </a>
+  <h1 class="ui header">Signed Certificates</h1>
+  <table class="ui table celled striped">
+    <thead>
+      <tr>
+        <th>Serial Number</th>
+        <th>CommonName</th>
+        <th>Issued Time</th>
+        <th></th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .SignedCertificates }}
+      <tr>
+        <td>0x{{ .SerialNumber }}</td>
+        <td>{{ .CommonName }}</td>
+        <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+        <td>{{ .Comment }}</td>
+        <td><a href="/cert/download?serial={{ .SerialNumber }}"><i class="icon download"></i>{{ if .P12 }}p12{{ else }}Cert{{ end }}</a></td>
+        <td>
+          <form action="/cert/revoke" method="POST" style="margin-block-end: 0">
+          <input type="hidden" name="serial" value="{{ .SerialNumber }}">
+          <div class="ui right floated">
+            <button class="ui button red mini basic" type="submit">Revoke</button>
+          </div>
+          </form>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  <div class="ui divider"></div>
+
+  <h1 class="ui header">Revoked Certificates</h1>
+  <table class="ui table celled striped">
+    <thead>
+    <tr>
+      <th>Serial Number</th>
+      <th>CommonName</th>
+      <th>Issued Time</th>
+      <th>Revoked At</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{ range .RevokedCertificates }}
+    <tr>
+      <td>0x{{ .SerialNumber.Text 16 }}</td>
+      <td>{{ .CommonName }}</td>
+      <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+      <td>{{ .RevokedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+    </tr>
+    {{ end }}
+    </tbody>
+  </table>
+
+  <div class="ui divider"></div>
+  <h1 class="ui header">Certificate Authority</h1>
+  <table class="ui table definition">
+    <tbody>
+      <tr>
+        <td>CommonName</td>
+        <td>{{ .CertificateAuthority.Subject.CommonName }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{{ template "include/footer.tmpl" }}

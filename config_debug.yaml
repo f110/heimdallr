@@ -4,6 +4,9 @@ general:
   certificate_authority:
     cert_file: ./ca.crt
     key_file: ./ca.key
+    organization: test
+    organization_unit: dev
+    country: jp
 identity_provider:
   bind: :4001
   endpoint_url: https://local-proxy.f110.dev:4001/auth
