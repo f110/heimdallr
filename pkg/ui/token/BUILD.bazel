@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["token.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/ui/token",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database:go_default_library",
+        "//pkg/localproxy:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/session:go_default_library",
+        "//pkg/template:go_default_library",
+        "//tmpl/ui:go_default_library",
+        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

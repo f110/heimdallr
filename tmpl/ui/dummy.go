@@ -1,3 +1,3 @@
-package dashboard
+package ui
 
 var Data map[string]string

@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "ca.go",
+        "token.go",
         "user.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/database/memory",

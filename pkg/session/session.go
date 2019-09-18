@@ -18,8 +18,10 @@ var (
 )
 
 type Session struct {
-	Id       string
-	IssuedAt time.Time
+	Id              string
+	IssuedAt        time.Time
+	Challenge       string
+	ChallengeMethod string
 }
 
 func New(id string) *Session {

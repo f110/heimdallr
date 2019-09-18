@@ -16,3 +16,9 @@
     - name: all
       locations:
         - any: /
+- name: ssh.local-proxy.f110.dev
+  upstream: tcp://localhost:22
+  permissions:
+    - name: all
+      locations:
+        - any: /

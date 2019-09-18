@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "ca.go",
+        "token.go",
         "user.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/database/etcd",
@@ -15,5 +16,6 @@ go_library(
         "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/sigs.k8s.io/yaml:go_default_library",
     ],
 )

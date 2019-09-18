@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
+
+go_embed_data(
+    name = "embed",
+    srcs = [
+        "//tmpl/ui/token:tmpl",
+    ],
+    string = True,
+    visibility = ["//visibility:private"],
+)
+
+go_library(
+    name = "embed_tmpl",
+    srcs = [":embed"],
+    importpath = "github.com/f110/lagrangian-proxy/tmpl/ui",
+    visibility = ["//visibility:private"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [],  # keep
+    embed = [":embed_tmpl"],  # keep
+    importpath = "github.com/f110/lagrangian-proxy/tmpl/ui",
+    visibility = ["//visibility:public"],
+)

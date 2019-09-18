@@ -2,9 +2,7 @@ package identityprovider
 
 import (
 	"context"
-	"crypto/tls"
 	"io"
-	"net"
 	"net/http"
 
 	"github.com/coreos/go-oidc"
@@ -14,24 +12,9 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
 )
-
-var allowCipherSuites = []uint16{
-	tls.TLS_AES_128_GCM_SHA256,
-	tls.TLS_AES_256_GCM_SHA384,
-	tls.TLS_CHACHA20_POLY1305_SHA256,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-}
 
 type claims struct {
 	Email    string `json:"email"`
@@ -41,7 +24,6 @@ type claims struct {
 type Server struct {
 	Config *config.IdentityProvider
 
-	server       *http.Server
 	database     database.UserDatabase
 	sessionStore session.Store
 	oauth2Config oauth2.Config
@@ -78,44 +60,12 @@ func NewServer(conf *config.IdentityProvider, database database.UserDatabase, st
 		verifier:     provider.Verifier(&oidc.Config{ClientID: conf.ClientId}),
 	}
 
-	mux := httprouter.New()
-	mux.GET("/auth", s.handleAuth)
-	mux.GET("/auth/callback", s.handleCallback)
-	server := &http.Server{
-		ErrorLog: logger.CompatibleLogger,
-		Handler:  mux,
-	}
-	s.server = server
-
 	return s, nil
 }
 
-func (s *Server) Start() error {
-	l, err := net.Listen("tcp", s.Config.Bind)
-	if err != nil {
-		return err
-	}
-	listener := tls.NewListener(l, &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		CipherSuites: allowCipherSuites,
-		Certificates: []tls.Certificate{s.Config.Certificate},
-	})
-
-	if err := http2.ConfigureServer(s.server, &http2.Server{}); err != nil {
-		return err
-	}
-
-	logger.Log.Info("Start IdentityProvide Server", zap.String("listen", s.Config.Bind))
-	return s.server.Serve(listener)
-}
-
-func (s *Server) Shutdown(ctx context.Context) error {
-	if s.server == nil {
-		return nil
-	}
-
-	logger.Log.Info("Shutdown IdentityProvide Server")
-	return s.server.Shutdown(ctx)
+func (s *Server) Route(router *httprouter.Router) {
+	router.GET("/auth", s.handleAuth)
+	router.GET("/auth/callback", s.handleCallback)
 }
 
 func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {

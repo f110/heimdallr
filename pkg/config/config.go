@@ -36,6 +36,7 @@ var (
 
 type Config struct {
 	General          *General          `json:"general"`
+	UI               *UI               `json:"ui"`
 	IdentityProvider *IdentityProvider `json:"identity_provider"`
 	Datastore        *Datastore        `json:"datastore"`
 	Logger           *Logger           `json:"logger"`
@@ -56,6 +57,14 @@ type General struct {
 	roleNameToRole    map[string]Role     `json:"-"`
 }
 
+type UI struct {
+	Bind     string `json:"bind"`
+	CertFile string `json:"cert_file"`
+	KeyFile  string `json:"key_file"`
+
+	Certificate tls.Certificate `json:"-"`
+}
+
 type CertificateAuthority struct {
 	CertFile         string `json:"cert_file"`
 	KeyFile          string `json:"key_file"`
@@ -70,7 +79,6 @@ type CertificateAuthority struct {
 }
 
 type IdentityProvider struct {
-	Bind             string   `json:"bind"`
 	EndpointUrl      string   `json:"endpoint_url"`
 	Provider         string   `json:"provider"`
 	ClientId         string   `json:"client_id"`
@@ -78,11 +86,7 @@ type IdentityProvider struct {
 	ExtraScopes      []string `json:"extra_scopes"`
 	RedirectUrl      string   `json:"redirect_url"`
 
-	CertFile string `json:"cert_file"`
-	KeyFile  string `json:"key_file"`
-
-	ClientSecret string          `json:"-"`
-	Certificate  tls.Certificate `json:"-"`
+	ClientSecret string `json:"-"`
 }
 
 type Datastore struct {
@@ -118,7 +122,8 @@ type Backend struct {
 	Upstream    string        `json:"upstream"`
 	Permissions []*Permission `json:"permissions"`
 
-	Url *url.URL `json:"-"`
+	Url    *url.URL `json:"-"`
+	Socket bool     `json:"-"`
 }
 
 type Permission struct {
@@ -191,14 +196,18 @@ func (idp *IdentityProvider) Inflate(dir string) error {
 		b = bytes.TrimRight(b, "\n")
 		idp.ClientSecret = string(b)
 	}
-	if idp.CertFile != "" && idp.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(absPath(idp.CertFile, dir), absPath(idp.KeyFile, dir))
+
+	return nil
+}
+
+func (ui *UI) Inflate(dir string) error {
+	if ui.CertFile != "" && ui.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(absPath(ui.CertFile, dir), absPath(ui.KeyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		idp.Certificate = cert
+		ui.Certificate = cert
 	}
-
 	return nil
 }
 
@@ -489,6 +498,10 @@ func (b *Backend) inflate() error {
 		return xerrors.Errorf("%s: %v", b.Name, err)
 	}
 	b.Url = u
+
+	if u.Scheme == "tcp" {
+		b.Socket = true
+	}
 
 	return nil
 }

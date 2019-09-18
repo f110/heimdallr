@@ -17,6 +17,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -41,20 +42,28 @@ var allowCipherSuites = []uint16{
 var TokenExpiration = 5 * time.Minute
 
 type FrontendProxy struct {
-	Config       *config.Config
-	server       *http.Server
+	Config *config.Config
+	server *http.Server
+
 	reverseProxy *httputil.ReverseProxy
+	socketProxy  *SocketProxy
 }
 
 func NewFrontendProxy(conf *config.Config) *FrontendProxy {
+	s := NewSocketProxy(conf)
+
 	p := &FrontendProxy{
 		Config: conf,
 		server: &http.Server{
 			ErrorLog: logger.CompatibleLogger,
+			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
+				SocketProxyNextProto: s.Accept,
+			},
 		},
 		reverseProxy: &httputil.ReverseProxy{
 			ErrorLog: logger.CompatibleLogger,
 		},
+		socketProxy: s,
 	}
 	p.server.Handler = p
 	p.reverseProxy.Director = p.director
@@ -63,9 +72,13 @@ func NewFrontendProxy(conf *config.Config) *FrontendProxy {
 }
 
 func (p *FrontendProxy) Serve() error {
+	if err := http2.ConfigureServer(p.server, nil); err != nil {
+		return err
+	}
+
 	l, err := net.Listen("tcp", p.Config.FrontendProxy.Bind)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %v", err)
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:   tls.VersionTLS12,
@@ -73,11 +86,8 @@ func (p *FrontendProxy) Serve() error {
 		Certificates: []tls.Certificate{p.Config.FrontendProxy.Certificate},
 		ClientAuth:   tls.RequestClientCert,
 		ClientCAs:    p.Config.General.CertificateAuthority.CertPool,
+		NextProtos:   []string{SocketProxyNextProto, http2.NextProtoTLS},
 	})
-
-	if err := http2.ConfigureServer(p.server, &http2.Server{}); err != nil {
-		return err
-	}
 
 	logger.Log.Info("Start FrontendProxy", zap.String("listen", p.Config.FrontendProxy.Bind))
 	return p.server.Serve(listener)

@@ -10,18 +10,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
-
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/dashboard"
+	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
-	"github.com/f110/lagrangian-proxy/pkg/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/session"
+	"github.com/f110/lagrangian-proxy/pkg/ui"
+	"github.com/f110/lagrangian-proxy/pkg/ui/identityprovider"
+	"github.com/f110/lagrangian-proxy/pkg/ui/token"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -30,15 +31,16 @@ import (
 type mainProcess struct {
 	Stop context.CancelFunc
 
-	ctx          context.Context
-	wg           sync.WaitGroup
-	config       *config.Config
-	userDatabase *etcd.UserDatabase
-	caDatabase   database.CertificateAuthority
-	sessionStore session.Store
+	ctx           context.Context
+	wg            sync.WaitGroup
+	config        *config.Config
+	userDatabase  *etcd.UserDatabase
+	caDatabase    database.CertificateAuthority
+	tokenDatabase database.TokenDatabase
+	sessionStore  session.Store
 
 	front     *frontproxy.FrontendProxy
-	idp       *identityprovider.Server
+	ui        *ui.Server
 	dashboard *dashboard.Server
 	etcd      *embed.Etcd
 }
@@ -67,8 +69,8 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
-	if m.idp != nil {
-		if err := m.idp.Shutdown(ctx); err != nil {
+	if m.ui != nil {
+		if err := m.ui.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
@@ -107,15 +109,18 @@ func (m *mainProcess) startFrontendProxy() {
 	}
 }
 
-func (m *mainProcess) startIdentityProviderServer() {
-	server, err := identityprovider.NewServer(m.config.IdentityProvider, m.userDatabase, m.sessionStore)
+func (m *mainProcess) startUIServer() {
+	idp, err := identityprovider.NewServer(m.config.IdentityProvider, m.userDatabase, m.sessionStore)
 	if err != nil {
 		m.Stop()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
-	m.idp = server
-	if err := m.idp.Start(); err != nil && err != http.ErrServerClosed {
+	t := token.New(m.sessionStore, m.tokenDatabase)
+
+	uiServer := ui.New(m.config, idp, t)
+	m.ui = uiServer
+	if err := m.ui.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
@@ -179,8 +184,9 @@ func (m *mainProcess) Setup() error {
 	case config.SessionTypeSecureCookie:
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
 	}
+	m.tokenDatabase = etcd.NewTemporaryToken(client)
 
-	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase)
+	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase, m.tokenDatabase)
 	return nil
 }
 
@@ -196,7 +202,7 @@ func (m *mainProcess) Start() error {
 	go func() {
 		defer m.wg.Done()
 
-		m.startIdentityProviderServer()
+		m.startUIServer()
 	}()
 
 	if m.config.Dashboard.Enable {

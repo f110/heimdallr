@@ -7,16 +7,17 @@ general:
     organization: test
     organization_unit: dev
     country: jp
-identity_provider:
+ui:
   bind: :4001
+  cert_file: ./tls.crt
+  key_file: ./tls.key
+identity_provider:
   endpoint_url: https://local-proxy.f110.dev:4001/auth
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
   client_secret_file: ./client_secret
   extra_scopes: ["email"]
   redirect_url: https://local-proxy.f110.dev:4001/auth/callback
-  cert_file: ./tls.crt
-  key_file: ./tls.key
 datastore:
   url: etcd://embed
   data_dir: ./data
