@@ -79,14 +79,18 @@ type CertificateAuthority struct {
 }
 
 type IdentityProvider struct {
-	EndpointUrl      string   `json:"endpoint_url"`
+	ServerName       string   `json:"server_name"`
+	AuthPath         string   `json:"auth_path"`
+	TokenPath        string   `json:"token_path"`
 	Provider         string   `json:"provider"`
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
 	ExtraScopes      []string `json:"extra_scopes"`
 	RedirectUrl      string   `json:"redirect_url"`
 
-	ClientSecret string `json:"-"`
+	ClientSecret  string `json:"-"`
+	AuthEndpoint  string `json:"-"`
+	TokenEndpoint string `json:"-"`
 }
 
 type Datastore struct {
@@ -196,6 +200,8 @@ func (idp *IdentityProvider) Inflate(dir string) error {
 		b = bytes.TrimRight(b, "\n")
 		idp.ClientSecret = string(b)
 	}
+	idp.AuthEndpoint = fmt.Sprintf("https://%s%s", idp.ServerName, idp.AuthPath)
+	idp.TokenEndpoint = fmt.Sprintf("https://%s%s", idp.ServerName, idp.TokenPath)
 
 	return nil
 }

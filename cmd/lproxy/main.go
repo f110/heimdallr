@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
+	"golang.org/x/xerrors"
 )
 
 func proxy(args []string) error {
@@ -14,12 +16,25 @@ func proxy(args []string) error {
 		return err
 	}
 
-	client, err := localproxy.Dial(args[0], token)
+	client := localproxy.NewClient(os.Stdin, os.Stdout)
+Retry:
+	err = client.Dial(args[0], token)
 	if err != nil {
+		e, ok := err.(*localproxy.ErrorTokenAuthorization)
+		if ok {
+			t, err := tokenClient.RequestToken(e.Endpoint)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			token = t
+			goto Retry
+		}
 		return err
 	}
-
-	return client.Pipe(os.Stdin, os.Stdout)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	err = client.Pipe(ctx)
+	return err
 }
 
 func main() {

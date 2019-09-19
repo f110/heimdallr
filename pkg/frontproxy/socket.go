@@ -6,10 +6,12 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,10 +29,76 @@ const (
 )
 
 const (
-	CommandOpen uint8 = iota
-	CommandPacket
-	CommandMessage
+	TypeOpen uint8 = 1 + iota
+	TypeOpenSuccess
+	TypePacket
+	TypeMessage
+	TypePing // not implement yet
+	TypePong // also
 )
+
+const (
+	SocketErrorCodeInvalidProtocol = 1 + iota
+	SocketErrorCodeRequestAuth
+	SocketErrorCodeNotAccessible
+)
+
+var (
+	SocketErrorInvalidProtocol = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
+	SocketErrorRequestAuth     = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
+	SocketErrorNotAccessible   = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
+)
+
+type MessageError interface {
+	error
+	Code() int
+	Message() string
+	Params() url.Values
+	Clone() MessageError
+}
+
+type messageError struct {
+	code    int
+	message string
+	params  url.Values
+}
+
+func NewMessageError(code int, message string) MessageError {
+	return &messageError{code: code, message: message}
+}
+
+func (e *messageError) Error() string {
+	return fmt.Sprintf("frontproxy: %s (code=%d)", e.message, e.code)
+}
+
+func (e *messageError) Code() int {
+	return e.code
+}
+
+func (e *messageError) Message() string {
+	return e.message
+}
+
+func (e *messageError) Params() url.Values {
+	return e.params
+}
+
+func (e *messageError) Clone() MessageError {
+	v, _ := url.ParseQuery(e.params.Encode())
+	return &messageError{code: e.code, message: e.message, params: v}
+}
+
+func ParseMessageError(v url.Values) (MessageError, error) {
+	i, err := strconv.Atoi(v.Get("code"))
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	msg := v.Get("msg")
+	v.Del("code")
+	v.Del("msg")
+
+	return &messageError{code: i, message: msg, params: v}, nil
+}
 
 type Stream struct {
 	conn   *tls.Conn
@@ -63,7 +131,7 @@ func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 		logger.Log.Info("Failure handshake", zap.Error(err))
 		return
 	}
-	if err := st.authenticate(ctx); err != nil {
+	if err := st.authenticate(ctx, s.Config.IdentityProvider.TokenEndpoint); err != nil {
 		logger.Log.Info("Failure authenticate", zap.Error(err))
 		return
 	}
@@ -98,7 +166,8 @@ func (st *Stream) handshake() error {
 	}
 
 	buf := msg.Bytes()
-	if buf[0] != CommandOpen {
+	if buf[0] != TypeOpen {
+		st.sendMessage(SocketErrorInvalidProtocol)
 		return xerrors.New("frontproxy: invalid packet header in handshake")
 	}
 	l := binary.BigEndian.Uint32(buf[1:5])
@@ -112,9 +181,20 @@ func (st *Stream) handshake() error {
 	return nil
 }
 
-func (st *Stream) authenticate(ctx context.Context) error {
+func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 	user, err := auth.AuthenticateForSocket(ctx, st.token, st.host)
+	switch err {
+	case auth.ErrNotAllowed, auth.ErrUserNotFound, auth.ErrHostnameNotFound:
+		st.sendMessage(SocketErrorNotAccessible)
+		return err
+	case auth.ErrInvalidToken:
+		e := SocketErrorRequestAuth.Clone()
+		e.Params().Set("endpoint", endpoint)
+		st.sendMessage(e)
+		return err
+	}
 	if err != nil {
+		logger.Log.Error("Unhandled error", zap.Error(err))
 		return xerrors.Errorf(": %v", err)
 	}
 	st.user = user
@@ -134,10 +214,14 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 		return xerrors.Errorf(": %v", err)
 	}
 	st.backendConn = conn
+	buf := make([]byte, 5)
+	buf[0] = TypeOpenSuccess
+	st.conn.Write(buf)
 	return nil
 }
 
 func (st *Stream) pipe() error {
+	logger.Log.Debug("Start duplexing connection")
 	go func() {
 		if err := st.readBackend(); err != nil {
 			logger.Log.Info("Something occurred during to read from backend", zap.Error(err))
@@ -151,7 +235,7 @@ func (st *Stream) pipe() error {
 func (st *Stream) readBackend() error {
 	readBuffer := make([]byte, bufferSize)
 	header := make([]byte, 5)
-	header[0] = CommandPacket
+	header[0] = TypePacket
 	for {
 		n, err := st.backendConn.Read(readBuffer)
 		if err != nil && !isClosedNetwork(err) {
@@ -179,7 +263,7 @@ func (st *Stream) readConn() error {
 		if n != 5 {
 			return xerrors.New("frontproxy: invalid header")
 		}
-		if header[0] != CommandPacket {
+		if header[0] != TypePacket {
 			return xerrors.New("frontproxy: unknown packet type")
 		}
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
@@ -192,7 +276,7 @@ func (st *Stream) readConn() error {
 		}
 
 		switch header[0] {
-		case CommandPacket:
+		case TypePacket:
 			st.backendConn.Write(readBuffer[:bodySize])
 		}
 	}
@@ -205,6 +289,23 @@ func (st *Stream) close() {
 	if st.conn != nil {
 		st.conn.Close()
 	}
+}
+
+func (st *Stream) sendMessage(errMsg MessageError) {
+	v := url.Values{}
+	if len(errMsg.Params()) > 0 {
+		v = errMsg.Params()
+	}
+	v.Set("code", strconv.Itoa(errMsg.Code()))
+	v.Set("msg", errMsg.Message())
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(len(v.Encode())))
+	msg := new(bytes.Buffer)
+	msg.WriteByte(TypeMessage)
+	msg.Write(buf)
+	msg.WriteString(v.Encode())
+
+	st.conn.Write(msg.Bytes())
 }
 
 func isClosedNetwork(err error) bool {

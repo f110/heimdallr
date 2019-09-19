@@ -84,8 +84,11 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 }
 
 func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
-	if token == "" || host == "" {
-		return nil, ErrNotAllowed
+	if token == "" {
+		return nil, ErrInvalidToken
+	}
+	if host == "" {
+		return nil, ErrHostnameNotFound
 	}
 	backend, ok := a.Config.GetBackendByHostname(host)
 	if !ok {

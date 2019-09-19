@@ -12,7 +12,9 @@ ui:
   cert_file: ./tls.crt
   key_file: ./tls.key
 identity_provider:
-  endpoint_url: https://local-proxy.f110.dev:4001/auth
+  server_name: local-proxy.f110.dev:4001
+  auth_path: /auth
+  token_path: /token
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
   client_secret_file: ./client_secret

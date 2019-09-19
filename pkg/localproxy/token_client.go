@@ -36,10 +36,10 @@ func (c *TokenClient) GetToken() (string, error) {
 	return c.readToken()
 }
 
-func (c *TokenClient) requestToken(authEndpoint string) (string, error) {
+func (c *TokenClient) RequestToken(endpoint string) (string, error) {
 	verifier := c.newVerifier()
 
-	u, err := url.Parse(authEndpoint)
+	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", xerrors.Errorf(": %v")
 	}
@@ -47,6 +47,7 @@ func (c *TokenClient) requestToken(authEndpoint string) (string, error) {
 	v.Set("challenge", c.challenge(verifier))
 	v.Set("challenge_method", "S256")
 	u.RawQuery = v.Encode()
+	u.Path = u.Path + "/authorize"
 	if err := OpenBrowser(u.String()); err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
@@ -55,7 +56,7 @@ func (c *TokenClient) requestToken(authEndpoint string) (string, error) {
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
-	token, err := c.exchangeToken(code, verifier)
+	token, err := c.exchangeToken(endpoint, code, verifier)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
@@ -74,11 +75,7 @@ func (c *TokenClient) readToken() (string, error) {
 	}
 	f, err := os.Open(filepath.Join(home, ".lagrangian", c.tokenFilename))
 	if os.IsNotExist(err) {
-		if v, err := c.requestToken("https://local-proxy.f110.dev:4001/token/authorize"); err != nil {
-			return "", xerrors.Errorf(": %v", err)
-		} else {
-			return v, nil
-		}
+		return "", nil
 	}
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
@@ -109,11 +106,11 @@ func (c *TokenClient) saveToken(token string) error {
 	return nil
 }
 
-func (c *TokenClient) exchangeToken(code, codeVerifier string) (string, error) {
+func (c *TokenClient) exchangeToken(endpoint, code, codeVerifier string) (string, error) {
 	v := &url.Values{}
 	v.Set("code", code)
 	v.Set("code_verifier", codeVerifier)
-	req, err := http.NewRequest(http.MethodGet, "https://local-proxy.f110.dev:4001/token/exchange?"+v.Encode(), nil)
+	req, err := http.NewRequest(http.MethodGet, endpoint+"/exchange?"+v.Encode(), nil)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}

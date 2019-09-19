@@ -112,7 +112,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		*u = *req.URL
 		u.Scheme = "https"
 		u.Host = req.Host
-		redirectUrl, _ := url.Parse(p.Config.IdentityProvider.EndpointUrl)
+		redirectUrl, _ := url.Parse(p.Config.IdentityProvider.AuthEndpoint)
 		v := &url.Values{}
 		v.Set("from", u.String())
 		redirectUrl.RawQuery = v.Encode()
