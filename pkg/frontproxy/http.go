@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -107,7 +108,15 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch err {
 	case auth.ErrSessionNotFound:
 		logger.Log.Debug("Session not found")
-		http.Redirect(w, req, p.Config.IdentityProvider.EndpointUrl, http.StatusSeeOther)
+		u := &url.URL{}
+		*u = *req.URL
+		u.Scheme = "https"
+		u.Host = req.Host
+		redirectUrl, _ := url.Parse(p.Config.IdentityProvider.EndpointUrl)
+		v := &url.Values{}
+		v.Set("from", u.String())
+		redirectUrl.RawQuery = v.Encode()
+		http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
 		logger.Log.Debug("Unauthorized", zap.Error(err))

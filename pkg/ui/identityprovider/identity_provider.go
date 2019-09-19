@@ -69,6 +69,14 @@ func (s *Server) Route(router *httprouter.Router) {
 }
 
 func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
+	if req.URL.Query().Get("from") != "" {
+		sess := session.New("")
+		sess.From = req.URL.Query().Get("from")
+		if err := s.sessionStore.SetSession(w, sess); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
 	http.Redirect(w, req, s.oauth2Config.AuthCodeURL(""), http.StatusFound)
 }
 
@@ -110,12 +118,24 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
-	sess := session.New(user.Id)
+	redirectUrl := ""
+	sess, err := s.sessionStore.GetSession(req)
+	if err != nil {
+		sess = session.New(user.Id)
+	} else {
+		redirectUrl = sess.From
+		sess.SetId(user.Id)
+	}
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	io.WriteString(w, "success!")
+	if redirectUrl != "" {
+		logger.Log.Debug("Redirect to", zap.String("url", redirectUrl))
+		http.Redirect(w, req, redirectUrl, http.StatusFound)
+	} else {
+		io.WriteString(w, "success!")
+	}
 }

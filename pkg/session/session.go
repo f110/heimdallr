@@ -22,6 +22,13 @@ type Session struct {
 	IssuedAt        time.Time
 	Challenge       string
 	ChallengeMethod string
+	From            string
+}
+
+func (s *Session) SetId(id string) {
+	s.Id = id
+	s.From = ""
+	s.IssuedAt = time.Now()
 }
 
 func New(id string) *Session {
