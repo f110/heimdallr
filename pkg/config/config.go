@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -48,6 +49,7 @@ type General struct {
 	RoleFile             string                `json:"role_file"`
 	ProxyFile            string                `json:"proxy_file"`
 	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
+	RootUsers            []string              `json:"root_users"`
 
 	Roles    []Role     `json:"-"`
 	Backends []*Backend `json:"-"`
@@ -162,7 +164,8 @@ type FrontendProxy struct {
 	Session                 *Session `json:"session"`
 
 	Certificate         tls.Certificate   `json:"-"`
-	SigningPrivateKey   crypto.PrivateKey `json:"-"`
+	SigningPrivateKey   *ecdsa.PrivateKey `json:"-"`
+	SigningPublicKey    ecdsa.PublicKey   `json:"-"`
 	GithubWebhookSecret []byte            `json:"-"`
 }
 
@@ -288,6 +291,7 @@ func (f *FrontendProxy) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 		f.SigningPrivateKey = privateKey
+		f.SigningPublicKey = privateKey.PublicKey
 	}
 	if f.GithubWebHookSecretFile != "" {
 		b, err := ioutil.ReadFile(absPath(f.GithubWebHookSecretFile, dir))
@@ -589,7 +593,7 @@ func absPath(path, dir string) string {
 	return path
 }
 
-func readPrivateKey(path string) (crypto.PrivateKey, error) {
+func readPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -602,18 +606,18 @@ func readPrivateKey(path string) (crypto.PrivateKey, error) {
 			return nil, xerrors.Errorf(": %v", err)
 		}
 		return privateKey, nil
-	case "RSA PRIVATE KEY":
-		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
-		}
-		return privateKey, nil
 	case "PRIVATE KEY":
 		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
-		return privateKey, nil
+
+		switch v := privateKey.(type) {
+		case *ecdsa.PrivateKey:
+			return v, nil
+		default:
+			return nil, xerrors.New("config: invalid private key type")
+		}
 	default:
 		return nil, xerrors.Errorf("config: Unknown Type: %s", block.Type)
 	}

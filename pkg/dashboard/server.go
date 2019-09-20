@@ -10,49 +10,119 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
+	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/template"
 	"github.com/f110/lagrangian-proxy/tmpl/dashboard"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type Server struct {
-	config       *config.Config
+	Config       *config.Config
 	loader       *template.Loader
 	server       *http.Server
 	userDatabase *etcd.UserDatabase
 	ca           database.CertificateAuthority
+	router       *httprouter.Router
 }
 
 func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca database.CertificateAuthority) *Server {
 	s := &Server{
 		userDatabase: userDatabase,
 		ca:           ca,
-		config:       config,
+		Config:       config,
 		loader:       template.New(dashboard.Data, config.Dashboard.Template.Loader, config.Dashboard.Template.Dir),
 		server: &http.Server{
 			Addr: config.Dashboard.Bind,
 		},
 	}
 	mux := httprouter.New()
-	mux.GET("/", s.handleIndex)
-	mux.GET("/user", s.handleUserIndex)
-	mux.POST("/user", s.handleAddUser)
-	mux.GET("/user/:id", s.handleGetUser)
-	mux.POST("/user/:id/delete", s.handleDeleteUser)
-	mux.POST("/user/:id/maintainer", s.handleMakeMaintainer)
-	mux.GET("/cert", s.handleCertIndex)
-	mux.GET("/cert/new", s.handleNewCert)
-	mux.POST("/cert/new", s.handleNewClientCert)
-	mux.POST("/cert/revoke", s.handleRevokeCert)
-	mux.GET("/cert/download", s.handleDownloadCert)
+	s.router = mux
+	s.Get("/", s.handleIndex)
+	s.Get("/user", s.handleUserIndex, s.AdminOnly)
+	s.Get("/users", s.handleUsers, s.AdminOnly)
+	s.Post("/user", s.handleAddUser, s.AdminOnly)
+	s.Get("/user/:id", s.handleGetUser, s.AdminOnly)
+	s.Post("/user/:id/delete", s.handleDeleteUser, s.AdminOnly)
+	s.Post("/user/:id/maintainer", s.handleMakeMaintainer, s.AdminOnly)
+	s.Post("/user/:id/admin", s.handleMakeAdmin, s.AdminOnly)
+	s.Get("/cert", s.handleCertIndex, s.AdminOnly)
+	s.Get("/cert/new", s.handleNewCert, s.AdminOnly)
+	s.Post("/cert/new", s.handleNewClientCert, s.AdminOnly)
+	s.Post("/cert/revoke", s.handleRevokeCert, s.AdminOnly)
+	s.Get("/cert/download", s.handleDownloadCert, s.AdminOnly)
 	s.server.Handler = mux
 
 	return s
+}
+
+type filterFunc func(w http.ResponseWriter, req *http.Request) (*database.User, error)
+type handleFunc func(user *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params)
+
+func (s *Server) Get(path string, handle handleFunc, filter ...filterFunc) {
+	s.method(s.router.GET, path, handle, filter...)
+}
+
+func (s *Server) Post(path string, handle handleFunc, filter ...filterFunc) {
+	s.method(s.router.POST, path, handle, filter...)
+}
+
+func (s *Server) method(method func(string, httprouter.Handle), path string, handle handleFunc, filter ...filterFunc) {
+	method(path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		var user *database.User
+		if len(filter) > 0 {
+			u, err := filter[0](w, req)
+			if err != nil {
+				logger.Log.Debug("Unauthorized", zap.Error(err))
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			user = u
+		}
+		handle(user, w, req, params)
+	})
+}
+
+func (s *Server) AdminOnly(w http.ResponseWriter, req *http.Request) (*database.User, error) {
+	h := req.Header.Get(frontproxy.TokenHeaderName)
+	if h == "" {
+		return nil, xerrors.New("dashboard: token header not found")
+	}
+
+	claims := &jwt.StandardClaims{}
+	_, err := jwt.ParseWithClaims(h, claims, func(token *jwt.Token) (i interface{}, e error) {
+		if token.Method != jwt.SigningMethodES256 {
+			return nil, xerrors.New("dashboard: invalid signing method")
+		}
+		return &s.Config.FrontendProxy.SigningPublicKey, nil
+	})
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	if err := claims.Valid(); err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	user, err := s.userDatabase.Get(claims.Id)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	if user.Admin {
+		return user, nil
+	}
+	for _, v := range s.Config.General.RootUsers {
+		if v == user.Id {
+			return user, nil
+		}
+	}
+
+	return nil, xerrors.New("dashboard: user is not admin")
 }
 
 func (s *Server) Start() error {
@@ -69,7 +139,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "index.tmpl", nil)
 }
 
@@ -82,7 +152,7 @@ type signedCertificate struct {
 	P12          bool
 }
 
-func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	signed, err := s.ca.GetSignedCertificates(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get signed certificates", zap.Error(err))
@@ -114,17 +184,17 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 		SignedCertificates   []*signedCertificate
 		RevokedCertificates  []*database.RevokedCertificate
 	}{
-		CertificateAuthority: s.config.General.CertificateAuthority.Certificate,
+		CertificateAuthority: s.Config.General.CertificateAuthority.Certificate,
 		SignedCertificates:   signedCertificates,
 		RevokedCertificates:  revoked,
 	})
 }
 
-func (s *Server) handleNewCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "cert/new.tmpl", nil)
 }
 
-func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewClientCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -140,7 +210,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	http.Redirect(w, req, "/cert", http.StatusFound)
 }
 
-func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleRevokeCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -171,7 +241,7 @@ func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ ht
 	http.Redirect(w, req, "/cert", http.StatusFound)
 }
 
-func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleDownloadCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	i := &big.Int{}
 	i, ok := i.SetString(req.FormValue("serial"), 16)
 	if !ok {
@@ -204,6 +274,7 @@ type user struct {
 	Id         string
 	Role       string
 	Maintainer bool
+	Admin      bool
 }
 
 type roleAndUser struct {
@@ -211,7 +282,7 @@ type roleAndUser struct {
 	Users []user
 }
 
-func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
+func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	users := s.userDatabase.GetAll()
 
 	userMap := make(map[string][]*database.User)
@@ -225,14 +296,14 @@ func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _para
 	}
 
 	sortedUsers := make([]roleAndUser, 0)
-	for _, v := range s.config.General.GetAllRoles() {
+	for _, v := range s.Config.General.GetAllRoles() {
 		u := make([]user, 0, len(v.Name))
 		for _, k := range userMap[v.Name] {
 			maintainer := false
 			if v, ok := k.MaintainRoles[v.Name]; ok {
 				maintainer = v
 			}
-			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer})
+			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer, Admin: k.Admin})
 		}
 		sort.Slice(u, func(i, j int) bool {
 			return strings.Compare(u[i].Id, u[j].Id) < 0
@@ -244,12 +315,37 @@ func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _para
 		Roles []config.Role
 		Users []roleAndUser
 	}{
-		Roles: s.config.General.GetAllRoles(),
+		Roles: s.Config.General.GetAllRoles(),
 		Users: sortedUsers,
 	})
 }
 
-func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	users := s.userDatabase.GetAll()
+
+	sort.Slice(users, func(i, j int) bool {
+		if users[i].Admin == users[j].Admin {
+			return strings.Compare(users[i].Id, users[j].Id) < 0
+		}
+		return users[i].Admin == true
+	})
+
+	userList := make([]user, 0, len(users))
+	for _, v := range users {
+		userList = append(userList, user{
+			Id:    v.Id,
+			Admin: v.Admin,
+		})
+	}
+
+	s.RenderTemplate(w, "user/list.tmpl", struct {
+		Users []user
+	}{
+		Users: userList,
+	})
+}
+
+func (s *Server) handleGetUser(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -266,7 +362,7 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 	s.RenderTemplate(w, "user/show.tmpl", u)
 }
 
-func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleAddUser(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -299,14 +395,9 @@ func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httpr
 	http.Redirect(w, req, "/user", http.StatusFound)
 }
 
-func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleDeleteUser(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if req.FormValue("role") == "" {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -314,6 +405,15 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, para
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if req.FormValue("role") == "" {
+		if err := s.userDatabase.Delete(req.Context(), u.Id); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, req, "/users", http.StatusFound)
 		return
 	}
 
@@ -333,7 +433,7 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, para
 	http.Redirect(w, req, "/user", http.StatusFound)
 }
 
-func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleMakeMaintainer(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -360,6 +460,23 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 	}
 
 	http.Redirect(w, req, "/user", http.StatusFound)
+}
+
+func (s *Server) handleMakeAdmin(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	u, err := s.userDatabase.Get(params.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	u.Admin = !u.Admin
+
+	if err := s.userDatabase.Set(req.Context(), u); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/users", http.StatusFound)
 }
 
 func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interface{}) {

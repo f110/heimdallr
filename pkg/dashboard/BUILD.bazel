@@ -9,10 +9,13 @@ go_library(
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/etcd:go_default_library",
+        "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/template:go_default_library",
         "//tmpl/dashboard:go_default_library",
+        "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
         "//vendor/github.com/julienschmidt/httprouter:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
     ],
 )

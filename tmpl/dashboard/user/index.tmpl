@@ -1,14 +1,18 @@
 {{ template "include/header.tmpl" }}
 
 <div class="ui container">
-  <div class="ui floating labeled icon dropdown button right floated" id="filter">
-    <i class="filter icon"></i>
-    <span class="text">Role</span>
-    <div class="menu">
-      <div class="item" data-value="_all">All</div>
-      {{ range .Roles -}}
-      <div class="item" data-value="{{ .Name }}">{{ .Title }}</div>
-      {{ end -}}
+  <div class="ui row">
+    <a class="ui basic button" href="/users"><i class="users icon"></i>All Users</a>
+
+    <div class="ui floating labeled icon dropdown button right floated" id="filter">
+      <i class="filter icon"></i>
+      <span class="text">Role</span>
+      <div class="menu">
+        <div class="item" data-value="_all">All</div>
+        {{ range .Roles -}}
+        <div class="item" data-value="{{ .Name }}">{{ .Title }}</div>
+        {{ end -}}
+      </div>
     </div>
   </div>
 
@@ -25,9 +29,12 @@
           {{ range $user := .Users -}}
           <tr>
             <td>
-              <a href="/user/{{ $user.Id }}">{{ $user.Id }}</a>
+              <a href="/user/{{ $user.Id }}" style="margin-right: 1em">{{ $user.Id }}</a>
               {{ if $user.Maintainer -}}
-              <button class="ui button basic green mini" style="margin-left: 1em">Maintainer</button>
+              <button class="ui button basic green mini">Maintainer</button>
+              {{ end -}}
+              {{ if $user.Admin -}}
+              <button class="ui button basic green mini">Admin</button>
               {{ end -}}
             </td>
             <td>

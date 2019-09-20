@@ -23,6 +23,7 @@ type User struct {
 	Id            string          `json:"id"`
 	Roles         []string        `json:"roles"`
 	MaintainRoles map[string]bool `json:"maintain_roles,omitempty"`
+	Admin         bool            `json:"admin"`
 
 	Version int64 `json:"-"`
 }

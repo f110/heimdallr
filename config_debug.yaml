@@ -7,6 +7,8 @@ general:
     organization: test
     organization_unit: dev
     country: jp
+  root_users:
+    - fmhrit@gmail.com
 ui:
   bind: :4001
   cert_file: ./tls.crt
