@@ -4,5 +4,6 @@
 /privatekey.pem
 /cookie_secret
 /client_secret
+/github_webhook_secret
 
 /bazel-*

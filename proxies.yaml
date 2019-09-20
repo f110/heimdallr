@@ -1,5 +1,7 @@
 - name: test.local-proxy.f110.dev
   upstream: http://localhost:4501
+  webhook: github
+  webhook_path: ["/webhook"]
   permissions:
     - name: all
       locations:

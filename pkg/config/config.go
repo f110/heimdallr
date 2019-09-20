@@ -125,9 +125,12 @@ type Backend struct {
 	Name        string        `json:"name"` // Name is an identifier
 	Upstream    string        `json:"upstream"`
 	Permissions []*Permission `json:"permissions"`
+	WebHook     string        `json:"webhook"` // name of webhook provider (e.g. github)
+	WebHookPath []string      `json:"webhook_path"`
 
-	Url    *url.URL `json:"-"`
-	Socket bool     `json:"-"`
+	Url           *url.URL    `json:"-"`
+	Socket        bool        `json:"-"`
+	WebHookRouter *mux.Router `json:"-"`
 }
 
 type Permission struct {
@@ -151,14 +154,16 @@ type Location struct {
 }
 
 type FrontendProxy struct {
-	Bind                 string   `json:"bind"`
-	CertFile             string   `json:"cert_file"`
-	KeyFile              string   `json:"key_file"`
-	SigningSecretKeyFile string   `json:"signing_secret_key_file"`
-	Session              *Session `json:"session"`
+	Bind                    string   `json:"bind"`
+	CertFile                string   `json:"cert_file"`
+	KeyFile                 string   `json:"key_file"`
+	SigningSecretKeyFile    string   `json:"signing_secret_key_file"`
+	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
+	Session                 *Session `json:"session"`
 
-	Certificate       tls.Certificate   `json:"-"`
-	SigningPrivateKey crypto.PrivateKey `json:"-"`
+	Certificate         tls.Certificate   `json:"-"`
+	SigningPrivateKey   crypto.PrivateKey `json:"-"`
+	GithubWebhookSecret []byte            `json:"-"`
 }
 
 type Session struct {
@@ -283,6 +288,13 @@ func (f *FrontendProxy) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 		f.SigningPrivateKey = privateKey
+	}
+	if f.GithubWebHookSecretFile != "" {
+		b, err := ioutil.ReadFile(absPath(f.GithubWebHookSecretFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f.GithubWebhookSecret = b
 	}
 	if f.Session != nil {
 		if err := f.Session.Inflate(dir); err != nil {
@@ -507,6 +519,14 @@ func (b *Backend) inflate() error {
 
 	if u.Scheme == "tcp" {
 		b.Socket = true
+	}
+
+	if len(b.WebHookPath) > 0 {
+		mux := mux.NewRouter()
+		for _, v := range b.WebHookPath {
+			mux.PathPrefix(v)
+		}
+		b.WebHookRouter = mux
 	}
 
 	return nil

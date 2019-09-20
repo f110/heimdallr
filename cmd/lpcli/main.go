@@ -104,6 +104,20 @@ func commandBootstrap(args []string) error {
 		}
 	}
 
+	_, err = os.Stat(absPath(conf.FrontendProxy.GithubWebHookSecretFile, dir))
+	if os.IsNotExist(err) {
+		b := make([]byte, 32)
+		if _, err := io.ReadFull(rand.Reader, b); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f, err := os.Create(absPath(conf.FrontendProxy.GithubWebHookSecretFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f.Write(b)
+		f.Close()
+	}
+
 	_, err = os.Stat(absPath(conf.FrontendProxy.Session.KeyFile, dir))
 	if os.IsNotExist(err) {
 		switch conf.FrontendProxy.Session.Type {
