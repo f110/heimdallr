@@ -30,6 +30,7 @@ frontend_proxy:
   bind: :4000
   cert_file: ./tls.crt
   key_file: ./tls.key
+  access_log: ./access.log
   signing_secret_key_file: ./privatekey.pem
   github_webhook_secret_file: ./github_webhook_secret
   session:

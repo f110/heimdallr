@@ -2,7 +2,10 @@ package frontproxy
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -23,13 +26,58 @@ import (
 const (
 	TokenHeaderName  = "X-Auth-Token"
 	UserIdHeaderName = "X-Auth-Id"
+
+	requestIdLength = 32
 )
 
 var TokenExpiration = 5 * time.Minute
 
+type AccessLog struct {
+	Time      time.Time `json:"time"`
+	Host      string    `json:"host"`
+	Protocol  string    `json:"protocol"`
+	Method    string    `json:"method"`
+	Path      string    `json:"path"`
+	Status    int       `json:"status"`
+	UserAgent string    `json:"user_agent"`
+	ClientIp  string    `json:"client_ip"`
+	AppTime   int       `json:"app_time_ms"`
+	RequestId string    `json:"request_id"`
+	UserId    string    `json:"user_id"`
+}
+
+type loggedResponseWriter struct {
+	internal http.ResponseWriter
+	status   int
+}
+
+func (w *loggedResponseWriter) Header() http.Header {
+	return w.internal.Header()
+}
+
+func (w *loggedResponseWriter) Write(b []byte) (n int, err error) {
+	return w.internal.Write(b)
+}
+
+func (w *loggedResponseWriter) WriteHeader(statusCode int) {
+	w.status = statusCode
+	w.internal.WriteHeader(statusCode)
+}
+
+type accessLogger struct {
+	internal *json.Encoder
+}
+
+func (a *accessLogger) Log(l AccessLog) {
+	if err := a.internal.Encode(l); err != nil {
+		logger.Log.Warn("Failed encoding access log", zap.Error(err))
+	}
+}
+
 type HttpProxy struct {
 	Config *config.Config
 
+	accessLogger *accessLogger
 	reverseProxy *httputil.ReverseProxy
 }
 
@@ -39,14 +87,21 @@ func NewHttpProxy(conf *config.Config) *HttpProxy {
 		reverseProxy: &httputil.ReverseProxy{
 			ErrorLog: logger.CompatibleLogger,
 		},
+		accessLogger: &accessLogger{json.NewEncoder(conf.FrontendProxy.AccessLog)},
 	}
 	p.reverseProxy.Director = p.director
 
 	return p
 }
 
-func (p *HttpProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+// ServeHTTP has responsibility to serving content to client.
+// ctx should be used instead of req.Context().
+func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *http.Request) {
+	w = &loggedResponseWriter{internal: w}
+
 	user, err := auth.Authenticate(req)
+	defer p.accessLog(ctx, w, req, user)
+
 	switch err {
 	case auth.ErrSessionNotFound:
 		logger.Log.Debug("Session not found")
@@ -79,7 +134,7 @@ func (p *HttpProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p.reverseProxy.ServeHTTP(w, req)
 }
 
-func (p *HttpProxy) ServeGithubWebHook(w http.ResponseWriter, req *http.Request) {
+func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
 	backend, ok := p.Config.General.GetBackendByHost(req.Host)
 	if !ok {
 		panic(http.ErrAbortHandler)
@@ -151,6 +206,53 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
 
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
+}
+
+func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *http.Request, user *database.User) {
+	requestId := ""
+	v := ctx.Value("request_id")
+	if v != nil {
+		switch s := v.(type) {
+		case string:
+			requestId = s
+		}
+	}
+
+	status := 0
+	switch v := w.(type) {
+	case *loggedResponseWriter:
+		status = v.status
+	}
+
+	appTime := 0
+	v = ctx.Value("dispatch_time")
+	if v != nil {
+		switch s := v.(type) {
+		case time.Time:
+			log.Print(s)
+			appTime = int(time.Now().Sub(s) / time.Millisecond)
+		}
+	}
+	remoteAddr := strings.Split(req.RemoteAddr, ":")
+	id := ""
+	if user != nil {
+		id = user.Id
+	}
+
+	l := AccessLog{
+		Time:      time.Now(),
+		Host:      req.Host,
+		Protocol:  req.Proto,
+		Method:    req.Method,
+		Path:      req.URL.Path,
+		Status:    status,
+		UserAgent: req.Header.Get("User-Agent"),
+		ClientIp:  remoteAddr[0],
+		AppTime:   appTime,
+		RequestId: requestId,
+		UserId:    id,
+	}
+	p.accessLogger.Log(l)
 }
 
 func joinPath(base, path string) string {

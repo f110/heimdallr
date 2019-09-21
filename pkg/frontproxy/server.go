@@ -2,9 +2,14 @@ package frontproxy
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha1"
 	"crypto/tls"
+	"encoding/hex"
+	"io"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -50,7 +55,7 @@ func NewFrontendProxy(conf *config.Config) *FrontendProxy {
 		httpProxy:   h,
 		socketProxy: s,
 	}
-	p.server.Handler = h
+	p.server.Handler = p
 
 	return p
 }
@@ -87,10 +92,23 @@ func (p *FrontendProxy) Shutdown(ctx context.Context) error {
 }
 
 func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	requestId := p.requestId()
+	ctx := context.WithValue(req.Context(), "dispatch_time", time.Now())
+	ctx = context.WithValue(ctx, "request_id", requestId)
+
 	switch {
 	case req.Header.Get("X-Hub-Signature") != "":
-		p.httpProxy.ServeGithubWebHook(w, req)
+		p.httpProxy.ServeGithubWebHook(ctx, w, req)
 	default:
-		p.httpProxy.ServeHTTP(w, req)
+		p.httpProxy.ServeHTTP(ctx, w, req)
 	}
+}
+
+func (p *FrontendProxy) requestId() string {
+	buf := make([]byte, requestIdLength/2)
+	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+		return ""
+	}
+	s := sha1.Sum(buf)
+	return hex.EncodeToString(s[:])
 }

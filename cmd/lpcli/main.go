@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -175,11 +176,13 @@ func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certif
 }
 
 func commandTestServer() error {
+	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.HandleFunc("/env", func(w http.ResponseWriter, req *http.Request) {
 		b, _ := httputil.DumpRequest(req, false)
 		w.Write(b)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		time.Sleep(5 * time.Millisecond)
 		io.WriteString(w, "It's working!")
 	})
 	fmt.Println("Listen :4501")
