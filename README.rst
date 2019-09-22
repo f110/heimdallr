@@ -17,7 +17,7 @@ Generate some secret keys and certificates for development.
 
     $ bazel run //cmd/lpcli -- bootstrap -c $(pwd)/config_debug.yaml
 
-`config_debug.yaml` is configuration for development. DO NOT USE IN PROCUCTION WITHOUT CHANGES.
+`config_debug.yaml` is configuration for development. DO NOT USE IN PRODUCTION WITHOUT CHANGES.
 
 After generate some secrets and certificates, build and run.
 
