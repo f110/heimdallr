@@ -84,11 +84,11 @@ type IdentityProvider struct {
 	ServerName       string   `json:"server_name"`
 	AuthPath         string   `json:"auth_path"`
 	TokenPath        string   `json:"token_path"`
-	Provider         string   `json:"provider"`
+	Provider         string   `json:"provider"` // "google", "okta" or "azure"
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
 	ExtraScopes      []string `json:"extra_scopes"`
-	Domain           string   `json:"domain"` // for Okta
+	Domain           string   `json:"domain"` // for Okta and AzureAD
 	RedirectUrl      string   `json:"redirect_url"`
 
 	ClientSecret  string `json:"-"`

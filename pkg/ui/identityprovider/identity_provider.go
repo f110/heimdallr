@@ -37,6 +37,8 @@ func NewServer(conf *config.IdentityProvider, database database.UserDatabase, st
 		issuer = "https://accounts.google.com"
 	case "okta":
 		issuer = "https://" + conf.Domain + ".okta.com"
+	case "azure":
+		issuer = "https://login.microsoftonline.com/" + conf.Domain + "/v2.0"
 	default:
 		return nil, xerrors.Errorf("unknown provider: %s", conf.Provider)
 	}
