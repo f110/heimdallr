@@ -35,6 +35,10 @@ func NewServer(conf *config.IdentityProvider, database database.UserDatabase, st
 	switch conf.Provider {
 	case "google":
 		issuer = "https://accounts.google.com"
+	case "okta":
+		issuer = "https://" + conf.Domain + ".okta.com"
+	default:
+		return nil, xerrors.Errorf("unknown provider: %s", conf.Provider)
 	}
 	provider, err := oidc.NewProvider(context.Background(), issuer)
 	if err != nil {

@@ -88,6 +88,7 @@ type IdentityProvider struct {
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
 	ExtraScopes      []string `json:"extra_scopes"`
+	Domain           string   `json:"domain"` // for Okta
 	RedirectUrl      string   `json:"redirect_url"`
 
 	ClientSecret  string `json:"-"`
