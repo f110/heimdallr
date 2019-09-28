@@ -2,15 +2,20 @@ package etcd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"sigs.k8s.io/yaml"
 )
 
 type UserDatabase struct {
@@ -102,6 +107,66 @@ func (d *UserDatabase) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return xerrors.Errorf(": $v", err)
 	}
+	return nil
+}
+
+type state struct {
+	State     string
+	Unique    string
+	CreatedAt time.Time
+}
+
+func (d *UserDatabase) SetState(ctx context.Context, unique string) (string, error) {
+	buf := make([]byte, 10)
+	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+		return "", xerrors.Errorf("database: failure generate state: %v", err)
+	}
+	stateString := base64.StdEncoding.EncodeToString(buf)
+
+	s := &state{State: stateString[:len(stateString)-2], Unique: unique, CreatedAt: time.Now()}
+	b, err := yaml.Marshal(s)
+	if err != nil {
+		return "", xerrors.Errorf(": %v", err)
+	}
+
+	_, err = d.client.Put(ctx, fmt.Sprintf("user_state/%s", s.State), string(b))
+	if err != nil {
+		return "", xerrors.Errorf(": %v", err)
+	}
+	return s.State, nil
+}
+
+func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string, error) {
+	res, err := d.client.Get(ctx, fmt.Sprintf("user_state/%s", stateString))
+	if err != nil {
+		return "", xerrors.Errorf(": %v", err)
+	}
+	if res.Count == 0 {
+		return "", xerrors.New("database: state not found")
+	}
+
+	s := &state{}
+	if err := yaml.Unmarshal(res.Kvs[0].Value, s); err != nil {
+		return "", xerrors.Errorf(": %v", err)
+	}
+	if s.CreatedAt.Add(1 * time.Hour).Before(time.Now()) {
+		_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", stateString))
+		if err != nil {
+			logger.Log.Warn("failure delete state", zap.String("state", stateString))
+		}
+
+		return "", xerrors.New("database: state not founds")
+	}
+
+	return s.Unique, nil
+}
+
+func (d *UserDatabase) DeleteState(ctx context.Context, state string) error {
+	_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", state))
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
 	return nil
 }
 

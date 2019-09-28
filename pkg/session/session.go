@@ -1,6 +1,9 @@
 package session
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"io"
 	"net/http"
 	"time"
 
@@ -18,6 +21,7 @@ var (
 )
 
 type Session struct {
+	Unique          string
 	Id              string
 	IssuedAt        time.Time
 	Challenge       string
@@ -32,7 +36,10 @@ func (s *Session) SetId(id string) {
 }
 
 func New(id string) *Session {
-	return &Session{Id: id, IssuedAt: time.Now()}
+	buf := make([]byte, 10)
+	_, _ = io.ReadFull(rand.Reader, buf)
+
+	return &Session{Unique: base64.StdEncoding.EncodeToString(buf), Id: id, IssuedAt: time.Now()}
 }
 
 type Store interface {

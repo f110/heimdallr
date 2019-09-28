@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -126,7 +125,6 @@ func (c *TokenClient) exchangeToken(endpoint, code, codeVerifier string) (string
 		return "", xerrors.Errorf(": %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		log.Print(res.Status)
 		return "", xerrors.New("localproxy: failure exchange token")
 	}
 

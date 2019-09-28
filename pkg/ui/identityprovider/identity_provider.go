@@ -69,18 +69,41 @@ func (s *Server) Route(router *httprouter.Router) {
 }
 
 func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
+	sess := session.New("")
 	if req.URL.Query().Get("from") != "" {
-		sess := session.New("")
 		sess.From = req.URL.Query().Get("from")
-		if err := s.sessionStore.SetSession(w, sess); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+
 	}
-	http.Redirect(w, req, s.oauth2Config.AuthCodeURL(""), http.StatusFound)
+	state, err := s.database.SetState(req.Context(), sess.Unique)
+	if err != nil {
+		logger.Log.Info("Failed set state", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	logger.Log.Debug("Generated state", zap.String("value", state))
+	if err := s.sessionStore.SetSession(w, sess); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, req, s.oauth2Config.AuthCodeURL(state), http.StatusFound)
 }
 
 func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
+	sess, err := s.sessionStore.GetSession(req)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	unique, err := s.database.GetState(req.Context(), req.URL.Query().Get("state"))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if sess.Unique != unique {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	token, err := s.oauth2Config.Exchange(req.Context(), req.URL.Query().Get("code"))
 	if err != nil {
 		logger.Log.Info("Failed exchange token", zap.Error(err))
@@ -119,13 +142,10 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	}
 
 	redirectUrl := ""
-	sess, err := s.sessionStore.GetSession(req)
-	if err != nil {
-		sess = session.New(user.Id)
-	} else {
+	if sess.From != "" {
 		redirectUrl = sess.From
-		sess.SetId(user.Id)
 	}
+	sess.SetId(user.Id)
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)

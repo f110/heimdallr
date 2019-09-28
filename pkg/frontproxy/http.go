@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -229,7 +228,6 @@ func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *h
 	if v != nil {
 		switch s := v.(type) {
 		case time.Time:
-			log.Print(s)
 			appTime = int(time.Now().Sub(s) / time.Millisecond)
 		}
 	}

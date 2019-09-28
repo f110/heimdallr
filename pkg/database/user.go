@@ -17,6 +17,9 @@ type UserDatabase interface {
 	GetAll() []*User
 	Set(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
+	SetState(ctx context.Context, unique string) (string, error)
+	GetState(ctx context.Context, state string) (string, error)
+	DeleteState(ctx context.Context, state string) error
 }
 
 type User struct {
