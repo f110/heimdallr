@@ -14,6 +14,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/dashboard"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
@@ -37,7 +38,9 @@ type mainProcess struct {
 	userDatabase  *etcd.UserDatabase
 	caDatabase    database.CertificateAuthority
 	tokenDatabase database.TokenDatabase
+	relayLocator  database.RelayLocator
 	sessionStore  session.Store
+	connector     *connector.Server
 
 	front     *frontproxy.FrontendProxy
 	ui        *ui.Server
@@ -79,6 +82,10 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
+	client, _ := m.config.Datastore.GetEtcdClient()
+	if err := client.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	}
 	if m.etcd != nil {
 		m.etcd.Server.Stop()
 	}
@@ -103,7 +110,7 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) startFrontendProxy() {
-	m.front = frontproxy.NewFrontendProxy(m.config)
+	m.front = frontproxy.NewFrontendProxy(m.config, m.connector)
 	if err := m.front.Serve(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
@@ -118,7 +125,7 @@ func (m *mainProcess) startUIServer() {
 	}
 	t := token.New(m.sessionStore, m.tokenDatabase)
 
-	uiServer := ui.New(m.config, idp, t)
+	uiServer := ui.New(m.config, m.connector, idp, t)
 	m.ui = uiServer
 	if err := m.ui.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -185,6 +192,12 @@ func (m *mainProcess) Setup() error {
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
 	}
 	m.tokenDatabase = etcd.NewTemporaryToken(client)
+	m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	m.connector = connector.NewServer(m.config, m.caDatabase, m.relayLocator)
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase, m.tokenDatabase)
 	return nil

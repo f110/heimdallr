@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
@@ -33,10 +34,12 @@ type ChildServer interface {
 
 type Server struct {
 	Config *config.Config
-	server *http.Server
+
+	server    *http.Server
+	connector *connector.Server
 }
 
-func New(conf *config.Config, child ...ChildServer) *Server {
+func New(conf *config.Config, c *connector.Server, child ...ChildServer) *Server {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
@@ -47,7 +50,11 @@ func New(conf *config.Config, child ...ChildServer) *Server {
 		server: &http.Server{
 			ErrorLog: logger.CompatibleLogger,
 			Handler:  mux,
+			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
+				connector.ProtocolName: c.Accept,
+			},
 		},
+		connector: c,
 	}
 }
 
@@ -58,11 +65,15 @@ func (s *Server) Start() error {
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:   tls.VersionTLS12,
+		MaxVersion:   tls.VersionTLS12,
 		CipherSuites: allowCipherSuites,
 		Certificates: []tls.Certificate{s.Config.UI.Certificate},
+		ClientAuth:   tls.RequestClientCert,
+		ClientCAs:    s.Config.General.CertificateAuthority.CertPool,
+		NextProtos:   []string{connector.ProtocolName, http2.NextProtoTLS},
 	})
 
-	if err := http2.ConfigureServer(s.server, &http2.Server{}); err != nil {
+	if err := http2.ConfigureServer(s.server, nil); err != nil {
 		return err
 	}
 

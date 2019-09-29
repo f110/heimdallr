@@ -1,0 +1,23 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <h2 class="ui header">Issue new client certificate for agent</h2>
+  <div class="ui divider"></div>
+  <form class="ui form" action="/agent/new" method="POST">
+    <div class="field">
+      <label>Agent</label>
+      <select class="ui fluid dropdown" name="id">
+      {{ range .Names -}}
+        <option value="{{ . }}">{{ . }}</option>
+      {{ end -}}
+      </select>
+    </div>
+    <div class="field">
+      <label>Comment</label>
+      <textarea rows="2" name="comment"></textarea>
+    </div>
+    <button class="ui button primary" type="submit">Register</a>
+  </form>
+</div>
+
+{{ template "include/footer.tmpl" }}

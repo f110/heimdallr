@@ -57,6 +57,9 @@ func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca databa
 	s.Post("/cert/new", s.handleNewClientCert, s.AdminOnly)
 	s.Post("/cert/revoke", s.handleRevokeCert, s.AdminOnly)
 	s.Get("/cert/download", s.handleDownloadCert, s.AdminOnly)
+	s.Get("/agent", s.handleAgentIndex, s.AdminOnly)
+	s.Get("/agent/new", s.handleNewAgent, s.AdminOnly)
+	s.Post("/agent/new", s.handleAgentRegister, s.AdminOnly)
 	s.server.Handler = mux
 
 	return s
@@ -161,6 +164,9 @@ func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *h
 	}
 	signedCertificates := make([]*signedCertificate, 0, len(signed))
 	for _, v := range signed {
+		if v.Agent {
+			continue
+		}
 		signedCertificates = append(signedCertificates, &signedCertificate{
 			SerialNumber: v.Certificate.SerialNumber.Text(16),
 			CommonName:   v.Certificate.Subject.CommonName,
@@ -178,6 +184,13 @@ func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *h
 	sort.Slice(revoked, func(i, j int) bool {
 		return revoked[i].RevokedAt.After(revoked[j].RevokedAt)
 	})
+	revokedList := make([]*database.RevokedCertificate, 0, len(revoked))
+	for _, v := range revoked {
+		if v.Agent {
+			continue
+		}
+		revokedList = append(revokedList, v)
+	}
 
 	s.RenderTemplate(w, "cert/index.tmpl", struct {
 		CertificateAuthority *x509.Certificate
@@ -186,7 +199,7 @@ func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *h
 	}{
 		CertificateAuthority: s.Config.General.CertificateAuthority.Certificate,
 		SignedCertificates:   signedCertificates,
-		RevokedCertificates:  revoked,
+		RevokedCertificates:  revokedList,
 	})
 }
 
@@ -238,7 +251,11 @@ func (s *Server) handleRevokeCert(_ *database.User, w http.ResponseWriter, req *
 		return
 	}
 
-	http.Redirect(w, req, "/cert", http.StatusFound)
+	if _, ok := req.Form["agent"]; ok {
+		http.Redirect(w, req, "/agent", http.StatusFound)
+	} else {
+		http.Redirect(w, req, "/cert", http.StatusFound)
+	}
 }
 
 func (s *Server) handleDownloadCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
@@ -477,6 +494,91 @@ func (s *Server) handleMakeAdmin(_ *database.User, w http.ResponseWriter, req *h
 	}
 
 	http.Redirect(w, req, "/users", http.StatusFound)
+}
+
+func (s *Server) handleAgentIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	signed, err := s.ca.GetSignedCertificates(req.Context())
+	if err != nil {
+		logger.Log.Info("Can't get signed certificates", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	signedCertificates := make([]*signedCertificate, 0, len(signed))
+	for _, v := range signed {
+		if !v.Agent {
+			continue
+		}
+		signedCertificates = append(signedCertificates, &signedCertificate{
+			SerialNumber: v.Certificate.SerialNumber.Text(16),
+			CommonName:   v.Certificate.Subject.CommonName,
+			IssuedAt:     v.IssuedAt,
+			Comment:      v.Comment,
+			P12:          len(v.P12) > 0,
+		})
+	}
+
+	sort.Slice(signedCertificates, func(i, j int) bool {
+		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
+	})
+
+	revoked := s.ca.GetRevokedCertificates()
+	revokedList := make([]*database.RevokedCertificate, 0, len(revoked))
+	for _, v := range revoked {
+		if !v.Agent {
+			continue
+		}
+		revokedList = append(revokedList, v)
+	}
+	sort.Slice(revokedList, func(i, j int) bool {
+		return revokedList[i].RevokedAt.After(revokedList[j].RevokedAt)
+	})
+
+	s.RenderTemplate(w, "agent/index.tmpl", struct {
+		SignedCertificates  []*signedCertificate
+		RevokedCertificates []*database.RevokedCertificate
+	}{
+		SignedCertificates:  signedCertificates,
+		RevokedCertificates: revokedList,
+	})
+}
+
+func (s *Server) handleNewAgent(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	backends := s.Config.General.GetAllBackends()
+	names := make([]string, 0, len(backends))
+	for _, v := range backends {
+		if !v.Agent {
+			continue
+		}
+		names = append(names, v.Name)
+	}
+
+	s.RenderTemplate(w, "agent/new.tmpl", struct {
+		Names []string
+	}{
+		Names: names,
+	})
+}
+
+func (s *Server) handleAgentRegister(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	backend, ok := s.Config.General.GetBackend(req.FormValue("id"))
+	if !ok || !backend.Agent {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err := s.ca.NewAgentCertificate(req.Context(), req.FormValue("id"), req.FormValue("comment"))
+	if err != nil {
+		logger.Log.Info("Failed create new client certificate", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/agent", http.StatusFound)
 }
 
 func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interface{}) {

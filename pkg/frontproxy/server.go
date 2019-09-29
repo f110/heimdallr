@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -40,9 +41,9 @@ type FrontendProxy struct {
 	socketProxy *SocketProxy
 }
 
-func NewFrontendProxy(conf *config.Config) *FrontendProxy {
-	s := NewSocketProxy(conf)
-	h := NewHttpProxy(conf)
+func NewFrontendProxy(conf *config.Config, ct *connector.Server) *FrontendProxy {
+	s := NewSocketProxy(conf, ct)
+	h := NewHttpProxy(conf, ct)
 
 	p := &FrontendProxy{
 		Config: conf,

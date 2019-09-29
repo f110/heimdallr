@@ -23,6 +23,9 @@
         <method importPath="strings" receiver="*Builder" name="WriteRune" />
         <method importPath="math/rand" receiver="*Rand" name="Read" />
         <method importPath="os" receiver="*File" name="Close" />
+        <method importPath="github.com/f110/lagrangian-proxy/pkg/connector" receiver="*Frame" name="Write" />
+        <method importPath="github.com/f110/lagrangian-proxy/pkg/connector" receiver="*Frame" name="EncodeTo" />
+        <method importPath="io" receiver="Writer" name="Write" />
       </methods>
     </inspection_tool>
   </profile>

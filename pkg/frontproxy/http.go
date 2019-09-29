@@ -14,6 +14,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/session"
@@ -73,6 +74,36 @@ func (a *accessLogger) Log(l AccessLog) {
 	}
 }
 
+type Transport struct {
+	config    *config.Config
+	connector *connector.Server
+	internal  *http.Transport
+}
+
+func NewTransport(conf *config.Config, ct *connector.Server) *Transport {
+	return &Transport{
+		config:    conf,
+		connector: ct,
+		internal: &http.Transport{
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          100,
+			MaxConnsPerHost:       16,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+}
+
+func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	b, ok := t.config.General.GetBackendByHost(req.Host)
+	if ok && b.Agent {
+		return t.connector.RoundTrip(b, req)
+	}
+
+	return t.internal.RoundTrip(req)
+}
+
 type HttpProxy struct {
 	Config *config.Config
 
@@ -80,11 +111,12 @@ type HttpProxy struct {
 	reverseProxy *httputil.ReverseProxy
 }
 
-func NewHttpProxy(conf *config.Config) *HttpProxy {
+func NewHttpProxy(conf *config.Config, ct *connector.Server) *HttpProxy {
 	p := &HttpProxy{
 		Config: conf,
 		reverseProxy: &httputil.ReverseProxy{
-			ErrorLog: logger.CompatibleLogger,
+			ErrorLog:  logger.CompatibleLogger,
+			Transport: NewTransport(conf, ct),
 		},
 		accessLogger: &accessLogger{json.NewEncoder(conf.FrontendProxy.AccessLog)},
 	}

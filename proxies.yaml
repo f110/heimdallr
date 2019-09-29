@@ -24,3 +24,17 @@
     - name: all
       locations:
         - any: /
+- name: agent.local-proxy.f110.dev
+  upstream: tcp://localhost:22
+  agent: true
+  permissions:
+    - name: all
+      locations:
+        - any: /
+- name: test-agent.local-proxy.f110.dev
+  upstream: http://localhost:4501
+  agent: true
+  permissions:
+    - name: all
+      locations:
+        - any: /

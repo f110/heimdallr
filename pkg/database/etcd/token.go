@@ -38,6 +38,9 @@ func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database
 	if err := yaml.Unmarshal(res.Kvs[0].Value, tk); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
+	if tk.IssuedAt.Add(database.TokenExpiration).Before(time.Now()) {
+		return nil, database.ErrTokenNotFound
+	}
 	return tk, nil
 }
 
@@ -93,7 +96,7 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	token := &database.Token{Token: s, UserId: c.UserId}
+	token := &database.Token{Token: s, UserId: c.UserId, IssuedAt: time.Now()}
 	b, err := yaml.Marshal(token)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)

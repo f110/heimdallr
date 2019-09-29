@@ -130,6 +130,7 @@ type Backend struct {
 	Permissions []*Permission `json:"permissions"`
 	WebHook     string        `json:"webhook"` // name of webhook provider (e.g. github)
 	WebHookPath []string      `json:"webhook_path"`
+	Agent       bool          `json:"agent"`
 
 	Url           *url.URL    `json:"-"`
 	Socket        bool        `json:"-"`
@@ -363,6 +364,26 @@ func (g *General) GetBackendByHost(host string) (*Backend, bool) {
 	}
 
 	return g.GetBackendByHostname(h)
+}
+
+func (g *General) GetBackend(name string) (*Backend, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	for _, v := range g.Backends {
+		if v.Name == name {
+			return v, true
+		}
+	}
+
+	return nil, false
+}
+
+func (g *General) GetAllBackends() []*Backend {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	return g.Backends
 }
 
 func (g *General) GetAllRoles() []Role {

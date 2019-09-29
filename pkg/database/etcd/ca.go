@@ -3,9 +3,11 @@ package etcd
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
@@ -13,6 +15,8 @@ import (
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -102,6 +106,14 @@ func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 }
 
 func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {
+	return c.generateClientCertificate(ctx, name, password, comment, false)
+}
+
+func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error) {
+	return c.generateClientCertificate(ctx, name, connector.DefaultCertificatePassword, comment, true)
+}
+
+func (c *CA) generateClientCertificate(ctx context.Context, name, password, comment string, agent bool) ([]byte, error) {
 	serial, err := c.newSerialNumber(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -126,11 +138,46 @@ func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment s
 		P12:         data,
 		IssuedAt:    time.Now(),
 		Comment:     comment,
+		Agent:       agent,
 	}); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
 	return data, nil
+}
+
+func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	var serial *big.Int
+	serial, err = rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			Organization:       []string{c.config.Organization},
+			OrganizationalUnit: []string{c.config.OrganizationUnit},
+			Country:            []string{c.config.Country},
+			CommonName:         commonName,
+		},
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().AddDate(1, 0, 0).UTC(),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		SignatureAlgorithm:    x509.ECDSAWithSHA256,
+	}
+	b, err := x509.CreateCertificate(rand.Reader, template, c.config.Certificate, &privKey.PublicKey, c.config.PrivateKey)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	cert, _ := x509.ParseCertificate(b)
+	return cert, privKey, nil
 }
 
 func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate) error {
@@ -141,6 +188,7 @@ func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate
 		IssuedAt:     certificate.IssuedAt,
 		RevokedAt:    time.Now(),
 		Comment:      certificate.Comment,
+		Agent:        certificate.Agent,
 	})
 	if err != nil {
 		return xerrors.Errorf(": %v", err)

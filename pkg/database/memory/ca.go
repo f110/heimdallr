@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/f110/lagrangian-proxy/pkg/connector"
+
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"golang.org/x/xerrors"
@@ -60,6 +62,14 @@ func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 }
 
 func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {
+	return c.generateClientCertificate(ctx, name, password, comment, false)
+}
+
+func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error) {
+	return c.generateClientCertificate(ctx, name, connector.DefaultCertificatePassword, comment, true)
+}
+
+func (c *CA) generateClientCertificate(ctx context.Context, name, password, comment string, agent bool) ([]byte, error) {
 	serial, err := c.newSerialNumber(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -83,6 +93,7 @@ func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment s
 		P12:         data,
 		IssuedAt:    time.Now(),
 		Comment:     comment,
+		Agent:       agent,
 	}); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

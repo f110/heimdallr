@@ -9,6 +9,7 @@ go_library(
         "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/config/configreader:go_default_library",
+        "//pkg/connector:go_default_library",
         "//pkg/dashboard:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/etcd:go_default_library",

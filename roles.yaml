@@ -8,6 +8,8 @@
       permission: all
     - backend: ssh.local-proxy.f110.dev
       permission: all
+    - backend: agent.local-proxy.f110.dev
+      permission: all
 - name: user
   title: User
   bindings:

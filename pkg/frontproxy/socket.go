@@ -17,6 +17,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
@@ -112,11 +113,12 @@ type Stream struct {
 }
 
 type SocketProxy struct {
-	Config *config.Config
+	Config    *config.Config
+	connector *connector.Server
 }
 
-func NewSocketProxy(conf *config.Config) *SocketProxy {
-	return &SocketProxy{Config: conf}
+func NewSocketProxy(conf *config.Config, ct *connector.Server) *SocketProxy {
+	return &SocketProxy{Config: conf, connector: ct}
 }
 
 func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
@@ -209,10 +211,18 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 
 func (st *Stream) dialBackend(ctx context.Context) error {
 	logger.Log.Debug("dial backend", zap.String("addr", st.backend.Url.Host))
-	conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", st.backend.Url.Host)
+	var conn net.Conn
+	var err error
+	if st.backend.Agent {
+		d := connector.NewDialer(st.parent.connector, st.backend.Name)
+		conn, err = d.DialContext(ctx, "", "")
+	} else {
+		conn, err = (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", st.backend.Url.Host)
+	}
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
+
 	st.backendConn = conn
 	buf := make([]byte, 5)
 	buf[0] = TypeOpenSuccess
@@ -225,8 +235,8 @@ func (st *Stream) pipe() error {
 	go func() {
 		if err := st.readBackend(); err != nil {
 			logger.Log.Info("Something occurred during to read from backend", zap.Error(err))
-			st.close()
 		}
+		st.close()
 	}()
 
 	return st.readConn()
@@ -238,8 +248,12 @@ func (st *Stream) readBackend() error {
 	header[0] = TypePacket
 	for {
 		n, err := st.backendConn.Read(readBuffer)
-		if err != nil && !isClosedNetwork(err) {
-			return xerrors.Errorf(": %v", err)
+		if err != nil {
+			if isClosedNetwork(err) {
+				return nil
+			} else {
+				return xerrors.Errorf(": %v", err)
+			}
 		}
 
 		binary.BigEndian.PutUint32(header[1:5], uint32(n))

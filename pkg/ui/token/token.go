@@ -72,7 +72,7 @@ func (t *Server) handleAuthorized(w http.ResponseWriter, req *http.Request, _ ht
 func (t *Server) handleExchange(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	token, err := t.tokenDatabase.IssueToken(req.Context(), req.URL.Query().Get("code"), req.URL.Query().Get("code_verifier"))
 	if err != nil {
-		logger.Log.Debug("Failure issue token", zap.Error(err))
+		logger.Log.Debug("Failure issue token", zap.Error(err), zap.String("code", req.URL.Query().Get("code")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

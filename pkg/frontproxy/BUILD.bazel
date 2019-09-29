@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
+        "//pkg/connector:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/session:go_default_library",
