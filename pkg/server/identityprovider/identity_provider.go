@@ -9,6 +9,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
@@ -29,6 +30,8 @@ type Server struct {
 	oauth2Config oauth2.Config
 	verifier     *oidc.IDTokenVerifier
 }
+
+var _ server.ChildServer = &Server{}
 
 func NewServer(conf *config.IdentityProvider, database database.UserDatabase, store session.Store) (*Server, error) {
 	issuer := ""

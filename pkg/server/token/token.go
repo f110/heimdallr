@@ -7,6 +7,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/f110/lagrangian-proxy/pkg/template"
 	"github.com/f110/lagrangian-proxy/tmpl/ui"
@@ -19,6 +20,8 @@ type Server struct {
 	sessionStore  session.Store
 	tokenDatabase database.TokenDatabase
 }
+
+var _ server.ChildServer = &Server{}
 
 func New(sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
 	return &Server{

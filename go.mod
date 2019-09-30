@@ -24,7 +24,7 @@ require (
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
-	github.com/prometheus/client_golang v1.1.0 // indirect
+	github.com/prometheus/client_golang v1.1.0
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/spf13/pflag v1.0.3
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect

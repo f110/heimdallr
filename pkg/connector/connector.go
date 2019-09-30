@@ -17,6 +17,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/stat"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
@@ -302,6 +303,9 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 	}
 	s.setUpstreamConn(b.Name, conn)
 	defer s.deleteUpstreamConn(b.Name)
+
+	stat.Value.NewAgent()
+	defer stat.Value.RemoveAgent()
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

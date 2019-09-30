@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["stat.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/server/internalapi",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/server:go_default_library",
+        "//pkg/stat:go_default_library",
+        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp:go_default_library",
+    ],
+)

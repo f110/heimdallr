@@ -16,6 +16,7 @@ go_library(
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/session:go_default_library",
+        "//pkg/stat:go_default_library",
         "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
         "//vendor/github.com/google/go-github/v28/github:go_default_library",
         "//vendor/github.com/gorilla/mux:go_default_library",

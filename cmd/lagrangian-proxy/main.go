@@ -20,10 +20,11 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/server"
+	"github.com/f110/lagrangian-proxy/pkg/server/identityprovider"
+	"github.com/f110/lagrangian-proxy/pkg/server/internalapi"
+	"github.com/f110/lagrangian-proxy/pkg/server/token"
 	"github.com/f110/lagrangian-proxy/pkg/session"
-	"github.com/f110/lagrangian-proxy/pkg/ui"
-	"github.com/f110/lagrangian-proxy/pkg/ui/identityprovider"
-	"github.com/f110/lagrangian-proxy/pkg/ui/token"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -43,7 +44,7 @@ type mainProcess struct {
 	connector     *connector.Server
 
 	front     *frontproxy.FrontendProxy
-	ui        *ui.Server
+	server    *server.Server
 	dashboard *dashboard.Server
 	etcd      *embed.Etcd
 }
@@ -72,8 +73,8 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
-	if m.ui != nil {
-		if err := m.ui.Shutdown(ctx); err != nil {
+	if m.server != nil {
+		if err := m.server.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
@@ -124,17 +125,18 @@ func (m *mainProcess) startUIServer() {
 		return
 	}
 	t := token.New(m.sessionStore, m.tokenDatabase)
+	internalApi := internalapi.NewServer()
 
-	uiServer := ui.New(m.config, m.connector, idp, t)
-	m.ui = uiServer
-	if err := m.ui.Start(); err != nil && err != http.ErrServerClosed {
+	s := server.New(m.config, m.connector, idp, t, internalApi)
+	m.server = s
+	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
 
 func (m *mainProcess) startDashboard() {
-	server := dashboard.NewServer(m.config, m.userDatabase, m.caDatabase)
-	m.dashboard = server
+	dashboardServer := dashboard.NewServer(m.config, m.userDatabase, m.caDatabase)
+	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
