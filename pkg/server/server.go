@@ -65,7 +65,6 @@ func (s *Server) Start() error {
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:   tls.VersionTLS12,
-		MaxVersion:   tls.VersionTLS12,
 		CipherSuites: allowCipherSuites,
 		Certificates: []tls.Certificate{s.Config.UI.Certificate},
 		ClientAuth:   tls.RequestClientCert,
