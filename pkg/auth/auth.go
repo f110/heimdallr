@@ -156,6 +156,9 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 	if err != nil {
 		return nil, ErrSessionNotFound
 	}
+	if s.Id == "" {
+		return nil, ErrSessionNotFound
+	}
 	u, err := a.userDatabase.Get(s.Id)
 	if err != nil {
 		return nil, ErrUserNotFound

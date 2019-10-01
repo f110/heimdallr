@@ -192,6 +192,8 @@ func (m *mainProcess) Setup() error {
 	switch m.config.FrontendProxy.Session.Type {
 	case config.SessionTypeSecureCookie:
 		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
+	case config.SessionTypeMemcached:
+		m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
 	}
 	m.tokenDatabase = etcd.NewTemporaryToken(client)
 	m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)

@@ -29,6 +29,7 @@ import (
 const (
 	EmbedEtcdUrlFilename    = "embed_etcd_url"
 	SessionTypeSecureCookie = "secure_cookie"
+	SessionTypeMemcached    = "memcached"
 )
 
 var (
@@ -174,8 +175,9 @@ type FrontendProxy struct {
 }
 
 type Session struct {
-	Type    string `json:"type"`
-	KeyFile string `json:"key_file"`
+	Type    string   `json:"type"` // secure_cookie or memcached
+	KeyFile string   `json:"key_file"`
+	Servers []string `json:"servers"`
 
 	HashKey  []byte `json:"-"`
 	BlockKey []byte `json:"-"`
