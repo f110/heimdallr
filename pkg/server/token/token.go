@@ -32,12 +32,12 @@ func New(sessionStore session.Store, tokenDatabase database.TokenDatabase) *Serv
 }
 
 func (t *Server) Route(router *httprouter.Router) {
-	router.GET("/token/authorize", t.handle)            // for browser
+	router.GET("/token/authorize", t.handleAuthorize)   // for browser
 	router.GET("/token/authorized", t.handleAuthorized) // for browser
 	router.GET("/token/exchange", t.handleExchange)     // for api
 }
 
-func (t *Server) handle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	sess, err := t.sessionStore.GetSession(req)
 	if err != nil {
 		logger.Log.Debug("session not found")

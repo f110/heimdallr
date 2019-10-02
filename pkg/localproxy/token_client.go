@@ -146,7 +146,7 @@ func (c *TokenClient) getCode() (string, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		result <- req.URL.Query().Get("code")
-		io.WriteString(w, `success`)
+		io.WriteString(w, `<html><body>Success<br>Close this window</body></html>`)
 	})
 
 	s := &http.Server{
