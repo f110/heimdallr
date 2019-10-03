@@ -3,7 +3,9 @@ package token
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 
+	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -16,6 +18,7 @@ import (
 )
 
 type Server struct {
+	Config        *config.Config
 	loader        *template.Loader
 	sessionStore  session.Store
 	tokenDatabase database.TokenDatabase
@@ -23,8 +26,9 @@ type Server struct {
 
 var _ server.ChildServer = &Server{}
 
-func New(sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
+func New(conf *config.Config, sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
 	return &Server{
+		Config:        conf,
 		loader:        template.New(ui.Data, template.LoaderTypeEmbed, "tmpl/ui/token"),
 		sessionStore:  sessionStore,
 		tokenDatabase: tokenDatabase,
@@ -41,7 +45,15 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 	sess, err := t.sessionStore.GetSession(req)
 	if err != nil {
 		logger.Log.Debug("session not found")
-		w.WriteHeader(http.StatusInternalServerError)
+		u := &url.URL{}
+		*u = *req.URL
+		u.Scheme = "https"
+		u.Host = req.Host
+		redirectUrl, _ := url.Parse(t.Config.IdentityProvider.AuthEndpoint)
+		v := &url.Values{}
+		v.Set("from", u.String())
+		redirectUrl.RawQuery = v.Encode()
+		http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
 		return
 	}
 

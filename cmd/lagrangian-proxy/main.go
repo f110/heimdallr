@@ -124,7 +124,7 @@ func (m *mainProcess) startUIServer() {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
-	t := token.New(m.sessionStore, m.tokenDatabase)
+	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	internalApi := internalapi.NewServer()
 
 	s := server.New(m.config, m.connector, idp, t, internalApi)
