@@ -108,6 +108,59 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	return token, nil
 }
 
+func (t *TemporaryToken) AllCodes(ctx context.Context) ([]*database.Code, error) {
+	res, err := t.client.Get(ctx, "code/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	codes := make([]*database.Code, 0, res.Count)
+	for _, v := range res.Kvs {
+		c := &database.Code{}
+		if err := yaml.Unmarshal(v.Value, c); err != nil {
+			return nil, xerrors.Errorf(": $v", err)
+		}
+		codes = append(codes, c)
+	}
+
+	return codes, nil
+}
+
+func (t *TemporaryToken) DeleteCode(ctx context.Context, code string) error {
+	_, err := t.client.Delete(ctx, fmt.Sprintf("code/%s", code))
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	return nil
+}
+
+func (t *TemporaryToken) AllTokens(ctx context.Context) ([]*database.Token, error) {
+	res, err := t.client.Get(ctx, "token/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	tokens := make([]*database.Token, 0, res.Count)
+	for _, v := range res.Kvs {
+		tk := &database.Token{}
+		if err := yaml.Unmarshal(v.Value, tk); err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		tokens = append(tokens, tk)
+	}
+
+	return tokens, nil
+}
+
+func (t *TemporaryToken) DeleteToken(ctx context.Context, token string) error {
+	_, err := t.client.Delete(ctx, fmt.Sprintf("token/%s", token))
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	return nil
+}
+
 func newCode() (string, error) {
 	buf := make([]byte, 16)
 	if _, err := rand.Read(buf); err != nil {
