@@ -68,21 +68,47 @@ func (m *mainProcess) ReadConfig(p string) error {
 }
 
 func (m *mainProcess) shutdown(ctx context.Context) {
+	done := make(chan struct{})
+	var wg sync.WaitGroup
 	if m.front != nil {
-		if err := m.front.Shutdown(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.front.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
 	}
 	if m.server != nil {
-		if err := m.server.Shutdown(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.server.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
 	}
 	if m.dashboard != nil {
-		if err := m.dashboard.Shutdown(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.dashboard.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
 	}
+
+	go func() {
+		wg.Wait()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-ctx.Done():
+		logger.Log.Info("Shutdown phase is timed out")
+	case <-done:
+	}
+
 	client, _ := m.config.Datastore.GetEtcdClient()
 	if err := client.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -101,7 +127,7 @@ func (m *mainProcess) signalHandling() {
 			switch sig {
 			case syscall.SIGTERM, os.Interrupt:
 				m.Stop()
-				ctx, cancelFunc := context.WithTimeout(m.ctx, 30*time.Second)
+				ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 				m.shutdown(ctx)
 				cancelFunc()
 				return

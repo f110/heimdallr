@@ -89,7 +89,11 @@ func (p *FrontendProxy) Shutdown(ctx context.Context) error {
 	}
 
 	logger.Log.Info("Shutdown FrontendProxy")
-	return p.server.Shutdown(ctx)
+	p.socketProxy.Shutdown()
+	if err := p.server.Shutdown(ctx); err != nil {
+		logger.Log.Error("Failed shutdown FrontendProxy", zap.Error(err))
+	}
+	return nil
 }
 
 func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {

@@ -39,7 +39,7 @@ Retry:
 
 func main() {
 	if err := proxy(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		fmt.Fprintf(os.Stderr, "%+v\n\x1b[0G", err)
 		os.Exit(1)
 	}
 }

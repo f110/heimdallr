@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
@@ -43,12 +44,14 @@ const (
 	SocketErrorCodeInvalidProtocol = 1 + iota
 	SocketErrorCodeRequestAuth
 	SocketErrorCodeNotAccessible
+	SocketErrorCodeCloseConnection
 )
 
 var (
 	SocketErrorInvalidProtocol = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
 	SocketErrorRequestAuth     = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
 	SocketErrorNotAccessible   = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
+	SocketErrorCloseConnection = NewMessageError(SocketErrorCodeCloseConnection, "Sorry, the server has to close connection")
 )
 
 var (
@@ -112,6 +115,7 @@ type Stream struct {
 	token  string
 	host   string
 
+	closeOnce   sync.Once
 	user        *database.User
 	backend     *config.Backend
 	backendConn net.Conn
@@ -120,10 +124,13 @@ type Stream struct {
 type SocketProxy struct {
 	Config    *config.Config
 	connector *connector.Server
+
+	mu    sync.Mutex
+	conns map[string]*Stream
 }
 
 func NewSocketProxy(conf *config.Config, ct *connector.Server) *SocketProxy {
-	return &SocketProxy{Config: conf, connector: ct}
+	return &SocketProxy{Config: conf, connector: ct, conns: make(map[string]*Stream, 0)}
 }
 
 func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
@@ -137,6 +144,16 @@ func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 
 	st := NewStream(s, conn, conn.ConnectionState().ServerName)
 	defer st.close()
+
+	s.mu.Lock()
+	s.conns[conn.RemoteAddr().String()] = st
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		delete(s.conns, conn.RemoteAddr().String())
+		s.mu.Unlock()
+	}()
+
 	if err := st.handshake(); err != nil {
 		logger.Log.Info("Failure handshake", zap.Error(err))
 		return
@@ -149,9 +166,15 @@ func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 		logger.Log.Info("Failure dial backend", zap.Error(err))
 		return
 	}
-	if err := st.pipe(); err != nil {
+	if err := st.pipe(); err != nil && !isClosedNetwork(err) {
 		logger.Log.Info("Close pipe", zap.Error(err))
 		return
+	}
+}
+
+func (s *SocketProxy) Shutdown() {
+	for _, st := range s.conns {
+		go st.close()
 	}
 }
 
@@ -286,11 +309,7 @@ func (st *Stream) readConn() error {
 		if n != 5 {
 			return xerrors.New("frontproxy: invalid header")
 		}
-		switch header[0] {
-		case TypePacket, TypePong:
-		default:
-			return xerrors.New("frontproxy: unknown packet type")
-		}
+
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
 		if cap(readBuffer) < bodySize {
 			readBuffer = make([]byte, bodySize)
@@ -305,6 +324,8 @@ func (st *Stream) readConn() error {
 			st.backendConn.Write(readBuffer[:bodySize])
 		case TypePong:
 			st.conn.SetReadDeadline(time.Now().Add(1 * time.Minute))
+		default:
+			return xerrors.New("frontproxy: unknown packet type")
 		}
 	}
 }
@@ -327,12 +348,15 @@ func (st *Stream) heartbeat() {
 }
 
 func (st *Stream) close() {
-	if st.backendConn != nil {
-		st.backendConn.Close()
-	}
-	if st.conn != nil {
-		st.conn.Close()
-	}
+	st.closeOnce.Do(func() {
+		st.sendMessage(SocketErrorCloseConnection)
+		if st.backendConn != nil {
+			st.backendConn.Close()
+		}
+		if st.conn != nil {
+			st.conn.Close()
+		}
+	})
 }
 
 func (st *Stream) sendMessage(errMsg MessageError) {
