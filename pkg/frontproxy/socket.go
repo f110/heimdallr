@@ -35,8 +35,8 @@ const (
 	TypeOpenSuccess
 	TypePacket
 	TypeMessage
-	TypePing // not implement yet
-	TypePong // also
+	TypePing
+	TypePong
 )
 
 const (
@@ -49,6 +49,10 @@ var (
 	SocketErrorInvalidProtocol = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
 	SocketErrorRequestAuth     = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
 	SocketErrorNotAccessible   = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
+)
+
+var (
+	HeartbeatInterval = 30 * time.Second
 )
 
 type MessageError interface {
@@ -235,13 +239,14 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 }
 
 func (st *Stream) pipe() error {
-	logger.Log.Debug("Start duplexing connection")
+	logger.Log.Debug("Start duplex connection")
 	go func() {
 		if err := st.readBackend(); err != nil {
 			logger.Log.Info("Something occurred during to read from backend", zap.Error(err))
 		}
 		st.close()
 	}()
+	go st.heartbeat()
 
 	return st.readConn()
 }
@@ -281,7 +286,9 @@ func (st *Stream) readConn() error {
 		if n != 5 {
 			return xerrors.New("frontproxy: invalid header")
 		}
-		if header[0] != TypePacket {
+		switch header[0] {
+		case TypePacket, TypePong:
+		default:
 			return xerrors.New("frontproxy: unknown packet type")
 		}
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
@@ -296,6 +303,25 @@ func (st *Stream) readConn() error {
 		switch header[0] {
 		case TypePacket:
 			st.backendConn.Write(readBuffer[:bodySize])
+		case TypePong:
+			st.conn.SetReadDeadline(time.Now().Add(1 * time.Minute))
+		}
+	}
+}
+
+func (st *Stream) heartbeat() {
+	ticker := time.NewTicker(HeartbeatInterval)
+	header := make([]byte, 5)
+	header[0] = TypePing
+	for {
+		select {
+		case <-ticker.C:
+			st.conn.SetWriteDeadline(time.Now().Add(2 * HeartbeatInterval))
+			logger.Log.Debug("send heartbeat")
+			if _, err := st.conn.Write(header); err != nil {
+				st.close()
+				return
+			}
 		}
 	}
 }

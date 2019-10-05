@@ -157,7 +157,9 @@ func (c *Client) Pipe(ctx context.Context) error {
 		if n != 5 {
 			return xerrors.New("localproxy: invalid header")
 		}
-		if header[0] != frontproxy.TypePacket && header[0] != frontproxy.TypeMessage {
+		switch header[0] {
+		case frontproxy.TypeMessage, frontproxy.TypePacket, frontproxy.TypePing:
+		default:
 			return xerrors.New("localproxy: unknown packet type")
 		}
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
@@ -180,6 +182,14 @@ func (c *Client) Pipe(ctx context.Context) error {
 				return xerrors.Errorf(": %v", err)
 			}
 			return e
+		case frontproxy.TypePing:
+			h := make([]byte, 5)
+			h[0] = frontproxy.TypePong
+			c.conn.SetWriteDeadline(time.Now().Add(2 * frontproxy.HeartbeatInterval))
+			if _, err := c.conn.Write(h); err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			c.conn.SetReadDeadline(time.Now().Add(2 * frontproxy.HeartbeatInterval))
 		}
 	}
 }
