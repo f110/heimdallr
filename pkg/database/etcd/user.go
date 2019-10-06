@@ -55,6 +55,10 @@ func (d *UserDatabase) Get(id string) (*database.User, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
+	if d.users == nil {
+		return nil, database.ErrClosed
+	}
+
 	if v, ok := d.users[id]; ok {
 		return v, nil
 	} else {
@@ -62,16 +66,20 @@ func (d *UserDatabase) Get(id string) (*database.User, error) {
 	}
 }
 
-func (d *UserDatabase) GetAll() []*database.User {
+func (d *UserDatabase) GetAll() ([]*database.User, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+
+	if d.users == nil {
+		return nil, database.ErrClosed
+	}
 
 	users := make([]*database.User, 0, len(d.users))
 	for _, v := range d.users {
 		users = append(users, v)
 	}
 
-	return users
+	return users, nil
 }
 
 func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
@@ -176,10 +184,16 @@ func (d *UserDatabase) key(id string) string {
 
 func (d *UserDatabase) watchUser(ctx context.Context, revision int64) {
 	logger.Log.Debug("Start watching users")
+	defer d.close()
+
 	watchCh := d.client.Watch(ctx, "user/", clientv3.WithPrefix(), clientv3.WithRev(revision))
+Watch:
 	for {
 		select {
-		case res := <-watchCh:
+		case res, ok := <-watchCh:
+			if !ok {
+				break Watch
+			}
 			for _, event := range res.Events {
 				switch event.Type {
 				case clientv3.EventTypePut:
@@ -214,4 +228,11 @@ func (d *UserDatabase) watchUser(ctx context.Context, revision int64) {
 			return
 		}
 	}
+}
+
+func (d *UserDatabase) close() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.users = nil
 }

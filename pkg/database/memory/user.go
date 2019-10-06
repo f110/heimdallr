@@ -37,7 +37,7 @@ func (u *UserDatabase) Get(id string) (*database.User, error) {
 	return v, nil
 }
 
-func (u *UserDatabase) GetAll() []*database.User {
+func (u *UserDatabase) GetAll() ([]*database.User, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
@@ -46,7 +46,7 @@ func (u *UserDatabase) GetAll() []*database.User {
 		users = append(users, v)
 	}
 
-	return users
+	return users, nil
 }
 
 func (u *UserDatabase) Set(_ctx context.Context, user *database.User) error {

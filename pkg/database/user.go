@@ -10,11 +10,12 @@ import (
 
 var (
 	ErrUserNotFound = xerrors.New("database: user not found")
+	ErrClosed       = xerrors.New("database: closed")
 )
 
 type UserDatabase interface {
 	Get(id string) (*User, error)
-	GetAll() []*User
+	GetAll() ([]*User, error)
 	Set(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
 	SetState(ctx context.Context, unique string) (string, error)

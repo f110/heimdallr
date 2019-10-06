@@ -300,7 +300,11 @@ type roleAndUser struct {
 }
 
 func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users := s.userDatabase.GetAll()
+	users, err := s.userDatabase.GetAll()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	userMap := make(map[string][]*database.User)
 	for _, v := range users {
@@ -338,7 +342,11 @@ func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *h
 }
 
 func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users := s.userDatabase.GetAll()
+	users, err := s.userDatabase.GetAll()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	sort.Slice(users, func(i, j int) bool {
 		if users[i].Admin == users[j].Admin {

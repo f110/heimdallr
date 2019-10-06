@@ -153,8 +153,9 @@ func (m *mainProcess) startUIServer() {
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	internalApi := internalapi.NewServer()
 	resourceServer := internalapi.NewResourceServer(m.config)
+	probe := internalapi.NewProbe(make(chan struct{}))
 
-	s := server.New(m.config, m.connector, idp, t, internalApi, resourceServer)
+	s := server.New(m.config, m.connector, idp, t, internalApi, resourceServer, probe)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
