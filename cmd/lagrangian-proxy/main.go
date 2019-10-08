@@ -43,7 +43,6 @@ type mainProcess struct {
 	sessionStore  session.Store
 	connector     *connector.Server
 
-	front     *frontproxy.FrontendProxy
 	server    *server.Server
 	dashboard *dashboard.Server
 	etcd      *embed.Etcd
@@ -70,15 +69,6 @@ func (m *mainProcess) ReadConfig(p string) error {
 func (m *mainProcess) shutdown(ctx context.Context) {
 	done := make(chan struct{})
 	var wg sync.WaitGroup
-	if m.front != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := m.front.Shutdown(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "%+v\n", err)
-			}
-		}()
-	}
 	if m.server != nil {
 		wg.Add(1)
 		go func() {
@@ -136,14 +126,8 @@ func (m *mainProcess) signalHandling() {
 	}()
 }
 
-func (m *mainProcess) startFrontendProxy() {
-	m.front = frontproxy.NewFrontendProxy(m.config, m.connector)
-	if err := m.front.Serve(); err != nil && err != http.ErrServerClosed {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
-	}
-}
-
-func (m *mainProcess) startUIServer() {
+func (m *mainProcess) startServer() {
+	front := frontproxy.NewFrontendProxy(m.config, m.connector)
 	idp, err := identityprovider.NewServer(m.config.IdentityProvider, m.userDatabase, m.sessionStore)
 	if err != nil {
 		m.Stop()
@@ -155,7 +139,7 @@ func (m *mainProcess) startUIServer() {
 	resourceServer := internalapi.NewResourceServer(m.config)
 	probe := internalapi.NewProbe(make(chan struct{}))
 
-	s := server.New(m.config, m.connector, idp, t, internalApi, resourceServer, probe)
+	s := server.New(m.config, front, m.connector, idp, t, internalApi, resourceServer, probe)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -245,14 +229,7 @@ func (m *mainProcess) Start() error {
 	go func() {
 		defer m.wg.Done()
 
-		m.startFrontendProxy()
-	}()
-
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
-
-		m.startUIServer()
+		m.startServer()
 	}()
 
 	if m.config.Dashboard.Enable {

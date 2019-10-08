@@ -7,16 +7,11 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"io"
-	"net"
 	"net/http"
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/xerrors"
 )
 
 var allowCipherSuites = []uint16{
@@ -35,7 +30,6 @@ var allowCipherSuites = []uint16{
 
 type FrontendProxy struct {
 	Config *config.Config
-	server *http.Server
 
 	httpProxy   *HttpProxy
 	socketProxy *SocketProxy
@@ -46,54 +40,16 @@ func NewFrontendProxy(conf *config.Config, ct *connector.Server) *FrontendProxy 
 	h := NewHttpProxy(conf, ct)
 
 	p := &FrontendProxy{
-		Config: conf,
-		server: &http.Server{
-			ErrorLog: logger.CompatibleLogger,
-			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
-				SocketProxyNextProto: s.Accept,
-			},
-		},
+		Config:      conf,
 		httpProxy:   h,
 		socketProxy: s,
 	}
-	p.server.Handler = p
 
 	return p
 }
 
-func (p *FrontendProxy) Serve() error {
-	if err := http2.ConfigureServer(p.server, nil); err != nil {
-		return err
-	}
-
-	l, err := net.Listen("tcp", p.Config.FrontendProxy.Bind)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	listener := tls.NewListener(l, &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		CipherSuites: allowCipherSuites,
-		Certificates: []tls.Certificate{p.Config.FrontendProxy.Certificate},
-		ClientAuth:   tls.RequestClientCert,
-		ClientCAs:    p.Config.General.CertificateAuthority.CertPool,
-		NextProtos:   []string{SocketProxyNextProto, http2.NextProtoTLS},
-	})
-
-	logger.Log.Info("Start FrontendProxy", zap.String("listen", p.Config.FrontendProxy.Bind))
-	return p.server.Serve(listener)
-}
-
-func (p *FrontendProxy) Shutdown(ctx context.Context) error {
-	if p.server == nil {
-		return nil
-	}
-
-	logger.Log.Info("Shutdown FrontendProxy")
-	p.socketProxy.Shutdown()
-	if err := p.server.Shutdown(ctx); err != nil {
-		logger.Log.Error("Failed shutdown FrontendProxy", zap.Error(err))
-	}
-	return nil
+func (p *FrontendProxy) Accept(server *http.Server, conn *tls.Conn, handler http.Handler) {
+	p.socketProxy.Accept(server, conn, handler)
 }
 
 func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {

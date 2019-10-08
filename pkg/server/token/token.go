@@ -49,7 +49,7 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 		*u = *req.URL
 		u.Scheme = "https"
 		u.Host = req.Host
-		redirectUrl, _ := url.Parse(t.Config.IdentityProvider.AuthEndpoint)
+		redirectUrl, _ := url.Parse(t.Config.General.AuthEndpoint)
 		v := &url.Values{}
 		v.Set("from", u.String())
 		redirectUrl.RawQuery = v.Encode()

@@ -38,7 +38,6 @@ var (
 
 type Config struct {
 	General          *General          `json:"general"`
-	UI               *UI               `json:"ui"`
 	IdentityProvider *IdentityProvider `json:"identity_provider"`
 	Datastore        *Datastore        `json:"datastore"`
 	Logger           *Logger           `json:"logger"`
@@ -47,6 +46,10 @@ type Config struct {
 }
 
 type General struct {
+	Bind                 string                `json:"bind"`
+	ServerName           string                `json:"server_name"`
+	CertFile             string                `json:"cert_file"`
+	KeyFile              string                `json:"key_file"`
 	RoleFile             string                `json:"role_file"`
 	ProxyFile            string                `json:"proxy_file"`
 	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
@@ -58,14 +61,10 @@ type General struct {
 	mu                sync.RWMutex        `json:"-"`
 	hostnameToBackend map[string]*Backend `json:"-"`
 	roleNameToRole    map[string]Role     `json:"-"`
-}
 
-type UI struct {
-	Bind     string `json:"bind"`
-	CertFile string `json:"cert_file"`
-	KeyFile  string `json:"key_file"`
-
-	Certificate tls.Certificate `json:"-"`
+	Certificate   tls.Certificate `json:"-"`
+	AuthEndpoint  string          `json:"-"`
+	TokenEndpoint string          `json:"-"`
 }
 
 type CertificateAuthority struct {
@@ -82,9 +81,6 @@ type CertificateAuthority struct {
 }
 
 type IdentityProvider struct {
-	ServerName       string   `json:"server_name"`
-	AuthPath         string   `json:"auth_path"`
-	TokenPath        string   `json:"token_path"`
 	Provider         string   `json:"provider"` // "google", "okta" or "azure"
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
@@ -92,9 +88,7 @@ type IdentityProvider struct {
 	Domain           string   `json:"domain"` // for Okta and AzureAD
 	RedirectUrl      string   `json:"redirect_url"`
 
-	ClientSecret  string `json:"-"`
-	AuthEndpoint  string `json:"-"`
-	TokenEndpoint string `json:"-"`
+	ClientSecret string `json:"-"`
 }
 
 type Datastore struct {
@@ -159,9 +153,6 @@ type Location struct {
 }
 
 type FrontendProxy struct {
-	Bind                    string   `json:"bind"`
-	CertFile                string   `json:"cert_file"`
-	KeyFile                 string   `json:"key_file"`
 	SigningSecretKeyFile    string   `json:"signing_secret_key_file"`
 	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
 	AccessLogFile           string   `json:"access_log"`
@@ -214,20 +205,7 @@ func (idp *IdentityProvider) Inflate(dir string) error {
 		b = bytes.TrimRight(b, "\n")
 		idp.ClientSecret = string(b)
 	}
-	idp.AuthEndpoint = fmt.Sprintf("https://%s%s", idp.ServerName, idp.AuthPath)
-	idp.TokenEndpoint = fmt.Sprintf("https://%s%s", idp.ServerName, idp.TokenPath)
 
-	return nil
-}
-
-func (ui *UI) Inflate(dir string) error {
-	if ui.CertFile != "" && ui.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(absPath(ui.CertFile, dir), absPath(ui.KeyFile, dir))
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		ui.Certificate = cert
-	}
 	return nil
 }
 
@@ -284,13 +262,6 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 }
 
 func (f *FrontendProxy) Inflate(dir string) error {
-	if f.CertFile != "" && f.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(absPath(f.CertFile, dir), absPath(f.KeyFile, dir))
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		f.Certificate = cert
-	}
 	if f.SigningSecretKeyFile != "" {
 		privateKey, err := readPrivateKey(absPath(f.SigningSecretKeyFile, dir))
 		if err != nil {
@@ -407,8 +378,13 @@ func (g *General) GetRole(name string) (Role, error) {
 }
 
 func (g *General) Inflate(dir string) error {
-	g.mu = sync.RWMutex{}
-
+	if g.CertFile != "" && g.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(absPath(g.CertFile, dir), absPath(g.KeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		g.Certificate = cert
+	}
 	if g.RoleFile != "" {
 		roles := make([]Role, 0)
 		b, err := ioutil.ReadFile(absPath(g.RoleFile, dir))
@@ -436,6 +412,9 @@ func (g *General) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
+
+	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.ServerName)
+	g.TokenEndpoint = fmt.Sprintf("https://%s/token", g.ServerName)
 
 	return g.Load()
 }

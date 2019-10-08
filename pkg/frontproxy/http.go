@@ -140,7 +140,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		*u = *req.URL
 		u.Scheme = "https"
 		u.Host = req.Host
-		redirectUrl, _ := url.Parse(p.Config.IdentityProvider.AuthEndpoint)
+		redirectUrl, _ := url.Parse(p.Config.General.AuthEndpoint)
 		v := &url.Values{}
 		v.Set("from", u.String())
 		redirectUrl.RawQuery = v.Encode()

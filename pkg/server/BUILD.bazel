@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/config:go_default_library",
         "//pkg/connector:go_default_library",
+        "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
         "//vendor/github.com/julienschmidt/httprouter:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",

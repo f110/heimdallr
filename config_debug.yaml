@@ -1,4 +1,8 @@
 general:
+  bind: :4000
+  server_name: local-proxy.f110.dev:4000
+  cert_file: ./tls.crt
+  key_file: ./tls.key
   role_file: ./roles.yaml
   proxy_file: ./proxies.yaml
   certificate_authority:
@@ -9,27 +13,19 @@ general:
     country: jp
   root_users:
     - fmhrit@gmail.com
-ui:
-  bind: :4001
-  cert_file: ./tls.crt
-  key_file: ./tls.key
-identity_provider:
-  server_name: local-proxy.f110.dev:4001
   auth_path: /auth
   token_path: /token
+identity_provider:
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
   client_secret_file: ./client_secret
   extra_scopes: ["email"]
-  redirect_url: https://local-proxy.f110.dev:4001/auth/callback
+  redirect_url: https://local-proxy.f110.dev:4000/auth/callback
 datastore:
   url: etcd://embed
   data_dir: ./data
   namespace: /lp
 frontend_proxy:
-  bind: :4000
-  cert_file: ./tls.crt
-  key_file: ./tls.key
   access_log: ./access.log
   signing_secret_key_file: ./privatekey.pem
   github_webhook_secret_file: ./github_webhook_secret

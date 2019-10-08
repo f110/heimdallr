@@ -158,7 +158,7 @@ func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 		logger.Log.Info("Failure handshake", zap.Error(err))
 		return
 	}
-	if err := st.authenticate(ctx, s.Config.IdentityProvider.TokenEndpoint); err != nil {
+	if err := st.authenticate(ctx, s.Config.General.TokenEndpoint); err != nil {
 		logger.Log.Info("Failure authenticate", zap.Error(err))
 		return
 	}
