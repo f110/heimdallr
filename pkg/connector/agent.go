@@ -16,6 +16,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
+const (
+	AddrTypeV4 byte = 0x01
+	AddrTypeV6 byte = 02
+)
+
 type Agent struct {
 	id         uint32
 	backend    string
@@ -90,9 +95,19 @@ func (a *Agent) Serve() error {
 			a.conns[streamId] = conn
 			a.mu.Unlock()
 
-			b := make([]byte, 8)
+			addr := conn.RemoteAddr().(*net.TCPAddr)
+			b := make([]byte, 9+len(addr.IP)+4)
 			binary.BigEndian.PutUint32(b[:4], dialId)
 			binary.BigEndian.PutUint32(b[4:8], streamId)
+			// addr type
+			if len(addr.IP) == net.IPv6len {
+				b[8] = AddrTypeV6
+			} else {
+				b[8] = AddrTypeV4
+			}
+			copy(b[9:9+len(addr.IP)], addr.IP)
+			binary.BigEndian.PutUint32(b[9+len(addr.IP):9+len(addr.IP)+4], uint32(addr.Port))
+
 			f := NewFrame()
 			f.Write(b)
 			f.EncodeTo(OpcodeDialSuccess, a.conn)

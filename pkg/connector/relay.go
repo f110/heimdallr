@@ -139,13 +139,19 @@ func (r *Relay) acceptConn(childConn net.Conn) {
 		switch header[0] {
 		case OpcodeDial:
 			dialId := binary.BigEndian.Uint32(buf[:4])
-			streamId, err := r.server.DialUpstreamForRelay(ctx, r.name, childConn, dialId)
+			streamId, addr, err := r.server.DialUpstreamForRelay(ctx, r.name, childConn, dialId)
 			if err != nil {
 				return
 			}
-			b := make([]byte, 8)
+			b := make([]byte, 9+len(addr.IP)+4)
 			binary.BigEndian.PutUint32(b[:4], dialId)
 			binary.BigEndian.PutUint32(b[4:8], streamId)
+			buf[8] = AddrTypeV4
+			if len(addr.IP) == net.IPv6len {
+				buf[8] = AddrTypeV6
+			}
+			copy(buf[9:9+len(addr.IP)], addr.IP)
+			binary.BigEndian.PutUint32(buf[9+len(addr.IP):9+len(addr.IP)+4], uint32(addr.Port))
 			logger.Log.Debug("dial success", zap.Int32("Dial id", int32(dialId)), zap.Uint32("stream id", streamId))
 			f := NewFrame()
 			f.Write(b)

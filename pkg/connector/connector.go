@@ -69,17 +69,25 @@ func (f *Frame) EncodeTo(opCode uint8, w io.Writer) (n int, err error) {
 }
 
 type Conn struct {
-	conn     *tls.Conn
-	r        io.ReadCloser
-	streamId uint32
-	idBuf    []byte
-	f        *Frame
+	conn       *tls.Conn
+	r          io.ReadCloser
+	remoteAddr *net.TCPAddr
+	streamId   uint32
+	idBuf      []byte
+	f          *Frame
 }
 
-func NewConn(conn *tls.Conn, streamId uint32, r io.ReadCloser) *Conn {
+func NewConn(conn *tls.Conn, streamId uint32, r io.ReadCloser, remoteAddr *net.TCPAddr) *Conn {
 	idBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(idBuf, streamId)
-	return &Conn{conn: conn, streamId: streamId, f: NewFrame(), r: r, idBuf: idBuf}
+	return &Conn{
+		conn:       conn,
+		remoteAddr: remoteAddr,
+		streamId:   streamId,
+		f:          NewFrame(),
+		r:          r,
+		idBuf:      idBuf,
+	}
 }
 
 func (c *Conn) Read(b []byte) (n int, err error) {
@@ -101,33 +109,34 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) LocalAddr() net.Addr {
-	panic("implement me")
+	return c.conn.LocalAddr()
 }
 
 func (c *Conn) RemoteAddr() net.Addr {
-	panic("implement me")
+	return c.remoteAddr
 }
 
 func (c *Conn) SetDeadline(t time.Time) error {
-	panic("implement me")
+	return c.conn.SetDeadline(t)
 }
 
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	panic("implement me")
+	return nil
 }
 
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	panic("implement me")
+	return c.conn.SetWriteDeadline(t)
 }
 
 type ConnThroughRelay struct {
-	conn       *tls.Conn
-	streamId   uint32
-	idBuf      []byte
-	f          *Frame
-	reader     io.ReadCloser
-	writer     io.Writer
-	streamIdCh chan uint32
+	conn          *tls.Conn
+	streamId      uint32
+	remoteAddr    *net.TCPAddr
+	idBuf         []byte
+	f             *Frame
+	reader        io.ReadCloser
+	writer        io.Writer
+	dialSuccessCh chan *dialSuccess
 }
 
 func NewConnThroughRelay(ctx context.Context, conn *tls.Conn) (*ConnThroughRelay, error) {
@@ -147,7 +156,7 @@ func NewConnThroughRelay(ctx context.Context, conn *tls.Conn) (*ConnThroughRelay
 	}
 	binary.BigEndian.PutUint32(id, uint32(i.Int64()))
 
-	c.streamIdCh = make(chan uint32)
+	c.dialSuccessCh = make(chan *dialSuccess)
 
 	f := NewFrame()
 	f.Write(id)
@@ -156,10 +165,11 @@ func NewConnThroughRelay(ctx context.Context, conn *tls.Conn) (*ConnThroughRelay
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case streamId := <-c.streamIdCh:
-		c.streamId = streamId
+	case su := <-c.dialSuccessCh:
+		c.streamId = su.streamId
+		c.remoteAddr = su.remoteAddr
 		c.idBuf = make([]byte, 4)
-		binary.BigEndian.PutUint32(c.idBuf, streamId)
+		binary.BigEndian.PutUint32(c.idBuf, su.streamId)
 	}
 
 	return c, nil
@@ -187,23 +197,23 @@ func (c *ConnThroughRelay) Close() error {
 }
 
 func (c *ConnThroughRelay) LocalAddr() net.Addr {
-	panic("implement me")
+	return c.conn.LocalAddr()
 }
 
 func (c *ConnThroughRelay) RemoteAddr() net.Addr {
-	panic("implement me")
+	return c.remoteAddr
 }
 
 func (c *ConnThroughRelay) SetDeadline(t time.Time) error {
-	panic("implement me")
+	return c.conn.SetDeadline(t)
 }
 
 func (c *ConnThroughRelay) SetReadDeadline(t time.Time) error {
-	panic("implement me")
+	return nil
 }
 
 func (c *ConnThroughRelay) SetWriteDeadline(t time.Time) error {
-	panic("implement me")
+	return c.conn.SetWriteDeadline(t)
 }
 
 func (c *ConnThroughRelay) readUpstream() {
@@ -241,7 +251,16 @@ func (c *ConnThroughRelay) readUpstream() {
 			c.writer.Write(buf[4:bodySize])
 		case OpcodeDialSuccess:
 			streamId := binary.BigEndian.Uint32(buf[4:8])
-			c.streamIdCh <- streamId
+			addrLen := net.IPv4len
+			if buf[8] == AddrTypeV6 {
+				addrLen = net.IPv6len
+			}
+			ipAddr := make([]byte, addrLen)
+			copy(ipAddr, buf[9:9+addrLen])
+			port := binary.BigEndian.Uint32(buf[9+addrLen : 9+addrLen+4])
+			addr := &net.TCPAddr{IP: ipAddr, Port: int(port)}
+
+			c.dialSuccessCh <- &dialSuccess{streamId: streamId, remoteAddr: addr}
 		case OpcodeHeartbeat:
 			c.conn.SetReadDeadline(time.Now().Add(heartbeatDuration * 2))
 			logger.Log.Debug("Got heartbeat of relay")
@@ -264,6 +283,11 @@ func (d *Dialer) DialContext(ctx context.Context, _network, _addr string) (net.C
 	return d.server.DialUpstream(ctx, d.name)
 }
 
+type dialSuccess struct {
+	streamId   uint32
+	remoteAddr *net.TCPAddr
+}
+
 type Server struct {
 	Config  *config.Config
 	Locator database.RelayLocator
@@ -272,7 +296,7 @@ type Server struct {
 
 	mu            sync.RWMutex
 	conns         map[string]*tls.Conn
-	dials         map[uint32]chan uint32
+	dials         map[uint32]chan *dialSuccess
 	serveStreams  map[uint32]io.Writer
 	roundTrippers map[string]http.RoundTripper
 }
@@ -284,7 +308,7 @@ func NewServer(conf *config.Config, ca database.CertificateAuthority, locator da
 		Pool:          NewConnectionManager(conf, locator),
 		ca:            ca,
 		conns:         make(map[string]*tls.Conn),
-		dials:         make(map[uint32]chan uint32),
+		dials:         make(map[uint32]chan *dialSuccess),
 		serveStreams:  make(map[uint32]io.Writer),
 		roundTrippers: make(map[string]http.RoundTripper),
 	}
@@ -350,13 +374,22 @@ func (s *Server) Serve(conn net.Conn) error {
 			}
 			dialId := binary.BigEndian.Uint32(buf[:4])
 			streamId := binary.BigEndian.Uint32(buf[4:8])
+			addrLen := net.IPv4len
+			if buf[8] == AddrTypeV6 {
+				addrLen = net.IPv6len
+			}
+			ipAddr := make([]byte, addrLen)
+			copy(ipAddr, buf[9:9+addrLen])
+			port := binary.BigEndian.Uint32(buf[9+addrLen : 9+addrLen+4])
+			addr := &net.TCPAddr{IP: ipAddr, Port: int(port)}
+
 			s.mu.Lock()
 			ch := s.dials[dialId]
 			delete(s.dials, dialId)
 			s.mu.Unlock()
 
 			select {
-			case ch <- streamId:
+			case ch <- &dialSuccess{streamId: streamId, remoteAddr: addr}:
 			default:
 			}
 		case OpcodePacket:
@@ -406,7 +439,7 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 	}
 	binary.BigEndian.PutUint32(id, uint32(i.Int64()))
 
-	ch := make(chan uint32)
+	ch := make(chan *dialSuccess)
 	s.mu.Lock()
 	s.dials[uint32(i.Int64())] = ch
 	s.mu.Unlock()
@@ -420,12 +453,12 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 		return nil, xerrors.New("connector: time out")
 	case <-ctx.Done():
 		return nil, xerrors.New("connector: canceled")
-	case streamId := <-ch:
+	case su := <-ch:
 		r, w := io.Pipe()
-		c := NewConn(conn, streamId, r)
+		c := NewConn(conn, su.streamId, r, su.remoteAddr)
 
 		s.mu.Lock()
-		s.serveStreams[streamId] = w
+		s.serveStreams[su.streamId] = w
 		s.mu.Unlock()
 		return c, nil
 	}
@@ -439,20 +472,20 @@ func (s *Server) dialUpstreamViaRelay(ctx context.Context, b *config.Backend) (n
 	return NewConnThroughRelay(ctx, conn)
 }
 
-func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Writer, dialId uint32) (uint32, error) {
+func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Writer, dialId uint32) (uint32, *net.TCPAddr, error) {
 	b, ok := s.Config.General.GetBackend(name)
 	if !ok {
-		return 0, xerrors.New("connector: backend not found")
+		return 0, nil, xerrors.New("connector: backend not found")
 	}
 	conn, ok := s.getUpstreamConn(b.Name)
 	if !ok {
-		return 0, xerrors.New("connector: backend not connected")
+		return 0, nil, xerrors.New("connector: backend not connected")
 	}
 
 	id := make([]byte, 4)
 	binary.BigEndian.PutUint32(id, dialId)
 
-	ch := make(chan uint32)
+	ch := make(chan *dialSuccess)
 	s.mu.Lock()
 	s.dials[dialId] = ch
 	s.mu.Unlock()
@@ -463,14 +496,14 @@ func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Wri
 
 	select {
 	case <-time.After(5 * time.Second):
-		return 0, xerrors.New("connector: time out")
+		return 0, nil, xerrors.New("connector: time out")
 	case <-ctx.Done():
-		return 0, xerrors.New("connector: canceled")
-	case streamId := <-ch:
+		return 0, nil, xerrors.New("connector: canceled")
+	case su := <-ch:
 		s.mu.Lock()
-		s.serveStreams[streamId] = w
+		s.serveStreams[su.streamId] = w
 		s.mu.Unlock()
-		return streamId, nil
+		return su.streamId, su.remoteAddr, nil
 	}
 }
 
