@@ -45,7 +45,7 @@ func NewRelayLocator(ctx context.Context, client *clientv3.Client) (*RelayLocato
 		rl.cache[r.Name] = r
 	}
 	w := client.Watch(ctx, "relay/", clientv3.WithPrefix(), clientv3.WithRev(res.Header.Revision))
-	go rl.watch(w)
+	go rl.watch(w, res.Header.Revision)
 
 	return rl, nil
 }
@@ -107,10 +107,19 @@ func (l *RelayLocator) Gone() chan *database.Relay {
 	return l.gone
 }
 
-func (l *RelayLocator) watch(watch clientv3.WatchChan) {
+func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
+	defer logger.Log.Debug("Stop watch relay locator")
+
 	for {
 		select {
 		case events := <-watch:
+			if len(events.Events) == 0 {
+				return
+			}
+			if startRev >= events.Header.Revision {
+				continue
+			}
+
 			for _, e := range events.Events {
 				switch e.Type {
 				case clientv3.EventTypePut:

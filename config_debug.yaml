@@ -13,8 +13,6 @@ general:
     country: jp
   root_users:
     - fmhrit@gmail.com
-  auth_path: /auth
-  token_path: /token
 identity_provider:
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
@@ -24,7 +22,6 @@ identity_provider:
 datastore:
   url: etcd://embed
   data_dir: ./data
-  namespace: /lp
 frontend_proxy:
   access_log: ./access.log
   signing_secret_key_file: ./privatekey.pem
@@ -32,12 +29,6 @@ frontend_proxy:
   session:
     type: secure_cookie
     key_file: ./cookie_secret
-logger:
-  level: debug
-  encoding: console
 dashboard:
   enable: true
   bind: :4100
-  template:
-    loader: shotgun
-    dir: tmpl/dashboard

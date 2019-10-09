@@ -21,7 +21,33 @@ func ReadConfig(filename string) (*config.Config, error) {
 		return nil, err
 	}
 
-	conf := &config.Config{}
+	conf := &config.Config{
+		General: &config.General{
+			Bind:       ":4000",
+			ServerName: "local-proxy.f110.dev:4000",
+		},
+		Logger: &config.Logger{
+			Level:    "debug",
+			Encoding: "console",
+		},
+		Dashboard: &config.Dashboard{
+			Enable: false,
+			Bind:   ":4100",
+			Template: &config.Template{
+				Loader: "shotgun",
+				Dir:    "tmpl/dashboard",
+			},
+		},
+		Datastore: &config.Datastore{
+			Namespace: "/lp",
+		},
+		FrontendProxy: &config.FrontendProxy{
+			AccessLogFile: "./access.log",
+		},
+		IdentityProvider: &config.IdentityProvider{
+			RedirectUrl: "https://local-proxy.f110.dev:4000/auth/callback",
+		},
+	}
 	if err := yaml.Unmarshal(b, conf); err != nil {
 		return nil, xerrors.Errorf("config: file parse error: %v", err)
 	}
