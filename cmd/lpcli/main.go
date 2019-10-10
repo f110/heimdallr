@@ -80,9 +80,9 @@ func commandBootstrap(args []string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	_, err = os.Stat(absPath(conf.FrontendProxy.CertFile, dir))
+	_, err = os.Stat(absPath(conf.General.CertFile, dir))
 	certFileExist = !os.IsNotExist(err)
-	_, err = os.Stat(absPath(conf.FrontendProxy.KeyFile, dir))
+	_, err = os.Stat(absPath(conf.General.KeyFile, dir))
 	keyFileExist = !os.IsNotExist(err)
 	if !certFileExist && !keyFileExist {
 		if err := createNewServerCertificate(conf, dir, cert, privateKey); err != nil {
@@ -166,10 +166,10 @@ func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certif
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := auth.PemEncode(absPath(conf.FrontendProxy.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+	if err := auth.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := auth.PemEncode(absPath(conf.FrontendProxy.CertFile, dir), "CERTIFICATE", cert); err != nil {
+	if err := auth.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", cert); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil

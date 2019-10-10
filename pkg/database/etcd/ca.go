@@ -16,10 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/connector"
-
 	"github.com/coreos/etcd/clientv3"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
