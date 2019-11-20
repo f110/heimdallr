@@ -1,0 +1,33 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <div class="ui row">
+    <a class="ui basic button primary" href="/sa/new"><i class="desktop icon"></i>New</a>
+  </div>
+
+  <table class="ui table striped">
+    <thead>
+      <th>Id</th>
+      <th>Comment</th>
+      <th></th>
+    </thead>
+    <tbody>
+      {{ range .Accounts }}
+      <tr>
+        <td><a href="/user/{{ .Id }}">{{ .Id }}</a></td>
+        <td>Sample</td>
+        <td>
+          <div class="ui right floated tiny buttons">
+            <form method="POST">
+            <a class="ui basic button olive" href="/service_account/{{ .Id }}/token">Token</a>
+            <button type="submit" class="ui basic button red" formaction="/user/{{ .Id }}/delete">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</div>
+
+{{ template "include/footer.tmpl" }}

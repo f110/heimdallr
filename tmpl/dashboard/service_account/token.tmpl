@@ -1,0 +1,44 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <div class="ui row">
+    <button class="ui basic button primary" onclick="$('.ui.modal').modal('show');"><i class="sign-in icon"></i>New</button>
+  </div>
+
+  <table class="ui table striped">
+    <thead>
+      <th>Name</th>
+      <th>Issuer</th>
+      <th>Timestamp</th>
+    </thead>
+    <tbody>
+    {{ range .Tokens }}
+    <tr>
+      <td>{{ .Name }}</td>
+      <td>{{ .Issuer }}</td>
+      <td>{{ .CreatedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+    </tr>
+    {{ end }}
+    </tbody>
+  </table>
+</div>
+
+<div class="ui modal">
+  <div class="header">New</div>
+  <div class="content">
+    <form class="ui form" action="/service_account/{{ .Id }}/token" method="POST">
+      <input type="hidden" name="id" value="{{ .Id }}">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="What's use for?">
+      </div>
+      <div class="field">
+        <label>Comment</label>
+        <textarea rows="2"></textarea>
+      </div>
+      <button class="ui button primary" type="submit">Create</button>
+    </form>
+  </div>
+</div>
+
+{{ template "include/footer.tmpl" }}

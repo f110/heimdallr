@@ -36,6 +36,9 @@
               {{ if $user.Admin -}}
               <button class="ui button basic green mini">Admin</button>
               {{ end -}}
+              {{ if $user.ServiceAccount -}}
+              <button class="ui button basic pink mini">ServiceAccount</button>
+              {{ end -}}
             </td>
             <td>
               <form method="POST">

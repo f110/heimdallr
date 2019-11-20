@@ -15,11 +15,14 @@
           {{ if .Admin -}}
           <button class="ui button basic green mini" style="margin-left: 1em">Admin</button>
           {{ end -}}
+          {{- if .ServiceAccount -}}
+          <button class="ui button basic pink mini" style="margin-left: 1em">ServiceAccount</button>
+          {{ end -}}
         </td>
         <td>
           <div class="ui right floated tiny buttons">
             <form method="POST">
-            <button type="submit" class="ui button" formaction="/user/{{ .Id }}/admin">{{ if .Admin }}Back to user{{ else }}Become admin{{ end }}</button>
+            {{ if not .ServiceAccount }}<button type="submit" class="ui button" formaction="/user/{{ .Id }}/admin">{{ if .Admin }}Back to user{{ else }}Become admin{{ end }}</button>{{ end }}
             <button type="submit" class="ui button red" formaction="/user/{{ .Id }}/delete">Delete</button>
             </form>
           </div>

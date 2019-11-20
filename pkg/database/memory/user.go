@@ -12,9 +12,10 @@ import (
 )
 
 type UserDatabase struct {
-	mu    sync.Mutex
-	data  map[string]*database.User
-	state map[string]string
+	mu        sync.Mutex
+	data      map[string]*database.User
+	tokenData map[string]*database.AccessToken
+	state     map[string]string
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -43,10 +44,53 @@ func (u *UserDatabase) GetAll() ([]*database.User, error) {
 
 	users := make([]*database.User, 0, len(u.data))
 	for _, v := range u.data {
+		if v.Type != database.UserTypeNormal {
+			continue
+		}
 		users = append(users, v)
 	}
 
 	return users, nil
+}
+
+func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	users := make([]*database.User, 0, len(u.data))
+	for _, v := range u.data {
+		if v.Type != database.UserTypeServiceAccount {
+			continue
+		}
+		users = append(users, v)
+	}
+
+	return users, nil
+}
+
+func (u *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	tokens := make([]*database.AccessToken, 0)
+	for _, v := range u.tokenData {
+		if v.UserId == id {
+			tokens = append(tokens, v)
+		}
+	}
+
+	return tokens, nil
+}
+
+func (u *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	if v, ok := u.tokenData[value]; ok {
+		return v, nil
+	}
+
+	return nil, database.ErrAccessTokenNotFound
 }
 
 func (u *UserDatabase) Set(_ctx context.Context, user *database.User) error {
@@ -54,6 +98,14 @@ func (u *UserDatabase) Set(_ctx context.Context, user *database.User) error {
 	defer u.mu.Unlock()
 
 	u.data[user.Id] = user
+	return nil
+}
+
+func (u *UserDatabase) SetAccessToken(_ context.Context, token *database.AccessToken) error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.tokenData[token.Value] = token
 	return nil
 }
 

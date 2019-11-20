@@ -21,8 +21,9 @@ import (
 type UserDatabase struct {
 	client *clientv3.Client
 
-	mu    sync.RWMutex
-	users map[string]*database.User
+	mu     sync.RWMutex
+	users  map[string]*database.User
+	tokens map[string]*database.AccessToken
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -48,6 +49,27 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client) (*UserDatabas
 
 	u := &UserDatabase{client: client, users: users}
 	go u.watchUser(ctx, res.Header.Revision)
+
+	res, err = client.Get(ctx, "user_token/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	tokens := make([]*database.AccessToken, 0, res.Count)
+	for _, v := range res.Kvs {
+		token := &database.AccessToken{}
+		if err := yaml.Unmarshal(v.Value, token); err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		tokens = append(tokens, token)
+	}
+	t := make(map[string]*database.AccessToken)
+	for _, v := range tokens {
+		t[v.Value] = v
+	}
+	u.tokens = t
+	go u.watchToken(ctx, res.Header.Revision)
+
 	return u, nil
 }
 
@@ -82,12 +104,60 @@ func (d *UserDatabase) GetAll() ([]*database.User, error) {
 	return users, nil
 }
 
+func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if d.users == nil {
+		return nil, database.ErrClosed
+	}
+
+	users := make([]*database.User, 0, len(d.users))
+	for _, v := range d.users {
+		if !v.ServiceAccount() {
+			continue
+		}
+		users = append(users, v)
+	}
+
+	return users, nil
+}
+
+func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if d.tokens == nil {
+		return nil, database.ErrClosed
+	}
+
+	tokens := make([]*database.AccessToken, 0)
+	for _, v := range d.tokens {
+		if v.UserId == id {
+			tokens = append(tokens, v)
+		}
+	}
+
+	return tokens, nil
+}
+
+func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if v, ok := d.tokens[value]; ok {
+		return v, nil
+	}
+
+	return nil, database.ErrAccessTokenNotFound
+}
+
 func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	if user.Id == "" {
 		return xerrors.New("etcd: User.Id is required")
 	}
 
-	if len(user.Roles) == 0 {
+	if !user.ServiceAccount() && len(user.Roles) == 0 {
 		return d.Delete(ctx, user.Id)
 	}
 
@@ -108,6 +178,16 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	}
 
 	return nil
+}
+
+func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.AccessToken) error {
+	b, err := yaml.Marshal(token)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	_, err = d.client.Put(ctx, fmt.Sprintf("user_token/%s", token.Value), string(b))
+	return err
 }
 
 func (d *UserDatabase) Delete(ctx context.Context, id string) error {
@@ -230,9 +310,58 @@ Watch:
 	}
 }
 
+func (d *UserDatabase) watchToken(ctx context.Context, revision int64) {
+	logger.Log.Debug("Start watching tokens")
+	defer d.close()
+
+	watchCh := d.client.Watch(ctx, "user_token/", clientv3.WithPrefix(), clientv3.WithRev(revision))
+Watch:
+	for {
+		select {
+		case res, ok := <-watchCh:
+			if !ok {
+				break Watch
+			}
+			for _, event := range res.Events {
+				switch event.Type {
+				case clientv3.EventTypePut:
+					token := &database.AccessToken{}
+					if err := yaml.Unmarshal(event.Kv.Value, token); err != nil {
+						continue
+					}
+					if token.Value == "" {
+						logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
+						continue
+					}
+
+					d.mu.Lock()
+					d.tokens[token.Value] = token
+					d.mu.Unlock()
+					logger.Log.Debug("Add new token", zap.String("value", token.Value))
+				case clientv3.EventTypeDelete:
+					key := strings.Split(string(event.Kv.Key), "/")
+					value := key[len(key)-1]
+					d.mu.Lock()
+					if _, ok := d.tokens[value]; !ok {
+						logger.Log.Warn("Token not found", zap.String("value", value))
+						d.mu.Unlock()
+						continue
+					}
+					delete(d.tokens, value)
+					d.mu.Unlock()
+					logger.Log.Debug("Remove token", zap.String("value", value))
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func (d *UserDatabase) close() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	d.users = nil
+	d.tokens = nil
 }

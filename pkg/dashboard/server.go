@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
@@ -60,6 +61,11 @@ func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca databa
 	s.Get("/agent", s.handleAgentIndex, s.AdminOnly)
 	s.Get("/agent/new", s.handleNewAgent, s.AdminOnly)
 	s.Post("/agent/new", s.handleAgentRegister, s.AdminOnly)
+	s.Get("/sa", s.handleServiceAccount, s.AdminOnly)
+	s.Get("/sa/new", s.handleNewServiceAccount, s.AdminOnly)
+	s.Post("/sa/new", s.handleCreateServiceAccount, s.AdminOnly)
+	s.Get("/service_account/:id/token", s.handleServiceAccountToken, s.AdminOnly)
+	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken, s.AdminOnly)
 	s.server.Handler = mux
 
 	return s
@@ -144,6 +150,87 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) handleIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "index.tmpl", nil)
+}
+
+func (s *Server) handleServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	users, err := s.userDatabase.GetAllServiceAccount()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	sort.Slice(users, func(i, j int) bool {
+		return strings.Compare(users[i].Id, users[j].Id) < 0
+	})
+
+	s.RenderTemplate(w, "service_account/index.tmpl", struct {
+		Accounts []*database.User
+	}{
+		Accounts: users,
+	})
+}
+
+func (s *Server) handleNewServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	s.RenderTemplate(w, "service_account/new.tmpl", nil)
+}
+
+func (s *Server) handleCreateServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err := s.userDatabase.Set(req.Context(), &database.User{Id: req.FormValue("id"), Comment: req.FormValue("comment"), Type: database.UserTypeServiceAccount})
+	if err != nil {
+		logger.Log.Info("Failed create service account", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/service_account", http.StatusFound)
+}
+
+func (s *Server) handleServiceAccountToken(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	tokens, err := s.userDatabase.GetAccessTokens(params.ByName("id"))
+	if err != nil {
+		logger.Log.Info("Failed get tokens", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	s.RenderTemplate(w, "service_account/token.tmpl", struct {
+		Id     string
+		Tokens []*database.AccessToken
+	}{
+		Id:     params.ByName("id"),
+		Tokens: tokens,
+	})
+}
+
+func (s *Server) handleNewServiceAccountToken(user *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	newToken, err := auth.NewAccessToken(req.FormValue("name"), params.ByName("id"), user.Id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err := s.userDatabase.SetAccessToken(req.Context(), newToken); err != nil {
+		logger.Log.Info("Failed set access token", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	s.RenderTemplate(w, "service_account/token_new.tmpl", struct {
+		Name  string
+		Token string
+	}{
+		Name:  newToken.Name,
+		Token: newToken.Value,
+	})
 }
 
 type signedCertificate struct {
@@ -288,10 +375,11 @@ func (s *Server) handleDownloadCert(_ *database.User, w http.ResponseWriter, req
 }
 
 type user struct {
-	Id         string
-	Role       string
-	Maintainer bool
-	Admin      bool
+	Id             string
+	Role           string
+	Maintainer     bool
+	Admin          bool
+	ServiceAccount bool
 }
 
 type roleAndUser struct {
@@ -324,7 +412,7 @@ func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *h
 			if v, ok := k.MaintainRoles[v.Name]; ok {
 				maintainer = v
 			}
-			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer, Admin: k.Admin})
+			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer, Admin: k.Admin, ServiceAccount: k.ServiceAccount()})
 		}
 		sort.Slice(u, func(i, j int) bool {
 			return strings.Compare(u[i].Id, u[j].Id) < 0
@@ -358,8 +446,9 @@ func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.
 	userList := make([]user, 0, len(users))
 	for _, v := range users {
 		userList = append(userList, user{
-			Id:    v.Id,
-			Admin: v.Admin,
+			Id:             v.Id,
+			Admin:          v.Admin,
+			ServiceAccount: v.ServiceAccount(),
 		})
 	}
 

@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/pkg/dashboard",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/etcd:go_default_library",

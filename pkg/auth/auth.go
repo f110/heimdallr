@@ -152,6 +152,22 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 		return u, nil
 	}
 
+	if v := req.Header.Get("Authorization"); v == "LP-TOKEN" {
+		token := req.Header.Get("X-LP-Token")
+		if token == "" {
+			return nil, ErrUserNotFound
+		}
+		at, err := a.userDatabase.GetAccessToken(token)
+		if err != nil {
+			return nil, ErrUserNotFound
+		}
+		user, err := a.userDatabase.Get(at.UserId)
+		if err != nil {
+			return nil, ErrUserNotFound
+		}
+		return user, nil
+	}
+
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
 		return nil, ErrSessionNotFound

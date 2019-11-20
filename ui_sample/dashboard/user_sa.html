@@ -21,23 +21,45 @@
 </div>
 
 <div class="ui container">
-  <h2 class="ui header">Issue new client certificate</h2>
-  <div class="ui divider"></div>
-  <form class="ui form" action="/ca/new" method="POST">
-    <div class="field">
-      <label>Id</label>
-      <input type="text" name="id" placeholder="Email">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="text" name="password" placeholder="Password">
-    </div>
-    <div class="field">
-      <label>Comment</label>
-      <textarea rows="2"></textarea>
-    </div>
-    <button class="ui button primary" type="submit">Issue</button>
-  </form>
+  <div class="ui row">
+    <a class="ui basic button primary" href="./service_account_new.html"><i class="sign-in icon"></i>Token</a>
+  </div>
+
+  <table class="ui definition table">
+    <thead></thead>
+    <tbody>
+      <tr>
+        <td>Id</td>
+        <td>service_account@example.com</td>
+      </tr>
+      <tr>
+        <td>Type</td>
+        <td>Service Account</td>
+      </tr>
+      <tr>
+        <td>Role</td>
+        <td>
+          <ol class="ui list">
+            <li>Bot</li>
+          </ol>
+        </td>
+      </tr>
+      <tr>
+        <td>Last Logged-in</td>
+        <td>2019/01/01 01:02:03</td>
+      </tr>
+      <tr>
+        <td>Allowed URLs</td>
+        <td>
+          <div class="ui list">
+            <a href="" class="item">https://test.local-proxy.f110.dev</a>
+            <a href="" class="item">https://dashboard.local-proxy.f110.dev</a>
+            <a href="" class="item">https://content.local-proxy.f110.dev</a>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 </body>

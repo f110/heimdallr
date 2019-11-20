@@ -9,17 +9,27 @@
         <td>{{ .Id }}</td>
       </tr>
       <tr>
+        <td>Type</td>
+        <td>
+        {{- if .ServiceAccount -}}
+        ServiceAccount
+        {{- else -}}
+        User
+        {{- end -}}
+        </td>
+      </tr>
+      <tr>
         <td>Role</td>
         <td>
           <ol class="ui list">
-            {{ range .Roles }}
+            {{ range .Roles -}}
             <li>
             {{ if eq (index $.MaintainRoles .) true -}}
             <i class="edit icon"></i>
             {{ end -}}
             {{ . }}
             </li>
-            {{ end }}
+            {{ end -}}
           </ol>
         </td>
       </tr>
