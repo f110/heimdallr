@@ -50,7 +50,8 @@ type User struct {
 	Type          string          `json:"type"`
 	Comment       string          `json:"comment"`
 
-	Version int64 `json:"-"`
+	Version  int64 `json:"-"`
+	RootUser bool  `json:"-"`
 }
 
 func (u *User) Setup() {

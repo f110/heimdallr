@@ -14,6 +14,7 @@
         - get: /
 - name: dashboard.local-proxy.f110.dev
   upstream: http://localhost:4100
+  allow_as_root_user: true
   permissions:
     - name: all
       locations:

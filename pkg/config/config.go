@@ -120,12 +120,13 @@ type Binding struct {
 }
 
 type Backend struct {
-	Name        string        `json:"name"` // Name is an identifier
-	Upstream    string        `json:"upstream"`
-	Permissions []*Permission `json:"permissions"`
-	WebHook     string        `json:"webhook"` // name of webhook provider (e.g. github)
-	WebHookPath []string      `json:"webhook_path"`
-	Agent       bool          `json:"agent"`
+	Name            string        `json:"name"` // Name is an identifier
+	Upstream        string        `json:"upstream"`
+	Permissions     []*Permission `json:"permissions"`
+	WebHook         string        `json:"webhook"` // name of webhook provider (e.g. github)
+	WebHookPath     []string      `json:"webhook_path"`
+	Agent           bool          `json:"agent"`
+	AllowAsRootUser bool          `json:"allow_as_root_user"`
 
 	Url           *url.URL    `json:"-"`
 	Socket        bool        `json:"-"`

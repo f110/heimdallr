@@ -128,7 +128,7 @@ func (m *mainProcess) signalHandling() {
 
 func (m *mainProcess) startServer() {
 	front := frontproxy.NewFrontendProxy(m.config, m.connector)
-	idp, err := identityprovider.NewServer(m.config.IdentityProvider, m.userDatabase, m.sessionStore)
+	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {
 		m.Stop()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

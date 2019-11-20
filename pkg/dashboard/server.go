@@ -118,17 +118,18 @@ func (s *Server) AdminOnly(w http.ResponseWriter, req *http.Request) (*database.
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
+	for _, v := range s.Config.General.RootUsers {
+		if v == claims.Id {
+			return &database.User{Id: claims.Id, Admin: true}, nil
+		}
+	}
+
 	user, err := s.userDatabase.Get(claims.Id)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 	if user.Admin {
 		return user, nil
-	}
-	for _, v := range s.Config.General.RootUsers {
-		if v == user.Id {
-			return user, nil
-		}
 	}
 
 	return nil, xerrors.New("dashboard: user is not admin")

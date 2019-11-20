@@ -6,10 +6,9 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
-
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
+	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"

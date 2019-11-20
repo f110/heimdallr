@@ -23,7 +23,7 @@ type claims struct {
 }
 
 type Server struct {
-	Config *config.IdentityProvider
+	Config *config.Config
 
 	database     database.UserDatabase
 	sessionStore session.Store
@@ -33,31 +33,31 @@ type Server struct {
 
 var _ server.ChildServer = &Server{}
 
-func NewServer(conf *config.IdentityProvider, database database.UserDatabase, store session.Store) (*Server, error) {
+func NewServer(conf *config.Config, database database.UserDatabase, store session.Store) (*Server, error) {
 	issuer := ""
-	switch conf.Provider {
+	switch conf.IdentityProvider.Provider {
 	case "google":
 		issuer = "https://accounts.google.com"
 	case "okta":
-		issuer = "https://" + conf.Domain + ".okta.com"
+		issuer = "https://" + conf.IdentityProvider.Domain + ".okta.com"
 	case "azure":
-		issuer = "https://login.microsoftonline.com/" + conf.Domain + "/v2.0"
+		issuer = "https://login.microsoftonline.com/" + conf.IdentityProvider.Domain + "/v2.0"
 	default:
-		return nil, xerrors.Errorf("unknown provider: %s", conf.Provider)
+		return nil, xerrors.Errorf("unknown provider: %s", conf.IdentityProvider.Provider)
 	}
 	provider, err := oidc.NewProvider(context.Background(), issuer)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 	scopes := []string{oidc.ScopeOpenID}
-	if len(conf.ExtraScopes) > 0 {
-		scopes = append(scopes, conf.ExtraScopes...)
+	if len(conf.IdentityProvider.ExtraScopes) > 0 {
+		scopes = append(scopes, conf.IdentityProvider.ExtraScopes...)
 	}
 	oauth2Config := oauth2.Config{
-		ClientID:     conf.ClientId,
-		ClientSecret: conf.ClientSecret,
+		ClientID:     conf.IdentityProvider.ClientId,
+		ClientSecret: conf.IdentityProvider.ClientSecret,
 		Endpoint:     provider.Endpoint(),
-		RedirectURL:  conf.RedirectUrl,
+		RedirectURL:  conf.IdentityProvider.RedirectUrl,
 		Scopes:       scopes,
 	}
 
@@ -66,7 +66,7 @@ func NewServer(conf *config.IdentityProvider, database database.UserDatabase, st
 		database:     database,
 		sessionStore: store,
 		oauth2Config: oauth2Config,
-		verifier:     provider.Verifier(&oidc.Config{ClientID: conf.ClientId}),
+		verifier:     provider.Verifier(&oidc.Config{ClientID: conf.IdentityProvider.ClientId}),
 	}
 
 	return s, nil
@@ -144,8 +144,17 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
-	user, err := s.database.Get(c.Email)
-	if err != nil {
+	asRootUser := false
+	for _, v := range s.Config.General.RootUsers {
+		if v == c.Email {
+			asRootUser = true
+			break
+		}
+	}
+
+	_, err = s.database.Get(c.Email)
+	if err != nil && !asRootUser {
+		logger.Log.Info("Could not get email", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -154,7 +163,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	if sess.From != "" {
 		redirectUrl = sess.From
 	}
-	sess.SetId(user.Id)
+	sess.SetId(c.Email)
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)

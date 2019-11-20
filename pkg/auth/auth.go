@@ -55,7 +55,13 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 	}
 
 	user, err := a.findUser(req)
-	if err != nil {
+	if backend.AllowAsRootUser && err == ErrUserNotFound {
+		u, err := a.findRootUser(req)
+		if err != nil {
+			return nil, err
+		}
+		return u, nil
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -181,6 +187,32 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 	}
 
 	return u, nil
+}
+
+func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) {
+	s, err := a.sessionStore.GetSession(req)
+	if err != nil {
+		return nil, ErrSessionNotFound
+	}
+	if s.Id == "" {
+		return nil, ErrSessionNotFound
+	}
+
+	asRootUser := false
+	for _, v := range a.Config.RootUsers {
+		if v == s.Id {
+			asRootUser = true
+			break
+		}
+	}
+	if !asRootUser {
+		return nil, ErrUserNotFound
+	}
+
+	return &database.User{
+		Id:       s.Id,
+		RootUser: true,
+	}, nil
 }
 
 func (a *authenticator) findUserByToken(token string) (*database.User, error) {
