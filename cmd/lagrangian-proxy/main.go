@@ -21,6 +21,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/server"
+	"github.com/f110/lagrangian-proxy/pkg/server/ct"
 	"github.com/f110/lagrangian-proxy/pkg/server/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/server/internalapi"
 	"github.com/f110/lagrangian-proxy/pkg/server/token"
@@ -138,8 +139,9 @@ func (m *mainProcess) startServer() {
 	internalApi := internalapi.NewServer()
 	resourceServer := internalapi.NewResourceServer(m.config)
 	probe := internalapi.NewProbe(make(chan struct{}))
+	ctReport := ct.NewServer()
 
-	s := server.New(m.config, front, m.connector, idp, t, internalApi, resourceServer, probe)
+	s := server.New(m.config, front, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

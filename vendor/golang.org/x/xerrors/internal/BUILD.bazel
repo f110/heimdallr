@@ -5,5 +5,5 @@ go_library(
     srcs = ["internal.go"],
     importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/xerrors/internal",
     importpath = "golang.org/x/xerrors/internal",
-    visibility = ["//visibility:public"],
+    visibility = ["//vendor/golang.org/x/xerrors:__subpackages__"],
 )

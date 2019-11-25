@@ -131,6 +131,9 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	w = &loggedResponseWriter{internal: w}
 
 	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	if p.Config.FrontendProxy.ExpectCT {
+		w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.General.ServerName+"/ct/report\"")
+	}
 
 	user, err := auth.Authenticate(req)
 	defer p.accessLog(ctx, w, req, user)

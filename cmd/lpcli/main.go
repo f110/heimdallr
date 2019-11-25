@@ -178,7 +178,9 @@ func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certif
 func commandTestServer() error {
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.HandleFunc("/env", func(w http.ResponseWriter, req *http.Request) {
-		b, _ := httputil.DumpRequest(req, false)
+		b, _ := httputil.DumpRequest(req, true)
+		fmt.Println(string(b))
+
 		w.Write(b)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {

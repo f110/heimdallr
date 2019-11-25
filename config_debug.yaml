@@ -26,6 +26,7 @@ frontend_proxy:
   access_log: ./access.log
   signing_secret_key_file: ./privatekey.pem
   github_webhook_secret_file: ./github_webhook_secret
+  expect_ct: true
   session:
     type: secure_cookie
     key_file: ./cookie_secret

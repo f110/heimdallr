@@ -157,6 +157,7 @@ type FrontendProxy struct {
 	SigningSecretKeyFile    string   `json:"signing_secret_key_file"`
 	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
 	AccessLogFile           string   `json:"access_log"`
+	ExpectCT                bool     `json:"expect_ct"`
 	Session                 *Session `json:"session"`
 
 	Certificate         tls.Certificate   `json:"-"`

@@ -16,6 +16,7 @@ go_library(
         "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/server:go_default_library",
+        "//pkg/server/ct:go_default_library",
         "//pkg/server/identityprovider:go_default_library",
         "//pkg/server/internalapi:go_default_library",
         "//pkg/server/token:go_default_library",
