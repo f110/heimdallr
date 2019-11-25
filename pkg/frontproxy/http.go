@@ -130,6 +130,8 @@ func NewHttpProxy(conf *config.Config, ct *connector.Server) *HttpProxy {
 func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *http.Request) {
 	w = &loggedResponseWriter{internal: w}
 
+	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
 	user, err := auth.Authenticate(req)
 	defer p.accessLog(ctx, w, req, user)
 
