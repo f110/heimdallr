@@ -6,3 +6,20 @@ load("//build/rules/go:vendor.bzl", "go_vendor")
 go_vendor(
     name = "vendor",
 )
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_image(
+    name = "image",
+    binary = "//cmd/lagrangian-proxy"
+)
+
+container_push(
+    name = "push",
+    image = ":image",
+    tag = "latest",
+    format = "Docker",
+    registry = "docker.pkg.github.com",
+    repository = "f110/lagrangian-proxy/proxy"
+)
