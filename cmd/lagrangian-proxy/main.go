@@ -158,11 +158,6 @@ func (m *mainProcess) startDashboard() {
 	}
 }
 
-func (m *mainProcess) startCrawler() {
-	crawler := database.NewTokenCrawler(m.tokenDatabase)
-	crawler.Crawl(m.ctx)
-}
-
 func (m *mainProcess) startEmbedEtcd() error {
 	c := embed.NewConfig()
 	c.Dir = m.config.Datastore.DataDir
@@ -242,15 +237,6 @@ func (m *mainProcess) Start() error {
 			defer m.wg.Done()
 
 			m.startDashboard()
-		}()
-	}
-
-	if m.config.Datastore.Embed {
-		m.wg.Add(1)
-		go func() {
-			defer m.wg.Done()
-
-			m.startCrawler()
 		}()
 	}
 

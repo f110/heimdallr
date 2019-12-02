@@ -21,7 +21,7 @@ container_image(
     name = "image",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/lagrangian-proxy"],
-    tars = [":bin"]
+    tars = [":bin"],
 )
 
 container_push(

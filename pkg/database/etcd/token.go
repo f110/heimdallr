@@ -38,9 +38,6 @@ func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database
 	if err := yaml.Unmarshal(res.Kvs[0].Value, tk); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	if tk.IssuedAt.Add(database.TokenExpiration).Before(time.Now()) {
-		return nil, database.ErrTokenNotFound
-	}
 	return tk, nil
 }
 
@@ -61,10 +58,16 @@ func (t *TemporaryToken) NewCode(ctx context.Context, userId, challenge, challen
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	_, err = t.client.Put(ctx, fmt.Sprintf("code/%s", code), string(b))
+
+	lease, err := t.client.Grant(ctx, int64(database.CodeExpiration.Seconds()))
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
+	_, err = t.client.Put(ctx, fmt.Sprintf("code/%s", code), string(b), clientv3.WithLease(lease.ID))
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
 	return c, nil
 }
 
@@ -79,9 +82,6 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	c := &database.Code{}
 	if err := yaml.Unmarshal(res.Kvs[0].Value, c); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
-	}
-	if c.IssuedAt.Add(database.CodeExpiration).Before(time.Now()) {
-		return nil, xerrors.New("etcd: code is expired")
 	}
 	if !c.Verify(codeVerifier) {
 		logger.Log.Debug("code verifier", zap.String("code_verifier", codeVerifier))
@@ -101,7 +101,11 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	_, err = t.client.Put(ctx, fmt.Sprintf("token/%s", s), string(b))
+	lease, err := t.client.Grant(ctx, int64(database.TokenExpiration.Seconds()))
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	_, err = t.client.Put(ctx, fmt.Sprintf("token/%s", s), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

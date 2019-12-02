@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
 
@@ -56,63 +54,4 @@ func (c *Code) Verify(verifier string) bool {
 	default:
 		return false
 	}
-}
-
-type TokenCrawler struct {
-	database TokenDatabase
-}
-
-func NewTokenCrawler(d TokenDatabase) *TokenCrawler {
-	return &TokenCrawler{database: d}
-}
-
-func (c *TokenCrawler) Crawl(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	logger.Log.Info("Start TokenCrawler")
-	if err := c.crawl(ctx); err != nil {
-		logger.Log.Error("Failed crawl token database", zap.Error(err))
-	}
-
-	for {
-		select {
-		case <-ticker.C:
-			if err := c.crawl(ctx); err != nil {
-				logger.Log.Error("Failed crawl token database", zap.Error(err))
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (c *TokenCrawler) crawl(ctx context.Context) error {
-	codes, err := c.database.AllCodes(ctx)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	for _, code := range codes {
-		if code.IssuedAt.Add(CodeExpiration).Before(time.Now()) {
-			logger.Log.Debug("Remove code", zap.String("code", code.Code), zap.Time("issued_at", code.IssuedAt))
-			if err := c.database.DeleteCode(ctx, code.Code); err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-		}
-	}
-
-	tokens, err := c.database.AllTokens(ctx)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	for _, token := range tokens {
-		if token.IssuedAt.Add(TokenExpiration).Before(time.Now()) {
-			logger.Log.Debug("Remove token", zap.String("token", token.Token), zap.Time("issued_at", token.IssuedAt))
-			if err := c.database.DeleteToken(ctx, token.Token); err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-		}
-	}
-
-	return nil
 }
