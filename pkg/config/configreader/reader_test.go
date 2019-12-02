@@ -76,7 +76,7 @@ logger:
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
 		t.Fatal(err)
 	}
-	cert, privateKey, err := auth.CreateCertificateAuthority(
+	cert, privateKey, err := auth.CreateCertificateAuthorityForConfig(
 		&config.Config{General: &config.General{
 			CertificateAuthority: &config.CertificateAuthority{
 				Organization:     "Test",

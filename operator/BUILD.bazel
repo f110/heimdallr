@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/f110/lagrangian-proxy/operator",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//operator/api/v1:go_default_library",
+        "//operator/controllers:go_default_library",
+        "//vendor/github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2:go_default_library",
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+        "//vendor/k8s.io/client-go/kubernetes/scheme:go_default_library",
+        "//vendor/k8s.io/client-go/plugin/pkg/client/auth/gcp:go_default_library",
+        "//vendor/sigs.k8s.io/controller-runtime:go_default_library",
+        "//vendor/sigs.k8s.io/controller-runtime/pkg/log/zap:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "operator",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

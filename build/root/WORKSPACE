@@ -25,6 +25,12 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.12.1/rules_docker-v0.12.1.tar.gz"],
 )
 
+http_archive(
+    name = "rules_pkg",
+    url = "https://github.com/bazelbuild/rules_pkg/releases/download/0.2.4/rules_pkg-0.2.4.tar.gz",
+    sha256 = "4ba8f4ab0ff85f2484287ab06c0d871dcb31cc54d439457d28fd4ae14b18450a",
+)
+
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
@@ -34,13 +40,20 @@ go_register_toolchains()
 
 gazelle_dependencies()
 
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
-)
-
-container_repositories()
-
+load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
 load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos = "repositories")
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 
 _go_image_repos()
+container_repositories()
+
+container_pull(
+    name = "com_google_distroless_base",
+    digest = "sha256:7fa7445dfbebae4f4b7ab0e6ef99276e96075ae42584af6286ba080750d6dfe5",
+    registry = "gcr.io",
+    repository = "distroless/base"
+)
+
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+
+rules_pkg_dependencies()

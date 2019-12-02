@@ -27,7 +27,16 @@ func (ca *CertificateAuthority) NewClientCertificate(ctx context.Context, name, 
 	return ca.store.NewClientCertificate(ctx, name, password, comment)
 }
 
-func CreateCertificateAuthority(conf *config.Config) ([]byte, crypto.PrivateKey, error) {
+func CreateCertificateAuthorityForConfig(conf *config.Config) ([]byte, crypto.PrivateKey, error) {
+	return CreateCertificateAuthority(
+		"Lagrangian Proxy CA",
+		conf.General.CertificateAuthority.Organization,
+		conf.General.CertificateAuthority.OrganizationUnit,
+		conf.General.CertificateAuthority.Country,
+	)
+}
+
+func CreateCertificateAuthority(commonName, org, orgUnit, country string) ([]byte, crypto.PrivateKey, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
@@ -41,10 +50,10 @@ func CreateCertificateAuthority(conf *config.Config) ([]byte, crypto.PrivateKey,
 	ca := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			Organization:       []string{conf.General.CertificateAuthority.Organization},
-			OrganizationalUnit: []string{conf.General.CertificateAuthority.OrganizationUnit},
-			Country:            []string{conf.General.CertificateAuthority.Country},
-			CommonName:         "Lagrangian Proxy CA",
+			Organization:       []string{org},
+			OrganizationalUnit: []string{orgUnit},
+			Country:            []string{country},
+			CommonName:         commonName,
 		},
 		NotBefore:             time.Now().UTC(),
 		NotAfter:              time.Now().AddDate(10, 0, 0).UTC(),

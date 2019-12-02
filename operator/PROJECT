@@ -1,0 +1,7 @@
+domain: f110.dev
+repo: github.com/f110/lagrangian-proxy
+resources:
+- group: proxy
+  kind: LagrangianProxy
+  version: v1
+version: "2"

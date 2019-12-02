@@ -4,7 +4,19 @@ lagrangian-proxy
 
 *Currently under development*
 
-Zero trust proxy
+Zero trust proxy for using in corporate.
+
+Deployment
+=============
+
+lagrangian-proxy is deployed to a kubernetes by an operator.
+You can deploying by yourself. but we highly recommended to using an operator.
+
+Depend on operator
+---------------------
+
+* `etcd-operator <https://github.com/coreos/etcd-operator>`_
+* `cert-manager <https://github.com/jetstack/cert-manager>`_
 
 Build & Run
 =============

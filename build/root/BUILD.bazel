@@ -7,12 +7,21 @@ go_vendor(
     name = "vendor",
 )
 
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push", "container_image")
 
-go_image(
+pkg_tar(
+    name = "bin",
+    package_dir = "/usr/local/bin",
+    srcs = ["//cmd/lagrangian-proxy"],
+    mode = "0755",
+)
+
+container_image(
     name = "image",
-    binary = "//cmd/lagrangian-proxy"
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/lagrangian-proxy"],
+    tars = [":bin"]
 )
 
 container_push(
@@ -21,5 +30,5 @@ container_push(
     tag = "latest",
     format = "Docker",
     registry = "docker.pkg.github.com",
-    repository = "f110/lagrangian-proxy/proxy"
+    repository = "f110/lagrangian-proxy/proxy",
 )

@@ -6,5 +6,6 @@
 /client_secret
 /github_webhook_secret
 /access.log
+/operator/bin
 
 /bazel-*

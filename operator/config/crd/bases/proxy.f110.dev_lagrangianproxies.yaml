@@ -1,0 +1,127 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.4
+  creationTimestamp: null
+  name: lagrangianproxies.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: LagrangianProxy
+    listKind: LagrangianProxyList
+    plural: lagrangianproxies
+    singular: lagrangianproxy
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: LagrangianProxy is the Schema for the lagrangianproxies API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: LagrangianProxySpec defines the desired state of LagrangianProxy
+          properties:
+            administratorUnit:
+              type: string
+            country:
+              type: string
+            domain:
+              type: string
+            identityProvider:
+              properties:
+                clientId:
+                  type: string
+                clientSecretRef:
+                  properties:
+                    key:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                provider:
+                  type: string
+                redirectUrl:
+                  type: string
+              required:
+              - provider
+              type: object
+            issuerRef:
+              description: ObjectReference is a reference to an object with a given
+                name, kind and group.
+              properties:
+                group:
+                  type: string
+                kind:
+                  type: string
+                name:
+                  type: string
+              required:
+              - name
+              type: object
+            name:
+              description: Name of proxy. if not present, uses "Lagrangian Proxy CA"
+              type: string
+            organization:
+              type: string
+            replicas:
+              format: int32
+              type: integer
+            rootUsers:
+              items:
+                type: string
+              type: array
+            session:
+              properties:
+                keySecretRef:
+                  properties:
+                    key:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type:
+                  type: string
+              required:
+              - type
+              type: object
+          required:
+          - administratorUnit
+          - domain
+          - identityProvider
+          - issuerRef
+          - organization
+          - replicas
+          - session
+          type: object
+        status:
+          description: LagrangianProxyStatus defines the observed state of LagrangianProxy
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

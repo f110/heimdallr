@@ -1,0 +1,24 @@
+apiVersion: proxy.f110.dev/v1
+kind: LagrangianProxy
+metadata:
+  name: lagrangianproxy-sample
+spec:
+  replicas: 3
+  domain: local-proxy.f110.dev
+  port: 443
+  issuerRef:
+    name: lets-encrypt
+    kind: ClusterIssuer
+  identityProvider:
+    provider: google
+    clientId: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
+    clientSecretRef:
+      name: client-secret
+      key: client_secret
+    redirectUrl: https://local-proxy.f110.dev:4000/auth/callback
+  rootUsers:
+    - fmhrit@gmail.com
+  session:
+    type: secure_cookie
+    keySecretRef:
+      name: cookie-secret

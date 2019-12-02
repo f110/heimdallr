@@ -140,7 +140,7 @@ func commandBootstrap(args []string) error {
 }
 
 func generateNewCertificateAuthority(conf *config.Config, dir string) error {
-	cert, privateKey, err := auth.CreateCertificateAuthority(conf)
+	cert, privateKey, err := auth.CreateCertificateAuthorityForConfig(conf)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

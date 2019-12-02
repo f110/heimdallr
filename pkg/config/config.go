@@ -40,9 +40,9 @@ type Config struct {
 	General          *General          `json:"general"`
 	IdentityProvider *IdentityProvider `json:"identity_provider"`
 	Datastore        *Datastore        `json:"datastore"`
-	Logger           *Logger           `json:"logger"`
+	Logger           *Logger           `json:"logger,omitempty"`
 	FrontendProxy    *FrontendProxy    `json:"frontend_proxy"`
-	Dashboard        *Dashboard        `json:"dashboard"`
+	Dashboard        *Dashboard        `json:"dashboard,omitempty"`
 }
 
 type General struct {
@@ -85,7 +85,7 @@ type IdentityProvider struct {
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
 	ExtraScopes      []string `json:"extra_scopes"`
-	Domain           string   `json:"domain"` // for Okta and AzureAD
+	Domain           string   `json:"domain,omitempty"` // for Okta and AzureAD
 	RedirectUrl      string   `json:"redirect_url"`
 
 	ClientSecret string `json:"-"`
@@ -93,8 +93,8 @@ type IdentityProvider struct {
 
 type Datastore struct {
 	RawUrl    string `json:"url"`
-	DataDir   string `json:"data_dir"`  // use only embed etcd
-	Namespace string `json:"namespace"` // use only etcd
+	DataDir   string `json:"data_dir,omitempty"`  // use only embed etcd
+	Namespace string `json:"namespace,omitempty"` // use only etcd
 
 	Url        *url.URL         `json:"-"`
 	Embed      bool             `json:"-"`
@@ -110,7 +110,7 @@ type Logger struct {
 type Role struct {
 	Name        string    `json:"name"`
 	Title       string    `json:"title"`
-	Description string    `json:"description"`
+	Description string    `json:"description,omitempty"`
 	Bindings    []Binding `json:"bindings"`
 }
 
@@ -123,10 +123,10 @@ type Backend struct {
 	Name            string        `json:"name"` // Name is an identifier
 	Upstream        string        `json:"upstream"`
 	Permissions     []*Permission `json:"permissions"`
-	WebHook         string        `json:"webhook"` // name of webhook provider (e.g. github)
-	WebHookPath     []string      `json:"webhook_path"`
-	Agent           bool          `json:"agent"`
-	AllowAsRootUser bool          `json:"allow_as_root_user"`
+	WebHook         string        `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
+	WebHookPath     []string      `json:"webhook_path,omitempty"`
+	Agent           bool          `json:"agent,omitempty"`
+	AllowAsRootUser bool          `json:"allow_as_root_user,omitempty"`
 
 	Url           *url.URL    `json:"-"`
 	Socket        bool        `json:"-"`
@@ -141,16 +141,16 @@ type Permission struct {
 }
 
 type Location struct {
-	Any     string `json:"any"`
-	Get     string `json:"get"`
-	Post    string `json:"post"`
-	Put     string `json:"put"`
-	Delete  string `json:"delete"`
-	Head    string `json:"head"`
-	Connect string `json:"connect"`
-	Options string `json:"options"`
-	Trace   string `json:"trace"`
-	Patch   string `json:"patch"`
+	Any     string `json:"any,omitempty"`
+	Get     string `json:"get,omitempty"`
+	Post    string `json:"post,omitempty"`
+	Put     string `json:"put,omitempty"`
+	Delete  string `json:"delete,omitempty"`
+	Head    string `json:"head,omitempty"`
+	Connect string `json:"connect,omitempty"`
+	Options string `json:"options,omitempty"`
+	Trace   string `json:"trace,omitempty"`
+	Patch   string `json:"patch,omitempty"`
 }
 
 type FrontendProxy struct {
@@ -169,8 +169,8 @@ type FrontendProxy struct {
 
 type Session struct {
 	Type    string   `json:"type"` // secure_cookie or memcached
-	KeyFile string   `json:"key_file"`
-	Servers []string `json:"servers"`
+	KeyFile string   `json:"key_file,omitempty"`
+	Servers []string `json:"servers,omitempty"`
 
 	HashKey  []byte `json:"-"`
 	BlockKey []byte `json:"-"`
@@ -178,8 +178,8 @@ type Session struct {
 
 type Dashboard struct {
 	Enable   bool      `json:"enable"`
-	Bind     string    `json:"bind"`
-	Template *Template `json:"template"`
+	Bind     string    `json:"bind,omitempty"`
+	Template *Template `json:"template,omitempty"`
 }
 
 type Template struct {

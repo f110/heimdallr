@@ -47,11 +47,13 @@ type mainProcess struct {
 	server    *server.Server
 	dashboard *dashboard.Server
 	etcd      *embed.Etcd
+
+	probeCh chan struct{}
 }
 
 func newMainProcess() *mainProcess {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	m := &mainProcess{Stop: cancelFunc, ctx: ctx}
+	m := &mainProcess{Stop: cancelFunc, ctx: ctx, probeCh: make(chan struct{})}
 
 	m.signalHandling()
 	return m
@@ -138,7 +140,7 @@ func (m *mainProcess) startServer() {
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	internalApi := internalapi.NewServer()
 	resourceServer := internalapi.NewResourceServer(m.config)
-	probe := internalapi.NewProbe(make(chan struct{}))
+	probe := internalapi.NewProbe(m.probeCh)
 	ctReport := ct.NewServer()
 
 	s := server.New(m.config, front, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)

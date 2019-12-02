@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "groupversion_info.go",
+        "lagrangianproxy_types.go",
+        "zz_generated.deepcopy.go",
+    ],
+    importpath = "github.com/f110/lagrangian-proxy/operator/api/v1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
+        "//vendor/sigs.k8s.io/controller-runtime/pkg/scheme:go_default_library",
+    ],
+)
