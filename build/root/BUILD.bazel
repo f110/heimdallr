@@ -5,6 +5,10 @@ load("//build/rules/go:vendor.bzl", "go_vendor")
 
 go_vendor(
     name = "vendor",
+    extra_args = [
+        "-exclude",
+        "third_party",
+    ],
 )
 
 load("@rules_pkg//:pkg.bzl", "pkg_tar")

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+BIN=@@BIN@@
+DIR=@@DIR@@
+ARGS=@@ARGS@@
+
+WORK_DIR=$(pwd)
+CONTROLLER_GEN="$WORK_DIR/$BIN"
+
+cd "$BUILD_WORKSPACE_DIRECTORY"/"$DIR"
+"$CONTROLLER_GEN" "${ARGS[@]}"

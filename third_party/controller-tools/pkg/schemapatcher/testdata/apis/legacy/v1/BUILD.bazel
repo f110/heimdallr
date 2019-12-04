@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "types_example.go",
+        "types_unchanged.go",
+    ],
+    importpath = "sigs.k8s.io/controller-tools/pkg/schemapatcher/testdata/apis/legacy/v1",
+    visibility = ["//visibility:public"],
+    deps = ["//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library"],
+)

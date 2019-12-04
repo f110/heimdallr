@@ -1,12 +1,15 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule")
 load("@bazel_skylib//lib:shell.bzl", "shell")
 
-def _go_vendor(ctx):
+def _go_vendor_impl(ctx):
     go = go_context(ctx)
     out = ctx.actions.declare_file(ctx.label.name + ".sh")
+    dir = ctx.attr.dir
     substitutions = {
         "@@GO@@": shell.quote(go.go.path),
         "@@GAZELLE@@": shell.quote(ctx.executable._gazelle.short_path),
+        "@@DIR@@": shell.quote(dir),
+        "@@ARGS@@": shell.array_literal(ctx.attr.extra_args),
     }
     ctx.actions.expand_template(
         template = ctx.file._template,
@@ -22,10 +25,12 @@ def _go_vendor(ctx):
         ),
     ]
 
-go_vendor = go_rule(
-    implementation = _go_vendor,
+_go_vendor = go_rule(
+    implementation = _go_vendor_impl,
     executable = True,
     attrs = {
+        "dir": attr.string(),
+        "extra_args": attr.string_list(),
         "_template": attr.label(
             default = "//build/rules/go:vendor.bash",
             allow_single_file = True,
@@ -37,3 +42,10 @@ go_vendor = go_rule(
         ),
     },
 )
+
+def go_vendor(name, **kwargs):
+    if not "dir" in kwargs:
+        dir = native.package_name()
+        kwargs["dir"] = dir
+
+    _go_vendor(name = name, **kwargs)

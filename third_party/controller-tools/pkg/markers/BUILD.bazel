@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "collect.go",
+        "doc.go",
+        "help.go",
+        "parse.go",
+        "reg.go",
+        "regutil.go",
+        "zip.go",
+    ],
+    importpath = "sigs.k8s.io/controller-tools/pkg/markers",
+    visibility = ["//visibility:public"],
+    deps = ["//third_party/controller-tools/pkg/loader:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "collect_test.go",
+        "markers_suite_test.go",
+        "parse_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//third_party/controller-tools/pkg/loader:go_default_library",
+        "//third_party/controller-tools/pkg/loader/testutils:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/onsi/ginkgo:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/onsi/gomega:go_default_library",
+        "//third_party/controller-tools/vendor/golang.org/x/tools/go/packages/packagestest:go_default_library",
+    ],
+)

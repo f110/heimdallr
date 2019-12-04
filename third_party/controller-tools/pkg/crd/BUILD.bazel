@@ -1,0 +1,62 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "conv.go",
+        "desc_visitor.go",
+        "doc.go",
+        "flatten.go",
+        "gen.go",
+        "known_types.go",
+        "parser.go",
+        "schema.go",
+        "schema_visitor.go",
+        "spec.go",
+        "zz_generated.markerhelp.go",
+    ],
+    importpath = "sigs.k8s.io/controller-tools/pkg/crd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/controller-tools/pkg/crd/markers:go_default_library",
+        "//third_party/controller-tools/pkg/genall:go_default_library",
+        "//third_party/controller-tools/pkg/loader:go_default_library",
+        "//third_party/controller-tools/pkg/markers:go_default_library",
+        "//third_party/controller-tools/pkg/version:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/gobuffalo/flect:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/api/equality:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "crd_spec_test.go",
+        "crd_suite_test.go",
+        "desc_visitor_test.go",
+        "flatten_all_of_test.go",
+        "flatten_type_test.go",
+        "parser_integration_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//third_party/controller-tools/pkg/crd/markers:go_default_library",
+        "//third_party/controller-tools/pkg/loader:go_default_library",
+        "//third_party/controller-tools/pkg/markers:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/google/go-cmp/cmp:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/onsi/ginkgo:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/onsi/gomega:go_default_library",
+        "//third_party/controller-tools/vendor/github.com/onsi/gomega/gstruct:go_default_library",
+        "//third_party/controller-tools/vendor/golang.org/x/tools/go/packages:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1:go_default_library",
+        "//third_party/controller-tools/vendor/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
+        "//third_party/controller-tools/vendor/sigs.k8s.io/yaml:go_default_library",
+    ],
+)

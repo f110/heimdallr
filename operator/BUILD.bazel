@@ -23,3 +23,50 @@ go_binary(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
+
+load("//build/rules/go:controller-tools.bzl", "controller_gen")
+
+controller_gen(
+    name = "generate",
+    extra_args = [
+        "object:headerFile=./hack/boilerplate.go.txt",
+        "paths=\"./...\"",
+    ],
+)
+
+controller_gen(
+    name = "manifests",
+    extra_args = [
+        "crd:trivialVersions=true",
+        "rbac:roleName=manager-role",
+        "webhook",
+        "paths=\"./...\"",
+        "output:crd:artifacts:config=config/crd/bases",
+    ],
+)
+
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push", "container_image")
+
+pkg_tar(
+    name = "bin",
+    package_dir = "/usr/local/bin",
+    srcs = ["//operator"],
+    mode = "0755",
+)
+
+container_image(
+    name = "image",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/operator"],
+    tars = [":bin"],
+)
+
+container_push(
+    name = "push",
+    image = ":image",
+    tag = "latest",
+    format = "Docker",
+    registry = "docker.pkg.github.com",
+    repository = "f110/lagrangian-proxy/operator",
+)

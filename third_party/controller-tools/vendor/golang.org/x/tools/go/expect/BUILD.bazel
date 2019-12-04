@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "expect.go",
+        "extract.go",
+    ],
+    importmap = "sigs.k8s.io/controller-tools/vendor/golang.org/x/tools/go/expect",
+    importpath = "golang.org/x/tools/go/expect",
+    visibility = ["//visibility:public"],
+)
