@@ -28,14 +28,13 @@ import (
 	mrand "math/rand"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,6 +53,7 @@ import (
 
 const (
 	proxyPort                  = 4000
+	dashboardPort              = 4100
 	configVolumePath           = "/etc/lagrangian-proxy"
 	configMountPath            = configVolumePath + "/config"
 	serverCertMountPath        = configVolumePath + "/certs"
@@ -142,7 +142,11 @@ func (r *LagrangianProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	if err := r.ReconcileConfig(def, req); err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
+	}
+
+	if err := r.ReconcileDashboardProcess(def, req); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if err := r.ReconcileMainProcess(def, req); err != nil {
@@ -164,11 +168,11 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &def.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name},
+				MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "proxy"},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name},
+					Labels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "proxy"},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -311,7 +315,7 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 	minAvailable := intstr.FromInt(int(def.Spec.Replicas / 2))
 	_, err = ctrl.CreateOrUpdate(context.Background(), r, pdb, func() error {
 		pdb.Spec.Selector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name},
+			MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "proxy"},
 		}
 		pdb.Spec.MinAvailable = &minAvailable
 
@@ -332,7 +336,7 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 		port = def.Spec.Port
 	}
 	_, err = ctrl.CreateOrUpdate(context.Background(), r, svc, func() error {
-		svc.Spec.Selector = map[string]string{"app": "lagrangian-proxy", "instance": req.Name}
+		svc.Spec.Selector = map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "proxy"}
 		svc.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "https",
@@ -342,6 +346,131 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 		}
 		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 		svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+
+		return nil
+	})
+
+	return err
+}
+
+func (r *LagrangianProxyReconciler) ReconcileDashboardProcess(def *proxyv1.LagrangianProxy, req ctrl.Request) error {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.Name + "-dashboard",
+			Namespace: req.Namespace,
+		},
+	}
+
+	var replicas int32 = 3
+	_, err := ctrl.CreateOrUpdate(context.Background(), r, deployment, func() error {
+		deployment.Spec = appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "dashboard"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "dashboard"},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    "proxy",
+							Image:   "quay.io/f110/lagrangian-proxy:latest",
+							Command: []string{"/usr/local/bin/lagrangian-proxy"},
+							Args:    []string{"-c", fmt.Sprintf("%s/config.yaml", configMountPath)},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/", // TODO: use readiness probe
+										Port: intstr.FromInt(dashboardPort),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/",
+										Port: intstr.FromInt(dashboardPort),
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "ca-cert",
+									MountPath: caCertMountPath,
+								},
+								{
+									Name:      "config",
+									MountPath: configMountPath,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "ca-cert",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: req.Name + "-ca",
+								},
+							},
+						},
+						{
+							Name: "config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: req.Name + "-dashboard",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		return ctrl.SetControllerReference(def, deployment, r.Scheme)
+	})
+	if err != nil {
+		return err
+	}
+
+	pdb := &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.Name + "-dashboard",
+			Namespace: req.Namespace,
+		},
+	}
+	minAvailable := intstr.FromInt(int(def.Spec.Replicas / 2))
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, pdb, func() error {
+		pdb.Spec.Selector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "dashboard"},
+		}
+		pdb.Spec.MinAvailable = &minAvailable
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.Name + "-dashboard",
+			Namespace: req.Namespace,
+		},
+	}
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, svc, func() error {
+		svc.Spec.Selector = map[string]string{"app": "lagrangian-proxy", "instance": req.Name, "role": "dashboard"}
+		svc.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:       "http",
+				Port:       dashboardPort,
+				TargetPort: intstr.FromInt(dashboardPort),
+			},
+		}
+		svc.Spec.Type = corev1.ServiceTypeClusterIP
 
 		return nil
 	})
@@ -579,8 +708,20 @@ func (r *LagrangianProxyReconciler) generateCookieSecret(def *proxyv1.Lagrangian
 }
 
 func (r *LagrangianProxyReconciler) generateConfig(def *proxyv1.LagrangianProxy, req ctrl.Request) error {
+	if err := r.generateMainConfig(def, req); err != nil {
+		return err
+	}
+	if err := r.generateDashboardConfig(def, req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *LagrangianProxyReconciler) generateMainConfig(def *proxyv1.LagrangianProxy, req ctrl.Request) error {
 	conf := &config.Config{
 		General: &config.General{
+			Enable:     true,
 			Bind:       fmt.Sprintf(":%d", proxyPort),
 			ServerName: def.Spec.Domain,
 			RootUsers:  def.Spec.RootUsers,
@@ -622,8 +763,7 @@ func (r *LagrangianProxyReconciler) generateConfig(def *proxyv1.LagrangianProxy,
 			Encoding: "console",
 		},
 		Dashboard: &config.Dashboard{
-			Enable: true,
-			Bind:   ":4100", // TODO: divide proxy and dashboard process
+			Enable: false,
 		},
 	}
 	b, err := yaml.Marshal(conf)
@@ -678,6 +818,55 @@ func (r *LagrangianProxyReconciler) generateConfig(def *proxyv1.LagrangianProxy,
 		configMap.Data["config.yaml"] = string(b)
 		configMap.Data["roles.yaml"] = string(roleBinary)
 		configMap.Data["proxies.yaml"] = string(proxyBinary)
+
+		return ctrl.SetControllerReference(def, configMap, r.Scheme)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *LagrangianProxyReconciler) generateDashboardConfig(def *proxyv1.LagrangianProxy, req ctrl.Request) error {
+	conf := &config.Config{
+		General: &config.General{
+			Enable: false,
+			CertificateAuthority: &config.CertificateAuthority{
+				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
+				Organization:     def.Spec.Organization,
+				OrganizationUnit: def.Spec.AdministratorUnit,
+				Country:          def.Spec.Country,
+			},
+		},
+		Datastore: &config.Datastore{
+			RawUrl:    fmt.Sprintf("etcd://%s:2379", def.Name+"-datastore-client"),
+			Namespace: "/lagrangian-proxy/",
+		},
+		Logger: &config.Logger{
+			Level:    "info",
+			Encoding: "console",
+		},
+		Dashboard: &config.Dashboard{
+			Enable: true,
+			Bind:   fmt.Sprintf(":%d", dashboardPort),
+		},
+	}
+	b, err := yaml.Marshal(conf)
+	if err != nil {
+		return err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.Name + "-dashboard",
+			Namespace: req.Namespace,
+		},
+		Data: make(map[string]string),
+	}
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, configMap, func() error {
+		configMap.Data["config.yaml"] = string(b)
 
 		return ctrl.SetControllerReference(def, configMap, r.Scheme)
 	})

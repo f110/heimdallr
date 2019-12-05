@@ -1,0 +1,16 @@
+dashboard:
+  bind: :4101
+  enable: true
+  template:
+    loader: shotgun
+datastore:
+  namespace: /lagrangian-proxy/
+  url: etcd://localhost:57527
+general:
+  certificate_authority:
+    cert_file: ./ca.crt
+    key_file: ./ca.key
+    organization: test
+    organization_unit: dev
+    country: jp
+  enable: false

@@ -30,6 +30,8 @@ const (
 	EmbedEtcdUrlFilename    = "embed_etcd_url"
 	SessionTypeSecureCookie = "secure_cookie"
 	SessionTypeMemcached    = "memcached"
+	TemplateLoaderShotgun   = "shotgun"
+	TemplateLoaderEmbed     = "embed"
 )
 
 var (
@@ -38,22 +40,23 @@ var (
 
 type Config struct {
 	General          *General          `json:"general"`
-	IdentityProvider *IdentityProvider `json:"identity_provider"`
+	IdentityProvider *IdentityProvider `json:"identity_provider,omitempty"`
 	Datastore        *Datastore        `json:"datastore"`
 	Logger           *Logger           `json:"logger,omitempty"`
-	FrontendProxy    *FrontendProxy    `json:"frontend_proxy"`
+	FrontendProxy    *FrontendProxy    `json:"frontend_proxy,omitempty"`
 	Dashboard        *Dashboard        `json:"dashboard,omitempty"`
 }
 
 type General struct {
-	Bind                 string                `json:"bind"`
-	ServerName           string                `json:"server_name"`
-	CertFile             string                `json:"cert_file"`
-	KeyFile              string                `json:"key_file"`
-	RoleFile             string                `json:"role_file"`
-	ProxyFile            string                `json:"proxy_file"`
+	Enable               bool                  `json:"enable"`
+	Bind                 string                `json:"bind,omitempty"`
+	ServerName           string                `json:"server_name,omitempty"`
+	CertFile             string                `json:"cert_file,omitempty"`
+	KeyFile              string                `json:"key_file,omitempty"`
+	RoleFile             string                `json:"role_file,omitempty"`
+	ProxyFile            string                `json:"proxy_file,omitempty"`
 	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
-	RootUsers            []string              `json:"root_users"`
+	RootUsers            []string              `json:"root_users,omitempty"`
 
 	Roles    []Role     `json:"-"`
 	Backends []*Backend `json:"-"`
@@ -158,7 +161,7 @@ type FrontendProxy struct {
 	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
 	AccessLogFile           string   `json:"access_log"`
 	ExpectCT                bool     `json:"expect_ct"`
-	Session                 *Session `json:"session"`
+	Session                 *Session `json:"session,omitempty"`
 
 	Certificate         tls.Certificate   `json:"-"`
 	SigningPrivateKey   *ecdsa.PrivateKey `json:"-"`
@@ -192,7 +195,7 @@ func (d *Dashboard) Inflate(dir string) error {
 }
 
 func (t *Template) inflate(dir string) error {
-	if t.Dir != "" {
+	if t.Dir != "" && t.Loader == TemplateLoaderShotgun {
 		t.Dir = filepath.Join(dir, t.Dir)
 	}
 	return nil

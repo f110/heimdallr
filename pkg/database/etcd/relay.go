@@ -108,6 +108,7 @@ func (l *RelayLocator) Gone() chan *database.Relay {
 }
 
 func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
+	logger.Log.Debug("Start watch relay locator")
 	defer logger.Log.Debug("Stop watch relay locator")
 
 	for {

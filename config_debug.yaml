@@ -33,3 +33,5 @@ frontend_proxy:
 dashboard:
   enable: true
   bind: :4100
+  template:
+    loader: shotgun

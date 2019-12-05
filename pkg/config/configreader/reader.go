@@ -23,6 +23,7 @@ func ReadConfig(filename string) (*config.Config, error) {
 
 	conf := &config.Config{
 		General: &config.General{
+			Enable:     true,
 			Bind:       ":4000",
 			ServerName: "local-proxy.f110.dev:4000",
 		},
@@ -34,16 +35,14 @@ func ReadConfig(filename string) (*config.Config, error) {
 			Enable: false,
 			Bind:   ":4100",
 			Template: &config.Template{
-				Loader: "shotgun",
+				Loader: "embed",
 				Dir:    "tmpl/dashboard",
 			},
 		},
 		Datastore: &config.Datastore{
 			Namespace: "/lp",
 		},
-		FrontendProxy: &config.FrontendProxy{
-			AccessLogFile: "./access.log",
-		},
+		FrontendProxy: &config.FrontendProxy{},
 		IdentityProvider: &config.IdentityProvider{
 			RedirectUrl: "https://local-proxy.f110.dev:4000/auth/callback",
 		},

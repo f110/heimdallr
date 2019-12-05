@@ -205,31 +205,37 @@ func (m *mainProcess) Setup() error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	switch m.config.FrontendProxy.Session.Type {
-	case config.SessionTypeSecureCookie:
-		m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
-	case config.SessionTypeMemcached:
-		m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
-	}
-	m.tokenDatabase = etcd.NewTemporaryToken(client)
-	m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
 
-	m.connector = connector.NewServer(m.config, m.caDatabase, m.relayLocator)
+	if m.config.General.Enable {
+		m.tokenDatabase = etcd.NewTemporaryToken(client)
+		m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+
+		switch m.config.FrontendProxy.Session.Type {
+		case config.SessionTypeSecureCookie:
+			m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
+		case config.SessionTypeMemcached:
+			m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
+		}
+
+		m.connector = connector.NewServer(m.config, m.caDatabase, m.relayLocator)
+	}
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase, m.tokenDatabase)
 	return nil
 }
 
 func (m *mainProcess) Start() error {
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
+	if m.config.General.Enable {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
 
-		m.startServer()
-	}()
+			m.startServer()
+		}()
+	}
 
 	if m.config.Dashboard.Enable {
 		m.wg.Add(1)
