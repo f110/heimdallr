@@ -33,6 +33,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/discovery"
@@ -209,6 +210,16 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 											{Name: "Host", Value: def.Spec.Domain},
 										},
 									},
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -413,6 +424,16 @@ func (r *LagrangianProxyReconciler) ReconcileDashboardProcess(def *proxyv1.Lagra
 										Path: "/",
 										Port: intstr.FromInt(dashboardPort),
 									},
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
