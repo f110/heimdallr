@@ -26,8 +26,8 @@ type SecretSelector struct {
 }
 
 type LabelSelector struct {
-	MatchLabels map[string]string `json:"matchLabel,omitempty"`
-	Namespace   string            `json:"namespace,omitempty"`
+	metav1.LabelSelector `json:",inline"`
+	Namespace            string `json:"namespace,omitempty"`
 }
 
 // LagrangianProxySpec defines the desired state of LagrangianProxy

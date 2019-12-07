@@ -67,7 +67,7 @@ Item:
 	}
 
 	for _, v := range targets {
-		if err := ConfigReconcile(r, r.Scheme, &v, req); err != nil {
+		if err := ConfigReconcile(r, r.Scheme, &v); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

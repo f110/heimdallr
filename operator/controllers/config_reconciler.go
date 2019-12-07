@@ -11,7 +11,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
 )
@@ -21,9 +20,13 @@ const (
 	RoleFilename  = "roles.yaml"
 )
 
-func ConfigReconcile(c client.Client, scheme *runtime.Scheme, target *proxyv1.LagrangianProxy, req ctrl.Request) error {
+func ConfigReconcile(c client.Client, scheme *runtime.Scheme, target *proxyv1.LagrangianProxy) error {
+	selector, err := metav1.LabelSelectorAsSelector(&target.Spec.BackendSelector.LabelSelector)
+	if err != nil {
+		return err
+	}
 	backends := &proxyv1.BackendList{}
-	if err := c.List(context.Background(), backends, &client.ListOptions{LabelSelector: labels.SelectorFromSet(target.Spec.BackendSelector.MatchLabels)}); err != nil {
+	if err := c.List(context.Background(), backends, &client.ListOptions{LabelSelector: selector, Namespace: target.Spec.BackendSelector.Namespace}); err != nil {
 		return err
 	}
 	proxies := make([]*config.Backend, len(backends.Items))
@@ -67,8 +70,12 @@ func ConfigReconcile(c client.Client, scheme *runtime.Scheme, target *proxyv1.La
 		return err
 	}
 
+	selector, err = metav1.LabelSelectorAsSelector(&target.Spec.RoleSelector.LabelSelector)
+	if err != nil {
+		return err
+	}
 	roleList := &proxyv1.RoleList{}
-	if err := c.List(context.Background(), roleList, &client.ListOptions{LabelSelector: labels.SelectorFromSet(target.Spec.RoleSelector.MatchLabels)}); err != nil {
+	if err := c.List(context.Background(), roleList, &client.ListOptions{LabelSelector: selector, Namespace: target.Spec.RoleSelector.Namespace}); err != nil {
 		return err
 	}
 	roles := make([]*config.Role, len(roleList.Items))
