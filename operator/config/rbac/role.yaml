@@ -9,6 +9,26 @@ rules:
 - apiGroups:
   - proxy.f110.dev
   resources:
+  - backends
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - proxy.f110.dev
+  resources:
+  - backends/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - proxy.f110.dev
+  resources:
   - lagrangianproxies
   verbs:
   - create
@@ -22,6 +42,26 @@ rules:
   - proxy.f110.dev
   resources:
   - lagrangianproxies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - proxy.f110.dev
+  resources:
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - proxy.f110.dev
+  resources:
+  - roles/status
   verbs:
   - get
   - patch

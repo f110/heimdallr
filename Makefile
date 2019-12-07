@@ -7,7 +7,7 @@ run-operator:
 	bazel run //operator
 
 install-operator:
-	bazel run //operator:manfests
+	bazel run //operator:manifests
 	kustomize build operator/config/crd | kubectl apply -f -
 
 update-deps:

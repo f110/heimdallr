@@ -20,9 +20,9 @@ import (
 	"os"
 
 	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	"github.com/f110/lagrangian-proxy/operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -75,6 +75,22 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LagrangianProxy")
+		os.Exit(1)
+	}
+	if err = (&controllers.BackendReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Backend"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Backend")
+		os.Exit(1)
+	}
+	if err = (&controllers.RoleReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Role"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Role")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

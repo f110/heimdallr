@@ -1,0 +1,96 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (unknown)
+  creationTimestamp: null
+  name: backends.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: Backend
+    listKind: BackendList
+    plural: backends
+    singular: backend
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: Backend is the Schema for the backends API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: BackendSpec defines the desired state of Backend
+          properties:
+            agent:
+              type: boolean
+            allowForRootUser:
+              type: boolean
+            permissions:
+              items:
+                properties:
+                  locations:
+                    items:
+                      properties:
+                        any:
+                          type: string
+                        connect:
+                          type: string
+                        delete:
+                          type: string
+                        get:
+                          type: string
+                        head:
+                          type: string
+                        options:
+                          type: string
+                        patch:
+                          type: string
+                        post:
+                          type: string
+                        put:
+                          type: string
+                        trace:
+                          type: string
+                      type: object
+                    type: array
+                  name:
+                    type: string
+                type: object
+              type: array
+            upstream:
+              type: string
+            webhook:
+              type: string
+            webhookPath:
+              items:
+                type: string
+              type: array
+          type: object
+        status:
+          description: BackendStatus defines the observed state of Backend
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

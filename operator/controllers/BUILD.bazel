@@ -2,7 +2,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["lagrangianproxy_controller.go"],
+    srcs = [
+        "backend_controller.go",
+        "config_reconciler.go",
+        "lagrangianproxy_controller.go",
+        "role_controller.go",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/operator/controllers",
     visibility = ["//visibility:public"],
     deps = [
@@ -18,6 +23,7 @@ go_library(
         "//vendor/k8s.io/api/policy/v1beta1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/labels:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/util/intstr:go_default_library",
         "//vendor/k8s.io/client-go/discovery:go_default_library",

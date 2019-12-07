@@ -36,6 +36,15 @@ spec:
           properties:
             administratorUnit:
               type: string
+            backendSelector:
+              properties:
+                matchLabel:
+                  additionalProperties:
+                    type: string
+                  type: object
+                namespace:
+                  type: string
+              type: object
             country:
               type: string
             domain:
@@ -84,6 +93,15 @@ spec:
             replicas:
               format: int32
               type: integer
+            roleSelector:
+              properties:
+                matchLabel:
+                  additionalProperties:
+                    type: string
+                  type: object
+                namespace:
+                  type: string
+              type: object
             rootUsers:
               items:
                 type: string

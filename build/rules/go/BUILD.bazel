@@ -5,6 +5,9 @@ filegroup(
 )
 
 exports_files(
-    ["vendor.bash", "controller-gen.bash"],
+    [
+        "vendor.bash",
+        "controller-gen.bash",
+    ],
     visibility = ["//visibility:public"],
 )

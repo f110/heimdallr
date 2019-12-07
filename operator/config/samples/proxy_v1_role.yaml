@@ -1,0 +1,12 @@
+apiVersion: proxy.f110.dev/v1
+kind: Role
+metadata:
+  name: role-sample
+  labels:
+    instance: lagrangianproxy-sample
+spec:
+  title: administrator
+  description: Proxy administrator a.k.a GOD
+  bindings:
+    - name: backend-sample
+      permission: all

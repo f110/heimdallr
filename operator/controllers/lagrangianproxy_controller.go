@@ -56,6 +56,7 @@ const (
 	dashboardPort              = 4100
 	configVolumePath           = "/etc/lagrangian-proxy"
 	configMountPath            = configVolumePath + "/config"
+	proxyConfigMountPath       = configVolumePath + "/proxy"
 	serverCertMountPath        = configVolumePath + "/certs"
 	caCertMountPath            = configVolumePath + "/ca"
 	identityProviderSecretPath = configVolumePath + "/idp"
@@ -231,6 +232,10 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 									MountPath: configMountPath,
 								},
 								{
+									Name:      "config-proxy",
+									MountPath: proxyConfigMountPath,
+								},
+								{
 									Name:      "idp-secret",
 									MountPath: identityProviderSecretPath,
 								},
@@ -284,6 +289,16 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.Lagrangian
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: req.Name,
+									},
+								},
+							},
+						},
+						{
+							Name: "config-proxy",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: req.Name + "-hosts",
 									},
 								},
 							},
@@ -727,8 +742,8 @@ func (r *LagrangianProxyReconciler) generateMainConfig(def *proxyv1.LagrangianPr
 			RootUsers:  def.Spec.RootUsers,
 			CertFile:   fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
 			KeyFile:    fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
-			RoleFile:   "./roles.yaml",
-			ProxyFile:  "./proxies.yaml",
+			RoleFile:   fmt.Sprintf("%s/%s", proxyConfigMountPath, RoleFilename),
+			ProxyFile:  fmt.Sprintf("%s/%s", proxyConfigMountPath, ProxyFilename),
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
@@ -771,42 +786,6 @@ func (r *LagrangianProxyReconciler) generateMainConfig(def *proxyv1.LagrangianPr
 		return err
 	}
 
-	roles := make([]*config.Role, 0)
-	roles = append(roles, &config.Role{
-		Name:        "admin",
-		Title:       "administrator",
-		Description: "Proxy administrator a.k.a GOD",
-		Bindings: []config.Binding{
-			{
-				Backend:    "dashboard." + def.Spec.Domain,
-				Permission: "all",
-			},
-		},
-	})
-	roleBinary, err := yaml.Marshal(roles)
-	if err != nil {
-		return err
-	}
-
-	proxies := make([]*config.Backend, 0)
-	proxies = append(proxies, &config.Backend{
-		Name:            "dashboard." + def.Spec.Domain,
-		Upstream:        "http://localhost:4100",
-		AllowAsRootUser: true,
-		Permissions: []*config.Permission{
-			{
-				Name: "all",
-				Locations: []config.Location{
-					{Any: "/"},
-				},
-			},
-		},
-	})
-	proxyBinary, err := yaml.Marshal(proxies)
-	if err != nil {
-		return err
-	}
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
@@ -816,8 +795,6 @@ func (r *LagrangianProxyReconciler) generateMainConfig(def *proxyv1.LagrangianPr
 	}
 	_, err = ctrl.CreateOrUpdate(context.Background(), r, configMap, func() error {
 		configMap.Data["config.yaml"] = string(b)
-		configMap.Data["roles.yaml"] = string(roleBinary)
-		configMap.Data["proxies.yaml"] = string(proxyBinary)
 
 		return ctrl.SetControllerReference(def, configMap, r.Scheme)
 	})

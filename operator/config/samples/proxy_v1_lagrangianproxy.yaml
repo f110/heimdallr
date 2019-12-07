@@ -6,8 +6,14 @@ spec:
   replicas: 3
   domain: local-proxy.f110.dev
   port: 443
+  organization: test
+  administratorUnit: super
+  backendSelector:
+    instance: lagrangianproxy-sample
+  roleSelector:
+    instance: lagrangianproxy-sample
   issuerRef:
-    name: lets-encrypt
+    name: self-signed
     kind: ClusterIssuer
   identityProvider:
     provider: google

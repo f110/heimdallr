@@ -25,6 +25,11 @@ type SecretSelector struct {
 	Key  string `json:"key,omitempty"`
 }
 
+type LabelSelector struct {
+	MatchLabels map[string]string `json:"matchLabel,omitempty"`
+	Namespace   string            `json:"namespace,omitempty"`
+}
+
 // LagrangianProxySpec defines the desired state of LagrangianProxy
 type LagrangianProxySpec struct {
 	Domain string `json:"domain"`
@@ -39,6 +44,8 @@ type LagrangianProxySpec struct {
 	RootUsers         []string               `json:"rootUsers,omitempty"`
 	Session           SessionSpec            `json:"session"`
 	Replicas          int32                  `json:"replicas"`
+	BackendSelector   LabelSelector          `json:"backendSelector,omitempty"`
+	RoleSelector      LabelSelector          `json:"roleSelector,omitempty"`
 }
 
 type IdentityProviderSpec struct {
