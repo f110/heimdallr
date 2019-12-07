@@ -158,14 +158,19 @@ func (r *LagrangianProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 }
 
 func (r *LagrangianProxyReconciler) ReconcileMainProcess(def *proxyv1.LagrangianProxy, req ctrl.Request) error {
+	secret := &corev1.Secret{}
+	err := r.Get(context.Background(), client.ObjectKey{Name: def.Spec.IdentityProvider.ClientSecretRef.Name, Namespace: req.Namespace}, secret)
+	if err != nil && apierrors.IsNotFound(err) {
+		return err
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
 			Namespace: req.Namespace,
 		},
 	}
-
-	_, err := ctrl.CreateOrUpdate(context.Background(), r, deployment, func() error {
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, deployment, func() error {
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &def.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
