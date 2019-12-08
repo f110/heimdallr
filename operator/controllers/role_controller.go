@@ -43,19 +43,17 @@ func (r *RoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *RoleReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("lagrangianproxy", req.NamespacedName)
-
 	role := &proxyv1.Role{}
 	if err := r.Get(context.Background(), req.NamespacedName, role); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	defList := &proxyv1.LagrangianProxyList{}
+	defList := &proxyv1.ProxyList{}
 	if err := r.List(context.Background(), defList); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	targets := make([]proxyv1.LagrangianProxy, 0)
+	targets := make([]proxyv1.Proxy, 0)
 Item:
 	for _, v := range defList.Items {
 		for k := range v.Spec.RoleSelector.MatchLabels {

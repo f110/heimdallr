@@ -18,7 +18,7 @@ func NewProcessRepository() *ProcessRepository {
 	return processRepository
 }
 
-func (r *ProcessRepository) Get(spec *proxyv1.LagrangianProxy) *LagrangianProxy {
+func (r *ProcessRepository) Get(spec *proxyv1.Proxy) *LagrangianProxy {
 	if v, ok := r.data[fmt.Sprintf("%s/%s", spec.Namespace, spec.Name)]; ok {
 		return v
 	}

@@ -34,28 +34,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// LagrangianProxyReconciler reconciles a LagrangianProxy object
-type LagrangianProxyReconciler struct {
+// ProxyReconciler reconciles a Proxy object
+type ProxyReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	ProcessRepository *ProcessRepository
 }
 
-// +kubebuilder:rbac:groups=proxy.f110.dev,resources=lagrangianproxies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=proxy.f110.dev,resources=lagrangianproxies/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=proxy.f110.dev,resources=proxies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=proxy.f110.dev,resources=proxies/status,verbs=get;update;patch
 
-func (r *LagrangianProxyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ProxyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := r.checkOperator(); err != nil {
 		return err
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&proxyv1.LagrangianProxy{}).
+		For(&proxyv1.Proxy{}).
 		Complete(r)
 }
 
-func (r *LagrangianProxyReconciler) checkOperator() error {
+func (r *ProxyReconciler) checkOperator() error {
 	cfg, err := cconfig.GetConfig()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (r *LagrangianProxyReconciler) checkOperator() error {
 	return nil
 }
 
-func (r *LagrangianProxyReconciler) existCustomResource(apiList []*metav1.APIResourceList, groupVersion, kind string) error {
+func (r *ProxyReconciler) existCustomResource(apiList []*metav1.APIResourceList, groupVersion, kind string) error {
 	for _, v := range apiList {
 		if v.GroupVersion == groupVersion {
 			for _, v := range v.APIResources {
@@ -90,11 +90,9 @@ func (r *LagrangianProxyReconciler) existCustomResource(apiList []*metav1.APIRes
 	return fmt.Errorf("controllers: %s/%s not found", groupVersion, kind)
 }
 
-func (r *LagrangianProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("lagrangianproxy", req.NamespacedName)
-
+func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Request reconcile")
-	def := &proxyv1.LagrangianProxy{}
+	def := &proxyv1.Proxy{}
 	if err := r.Get(context.Background(), req.NamespacedName, def); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -115,7 +113,7 @@ func (r *LagrangianProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	return ctrl.Result{}, nil
 }
 
-func (r *LagrangianProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) error {
+func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) error {
 	lp.Lock()
 	defer lp.Unlock()
 
@@ -196,7 +194,7 @@ func (r *LagrangianProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *
 	return nil
 }
 
-func (r *LagrangianProxyReconciler) ReconcileMainProcess(lp *LagrangianProxy) error {
+func (r *ProxyReconciler) ReconcileMainProcess(lp *LagrangianProxy) error {
 	secret := &corev1.Secret{}
 	err := r.Get(context.Background(), client.ObjectKey{Name: lp.Spec.IdentityProvider.ClientSecretRef.Name, Namespace: lp.Namespace}, secret)
 	if err != nil && apierrors.IsNotFound(err) {
@@ -211,7 +209,7 @@ func (r *LagrangianProxyReconciler) ReconcileMainProcess(lp *LagrangianProxy) er
 	return r.reconcileProcess(lp, objs)
 }
 
-func (r *LagrangianProxyReconciler) ReconcileDashboardProcess(lp *LagrangianProxy) error {
+func (r *ProxyReconciler) ReconcileDashboardProcess(lp *LagrangianProxy) error {
 	objs, err := lp.Dashboard()
 	if err != nil {
 		return err
@@ -220,7 +218,7 @@ func (r *LagrangianProxyReconciler) ReconcileDashboardProcess(lp *LagrangianProx
 	return r.reconcileProcess(lp, objs)
 }
 
-func (r *LagrangianProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
+func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 	requeue := false
 	if err := r.ReconcileEtcdCluster(lp); err != nil {
 		r.Log.Info("etcd cluster is not ready yet. waiting 30 seconds")
@@ -234,7 +232,7 @@ func (r *LagrangianProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) 
 	return requeue, nil
 }
 
-func (r *LagrangianProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
+func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
 	cluster := lp.EtcdCluster()
 	orig := cluster.DeepCopy()
 	_, err := ctrl.CreateOrUpdate(context.Background(), r, cluster, func() error {

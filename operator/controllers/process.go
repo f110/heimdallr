@@ -56,6 +56,8 @@ const (
 	serverPrivateKeyFilename    = "tls.key"
 	caCertificateFilename       = "ca.crt"
 	caPrivateKeyFilename        = "ca.key"
+	proxyFilename               = "proxies.yaml"
+	roleFilename                = "roles.yaml"
 
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
@@ -65,12 +67,12 @@ type LagrangianProxy struct {
 
 	Name      string
 	Namespace string
-	Object    *proxyv1.LagrangianProxy
-	Spec      proxyv1.LagrangianProxySpec
+	Object    *proxyv1.Proxy
+	Spec      proxyv1.ProxySpec
 	Client    client.Client
 }
 
-func NewLagrangianProxy(spec *proxyv1.LagrangianProxy, client client.Client) *LagrangianProxy {
+func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client) *LagrangianProxy {
 	return &LagrangianProxy{
 		Name:      spec.Name,
 		Namespace: spec.Namespace,
@@ -324,8 +326,8 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			RootUsers:  r.Spec.RootUsers,
 			CertFile:   fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
 			KeyFile:    fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
-			RoleFile:   fmt.Sprintf("%s/%s", proxyConfigMountPath, RoleFilename),
-			ProxyFile:  fmt.Sprintf("%s/%s", proxyConfigMountPath, ProxyFilename),
+			RoleFile:   fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
+			ProxyFile:  fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
@@ -527,8 +529,8 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		},
 		Data: make(map[string]string),
 	}
-	configMap.Data[RoleFilename] = string(roleBinary)
-	configMap.Data[ProxyFilename] = string(proxyBinary)
+	configMap.Data[roleFilename] = string(roleBinary)
+	configMap.Data[proxyFilename] = string(proxyBinary)
 
 	return configMap, nil
 }

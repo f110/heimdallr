@@ -1,7 +1,7 @@
 apiVersion: proxy.f110.dev/v1
-kind: LagrangianProxy
+kind: Proxy
 metadata:
-  name: lagrangianproxy-sample
+  name: proxy-sample
 spec:
   replicas: 3
   domain: local-proxy.f110.dev
@@ -9,9 +9,9 @@ spec:
   organization: test
   administratorUnit: super
   backendSelector:
-    instance: lagrangianproxy-sample
+    instance: proxy-sample
   roleSelector:
-    instance: lagrangianproxy-sample
+    instance: proxy-sample
   issuerRef:
     name: self-signed
     kind: ClusterIssuer

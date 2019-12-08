@@ -6,18 +6,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (unknown)
   creationTimestamp: null
-  name: lagrangianproxies.proxy.f110.dev
+  name: proxies.proxy.f110.dev
 spec:
   group: proxy.f110.dev
   names:
-    kind: LagrangianProxy
-    listKind: LagrangianProxyList
-    plural: lagrangianproxies
-    singular: lagrangianproxy
+    kind: Proxy
+    listKind: ProxyList
+    plural: proxies
+    singular: proxy
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: LagrangianProxy is the Schema for the lagrangianproxies API
+      description: Proxy is the Schema for the proxies API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +32,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: LagrangianProxySpec defines the desired state of LagrangianProxy
+          description: ProxySpec defines the desired state of Proxy
           properties:
             administratorUnit:
               type: string
@@ -202,7 +202,7 @@ spec:
           - session
           type: object
         status:
-          description: LagrangianProxyStatus defines the observed state of LagrangianProxy
+          description: ProxyStatus defines the observed state of Proxy
           type: object
       type: object
   version: v1

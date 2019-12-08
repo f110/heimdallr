@@ -3,7 +3,7 @@ kind: Role
 metadata:
   name: role-sample
   labels:
-    instance: lagrangianproxy-sample
+    instance: proxy-sample
 spec:
   title: administrator
   description: Proxy administrator a.k.a GOD

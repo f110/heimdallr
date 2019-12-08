@@ -30,8 +30,8 @@ type LabelSelector struct {
 	Namespace            string `json:"namespace,omitempty"`
 }
 
-// LagrangianProxySpec defines the desired state of LagrangianProxy
-type LagrangianProxySpec struct {
+// ProxySpec defines the desired state of Proxy
+type ProxySpec struct {
 	Domain string `json:"domain"`
 	Port   int32  `json:"port,omitempty"`
 	// Name of proxy. if not present, uses "Lagrangian Proxy CA"
@@ -60,32 +60,32 @@ type SessionSpec struct {
 	KeySecretRef SecretSelector `json:"keySecretRef,omitempty"`
 }
 
-// LagrangianProxyStatus defines the observed state of LagrangianProxy
-type LagrangianProxyStatus struct {
+// ProxyStatus defines the observed state of Proxy
+type ProxyStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
 
-// LagrangianProxy is the Schema for the lagrangianproxies API
-type LagrangianProxy struct {
+// Proxy is the Schema for the proxies API
+type Proxy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LagrangianProxySpec   `json:"spec,omitempty"`
-	Status LagrangianProxyStatus `json:"status,omitempty"`
+	Spec   ProxySpec   `json:"spec,omitempty"`
+	Status ProxyStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// LagrangianProxyList contains a list of LagrangianProxy
-type LagrangianProxyList struct {
+// ProxyList contains a list of Proxy
+type ProxyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LagrangianProxy `json:"items"`
+	Items           []Proxy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&LagrangianProxy{}, &LagrangianProxyList{})
+	SchemeBuilder.Register(&Proxy{}, &ProxyList{})
 }

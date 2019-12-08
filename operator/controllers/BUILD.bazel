@@ -4,9 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "backend_controller.go",
-        "lagrangianproxy_controller.go",
         "process.go",
         "process_repository.go",
+        "proxy_controller.go",
         "role_controller.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/operator/controllers",

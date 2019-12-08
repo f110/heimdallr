@@ -2,7 +2,7 @@ domain: f110.dev
 repo: github.com/f110/lagrangian-proxy/operator
 resources:
 - group: proxy
-  kind: LagrangianProxy
+  kind: Proxy
   version: v1
 - group: proxy
   kind: Backend

@@ -3,7 +3,7 @@ kind: Backend
 metadata:
   name: backend-sample
   labels:
-    instance: lagrangianproxy-sample
+    instance: proxy-sample
 spec:
   upstream: http://localhost:4502
   permissions:

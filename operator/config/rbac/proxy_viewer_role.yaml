@@ -1,13 +1,13 @@
-# permissions to do viewer lagrangianproxies.
+# permissions to do viewer proxies.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: lagrangianproxy-viewer-role
+  name: proxy-viewer-role
 rules:
 - apiGroups:
   - proxy.f110.dev
   resources:
-  - lagrangianproxies
+  - proxies
   verbs:
   - get
   - list
@@ -15,6 +15,6 @@ rules:
 - apiGroups:
   - proxy.f110.dev
   resources:
-  - lagrangianproxies/status
+  - proxies/status
   verbs:
   - get

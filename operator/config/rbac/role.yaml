@@ -29,7 +29,7 @@ rules:
 - apiGroups:
   - proxy.f110.dev
   resources:
-  - lagrangianproxies
+  - proxies
   verbs:
   - create
   - delete
@@ -41,7 +41,7 @@ rules:
 - apiGroups:
   - proxy.f110.dev
   resources:
-  - lagrangianproxies/status
+  - proxies/status
   verbs:
   - get
   - patch

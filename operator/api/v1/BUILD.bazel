@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "backend_types.go",
         "groupversion_info.go",
-        "lagrangianproxy_types.go",
+        "proxy_types.go",
         "role_types.go",
         "zz_generated.deepcopy.go",
     ],

@@ -72,13 +72,13 @@ func main() {
 	repo := controllers.NewProcessRepository()
 	repo.SetClient(mgr.GetClient())
 
-	if err = (&controllers.LagrangianProxyReconciler{
+	if err = (&controllers.ProxyReconciler{
 		Client:            mgr.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("LagrangianProxy"),
+		Log:               ctrl.Log.WithName("controllers").WithName("Proxy"),
 		Scheme:            mgr.GetScheme(),
 		ProcessRepository: repo,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LagrangianProxy")
+		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
 		os.Exit(1)
 	}
 	if err = (&controllers.BackendReconciler{
