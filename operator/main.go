@@ -69,26 +69,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	repo := controllers.NewProcessRepository()
+	repo.SetClient(mgr.GetClient())
+
 	if err = (&controllers.LagrangianProxyReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LagrangianProxy"),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("LagrangianProxy"),
+		Scheme:            mgr.GetScheme(),
+		ProcessRepository: repo,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LagrangianProxy")
 		os.Exit(1)
 	}
 	if err = (&controllers.BackendReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Backend"),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("Backend"),
+		Scheme:            mgr.GetScheme(),
+		ProcessRepository: repo,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Backend")
 		os.Exit(1)
 	}
 	if err = (&controllers.RoleReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Role"),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("Role"),
+		Scheme:            mgr.GetScheme(),
+		ProcessRepository: repo,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Role")
 		os.Exit(1)

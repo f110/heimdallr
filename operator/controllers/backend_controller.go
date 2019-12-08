@@ -28,8 +28,9 @@ import (
 // BackendReconciler reconciles a Backend object
 type BackendReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log               logr.Logger
+	Scheme            *runtime.Scheme
+	ProcessRepository *ProcessRepository
 }
 
 // +kubebuilder:rbac:groups=proxy.f110.dev,resources=backends,verbs=get;list;watch;create;update;patch;delete
@@ -67,10 +68,32 @@ Item:
 	}
 
 	for _, v := range targets {
-		if err := ConfigReconcile(r, r.Scheme, &v); err != nil {
+		lp := r.ProcessRepository.Get(&v)
+		if err := r.reconcileConfig(lp); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *BackendReconciler) reconcileConfig(lp *LagrangianProxy) error {
+	lp.Lock()
+	defer lp.Unlock()
+
+	configMap, err := lp.ReverseProxyConfig()
+	if err != nil {
+		return err
+	}
+	orig := configMap.DeepCopy()
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, configMap, func() error {
+		configMap.Data = orig.Data
+
+		return ctrl.SetControllerReference(lp.Object, configMap, r.Scheme)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
