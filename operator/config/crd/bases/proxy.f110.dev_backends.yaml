@@ -38,6 +38,8 @@ spec:
               type: boolean
             allowRootUser:
               type: boolean
+            layer:
+              type: string
             permissions:
               items:
                 properties:
@@ -78,6 +80,8 @@ spec:
               items:
                 type: string
               type: array
+          required:
+          - layer
           type: object
         status:
           description: BackendStatus defines the observed state of Backend

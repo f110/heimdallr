@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	mrand "math/rand"
+	"sort"
 	"sync"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
@@ -62,6 +63,15 @@ const (
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
+type process struct {
+	Deployment          *appsv1.Deployment
+	PodDisruptionBudget *policyv1beta1.PodDisruptionBudget
+	Service             *corev1.Service
+	ConfigMaps          []*corev1.ConfigMap
+	Secrets             []*corev1.Secret
+	Certificate         *certmanager.Certificate
+}
+
 type LagrangianProxy struct {
 	sync.Mutex
 
@@ -80,20 +90,6 @@ func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client) *LagrangianPr
 		Object:    spec,
 		Spec:      spec.Spec,
 	}
-}
-
-func (r *LagrangianProxy) Certificate() *certmanager.Certificate {
-	cert := &certmanager.Certificate{
-		ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
-		Spec: certmanager.CertificateSpec{
-			SecretName: r.CertificateSecretName(),
-			IssuerRef:  r.Spec.IssuerRef,
-			CommonName: r.Spec.Domain,
-			DNSNames:   []string{r.Spec.Domain},
-		},
-	}
-
-	return cert
 }
 
 func (r *LagrangianProxy) EtcdClusterName() string {
@@ -163,6 +159,63 @@ func (r *LagrangianProxy) ServiceNameForDashboard() string {
 
 func (r *LagrangianProxy) ReverseProxyConfigName() string {
 	return r.Name + "-proxy"
+}
+
+func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.BackendSelector.LabelSelector)
+	if err != nil {
+		return nil, err
+	}
+	backends := &proxyv1.BackendList{}
+	if err := r.Client.List(context.Background(), backends, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.BackendSelector.Namespace}); err != nil {
+		return nil, err
+	}
+
+	return backends.Items, nil
+}
+
+func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.RoleSelector.LabelSelector)
+	if err != nil {
+		return nil, err
+	}
+	roleList := &proxyv1.RoleList{}
+	if err := r.Client.List(context.Background(), roleList, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.RoleSelector.Namespace}); err != nil {
+		return nil, err
+	}
+
+	return roleList.Items, nil
+}
+
+func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
+	backends, err := r.Backends()
+	if err != nil {
+		return nil, err
+	}
+	layers := make(map[string]struct{})
+	for _, v := range backends {
+		if _, ok := layers[v.Spec.Layer]; !ok {
+			layers[v.Spec.Layer] = struct{}{}
+		}
+	}
+
+	domains := []string{r.Spec.Domain, fmt.Sprintf("*.%s", r.Spec.Domain)}
+	for v := range layers {
+		domains = append(domains, fmt.Sprintf("*.%s.%s", v, r.Spec.Domain))
+	}
+	sort.Strings(domains)
+
+	cert := &certmanager.Certificate{
+		ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
+		Spec: certmanager.CertificateSpec{
+			SecretName: r.CertificateSecretName(),
+			IssuerRef:  r.Spec.IssuerRef,
+			CommonName: r.Spec.Domain,
+			DNSNames:   domains,
+		},
+	}
+
+	return cert, nil
 }
 
 func (r *LagrangianProxy) EtcdCluster() *etcdcluster.EtcdCluster {
@@ -433,18 +486,16 @@ func (r *LagrangianProxy) LabelsForDashboard() map[string]string {
 }
 
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.BackendSelector.LabelSelector)
+	backends, err := r.Backends()
 	if err != nil {
 		return nil, err
 	}
-	backends := &proxyv1.BackendList{}
-	if err := r.Client.List(context.Background(), backends, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.BackendSelector.Namespace}); err != nil {
-		return nil, err
-	}
-	proxies := make([]*config.Backend, len(backends.Items))
+
+	proxies := make([]*config.Backend, len(backends))
 	backendMap := make(map[string]*proxyv1.Backend)
-	for i, v := range backends.Items {
+	for i, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = &v
+
 		permissions := make([]*config.Permission, len(v.Spec.Permissions))
 		for k, p := range v.Spec.Permissions {
 			locations := make([]config.Location, len(p.Locations))
@@ -468,7 +519,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			}
 		}
 		proxies[i] = &config.Backend{
-			Name:            v.Name + "." + r.Spec.Domain,
+			Name:            v.Name + "." + v.Spec.Layer + "." + r.Spec.Domain,
 			Upstream:        v.Spec.Upstream,
 			Permissions:     permissions,
 			WebHook:         v.Spec.Webhook,
@@ -482,16 +533,12 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 
-	selector, err = metav1.LabelSelectorAsSelector(&r.Spec.RoleSelector.LabelSelector)
+	roleList, err := r.Roles()
 	if err != nil {
 		return nil, err
 	}
-	roleList := &proxyv1.RoleList{}
-	if err := r.Client.List(context.Background(), roleList, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.RoleSelector.Namespace}); err != nil {
-		return nil, err
-	}
-	roles := make([]*config.Role, len(roleList.Items))
-	for i, v := range roleList.Items {
+	roles := make([]*config.Role, len(roleList))
+	for i, v := range roleList {
 		bindings := make([]config.Binding, len(v.Spec.Bindings))
 		for k, b := range v.Spec.Bindings {
 			namespace := v.Namespace
@@ -500,7 +547,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			}
 			backendHost := ""
 			if bn, ok := backendMap[namespace+"/"+b.Name]; ok {
-				backendHost = bn.Name + "." + r.Spec.Domain
+				backendHost = bn.Name + "." + bn.Spec.Layer + "." + r.Spec.Domain
 			} else {
 				return nil, fmt.Errorf("controller: %s not found", b.Name)
 			}
@@ -533,15 +580,6 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	configMap.Data[proxyFilename] = string(proxyBinary)
 
 	return configMap, nil
-}
-
-type process struct {
-	Deployment          *appsv1.Deployment
-	PodDisruptionBudget *policyv1beta1.PodDisruptionBudget
-	Service             *corev1.Service
-	ConfigMaps          []*corev1.ConfigMap
-	Secrets             []*corev1.Secret
-	Certificate         *certmanager.Certificate
 }
 
 func (r *LagrangianProxy) MainProcess() (*process, error) {
@@ -756,6 +794,11 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 		return nil, err
 	}
 
+	cert, err := r.Certificate()
+	if err != nil {
+		return nil, err
+	}
+
 	return &process{
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
@@ -765,7 +808,7 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 			caSecert, privateKey, githubSecret,
 			cookieSecret,
 		},
-		Certificate: r.Certificate(),
+		Certificate: cert,
 	}, nil
 }
 

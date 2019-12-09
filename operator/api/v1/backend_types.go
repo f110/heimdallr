@@ -21,6 +21,7 @@ import (
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
+	Layer         string       `json:"layer"`
 	Upstream      string       `json:"upstream,omitempty"`
 	Webhook       string       `json:"webhook,omitempty"`
 	WebhookPath   []string     `json:"webhookPath,omitempty"`

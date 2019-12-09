@@ -93,5 +93,16 @@ func (r *BackendReconciler) reconcileConfig(lp *LagrangianProxy) error {
 		return err
 	}
 
+	cert, err := lp.Certificate()
+	if err != nil {
+		return err
+	}
+	origC := cert.DeepCopy()
+	_, err = ctrl.CreateOrUpdate(context.Background(), r, cert, func() error {
+		cert.Spec = origC.Spec
+
+		return ctrl.SetControllerReference(lp.Object, cert, r.Scheme)
+	})
+
 	return nil
 }
