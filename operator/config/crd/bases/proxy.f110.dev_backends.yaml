@@ -36,7 +36,7 @@ spec:
           properties:
             agent:
               type: boolean
-            allowForRootUser:
+            allowRootUser:
               type: boolean
             permissions:
               items:

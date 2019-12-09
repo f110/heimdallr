@@ -474,7 +474,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			WebHook:         v.Spec.Webhook,
 			WebHookPath:     v.Spec.WebhookPath,
 			Agent:           v.Spec.Agent,
-			AllowAsRootUser: v.Spec.AllowForRootUser,
+			AllowAsRootUser: v.Spec.AllowRootUser,
 		}
 	}
 	proxyBinary, err := yaml.Marshal(proxies)

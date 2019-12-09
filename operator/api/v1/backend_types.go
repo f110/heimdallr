@@ -21,12 +21,12 @@ import (
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	Upstream         string       `json:"upstream,omitempty"`
-	Webhook          string       `json:"webhook,omitempty"`
-	WebhookPath      []string     `json:"webhookPath,omitempty"`
-	AllowForRootUser bool         `json:"allowForRootUser,omitempty"`
-	Agent            bool         `json:"agent,omitempty"`
-	Permissions      []Permission `json:"permissions,omitempty"`
+	Upstream      string       `json:"upstream,omitempty"`
+	Webhook       string       `json:"webhook,omitempty"`
+	WebhookPath   []string     `json:"webhookPath,omitempty"`
+	AllowRootUser bool         `json:"allowRootUser,omitempty"`
+	Agent         bool         `json:"agent,omitempty"`
+	Permissions   []Permission `json:"permissions,omitempty"`
 }
 
 type Permission struct {

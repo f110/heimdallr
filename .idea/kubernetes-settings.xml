@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="KubernetesSettings">
+    <specSources>
+      <SpecSource>
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_backends.yaml" />
+      </SpecSource>
+      <SpecSource>
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_proxies.yaml" />
+      </SpecSource>
+      <SpecSource>
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_roles.yaml" />
+      </SpecSource>
+    </specSources>
+  </component>
+</project>
