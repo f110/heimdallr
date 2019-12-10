@@ -2,6 +2,7 @@ load("//build/rules/go:vendor.bzl", "go_vendor")
 
 # gazelle:proto disable_global
 # gazelle:prefix github.com/f110/lagrangian-proxy
+# gazelle:resolve go github.com/f110/lagrangian-proxy/pkg/server/rpc //pkg/server/rpc:go_default_library
 
 go_vendor(
     name = "vendor",
@@ -12,13 +13,13 @@ go_vendor(
 )
 
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 
 pkg_tar(
     name = "bin",
-    package_dir = "/usr/local/bin",
     srcs = ["//cmd/lagrangian-proxy"],
     mode = "0755",
+    package_dir = "/usr/local/bin",
 )
 
 container_image(
@@ -30,9 +31,9 @@ container_image(
 
 container_push(
     name = "push",
-    image = ":image",
-    tag = "latest",
     format = "Docker",
+    image = ":image",
     registry = "docker.pkg.github.com",
     repository = "f110/lagrangian-proxy/proxy",
+    tag = "latest",
 )

@@ -24,6 +24,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/server/ct"
 	"github.com/f110/lagrangian-proxy/pkg/server/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/server/internalapi"
+	"github.com/f110/lagrangian-proxy/pkg/server/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/server/token"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/spf13/pflag"
@@ -34,15 +35,16 @@ import (
 type mainProcess struct {
 	Stop context.CancelFunc
 
-	ctx           context.Context
-	wg            sync.WaitGroup
-	config        *config.Config
-	userDatabase  *etcd.UserDatabase
-	caDatabase    database.CertificateAuthority
-	tokenDatabase database.TokenDatabase
-	relayLocator  database.RelayLocator
-	sessionStore  session.Store
-	connector     *connector.Server
+	ctx             context.Context
+	wg              sync.WaitGroup
+	config          *config.Config
+	userDatabase    *etcd.UserDatabase
+	caDatabase      database.CertificateAuthority
+	tokenDatabase   database.TokenDatabase
+	relayLocator    database.RelayLocator
+	clusterDatabase database.ClusterDatabase
+	sessionStore    session.Store
+	connector       *connector.Server
 
 	server    *server.Server
 	dashboard *dashboard.Server
@@ -142,8 +144,9 @@ func (m *mainProcess) startServer() {
 	resourceServer := internalapi.NewResourceServer(m.config)
 	probe := internalapi.NewProbe(m.probeCh)
 	ctReport := ct.NewServer()
+	rpcServer := rpc.NewServer(m.userDatabase, m.clusterDatabase)
 
-	s := server.New(m.config, front, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)
+	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -202,6 +205,10 @@ func (m *mainProcess) Setup() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

@@ -49,6 +49,7 @@ type Config struct {
 
 type General struct {
 	Enable               bool                  `json:"enable"`
+	Debug                bool                  `json:"debug,omitempty"`
 	Bind                 string                `json:"bind,omitempty"`
 	ServerName           string                `json:"server_name,omitempty"`
 	CertFile             string                `json:"cert_file,omitempty"`

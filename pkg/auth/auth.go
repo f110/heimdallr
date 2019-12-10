@@ -8,8 +8,15 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/session"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var defaultAuthenticator = &authenticator{}
@@ -21,6 +28,10 @@ var (
 	ErrInvalidToken       = xerrors.New("auth: invalid token")
 	ErrUserNotFound       = xerrors.New("auth: user not found")
 	ErrNotAllowed         = xerrors.New("auth: not allowed")
+)
+
+var (
+	unauthorizedError = status.New(codes.Unauthenticated, "not provided valid token")
 )
 
 type authenticator struct {
@@ -38,6 +49,14 @@ func Init(conf *config.Config, sessionStore session.Store, userDatabase database
 	defaultAuthenticator.userDatabase = userDatabase
 	defaultAuthenticator.ca = ca
 	defaultAuthenticator.tokenDatabase = tokenDatabase
+
+	v, err := unauthorizedError.WithDetails(&rpc.ErrorUnauthorized{
+		Endpoint: conf.General.TokenEndpoint,
+	})
+	if err != nil {
+		panic(err)
+	}
+	unauthorizedError = v
 }
 
 func Authenticate(req *http.Request) (*database.User, error) {
@@ -46,6 +65,14 @@ func Authenticate(req *http.Request) (*database.User, error) {
 
 func AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
 	return defaultAuthenticator.AuthenticateForSocket(ctx, token, host)
+}
+
+func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return defaultAuthenticator.UnaryInterceptor(ctx, req, info, handler)
+}
+
+func StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return defaultAuthenticator.StreamInterceptor(srv, ss, info, handler)
 }
 
 func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) {
@@ -126,6 +153,59 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	}
 
 	return nil, ErrNotAllowed
+}
+
+func (a *authenticator) UnaryInterceptor(ctx context.Context, req interface{}, _info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, unauthorizedError.Err()
+	}
+
+	err := a.authenticateByMetadata(ctx, md)
+	if err != nil {
+		return nil, unauthorizedError.Err()
+	}
+
+	return handler(ctx, req)
+}
+
+func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	md, ok := metadata.FromIncomingContext(ss.Context())
+	if !ok {
+		return unauthorizedError.Err()
+	}
+
+	err := a.authenticateByMetadata(ss.Context(), md)
+	if err != nil {
+		return unauthorizedError.Err()
+	}
+
+	return handler(srv, ss)
+}
+
+func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.MD) error {
+	if len(md.Get("token")) == 0 {
+		return unauthorizedError.Err()
+	}
+	tokenString := md.Get("token")[0]
+
+	token, err := a.tokenDatabase.FindToken(ctx, tokenString)
+	if err != nil {
+		logger.Log.Info("Could not find token", zap.Error(err))
+		return unauthorizedError.Err()
+	}
+
+	user, err := a.userDatabase.Get(token.UserId)
+	if err != nil {
+		logger.Log.Info("Could not find user", zap.Error(err))
+		return unauthorizedError.Err()
+	}
+
+	if !user.Admin {
+		return unauthorizedError.Err()
+	}
+
+	return nil
 }
 
 func (a *authenticator) findUser(req *http.Request) (*database.User, error) {

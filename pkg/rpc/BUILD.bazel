@@ -1,0 +1,41 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "rpc_proto",
+    srcs = ["rpc.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "rpc_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/server/rpc",
+    proto = ":rpc_proto",
+    visibility = ["//visibility:private"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "rpc.pb.go",
+        "service.go",
+    ],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/rpc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+        "//vendor/google.golang.org/grpc/codes:go_default_library",
+        "//vendor/google.golang.org/grpc/status:go_default_library",
+    ],
+)
+
+load("//build/rules/go:grpc.bzl", "vendor_grpc_source")
+
+vendor_grpc_source(
+    name = "vendor_grpc_source",
+    src = ":rpc_go_proto",
+    visibility = ["//visibility:public"],
+)

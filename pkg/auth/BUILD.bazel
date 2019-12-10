@@ -13,8 +13,15 @@ go_library(
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/etcd:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/rpc:go_default_library",
         "//pkg/session:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+        "//vendor/google.golang.org/grpc/codes:go_default_library",
+        "//vendor/google.golang.org/grpc/metadata:go_default_library",
+        "//vendor/google.golang.org/grpc/status:go_default_library",
     ],
 )
 

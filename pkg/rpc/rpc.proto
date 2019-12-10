@@ -1,0 +1,36 @@
+syntax = "proto3";
+package proxy.rpc;
+option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
+
+service Cluster {
+    rpc MemberList(RequestMemberList) returns (ResponseMemberList) {}
+}
+
+service User {
+    rpc List(RequestUserList) returns (ResponseUserList);
+}
+
+message RequestMemberList {}
+
+message ResponseMemberList {
+    repeated ClusterMember items = 1;
+}
+
+message ClusterMember {
+    string id = 1;
+}
+
+message RequestUserList {}
+
+message ResponseUserList {
+    repeated UserItem items = 1;
+}
+
+message UserItem {
+    string id = 1;
+    repeated string roles = 2;
+}
+
+message ErrorUnauthorized {
+    string endpoint = 1;
+}

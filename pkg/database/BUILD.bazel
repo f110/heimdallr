@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "certificate.go",
+        "cluster.go",
         "relay.go",
         "token.go",
         "user.go",

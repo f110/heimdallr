@@ -1,5 +1,6 @@
 general:
   bind: :4000
+  debug: true
   server_name: local-proxy.f110.dev:4000
   cert_file: ./tls.crt
   key_file: ./tls.key

@@ -19,6 +19,7 @@ go_library(
         "//pkg/server/ct:go_default_library",
         "//pkg/server/identityprovider:go_default_library",
         "//pkg/server/internalapi:go_default_library",
+        "//pkg/server/rpc:go_default_library",
         "//pkg/server/token:go_default_library",
         "//pkg/session:go_default_library",
         "//vendor/github.com/coreos/etcd/embed:go_default_library",

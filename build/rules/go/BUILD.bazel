@@ -8,6 +8,7 @@ exports_files(
     [
         "vendor.bash",
         "controller-gen.bash",
+        "move-into-workspace.bash",
     ],
     visibility = ["//visibility:public"],
 )

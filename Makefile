@@ -11,6 +11,7 @@ install-operator:
 	kustomize build operator/config/crd | kubectl apply -f -
 
 update-deps:
+	bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
 	bazel run //:vendor
 
 push:
