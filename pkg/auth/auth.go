@@ -19,6 +19,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	TokenMetadataKey = "token"
+)
+
 var defaultAuthenticator = &authenticator{}
 
 var (
@@ -187,7 +191,7 @@ func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.
 	if len(md.Get("token")) == 0 {
 		return unauthorizedError.Err()
 	}
-	tokenString := md.Get("token")[0]
+	tokenString := md.Get(TokenMetadataKey)[0]
 
 	token, err := a.tokenDatabase.FindToken(ctx, tokenString)
 	if err != nil {

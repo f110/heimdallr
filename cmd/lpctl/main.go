@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc/status"
-
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
@@ -32,6 +30,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"sigs.k8s.io/yaml"
 )
 
@@ -229,7 +228,7 @@ func commandCluster(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "token", token)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), auth.TokenMetadataKey, token)
 	retry := false
 
 Retry:
@@ -242,7 +241,7 @@ Retry:
 				return xerrors.Errorf(": %v", err)
 			}
 			newToken, err := tokenClient.RequestToken(endpoint)
-			ctx = metadata.AppendToOutgoingContext(context.Background(), "token", newToken)
+			ctx = metadata.AppendToOutgoingContext(context.Background(), auth.TokenMetadataKey, newToken)
 			retry = true
 			goto Retry
 		}
