@@ -18,6 +18,11 @@ func unaryAccessLogInterceptor(ctx context.Context, req interface{}, info *grpc.
 	return handler(ctx, req)
 }
 
+func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	logger.Log.Debug("Stream", zap.String("method", info.FullMethod))
+	return handler(srv, ss)
+}
+
 type Server struct {
 	internal *grpc.Server
 }
@@ -32,7 +37,10 @@ func NewServer(user database.UserDatabase, cluster database.ClusterDatabase) *Se
 			unaryAccessLogInterceptor,
 			auth.UnaryInterceptor,
 		)),
-		grpc.StreamInterceptor(auth.StreamInterceptor),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			streamAccessLogInterceptor,
+			auth.StreamInterceptor,
+		)),
 	)
 	rpc.RegisterClusterServer(s, rpc.NewClusterService(cluster))
 	rpc.RegisterAdminServer(s, rpc.NewAdminService(user))
