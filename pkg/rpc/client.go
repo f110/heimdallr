@@ -14,9 +14,10 @@ import (
 )
 
 type Client struct {
-	conn   *grpc.ClientConn
-	client AdminClient
-	md     context.Context
+	conn          *grpc.ClientConn
+	adminClient   AdminClient
+	clusterClient ClusterClient
+	md            context.Context
 }
 
 func NewClient(pool *x509.CertPool, host string) (*Client, error) {
@@ -25,7 +26,7 @@ func NewClient(pool *x509.CertPool, host string) (*Client, error) {
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	client := NewAdminClient(conn)
+	adminClient := NewAdminClient(conn)
 
 	tokenClient := token.NewTokenClient("token")
 	t, err := tokenClient.GetToken()
@@ -33,7 +34,7 @@ func NewClient(pool *x509.CertPool, host string) (*Client, error) {
 		return nil, xerrors.Errorf(": %v", nil)
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), TokenMetadataKey, t)
-	_, err = client.Ping(ctx, &RequestPing{})
+	_, err = adminClient.Ping(ctx, &RequestPing{})
 	if err != nil {
 		endpoint, err := extractEndpointFromError(err)
 		if err != nil {
@@ -43,7 +44,12 @@ func NewClient(pool *x509.CertPool, host string) (*Client, error) {
 		ctx = metadata.AppendToOutgoingContext(context.Background(), TokenMetadataKey, newToken)
 	}
 
-	return &Client{conn: conn, client: client, md: ctx}, nil
+	return &Client{
+		conn:          conn,
+		adminClient:   adminClient,
+		clusterClient: NewClusterClient(conn),
+		md:            ctx,
+	}, nil
 }
 
 func (c *Client) Close() {
@@ -51,8 +57,35 @@ func (c *Client) Close() {
 }
 
 func (c *Client) AddUser(id string, role string) error {
-	_, err := c.client.UserAdd(c.md, &RequestUserAdd{Id: id, Role: role})
+	_, err := c.adminClient.UserAdd(c.md, &RequestUserAdd{Id: id, Role: role})
 	return err
+}
+
+func (c *Client) DeleteUser(id string, role string) error {
+	_, err := c.adminClient.UserDel(c.md, &RequestUserDel{Id: id, Role: role})
+	return err
+}
+
+func (c *Client) ListAllUser() ([]*UserItem, error) {
+	return c.ListUser("")
+}
+
+func (c *Client) ListUser(role string) ([]*UserItem, error) {
+	res, err := c.adminClient.UserList(c.md, &RequestUserList{Role: role})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Items, nil
+}
+
+func (c *Client) ClusterMemberList() ([]*ClusterMember, error) {
+	res, err := c.clusterClient.MemberList(c.md, &RequestMemberList{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Items, nil
 }
 
 func extractEndpointFromError(err error) (string, error) {

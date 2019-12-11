@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -20,17 +19,12 @@ import (
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
-	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"sigs.k8s.io/yaml"
 )
 
@@ -215,37 +209,18 @@ func commandCluster(args []string) error {
 	if conf.General.Debug {
 		cp = conf.General.CertificateAuthority.CertPool
 	}
-	cred := credentials.NewClientTLSFromCert(cp, "")
-	conn, err := grpc.Dial(fmt.Sprintf("%s", conf.General.ServerName), grpc.WithTransportCredentials(cred))
+	c, err := rpc.NewClient(cp, conf.General.ServerName)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	defer conn.Close()
-	client := rpc.NewClusterClient(conn)
 
-	tokenClient := token.NewTokenClient("token")
-	t, err := tokenClient.GetToken()
-	if err != nil {
-		return err
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, t)
-	retry := false
-
-Retry:
 	switch args[0] {
 	case "member-list":
-		memberList, err := client.MemberList(ctx, &rpc.RequestMemberList{})
+		memberList, err := c.ClusterMemberList()
 		if err != nil {
-			endpoint, err := extractEndpointFromError(err)
-			if err != nil || retry {
-				return xerrors.Errorf(": %v", err)
-			}
-			newToken, err := tokenClient.RequestToken(endpoint)
-			ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
-			retry = true
-			goto Retry
+			return xerrors.Errorf(": %v", err)
 		}
-		for i, v := range memberList.Items {
+		for i, v := range memberList {
 			fmt.Printf("[%d] %s\n", i+1, v)
 		}
 		return nil
@@ -253,20 +228,46 @@ Retry:
 	return nil
 }
 
-func extractEndpointFromError(err error) (string, error) {
-	e, ok := status.FromError(err)
-	if !ok {
-		return "", err
+func commandAdmin(args []string) error {
+	confFile := ""
+	role := ""
+	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
+	fs.StringVar(&role, "role", role, "Role")
+	if err := fs.Parse(args); err != nil {
+		return err
 	}
-	if len(e.Details()) == 0 {
-		return "", err
+	conf, err := configreader.ReadConfig(confFile)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
 	}
 
-	if v, ok := e.Details()[0].(*rpc.ErrorUnauthorized); ok {
-		return v.Endpoint, nil
+	var cp *x509.CertPool
+	if conf.General.Debug {
+		cp = conf.General.CertificateAuthority.CertPool
+	}
+	c, err := rpc.NewClient(cp, conf.General.ServerName)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
 	}
 
-	return "", err
+	switch args[0] {
+	case "user-list":
+		var userList []*rpc.UserItem
+		if role != "" {
+			userList, err = c.ListUser(role)
+		} else {
+			userList, err = c.ListAllUser()
+		}
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		for i, v := range userList {
+			fmt.Printf("[%d] %s\n", i+1, v.Id)
+		}
+		return nil
+	}
+	return nil
 }
 
 func cli(args []string) error {
@@ -277,6 +278,8 @@ func cli(args []string) error {
 		return commandTestServer()
 	case "cluster":
 		return commandCluster(args[2:])
+	case "admin":
+		return commandAdmin(args[2:])
 	}
 
 	return nil

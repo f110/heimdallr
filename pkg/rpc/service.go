@@ -51,17 +51,29 @@ func (s *AdminService) Ping(_ context.Context, _ *RequestPing) (*ResponsePong, e
 	return &ResponsePong{}, nil
 }
 
-func (s *AdminService) UserList(_ context.Context, _ *RequestUserList) (*ResponseUserList, error) {
+func (s *AdminService) UserList(_ context.Context, req *RequestUserList) (*ResponseUserList, error) {
 	users, err := s.userDatabase.GetAll()
 	if err != nil {
 		return nil, err
 	}
-	res := make([]*UserItem, len(users))
-	for i, v := range users {
-		res[i] = &UserItem{
+	res := make([]*UserItem, 0, len(users))
+	for _, v := range users {
+		if req.Role != "" {
+			ok := false
+			for _, r := range v.Roles {
+				if r == req.Role {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+		}
+		res = append(res, &UserItem{
 			Id:    v.Id,
 			Roles: v.Roles,
-		}
+		})
 	}
 
 	return &ResponseUserList{Items: res}, nil

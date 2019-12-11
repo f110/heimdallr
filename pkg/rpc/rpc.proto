@@ -27,7 +27,9 @@ message ClusterMember {
     string id = 1;
 }
 
-message RequestUserList {}
+message RequestUserList {
+    string role = 1;
+}
 
 message ResponseUserList {
     repeated UserItem items = 1;
