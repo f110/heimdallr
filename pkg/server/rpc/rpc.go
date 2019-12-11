@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/f110/lagrangian-proxy/pkg/config"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -31,7 +33,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.internal.ServeHTTP(w, req)
 }
 
-func NewServer(user database.UserDatabase, cluster database.ClusterDatabase) *Server {
+func NewServer(conf *config.Config, user database.UserDatabase, cluster database.ClusterDatabase) *Server {
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			unaryAccessLogInterceptor,
@@ -43,6 +45,6 @@ func NewServer(user database.UserDatabase, cluster database.ClusterDatabase) *Se
 		)),
 	)
 	rpc.RegisterClusterServer(s, rpc.NewClusterService(cluster))
-	rpc.RegisterAdminServer(s, rpc.NewAdminService(user))
+	rpc.RegisterAdminServer(s, rpc.NewAdminService(conf, user))
 	return &Server{internal: s}
 }

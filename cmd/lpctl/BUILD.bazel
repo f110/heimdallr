@@ -7,17 +7,12 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/auth:go_default_library",
-        "//pkg/auth/token:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/config/configreader:go_default_library",
         "//pkg/rpc:go_default_library",
         "//vendor/github.com/gorilla/securecookie:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/google.golang.org/grpc/credentials:go_default_library",
-        "//vendor/google.golang.org/grpc/metadata:go_default_library",
-        "//vendor/google.golang.org/grpc/status:go_default_library",
         "//vendor/sigs.k8s.io/yaml:go_default_library",
     ],
 )

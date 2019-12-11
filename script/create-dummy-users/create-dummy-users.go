@@ -17,7 +17,7 @@ func main() {
 	role := "user"
 	userIdFormat := "dummy_%d@exmaple.com"
 	ca := ""
-	flags := pflag.NewFlagSet("create-dumm-users", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("create-dummy-users", pflag.ContinueOnError)
 	flags.StringVarP(&host, "host", "h", host, "hostname")
 	flags.IntVarP(&count, "count", "c", count, "number of users")
 	flags.StringVarP(&role, "role", "r", role, "role name")

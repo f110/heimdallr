@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
@@ -22,7 +23,7 @@ func NewClusterService(cluster database.ClusterDatabase) *ClusterService {
 	return &ClusterService{clusterDatabase: cluster}
 }
 
-func (s *ClusterService) MemberList(ctx context.Context, req *RequestMemberList) (*ResponseMemberList, error) {
+func (s *ClusterService) MemberList(ctx context.Context, _ *RequestMemberList) (*ResponseMemberList, error) {
 	members, err := s.clusterDatabase.MemberList(ctx)
 	if err != nil {
 		return nil, err
@@ -38,13 +39,14 @@ func (s *ClusterService) MemberList(ctx context.Context, req *RequestMemberList)
 }
 
 type AdminService struct {
+	Config       *config.Config
 	userDatabase database.UserDatabase
 }
 
 var _ AdminServer = &AdminService{}
 
-func NewAdminService(user database.UserDatabase) *AdminService {
-	return &AdminService{userDatabase: user}
+func NewAdminService(conf *config.Config, user database.UserDatabase) *AdminService {
+	return &AdminService{Config: conf, userDatabase: user}
 }
 
 func (s *AdminService) Ping(_ context.Context, _ *RequestPing) (*ResponsePong, error) {
@@ -126,4 +128,19 @@ func (s *AdminService) UserDel(ctx context.Context, req *RequestUserDel) (*Respo
 		return nil, err
 	}
 	return &ResponseUserDel{Ok: true}, nil
+}
+
+func (s *AdminService) RoleList(_ context.Context, _ *RequestRoleList) (*ResponseRoleList, error) {
+	roles := s.Config.General.GetAllRoles()
+
+	res := make([]*RoleItem, len(roles))
+	for i, v := range roles {
+		res[i] = &RoleItem{
+			Name:        v.Name,
+			Title:       v.Title,
+			Description: v.Description,
+		}
+	}
+
+	return &ResponseRoleList{Items: res}, nil
 }

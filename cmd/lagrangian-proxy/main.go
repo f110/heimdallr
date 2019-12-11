@@ -144,7 +144,7 @@ func (m *mainProcess) startServer() {
 	resourceServer := internalapi.NewResourceServer(m.config)
 	probe := internalapi.NewProbe(m.probeCh)
 	ctReport := ct.NewServer()
-	rpcServer := rpc.NewServer(m.userDatabase, m.clusterDatabase)
+	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.clusterDatabase)
 
 	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)
 	m.server = s

@@ -26,6 +26,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth/token:go_default_library",
+        "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",

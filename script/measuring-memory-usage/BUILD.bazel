@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["measuring-memory-usage.go"],
+    importpath = "github.com/f110/lagrangian-proxy/script/mesuring-memory-usage",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/rpc:go_default_library",
+        "//vendor/github.com/spf13/pflag:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "mesauring-memory-usage",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

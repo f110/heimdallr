@@ -262,8 +262,8 @@ func commandAdmin(args []string) error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		for i, v := range userList {
-			fmt.Printf("[%d] %s\n", i+1, v.Id)
+		for _, v := range userList {
+			fmt.Printf("%s\n", v.Id)
 		}
 		return nil
 	}

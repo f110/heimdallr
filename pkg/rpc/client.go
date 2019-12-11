@@ -88,6 +88,15 @@ func (c *Client) ClusterMemberList() ([]*ClusterMember, error) {
 	return res.Items, nil
 }
 
+func (c *Client) ListRole() ([]*RoleItem, error) {
+	res, err := c.adminClient.RoleList(c.md, &RequestRoleList{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Items, nil
+}
+
 func extractEndpointFromError(err error) (string, error) {
 	e, ok := status.FromError(err)
 	if !ok {

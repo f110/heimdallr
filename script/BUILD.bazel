@@ -2,3 +2,8 @@ alias(
     name = "create-dummy-users",
     actual = "//script/create-dummy-users:create-dummy-users",
 )
+
+alias(
+    name = "measuring-memory-usage",
+    actual = "//script/measuring-memory-usage:mesauring-memory-usage",
+)

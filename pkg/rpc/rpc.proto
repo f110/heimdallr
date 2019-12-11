@@ -8,9 +8,12 @@ service Cluster {
 
 service Admin {
     rpc Ping(RequestPing) returns (ResponsePong);
+
     rpc UserList(RequestUserList) returns (ResponseUserList);
     rpc UserAdd(RequestUserAdd) returns (ResponseUserAdd);
     rpc UserDel(RequestUserDel) returns (ResponseUserDel);
+
+    rpc RoleList(RequestRoleList) returns (ResponseRoleList);
 }
 
 message RequestPing {}
@@ -27,17 +30,23 @@ message ClusterMember {
     string id = 1;
 }
 
+message UserItem {
+    string id = 1;
+    repeated string roles = 2;
+}
+
+message RoleItem {
+    string name = 1;
+    string title = 2;
+    string description = 3;
+}
+
 message RequestUserList {
     string role = 1;
 }
 
 message ResponseUserList {
     repeated UserItem items = 1;
-}
-
-message UserItem {
-    string id = 1;
-    repeated string roles = 2;
 }
 
 message RequestUserAdd {
@@ -56,6 +65,12 @@ message RequestUserDel {
 
 message ResponseUserDel {
     bool ok = 1;
+}
+
+message RequestRoleList {}
+
+message ResponseRoleList {
+    repeated RoleItem items = 1;
 }
 
 message ErrorUnauthorized {
