@@ -87,3 +87,31 @@ func (s *AdminService) UserAdd(ctx context.Context, req *RequestUserAdd) (*Respo
 
 	return &ResponseUserAdd{Ok: true}, nil
 }
+
+func (s *AdminService) UserDel(ctx context.Context, req *RequestUserDel) (*ResponseUserDel, error) {
+	u, err := s.userDatabase.Get(req.Id)
+	if err != nil {
+		logger.Log.Info("Failure get user", zap.Error(err))
+		return nil, err
+	}
+
+	if req.Role == "" {
+		if err := s.userDatabase.Delete(ctx, u.Id); err != nil {
+			return nil, err
+		}
+		return &ResponseUserDel{Ok: true}, nil
+	}
+
+	for i := range u.Roles {
+		if u.Roles[i] == req.Role {
+			u.Roles = append(u.Roles[:i], u.Roles[i+1:]...)
+			break
+		}
+	}
+
+	if err := s.userDatabase.Set(ctx, u); err != nil {
+		logger.Log.Warn("Failure delete role", zap.Error(err))
+		return nil, err
+	}
+	return &ResponseUserDel{Ok: true}, nil
+}

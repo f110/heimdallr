@@ -10,6 +10,7 @@ service Admin {
     rpc Ping(RequestPing) returns (ResponsePong);
     rpc UserList(RequestUserList) returns (ResponseUserList);
     rpc UserAdd(RequestUserAdd) returns (ResponseUserAdd);
+    rpc UserDel(RequestUserDel) returns (ResponseUserDel);
 }
 
 message RequestPing {}
@@ -43,6 +44,15 @@ message RequestUserAdd {
 }
 
 message ResponseUserAdd {
+    bool ok = 1;
+}
+
+message RequestUserDel {
+    string id = 1;
+    string role = 2;
+}
+
+message ResponseUserDel {
     bool ok = 1;
 }
 
