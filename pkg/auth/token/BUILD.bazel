@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "openbrowser_darwin.go",
+        "openbrowser_linux.go",
+        "openbrowser_windows.go",
+        "token_client.go",
+    ],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/auth/token",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/xerrors:go_default_library"],
+)

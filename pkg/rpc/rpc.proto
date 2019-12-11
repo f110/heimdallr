@@ -6,9 +6,15 @@ service Cluster {
     rpc MemberList(RequestMemberList) returns (ResponseMemberList) {}
 }
 
-service User {
-    rpc List(RequestUserList) returns (ResponseUserList);
+service Admin {
+    rpc Ping(RequestPing) returns (ResponsePong);
+    rpc UserList(RequestUserList) returns (ResponseUserList);
+    rpc UserAdd(RequestUserAdd) returns (ResponseUserAdd);
 }
+
+message RequestPing {}
+
+message ResponsePong {}
 
 message RequestMemberList {}
 
@@ -29,6 +35,15 @@ message ResponseUserList {
 message UserItem {
     string id = 1;
     repeated string roles = 2;
+}
+
+message RequestUserAdd {
+    string id = 1;
+    string role = 2;
+}
+
+message ResponseUserAdd {
+    bool ok = 1;
 }
 
 message ErrorUnauthorized {

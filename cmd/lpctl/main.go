@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
-	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
@@ -223,12 +223,12 @@ func commandCluster(args []string) error {
 	defer conn.Close()
 	client := rpc.NewClusterClient(conn)
 
-	tokenClient := localproxy.NewTokenClient("token")
-	token, err := tokenClient.GetToken()
+	tokenClient := token.NewTokenClient("token")
+	t, err := tokenClient.GetToken()
 	if err != nil {
 		return err
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), auth.TokenMetadataKey, token)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, t)
 	retry := false
 
 Retry:
@@ -241,7 +241,7 @@ Retry:
 				return xerrors.Errorf(": %v", err)
 			}
 			newToken, err := tokenClient.RequestToken(endpoint)
-			ctx = metadata.AppendToOutgoingContext(context.Background(), auth.TokenMetadataKey, newToken)
+			ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 			retry = true
 			goto Retry
 		}

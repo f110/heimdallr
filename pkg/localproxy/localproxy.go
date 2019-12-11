@@ -15,10 +15,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const (
-	ClientRedirectUrl = "http://localhost:6391/callback"
-)
-
 type ErrorTokenAuthorization struct {
 	Endpoint string
 }

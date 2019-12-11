@@ -2,18 +2,17 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["main.go"],
-    importpath = "github.com/f110/lagrangian-proxy/cmd/lproxy",
+    srcs = ["create-dummy-users.go"],
+    importpath = "github.com/f110/lagrangian-proxy/script/create-dummy-users",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/auth/token:go_default_library",
-        "//pkg/localproxy:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//pkg/rpc:go_default_library",
+        "//vendor/github.com/spf13/pflag:go_default_library",
     ],
 )
 
 go_binary(
-    name = "lproxy",
+    name = "create-dummy-users",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )

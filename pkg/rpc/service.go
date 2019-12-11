@@ -4,6 +4,12 @@ import (
 	"context"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.uber.org/zap"
+)
+
+const (
+	TokenMetadataKey = "token"
 )
 
 type ClusterService struct {
@@ -31,17 +37,21 @@ func (s *ClusterService) MemberList(ctx context.Context, req *RequestMemberList)
 	return &ResponseMemberList{Items: res}, nil
 }
 
-type UserService struct {
+type AdminService struct {
 	userDatabase database.UserDatabase
 }
 
-var _ UserServer = &UserService{}
+var _ AdminServer = &AdminService{}
 
-func NewUserService(user database.UserDatabase) *UserService {
-	return &UserService{userDatabase: user}
+func NewAdminService(user database.UserDatabase) *AdminService {
+	return &AdminService{userDatabase: user}
 }
 
-func (s *UserService) List(_ context.Context, _ *RequestUserList) (*ResponseUserList, error) {
+func (s *AdminService) Ping(_ context.Context, _ *RequestPing) (*ResponsePong, error) {
+	return &ResponsePong{}, nil
+}
+
+func (s *AdminService) UserList(_ context.Context, _ *RequestUserList) (*ResponseUserList, error) {
 	users, err := s.userDatabase.GetAll()
 	if err != nil {
 		return nil, err
@@ -55,4 +65,25 @@ func (s *UserService) List(_ context.Context, _ *RequestUserList) (*ResponseUser
 	}
 
 	return &ResponseUserList{Items: res}, nil
+}
+
+func (s *AdminService) UserAdd(ctx context.Context, req *RequestUserAdd) (*ResponseUserAdd, error) {
+	u, err := s.userDatabase.Get(req.Id)
+	if err != nil && err != database.ErrUserNotFound {
+		logger.Log.Info("Failure get user", zap.Error(err))
+		return nil, err
+	}
+
+	if u != nil {
+		u.Roles = append(u.Roles, req.Role)
+	} else {
+		u = &database.User{Id: req.Id, Roles: []string{req.Role}}
+	}
+
+	if err := s.userDatabase.Set(ctx, u); err != nil {
+		logger.Log.Warn("Failure create or update user", zap.Error(err))
+		return nil, err
+	}
+
+	return &ResponseUserAdd{Ok: true}, nil
 }

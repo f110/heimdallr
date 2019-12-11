@@ -1,4 +1,4 @@
-package localproxy
+package token
 
 import "os/exec"
 

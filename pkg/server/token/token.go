@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/f110/lagrangian-proxy/pkg/session"
@@ -81,19 +81,19 @@ func (t *Server) handleAuthorized(w http.ResponseWriter, req *http.Request, _ ht
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, req, localproxy.ClientRedirectUrl+"?code="+code.Code, http.StatusFound)
+	http.Redirect(w, req, token.ClientRedirectUrl+"?code="+code.Code, http.StatusFound)
 }
 
 func (t *Server) handleExchange(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	token, err := t.tokenDatabase.IssueToken(req.Context(), req.URL.Query().Get("code"), req.URL.Query().Get("code_verifier"))
+	tk, err := t.tokenDatabase.IssueToken(req.Context(), req.URL.Query().Get("code"), req.URL.Query().Get("code_verifier"))
 	if err != nil {
 		logger.Log.Debug("Failure issue token", zap.Error(err), zap.String("code", req.URL.Query().Get("code")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	res := &localproxy.TokenExchangeResponse{
-		AccessToken: token.Token,
+	res := &token.TokenExchangeResponse{
+		AccessToken: tk.Token,
 		ExpiresIn:   int(database.TokenExpiration.Seconds()),
 	}
 	if err := json.NewEncoder(w).Encode(res); err != nil {

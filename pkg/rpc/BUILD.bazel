@@ -18,16 +18,23 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
+        "client.go",
         "rpc.pb.go",
         "service.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/rpc",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/auth/token:go_default_library",
         "//pkg/database:go_default_library",
+        "//pkg/logger:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
         "//vendor/google.golang.org/grpc:go_default_library",
         "//vendor/google.golang.org/grpc/codes:go_default_library",
+        "//vendor/google.golang.org/grpc/credentials:go_default_library",
+        "//vendor/google.golang.org/grpc/metadata:go_default_library",
         "//vendor/google.golang.org/grpc/status:go_default_library",
     ],
 )

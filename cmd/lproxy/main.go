@@ -5,20 +5,21 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"golang.org/x/xerrors"
 )
 
 func proxy(args []string) error {
-	tokenClient := localproxy.NewTokenClient("token")
-	token, err := tokenClient.GetToken()
+	tokenClient := token.NewTokenClient("token")
+	t, err := tokenClient.GetToken()
 	if err != nil {
 		return err
 	}
 
 	client := localproxy.NewClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(args[0], token)
+	err = client.Dial(args[0], t)
 	if err != nil {
 		e, ok := err.(*localproxy.ErrorTokenAuthorization)
 		if ok {
@@ -26,7 +27,7 @@ Retry:
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
-			token = t
+			t = t
 			goto Retry
 		}
 		return err

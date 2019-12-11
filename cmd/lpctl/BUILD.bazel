@@ -7,9 +7,9 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/auth:go_default_library",
+        "//pkg/auth/token:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/config/configreader:go_default_library",
-        "//pkg/localproxy:go_default_library",
         "//pkg/rpc:go_default_library",
         "//vendor/github.com/gorilla/securecookie:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",

@@ -2,13 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "localproxy.go",
-        "openbrowser_darwin.go",
-        "openbrowser_linux.go",
-        "openbrowser_windows.go",
-        "token_client.go",
-    ],
+    srcs = ["localproxy.go"],
     importpath = "github.com/f110/lagrangian-proxy/pkg/localproxy",
     visibility = ["//visibility:public"],
     deps = [

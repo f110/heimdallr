@@ -6,9 +6,9 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/pkg/server/token",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/auth/token:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
-        "//pkg/localproxy:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/server:go_default_library",
         "//pkg/session:go_default_library",

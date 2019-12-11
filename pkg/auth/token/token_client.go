@@ -1,4 +1,4 @@
-package localproxy
+package token
 
 import (
 	"context"
@@ -16,6 +16,10 @@ import (
 	"path/filepath"
 
 	"golang.org/x/xerrors"
+)
+
+const (
+	ClientRedirectUrl = "http://localhost:6391/callback"
 )
 
 type TokenExchangeResponse struct {
