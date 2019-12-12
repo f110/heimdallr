@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 )
@@ -22,7 +22,7 @@ type ClusterDatabase struct {
 var _ database.ClusterDatabase = &ClusterDatabase{}
 
 func NewClusterDatabase(ctx context.Context, client *clientv3.Client) (*ClusterDatabase, error) {
-	hostname, err := os.Hostname()
+	hostname, err := netutil.GetHostname()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

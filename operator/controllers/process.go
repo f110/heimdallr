@@ -15,6 +15,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -630,6 +631,24 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 										Port:   intstr.FromInt(proxyPort),
 										HTTPHeaders: []corev1.HTTPHeader{
 											{Name: "Host", Value: r.Spec.Domain},
+										},
+									},
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name: netutil.IPAddressEnvKey,
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
+									},
+								},
+								{
+									Name: netutil.NamespaceEnvKey,
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
 										},
 									},
 								},

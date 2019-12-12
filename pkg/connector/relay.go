@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
@@ -30,7 +30,7 @@ type Relay struct {
 }
 
 func NewRelay(ca database.CertificateAuthority, name string, server *Server, conn *tls.Conn) (*Relay, error) {
-	hostname, err := os.Hostname()
+	hostname, err := netutil.GetHostname()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
