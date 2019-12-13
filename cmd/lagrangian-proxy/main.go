@@ -46,9 +46,10 @@ type mainProcess struct {
 	sessionStore    session.Store
 	connector       *connector.Server
 
-	server    *server.Server
-	dashboard *dashboard.Server
-	etcd      *embed.Etcd
+	server      *server.Server
+	internalApi *server.Internal
+	dashboard   *dashboard.Server
+	etcd        *embed.Etcd
 
 	probeCh chan struct{}
 }
@@ -83,6 +84,17 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 			}
 		}()
 	}
+
+	if m.internalApi != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.internalApi.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
+	}
+
 	if m.dashboard != nil {
 		wg.Add(1)
 		go func() {
@@ -140,15 +152,23 @@ func (m *mainProcess) startServer() {
 		return
 	}
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
-	internalApi := internalapi.NewServer()
 	resourceServer := internalapi.NewResourceServer(m.config)
-	probe := internalapi.NewProbe(m.probeCh)
 	ctReport := ct.NewServer()
 	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.clusterDatabase)
 
-	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, internalApi, resourceServer, probe, ctReport)
+	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, resourceServer, ctReport)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	}
+}
+
+func (m *mainProcess) startInternalApiServer() {
+	internalApi := internalapi.NewServer()
+	probe := internalapi.NewProbe(m.probeCh)
+	s := server.NewInternal(m.config, internalApi, probe)
+	m.internalApi = s
+	if err := m.internalApi.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
@@ -241,6 +261,13 @@ func (m *mainProcess) Start() error {
 			defer m.wg.Done()
 
 			m.startServer()
+		}()
+
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+
+			m.startInternalApiServer()
 		}()
 	}
 

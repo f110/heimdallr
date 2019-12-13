@@ -39,6 +39,7 @@ const (
 	defaultImageTag            = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	proxyPort                  = 4000
+	internalApiPort            = 4004
 	dashboardPort              = 4100
 	configVolumePath           = "/etc/lagrangian-proxy"
 	configMountPath            = configVolumePath + "/config"
@@ -67,7 +68,7 @@ const (
 type process struct {
 	Deployment          *appsv1.Deployment
 	PodDisruptionBudget *policyv1beta1.PodDisruptionBudget
-	Service             *corev1.Service
+	Service             []*corev1.Service
 	ConfigMaps          []*corev1.ConfigMap
 	Secrets             []*corev1.Secret
 	Certificate         *certmanager.Certificate
@@ -160,6 +161,10 @@ func (r *LagrangianProxy) ServiceNameForDashboard() string {
 
 func (r *LagrangianProxy) ReverseProxyConfigName() string {
 	return r.Name + "-proxy"
+}
+
+func (r *LagrangianProxy) ServiceNameForInternalApi() string {
+	return r.Name + "-internal"
 }
 
 func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
@@ -787,6 +792,24 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 		},
 	}
 
+	internalApiSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ServiceNameForInternalApi(),
+			Namespace: r.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: r.LabelsForMain(),
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       internalApiPort,
+					TargetPort: intstr.FromInt(internalApiPort),
+				},
+			},
+		},
+	}
+
 	conf, err := r.ConfigForMain()
 	if err != nil {
 		return nil, err
@@ -821,7 +844,7 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 	return &process{
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
-		Service:             svc,
+		Service:             []*corev1.Service{svc, internalApiSvc},
 		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
 		Secrets: []*corev1.Secret{
 			caSecert, privateKey, githubSecret,
@@ -956,7 +979,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 	return &process{
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
-		Service:             svc,
+		Service:             []*corev1.Service{svc},
 		Secrets:             []*corev1.Secret{caSecret},
 		ConfigMaps:          []*corev1.ConfigMap{conf},
 	}, nil

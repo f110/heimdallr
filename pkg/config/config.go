@@ -51,6 +51,7 @@ type General struct {
 	Enable               bool                  `json:"enable"`
 	Debug                bool                  `json:"debug,omitempty"`
 	Bind                 string                `json:"bind,omitempty"`
+	BindInternalApi      string                `json:"bind_internal_api,omitempty"`
 	ServerName           string                `json:"server_name,omitempty"`
 	CertFile             string                `json:"cert_file,omitempty"`
 	KeyFile              string                `json:"key_file,omitempty"`

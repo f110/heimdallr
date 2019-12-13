@@ -23,9 +23,10 @@ func ReadConfig(filename string) (*config.Config, error) {
 
 	conf := &config.Config{
 		General: &config.General{
-			Enable:     true,
-			Bind:       ":4000",
-			ServerName: "local-proxy.f110.dev:4000",
+			Enable:          true,
+			Bind:            ":4000",
+			BindInternalApi: ":4004",
+			ServerName:      "local-proxy.f110.dev:4000",
 		},
 		Logger: &config.Logger{
 			Level:    "debug",

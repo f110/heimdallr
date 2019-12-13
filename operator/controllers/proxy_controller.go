@@ -141,14 +141,14 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 		}
 	}
 
-	if objs.Service != nil {
-		orig := objs.Service.DeepCopy()
-		_, err := ctrl.CreateOrUpdate(context.Background(), r, objs.Service, func() error {
-			objs.Service.Spec.Selector = orig.Spec.Selector
-			objs.Service.Spec.Type = orig.Spec.Type
-			objs.Service.Spec.Ports = orig.Spec.Ports
+	for _, svc := range objs.Service {
+		orig := svc.DeepCopy()
+		_, err := ctrl.CreateOrUpdate(context.Background(), r, svc, func() error {
+			svc.Spec.Selector = orig.Spec.Selector
+			svc.Spec.Type = orig.Spec.Type
+			svc.Spec.Ports = orig.Spec.Ports
 
-			return ctrl.SetControllerReference(lp.Object, objs.Service, r.Scheme)
+			return ctrl.SetControllerReference(lp.Object, svc, r.Scheme)
 		})
 		if err != nil {
 			return err
