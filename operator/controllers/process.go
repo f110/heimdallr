@@ -619,24 +619,18 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTPS,
+										Scheme: corev1.URISchemeHTTP,
 										Path:   "/liveness", // TODO: use readiness proebe
-										Port:   intstr.FromInt(proxyPort),
-										HTTPHeaders: []corev1.HTTPHeader{
-											{Name: "Host", Value: r.Spec.Domain},
-										},
+										Port:   intstr.FromInt(internalApiPort),
 									},
 								},
 							},
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTPS,
+										Scheme: corev1.URISchemeHTTP,
 										Path:   "/liveness",
-										Port:   intstr.FromInt(proxyPort),
-										HTTPHeaders: []corev1.HTTPHeader{
-											{Name: "Host", Value: r.Spec.Domain},
-										},
+										Port:   intstr.FromInt(internalApiPort),
 									},
 								},
 							},

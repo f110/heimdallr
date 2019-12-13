@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/pkg/config",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/k8s:go_default_library",
         "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
         "//vendor/github.com/coreos/etcd/clientv3/namespace:go_default_library",
         "//vendor/github.com/gorilla/mux:go_default_library",

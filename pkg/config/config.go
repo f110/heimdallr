@@ -21,6 +21,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/namespace"
+	"github.com/f110/lagrangian-proxy/pkg/k8s"
 	"github.com/gorilla/mux"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
@@ -60,12 +61,12 @@ type General struct {
 	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
 	RootUsers            []string              `json:"root_users,omitempty"`
 
-	Roles    []Role     `json:"-"`
-	Backends []*Backend `json:"-"`
-
 	mu                sync.RWMutex        `json:"-"`
+	Roles             []Role              `json:"-"`
+	Backends          []*Backend          `json:"-"`
 	hostnameToBackend map[string]*Backend `json:"-"`
 	roleNameToRole    map[string]Role     `json:"-"`
+	watcher           *k8s.VolumeWatcher  `json:"-"`
 
 	Certificate   tls.Certificate `json:"-"`
 	AuthEndpoint  string          `json:"-"`
@@ -386,34 +387,55 @@ func (g *General) GetRole(name string) (Role, error) {
 
 func (g *General) Inflate(dir string) error {
 	if g.CertFile != "" && g.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(absPath(g.CertFile, dir), absPath(g.KeyFile, dir))
+		g.CertFile = absPath(g.CertFile, dir)
+		g.KeyFile = absPath(g.KeyFile, dir)
+
+		cert, err := tls.LoadX509KeyPair(g.CertFile, g.KeyFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		g.Certificate = cert
 	}
+
+	roles := make([]Role, 0)
+	backends := make([]*Backend, 0)
 	if g.RoleFile != "" {
-		roles := make([]Role, 0)
-		b, err := ioutil.ReadFile(absPath(g.RoleFile, dir))
+		g.RoleFile = absPath(g.RoleFile, dir)
+
+		b, err := ioutil.ReadFile(g.RoleFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		if err := yaml.Unmarshal(b, &roles); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		g.Roles = roles
 	}
 	if g.ProxyFile != "" {
-		backends := make([]*Backend, 0)
-		b, err := ioutil.ReadFile(absPath(g.ProxyFile, dir))
+		g.ProxyFile = absPath(g.ProxyFile, dir)
+
+		b, err := ioutil.ReadFile(g.ProxyFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		if err := yaml.Unmarshal(b, &backends); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		g.Backends = backends
 	}
+	if g.RoleFile != "" && g.ProxyFile != "" {
+		if k8s.CanWatchVolume(g.RoleFile) {
+			mountPath, err := k8s.FindMountPath(g.RoleFile)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			fmt.Fprintf(os.Stderr, "watch volume: %s\n", mountPath)
+			w, err := k8s.NewVolumeWatcher(mountPath, g.reloadConfig)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			g.watcher = w
+		}
+	}
+
 	if g.CertificateAuthority != nil {
 		if err := g.CertificateAuthority.inflate(dir); err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -423,24 +445,59 @@ func (g *General) Inflate(dir string) error {
 	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.ServerName)
 	g.TokenEndpoint = fmt.Sprintf("https://%s/token", g.ServerName)
 
-	return g.Load()
+	return g.Load(backends, roles)
 }
 
-func (g *General) Load() error {
-	g.hostnameToBackend = make(map[string]*Backend)
-	for _, v := range g.Backends {
+func (g *General) Load(backends []*Backend, roles []Role) error {
+	hostnameToBackend := make(map[string]*Backend)
+	for _, v := range backends {
 		if err := v.inflate(); err != nil {
 			return err
 		}
-		g.hostnameToBackend[v.Name] = v
+		hostnameToBackend[v.Name] = v
 	}
 
-	g.roleNameToRole = make(map[string]Role)
-	for _, v := range g.Roles {
-		g.roleNameToRole[v.Name] = v
+	roleNameToRole := make(map[string]Role)
+	for _, v := range roles {
+		roleNameToRole[v.Name] = v
 	}
 
+	g.mu.Lock()
+	g.Backends = backends
+	g.Roles = roles
+	g.hostnameToBackend = hostnameToBackend
+	g.roleNameToRole = roleNameToRole
+	g.mu.Unlock()
 	return nil
+}
+
+func (g *General) reloadConfig() {
+	roles := make([]Role, 0)
+	b, err := ioutil.ReadFile(g.RoleFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+	if err := yaml.Unmarshal(b, &roles); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+
+	backends := make([]*Backend, 0)
+	b, err = ioutil.ReadFile(g.ProxyFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+	if err := yaml.Unmarshal(b, &backends); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+
+	if err := g.Load(backends, roles); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+	}
+	fmt.Fprintf(os.Stderr, "%s\tReload role and proxy config file\n", time.Now().Format(time.RFC3339))
 }
 
 func (d *Datastore) Inflate(dir string) error {
