@@ -2,31 +2,22 @@ package internalapi
 
 import (
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/julienschmidt/httprouter"
 )
 
-var (
-	ProbeInterval = 1 * time.Minute
-)
-
 type Probe struct {
-	readinessCh chan struct{}
-
-	mu          sync.Mutex
-	lastUpdated time.Time
+	readinessFn func() bool
 }
 
 var _ server.ChildServer = &Probe{}
 
-func NewProbe(ch chan struct{}) *Probe {
+func NewProbe(fn func() bool) *Probe {
 	p := &Probe{
-		readinessCh: ch,
-		lastUpdated: time.Now(),
+		readinessFn: fn,
 	}
+
 	return p
 }
 
@@ -38,21 +29,7 @@ func (p *Probe) Route(mux *httprouter.Router) {
 func (p *Probe) Liveness(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {}
 
 func (p *Probe) Readiness(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.lastUpdated.Add(ProbeInterval * 2).Before(time.Now()) {
+	if !p.readinessFn() {
 		w.WriteHeader(http.StatusServiceUnavailable)
-	}
-}
-
-func (p *Probe) read() {
-	for {
-		select {
-		case <-p.readinessCh:
-			p.mu.Lock()
-			p.lastUpdated = time.Now()
-			p.mu.Unlock()
-		}
 	}
 }

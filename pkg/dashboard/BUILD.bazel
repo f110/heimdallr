@@ -9,7 +9,6 @@ go_library(
         "//pkg/auth:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
-        "//pkg/database/etcd:go_default_library",
         "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/template:go_default_library",

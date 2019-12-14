@@ -14,7 +14,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/template"
@@ -28,12 +27,12 @@ type Server struct {
 	Config       *config.Config
 	loader       *template.Loader
 	server       *http.Server
-	userDatabase *etcd.UserDatabase
+	userDatabase database.UserDatabase
 	ca           database.CertificateAuthority
 	router       *httprouter.Router
 }
 
-func NewServer(config *config.Config, userDatabase *etcd.UserDatabase, ca database.CertificateAuthority) *Server {
+func NewServer(config *config.Config, userDatabase database.UserDatabase, ca database.CertificateAuthority) *Server {
 	s := &Server{
 		userDatabase: userDatabase,
 		ca:           ca,

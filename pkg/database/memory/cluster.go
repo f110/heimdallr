@@ -28,3 +28,7 @@ func (d *ClusterDatabase) Leave(ctx context.Context) error {
 func (d *ClusterDatabase) MemberList(ctx context.Context) ([]*database.Member, error) {
 	panic("implement me")
 }
+
+func (d *ClusterDatabase) Alive() bool {
+	return true
+}

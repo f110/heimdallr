@@ -54,6 +54,7 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 	kaCtx, cancelFunc := context.WithCancel(context.Background())
 	go func() {
 		defer func() {
+			cancelFunc()
 			d.cancel = nil
 		}()
 
@@ -106,4 +107,12 @@ func (d *ClusterDatabase) MemberList(ctx context.Context) ([]*database.Member, e
 		members[i] = member
 	}
 	return members, nil
+}
+
+func (d *ClusterDatabase) Alive() bool {
+	if d.cancel == nil {
+		return false
+	}
+
+	return true
 }

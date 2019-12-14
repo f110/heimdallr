@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -38,7 +39,8 @@ type mainProcess struct {
 	ctx             context.Context
 	wg              sync.WaitGroup
 	config          *config.Config
-	userDatabase    *etcd.UserDatabase
+	etcdClient      *clientv3.Client
+	userDatabase    database.UserDatabase
 	caDatabase      database.CertificateAuthority
 	tokenDatabase   database.TokenDatabase
 	relayLocator    database.RelayLocator
@@ -51,7 +53,8 @@ type mainProcess struct {
 	dashboard   *dashboard.Server
 	etcd        *embed.Etcd
 
-	probeCh chan struct{}
+	probeCh   chan struct{}
+	readiness *etcd.TapReadiness
 }
 
 func newMainProcess() *mainProcess {
@@ -143,6 +146,10 @@ func (m *mainProcess) signalHandling() {
 	}()
 }
 
+func (m *mainProcess) IsReady() bool {
+	return m.readiness.IsReady() && m.clusterDatabase.Alive()
+}
+
 func (m *mainProcess) startServer() {
 	front := frontproxy.NewFrontendProxy(m.config, m.connector)
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
@@ -165,7 +172,7 @@ func (m *mainProcess) startServer() {
 
 func (m *mainProcess) startInternalApiServer() {
 	internalApi := internalapi.NewServer()
-	probe := internalapi.NewProbe(m.probeCh)
+	probe := internalapi.NewProbe(m.IsReady)
 	s := server.NewInternal(m.config, internalApi, probe)
 	m.internalApi = s
 	if err := m.internalApi.Start(); err != nil && err != http.ErrServerClosed {
@@ -220,6 +227,14 @@ func (m *mainProcess) Setup() error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
+	m.readiness = &etcd.TapReadiness{
+		Watcher: etcd.NewTapWatcher(client.Watcher),
+		Lease:   etcd.NewTapLease(client.Lease),
+	}
+	client.Watcher = m.readiness.Watcher
+	client.Lease = m.readiness.Lease
+	m.etcdClient = client
+
 	m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)

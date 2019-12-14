@@ -620,7 +620,7 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Scheme: corev1.URISchemeHTTP,
-										Path:   "/liveness", // TODO: use readiness proebe
+										Path:   "/readiness",
 										Port:   intstr.FromInt(internalApiPort),
 									},
 								},
