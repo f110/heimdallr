@@ -161,7 +161,7 @@ func (m *mainProcess) startServer() {
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	resourceServer := internalapi.NewResourceServer(m.config)
 	ctReport := ct.NewServer()
-	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.clusterDatabase)
+	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator)
 
 	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, resourceServer, ctReport)
 	m.server = s

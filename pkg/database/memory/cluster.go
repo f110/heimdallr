@@ -17,6 +17,10 @@ func NewClusterDatabase() *ClusterDatabase {
 	return &ClusterDatabase{}
 }
 
+func (d *ClusterDatabase) Id() string {
+	panic("implement me")
+}
+
 func (d *ClusterDatabase) Join(ctx context.Context) error {
 	panic("implement me")
 }

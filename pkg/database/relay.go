@@ -17,6 +17,7 @@ type RelayLocator interface {
 	Update(ctx context.Context, relay *Relay) error
 	Delete(ctx context.Context, name, addr string) error
 	Gone() chan *Relay
+	GetListenedAddrs() []string
 }
 
 type Relay struct {

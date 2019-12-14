@@ -33,7 +33,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.internal.ServeHTTP(w, req)
 }
 
-func NewServer(conf *config.Config, user database.UserDatabase, cluster database.ClusterDatabase) *Server {
+func NewServer(conf *config.Config, user database.UserDatabase, token database.TokenDatabase, cluster database.ClusterDatabase, relay database.RelayLocator) *Server {
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			unaryAccessLogInterceptor,
@@ -44,7 +44,7 @@ func NewServer(conf *config.Config, user database.UserDatabase, cluster database
 			auth.StreamInterceptor,
 		)),
 	)
-	rpc.RegisterClusterServer(s, rpc.NewClusterService(cluster))
+	rpc.RegisterClusterServer(s, rpc.NewClusterService(user, token, cluster, relay))
 	rpc.RegisterAdminServer(s, rpc.NewAdminService(conf, user))
 	return &Server{internal: s}
 }

@@ -68,3 +68,15 @@ func (r *RelayLocator) Delete(ctx context.Context, name, addr string) error {
 func (r *RelayLocator) Gone() chan *database.Relay {
 	return r.gone
 }
+
+func (r *RelayLocator) GetListenedAddrs() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	res := make([]string, 0, len(r.data))
+	for _, v := range r.data {
+		res = append(res, v.Addr)
+	}
+
+	return res
+}

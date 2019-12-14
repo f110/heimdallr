@@ -15,7 +15,7 @@ import (
 type ClusterDatabase struct {
 	client *clientv3.Client
 
-	Id     string
+	id     string
 	cancel context.CancelFunc
 }
 
@@ -27,7 +27,11 @@ func NewClusterDatabase(ctx context.Context, client *clientv3.Client) (*ClusterD
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	return &ClusterDatabase{client: client, Id: hostname}, nil
+	return &ClusterDatabase{client: client, id: hostname}, nil
+}
+
+func (d *ClusterDatabase) Id() string {
+	return d.id
 }
 
 func (d *ClusterDatabase) Join(ctx context.Context) error {
@@ -40,7 +44,7 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 		return xerrors.Errorf(": %v", err)
 	}
 	member := &database.Member{
-		Id: d.Id,
+		Id: d.id,
 	}
 	b, err := yaml.Marshal(member)
 	if err != nil {

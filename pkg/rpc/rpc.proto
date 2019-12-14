@@ -4,6 +4,7 @@ option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
 
 service Cluster {
     rpc MemberList(RequestMemberList) returns (ResponseMemberList) {}
+    rpc MemberStat(RequestMemberStat) returns (ResponseMemberStat) {}
 }
 
 service Admin {
@@ -24,6 +25,15 @@ message RequestMemberList {}
 
 message ResponseMemberList {
     repeated ClusterMember items = 1;
+}
+
+message RequestMemberStat {}
+
+message ResponseMemberStat {
+    string id = 1;
+    int32 user_count = 2;
+    int32 token_count = 3;
+    repeated string listened_relay_addrs = 4;
 }
 
 message ClusterMember {

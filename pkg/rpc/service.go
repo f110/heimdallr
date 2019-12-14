@@ -15,12 +15,20 @@ const (
 
 type ClusterService struct {
 	clusterDatabase database.ClusterDatabase
+	userDatabase    database.UserDatabase
+	tokenDatabase   database.TokenDatabase
+	relayDatabase   database.RelayLocator
 }
 
 var _ ClusterServer = &ClusterService{}
 
-func NewClusterService(cluster database.ClusterDatabase) *ClusterService {
-	return &ClusterService{clusterDatabase: cluster}
+func NewClusterService(user database.UserDatabase, token database.TokenDatabase, cluster database.ClusterDatabase, relay database.RelayLocator) *ClusterService {
+	return &ClusterService{
+		userDatabase:    user,
+		tokenDatabase:   token,
+		clusterDatabase: cluster,
+		relayDatabase:   relay,
+	}
 }
 
 func (s *ClusterService) MemberList(ctx context.Context, _ *RequestMemberList) (*ResponseMemberList, error) {
@@ -36,6 +44,24 @@ func (s *ClusterService) MemberList(ctx context.Context, _ *RequestMemberList) (
 		}
 	}
 	return &ResponseMemberList{Items: res}, nil
+}
+
+func (s *ClusterService) MemberStat(ctx context.Context, _ *RequestMemberStat) (*ResponseMemberStat, error) {
+	users, err := s.userDatabase.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := s.tokenDatabase.AllTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResponseMemberStat{
+		Id:                 s.clusterDatabase.Id(),
+		UserCount:          int32(len(users)),
+		TokenCount:         int32(len(tokens)),
+		ListenedRelayAddrs: s.relayDatabase.GetListenedAddrs(),
+	}, nil
 }
 
 type AdminService struct {

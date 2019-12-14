@@ -21,12 +21,19 @@ type RelayLocator struct {
 
 	mu    sync.RWMutex
 	cache map[string]*database.Relay
+
+	myListenedAddr []string
 }
 
 var _ database.RelayLocator = &RelayLocator{}
 
 func NewRelayLocator(ctx context.Context, client *clientv3.Client) (*RelayLocator, error) {
-	rl := &RelayLocator{client: client, cache: make(map[string]*database.Relay), gone: make(chan *database.Relay)}
+	rl := &RelayLocator{
+		client:         client,
+		cache:          make(map[string]*database.Relay),
+		gone:           make(chan *database.Relay),
+		myListenedAddr: make([]string, 0),
+	}
 
 	res, err := client.Get(ctx, "relay/", clientv3.WithPrefix())
 	if err != nil {
@@ -69,6 +76,9 @@ func (l *RelayLocator) Set(ctx context.Context, r *database.Relay) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
+	l.mu.Lock()
+	l.myListenedAddr = append(l.myListenedAddr, r.Addr)
+	l.mu.Unlock()
 	return nil
 }
 
@@ -100,11 +110,25 @@ func (l *RelayLocator) Delete(ctx context.Context, name, addr string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
+	l.mu.Lock()
+	for i, v := range l.myListenedAddr {
+		if v == addr {
+			l.myListenedAddr = append(l.myListenedAddr[:i], l.myListenedAddr[i+1:]...)
+		}
+	}
+	l.mu.Unlock()
 	return nil
 }
 
 func (l *RelayLocator) Gone() chan *database.Relay {
 	return l.gone
+}
+
+func (l *RelayLocator) GetListenedAddrs() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return l.myListenedAddr
 }
 
 func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
