@@ -65,7 +65,7 @@ func (p *TapWatcher) Watch(ctx context.Context, key string, opts ...clientv3.OpO
 		}
 	}()
 
-	return wc
+	return res
 }
 
 func (p *TapWatcher) Close() error {
