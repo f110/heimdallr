@@ -66,3 +66,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - proxy.f110.dev
+  resources:
+  - rpcpermissions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - proxy.f110.dev
+  resources:
+  - rpcpermissions/status
+  verbs:
+  - get
+  - patch
+  - update

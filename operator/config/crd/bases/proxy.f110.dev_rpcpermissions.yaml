@@ -6,18 +6,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (unknown)
   creationTimestamp: null
-  name: roles.proxy.f110.dev
+  name: rpcpermissions.proxy.f110.dev
 spec:
   group: proxy.f110.dev
   names:
-    kind: Role
-    listKind: RoleList
-    plural: roles
-    singular: role
+    kind: RpcPermission
+    listKind: RpcPermissionList
+    plural: rpcpermissions
+    singular: rpcpermission
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: Role is the Schema for the roles API
+      description: RpcPermission is the Schema for the rpcpermissions API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,28 +32,17 @@ spec:
         metadata:
           type: object
         spec:
-          description: RoleSpec defines the desired state of Role
+          description: RpcPermissionSpec defines the desired state of RpcPermission
           properties:
-            bindings:
+            allow:
               items:
-                properties:
-                  backendName:
-                    type: string
-                  namespace:
-                    type: string
-                  permission:
-                    type: string
-                  rpcPermissionName:
-                    type: string
-                type: object
+                type: string
               type: array
-            description:
-              type: string
-            title:
-              type: string
+          required:
+          - allow
           type: object
         status:
-          description: RoleStatus defines the observed state of Role
+          description: RpcPermissionStatus defines the observed state of RpcPermission
           type: object
       type: object
   version: v1

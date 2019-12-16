@@ -1,0 +1,7 @@
+apiVersion: proxy.f110.dev/v1
+kind: RpcPermission
+metadata:
+  name: rpcpermission-sample
+spec:
+  allow:
+    - proxy.rpc.admin.*

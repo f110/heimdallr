@@ -63,6 +63,7 @@ const (
 	caPrivateKeyFilename        = "ca.key"
 	proxyFilename               = "proxies.yaml"
 	roleFilename                = "roles.yaml"
+	rpcPermissionFilename       = "rpc_permissions.yaml"
 
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
@@ -195,7 +196,8 @@ func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
 	if !found {
 		res = append(res, proxyv1.Backend{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "dashboard",
+				Name:      "dashboard",
+				Namespace: r.Namespace,
 			},
 			Spec: proxyv1.BackendSpec{
 				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
@@ -226,6 +228,19 @@ func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
 	}
 
 	return roleList.Items, nil
+}
+
+func (r *LagrangianProxy) RpcPermissions() ([]proxyv1.RpcPermission, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.RpcPermissionSelector.LabelSelector)
+	if err != nil {
+		return nil, err
+	}
+	rpcPermissionList := &proxyv1.RpcPermissionList{}
+	if err := r.Client.List(context.Background(), rpcPermissionList, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.RpcPermissionSelector.Namespace}); err != nil {
+		return nil, err
+	}
+
+	return rpcPermissionList.Items, nil
 }
 
 func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
@@ -414,14 +429,15 @@ func (r *LagrangianProxy) CookieSecret() (*corev1.Secret, error) {
 func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
-			Enable:     true,
-			Bind:       fmt.Sprintf(":%d", proxyPort),
-			ServerName: r.Spec.Domain,
-			RootUsers:  r.Spec.RootUsers,
-			CertFile:   fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
-			KeyFile:    fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
-			RoleFile:   fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
-			ProxyFile:  fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			Enable:            true,
+			Bind:              fmt.Sprintf(":%d", proxyPort),
+			ServerName:        r.Spec.Domain,
+			RootUsers:         r.Spec.RootUsers,
+			CertFile:          fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
+			KeyFile:           fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
+			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
+			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
@@ -582,25 +598,33 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	for i, v := range roleList {
 		bindings := make([]config.Binding, len(v.Spec.Bindings))
 		for k, b := range v.Spec.Bindings {
-			namespace := v.Namespace
-			if b.Namespace != "" {
-				namespace = b.Namespace
-			}
-			backendHost := ""
-			if bn, ok := backendMap[namespace+"/"+b.Name]; ok {
-				backendHost = bn.Name + "." + bn.Spec.Layer + "." + r.Spec.Domain
-				if bn.Spec.Layer == "" {
-					backendHost = bn.Name + "." + r.Spec.Domain
+			switch {
+			case b.BackendName != "":
+				namespace := v.Namespace
+				if b.Namespace != "" {
+					namespace = b.Namespace
 				}
-			} else {
-				return nil, fmt.Errorf("controller: %s not found", b.Name)
-			}
+				backendHost := ""
+				if bn, ok := backendMap[namespace+"/"+b.BackendName]; ok {
+					backendHost = bn.Name + "." + bn.Spec.Layer + "." + r.Spec.Domain
+					if bn.Spec.Layer == "" {
+						backendHost = bn.Name + "." + r.Spec.Domain
+					}
+				} else {
+					return nil, fmt.Errorf("controller: %s not found", b.BackendName)
+				}
 
-			bindings[k] = config.Binding{
-				Permission: b.Permission,
-				Backend:    backendHost,
+				bindings[k] = config.Binding{
+					Permission: b.Permission,
+					Backend:    backendHost,
+				}
+			case b.RpcPermissionName != "":
+				bindings[k] = config.Binding{
+					Rpc: b.RpcPermissionName,
+				}
 			}
 		}
+
 		roles[i] = &config.Role{
 			Name:        v.Name,
 			Title:       v.Spec.Title,
@@ -609,6 +633,22 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		}
 	}
 	roleBinary, err := yaml.Marshal(roles)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcPermissionList, err := r.RpcPermissions()
+	if err != nil {
+		return nil, err
+	}
+	rpcPermissions := make([]*config.RpcPermission, len(rpcPermissionList))
+	for i, v := range rpcPermissionList {
+		rpcPermissions[i] = &config.RpcPermission{
+			Name:  v.Name,
+			Allow: v.Spec.Allow,
+		}
+	}
+	rpcPermissionBinary, err := yaml.Marshal(rpcPermissions)
 	if err != nil {
 		return nil, err
 	}
@@ -622,6 +662,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	}
 	configMap.Data[roleFilename] = string(roleBinary)
 	configMap.Data[proxyFilename] = string(proxyBinary)
+	configMap.Data[rpcPermissionFilename] = string(rpcPermissionBinary)
 
 	return configMap, nil
 }

@@ -10,4 +10,7 @@ resources:
 - group: proxy
   kind: Role
   version: v1
+- group: proxy
+  kind: RpcPermission
+  version: v1
 version: "2"

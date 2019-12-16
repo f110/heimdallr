@@ -8,7 +8,8 @@ spec:
   title: administrator
   description: Proxy administrator a.k.a GOD
   bindings:
-    - name: backend-sample
+    - rpcPermissionName: rpcpermission-sample
+    - backendName: backend-sample
       permission: all
-    - name: dashboard
+    - backendName: dashboard
       permission: all

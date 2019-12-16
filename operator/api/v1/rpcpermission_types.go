@@ -19,46 +19,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RoleSpec defines the desired state of Role
-type RoleSpec struct {
-	Title       string    `json:"title,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Bindings    []Binding `json:"bindings,omitempty"`
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// RpcPermissionSpec defines the desired state of RpcPermission
+type RpcPermissionSpec struct {
+	Allow []string `json:"allow"`
 }
 
-type Binding struct {
-	BackendName       string `json:"backendName,omitempty"`
-	Namespace         string `json:"namespace,omitempty"`
-	Permission        string `json:"permission,omitempty"`
-	RpcPermissionName string `json:"rpcPermissionName,omitempty"`
-}
-
-// RoleStatus defines the observed state of Role
-type RoleStatus struct {
+// RpcPermissionStatus defines the observed state of RpcPermission
+type RpcPermissionStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
 
-// Role is the Schema for the roles API
-type Role struct {
+// RpcPermission is the Schema for the rpcpermissions API
+type RpcPermission struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   RoleSpec   `json:"spec,omitempty"`
-	Status RoleStatus `json:"status,omitempty"`
+	Spec   RpcPermissionSpec   `json:"spec,omitempty"`
+	Status RpcPermissionStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// RoleList contains a list of Role
-type RoleList struct {
+// RpcPermissionList contains a list of RpcPermission
+type RpcPermissionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Role `json:"items"`
+	Items           []RpcPermission `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Role{}, &RoleList{})
+	SchemeBuilder.Register(&RpcPermission{}, &RpcPermissionList{})
 }

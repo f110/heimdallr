@@ -8,6 +8,7 @@ go_library(
         "process_repository.go",
         "proxy_controller.go",
         "role_controller.go",
+        "rpcpermission_controller.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/operator/controllers",
     visibility = ["//visibility:public"],

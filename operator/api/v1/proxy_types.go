@@ -35,17 +35,18 @@ type ProxySpec struct {
 	Domain string `json:"domain"`
 	Port   int32  `json:"port,omitempty"`
 	// Name of proxy. if not present, uses "Lagrangian Proxy CA"
-	Name              string                 `json:"name,omitempty"`
-	Organization      string                 `json:"organization"`
-	AdministratorUnit string                 `json:"administratorUnit"`
-	Country           string                 `json:"country,omitempty"`
-	IssuerRef         cmmeta.ObjectReference `json:"issuerRef"`
-	IdentityProvider  IdentityProviderSpec   `json:"identityProvider"`
-	RootUsers         []string               `json:"rootUsers,omitempty"`
-	Session           SessionSpec            `json:"session"`
-	Replicas          int32                  `json:"replicas"`
-	BackendSelector   LabelSelector          `json:"backendSelector,omitempty"`
-	RoleSelector      LabelSelector          `json:"roleSelector,omitempty"`
+	Name                  string                 `json:"name,omitempty"`
+	Organization          string                 `json:"organization"`
+	AdministratorUnit     string                 `json:"administratorUnit"`
+	Country               string                 `json:"country,omitempty"`
+	IssuerRef             cmmeta.ObjectReference `json:"issuerRef"`
+	IdentityProvider      IdentityProviderSpec   `json:"identityProvider"`
+	RootUsers             []string               `json:"rootUsers,omitempty"`
+	Session               SessionSpec            `json:"session"`
+	Replicas              int32                  `json:"replicas"`
+	BackendSelector       LabelSelector          `json:"backendSelector,omitempty"`
+	RoleSelector          LabelSelector          `json:"roleSelector,omitempty"`
+	RpcPermissionSelector LabelSelector          `json:"rpcPermissionSelector,omitempty"`
 }
 
 type IdentityProviderSpec struct {

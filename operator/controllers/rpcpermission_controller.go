@@ -18,33 +18,28 @@ package controllers
 import (
 	"context"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 )
 
-// RoleReconciler reconciles a Role object
-type RoleReconciler struct {
+// RpcPermissionReconciler reconciles a RpcPermission object
+type RpcPermissionReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	ProcessRepository *ProcessRepository
 }
 
-// +kubebuilder:rbac:groups=proxy.f110.dev,resources=roles,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=proxy.f110.dev,resources=roles/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=proxy.f110.dev,resources=rpcpermissions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=proxy.f110.dev,resources=rpcpermissions/status,verbs=get;update;patch
 
-func (r *RoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&proxyv1.Role{}).
-		Complete(r)
-}
-
-func (r *RoleReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	role := &proxyv1.Role{}
-	if err := r.Get(context.Background(), req.NamespacedName, role); err != nil {
+func (r *RpcPermissionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	permission := &proxyv1.RpcPermission{}
+	if err := r.Get(context.Background(), req.NamespacedName, permission); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -56,9 +51,9 @@ func (r *RoleReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	targets := make([]proxyv1.Proxy, 0)
 Item:
 	for _, v := range defList.Items {
-		for k := range v.Spec.RoleSelector.MatchLabels {
-			value, ok := role.ObjectMeta.Labels[k]
-			if !ok || v.Spec.RoleSelector.MatchLabels[k] != value {
+		for k := range v.Spec.RpcPermissionSelector.MatchLabels {
+			value, ok := permission.ObjectMeta.Labels[k]
+			if !ok || v.Spec.RpcPermissionSelector.MatchLabels[k] != value {
 				continue Item
 			}
 		}
@@ -76,7 +71,13 @@ Item:
 	return ctrl.Result{}, nil
 }
 
-func (r *RoleReconciler) reconcileConfig(lp *LagrangianProxy) error {
+func (r *RpcPermissionReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&proxyv1.RpcPermission{}).
+		Complete(r)
+}
+
+func (r *RpcPermissionReconciler) reconcileConfig(lp *LagrangianProxy) error {
 	lp.Lock()
 	defer lp.Unlock()
 

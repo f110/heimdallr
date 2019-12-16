@@ -57,7 +57,8 @@ func (r *BackendReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 Item:
 	for _, v := range defList.Items {
 		for k := range v.Spec.BackendSelector.MatchLabels {
-			if value, ok := backend.ObjectMeta.Labels[k]; !ok && v.Spec.BackendSelector.MatchLabels[k] != value {
+			value, ok := backend.ObjectMeta.Labels[k]
+			if !ok || v.Spec.BackendSelector.MatchLabels[k] != value {
 				continue Item
 			}
 		}

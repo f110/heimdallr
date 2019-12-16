@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/script/create-dummy-users",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/rpc:go_default_library",
+        "//pkg/rpc/rpcclient:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
     ],
 )
