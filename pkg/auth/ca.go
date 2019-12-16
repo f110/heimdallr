@@ -69,14 +69,18 @@ func CreateCertificateAuthority(commonName, org, orgUnit, country string) ([]byt
 	return cert, privateKey, nil
 }
 
-func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, serialNumber int64, dnsNames []string) ([]byte, crypto.PrivateKey, error) {
+func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, dnsNames []string) ([]byte, crypto.PrivateKey, error) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
 
 	template := &x509.Certificate{
-		SerialNumber: big.NewInt(serialNumber),
+		SerialNumber: serial,
 		Subject: pkix.Name{
 			Organization:       []string{"test"},
 			OrganizationalUnit: []string{"dev"},

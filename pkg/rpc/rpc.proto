@@ -2,6 +2,8 @@ syntax = "proto3";
 package proxy.rpc;
 option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
 
+import "google/protobuf/timestamp.proto";
+
 service Cluster {
     rpc MemberList(RequestMemberList) returns (ResponseMemberList) {}
     rpc MemberStat(RequestMemberStat) returns (ResponseMemberStat) {}
@@ -10,11 +12,22 @@ service Cluster {
 service Admin {
     rpc Ping(RequestPing) returns (ResponsePong);
 
-    rpc UserList(RequestUserList) returns (ResponseUserList);
-    rpc UserAdd(RequestUserAdd) returns (ResponseUserAdd);
-    rpc UserDel(RequestUserDel) returns (ResponseUserDel);
+    rpc UserList (RequestUserList) returns (ResponseUserList);
+    rpc UserAdd (RequestUserAdd) returns (ResponseUserAdd);
+    rpc UserDel (RequestUserDel) returns (ResponseUserDel);
+    rpc UserGet (RequestUserGet) returns (ResponseUserGet);
+    rpc BecomeMaintainer (RequestBecomeMaintainer) returns (ResponseBecomeMaintainer);
+    rpc ToggleAdmin (RequestToggleAdmin) returns (ResponseToggleAdmin);
+    rpc TokenNew (RequestTokenNew) returns (ResponseTokenNew);
 
-    rpc RoleList(RequestRoleList) returns (ResponseRoleList);
+    rpc RoleList (RequestRoleList) returns (ResponseRoleList);
+    rpc BackendList (RequestBackendList) returns (ResponseBackendList);
+
+    rpc CertList (RequestCertList) returns (ResponseCertList);
+    rpc RevokedCertList (RequestRevokedCertList) returns (ResponseRevokedCertList);
+    rpc CertNew (RequestCertNew) returns (ResponseCertNew);
+    rpc CertRevoke (RequestCertRevoke) returns (ResponseCertRevoke);
+    rpc CertGet (RequestCertGet) returns (ResponseCertGet);
 }
 
 message RequestPing {}
@@ -40,9 +53,26 @@ message ClusterMember {
     string id = 1;
 }
 
+enum UserType {
+    NORMAL = 0;
+    SERVICE_ACCOUNT = 1;
+}
+
 message UserItem {
     string id = 1;
     repeated string roles = 2;
+    repeated string maintain_roles = 3;
+    bool admin = 4;
+    UserType type = 5;
+    string comment = 6;
+    repeated AccessTokenItem tokens = 7;
+}
+
+message AccessTokenItem {
+    string name = 1;
+    string value = 2;
+    string issuer = 3;
+    google.protobuf.Timestamp issued_at = 4;
 }
 
 message RoleItem {
@@ -51,8 +81,24 @@ message RoleItem {
     string description = 3;
 }
 
+message BackendItem {
+    string name = 1;
+}
+
+message CertItem {
+    bytes serial_number = 1;
+    string common_name = 2;
+    google.protobuf.Timestamp issued_at = 3;
+    google.protobuf.Timestamp revoked_at = 4;
+    bool agent = 5;
+    string comment = 6;
+    bytes certificate = 7;
+    bytes p12 = 8;
+}
+
 message RequestUserList {
     string role = 1;
+    bool service_account = 2;
 }
 
 message ResponseUserList {
@@ -62,6 +108,8 @@ message ResponseUserList {
 message RequestUserAdd {
     string id = 1;
     string role = 2;
+    UserType type = 3;
+    string comment = 4;
 }
 
 message ResponseUserAdd {
@@ -77,10 +125,93 @@ message ResponseUserDel {
     bool ok = 1;
 }
 
+message RequestUserGet {
+    string id = 1;
+    bool with_tokens = 2;
+}
+
+message ResponseUserGet {
+    UserItem user = 1;
+    bool ok = 2;
+}
+
+message RequestBecomeMaintainer {
+    string id = 1;
+    string role = 2;
+}
+
+message ResponseBecomeMaintainer {
+    bool ok = 1;
+}
+
+message RequestToggleAdmin {
+    string id = 1;
+}
+
+message ResponseToggleAdmin {
+    bool ok = 1;
+}
+
+message RequestTokenNew {
+    string user_id = 1;
+    string name = 2;
+}
+
+message ResponseTokenNew {
+    AccessTokenItem item = 1;
+}
+
 message RequestRoleList {}
 
 message ResponseRoleList {
     repeated RoleItem items = 1;
+}
+
+message RequestBackendList {
+    bool agent = 1;
+}
+
+message ResponseBackendList {
+    repeated BackendItem items = 1;
+}
+
+message RequestCertList {}
+
+message ResponseCertList {
+    repeated CertItem items = 1;
+}
+
+message RequestRevokedCertList {}
+
+message ResponseRevokedCertList {
+    repeated CertItem items = 1;
+}
+
+message RequestCertNew {
+    string common_name = 1;
+    string password = 2;
+    string comment = 3;
+    bool agent = 4;
+}
+
+message ResponseCertNew {
+    bool ok = 1;
+}
+
+message RequestCertRevoke {
+    bytes serial_number = 1;
+}
+
+message ResponseCertRevoke {
+    bool ok = 1;
+}
+
+message RequestCertGet {
+    bytes serial_number = 1;
+}
+
+message ResponseCertGet {
+    CertItem item = 1;
 }
 
 message ErrorUnauthorized {

@@ -61,7 +61,7 @@ func ReadConfig(filename string) (*config.Config, error) {
 			return nil, err
 		}
 	}
-	if conf.Datastore != nil {
+	if conf.Datastore != nil && conf.Datastore.RawUrl != "" {
 		if err := conf.Datastore.Inflate(dir); err != nil {
 			return nil, err
 		}

@@ -10,13 +10,7 @@
       </tr>
       <tr>
         <td>Type</td>
-        <td>
-        {{- if .ServiceAccount -}}
-        ServiceAccount
-        {{- else -}}
-        User
-        {{- end -}}
-        </td>
+        <td>{{ .Type }}</td>
       </tr>
       <tr>
         <td>Role</td>
@@ -24,7 +18,7 @@
           <ol class="ui list">
             {{ range .Roles -}}
             <li>
-            {{ if eq (index $.MaintainRoles .) true -}}
+            {{ if includes $.MaintainRoles . }}
             <i class="edit icon"></i>
             {{ end -}}
             {{ . }}

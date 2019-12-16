@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
@@ -53,7 +54,13 @@ func NewHostMultiplexer(conf *config.Config, frontProxy, utilities, grpc http.Ha
 }
 
 func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if req.Host == h.Config.General.ServerName {
+	host := req.Host
+	if strings.Contains(host, ":") {
+		s := strings.Split(host, ":")
+		host = s[0]
+	}
+
+	if host == h.Config.General.ServerNameHost {
 		if req.Header.Get("Content-Type") == GrpcContentType {
 			h.grpc.ServeHTTP(w, req)
 			return

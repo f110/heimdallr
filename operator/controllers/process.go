@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	mrand "math/rand"
 	"sort"
@@ -19,6 +20,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -82,6 +84,10 @@ type LagrangianProxy struct {
 	Object    *proxyv1.Proxy
 	Spec      proxyv1.ProxySpec
 	Client    client.Client
+
+	selfSignedIssuer bool
+	caSecretName     string
+	caFilename       string
 }
 
 func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client) *LagrangianProxy {
@@ -177,7 +183,25 @@ func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
 		return nil, err
 	}
 
-	return backends.Items, nil
+	res := backends.Items
+	res = append(res, proxyv1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "dashboard",
+		},
+		Spec: proxyv1.BackendSpec{
+			Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
+			AllowRootUser: true,
+			Permissions: []proxyv1.Permission{
+				{
+					Name: "all",
+					Locations: []proxyv1.Location{
+						{Any: "/"},
+					},
+				},
+			},
+		},
+	})
+	return res, nil
 }
 
 func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
@@ -442,28 +466,24 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 }
 
 func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
+	caCertFile := ""
+	if r.selfSignedIssuer {
+		caCertFile = fmt.Sprintf("%s/%s", caCertMountPath, r.caFilename)
+	}
 	conf := &config.Config{
 		General: &config.General{
 			Enable: false,
-			CertificateAuthority: &config.CertificateAuthority{
-				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
-				Organization:     r.Spec.Organization,
-				OrganizationUnit: r.Spec.AdministratorUnit,
-				Country:          r.Spec.Country,
-			},
-		},
-		Datastore: &config.Datastore{
-			RawUrl:    fmt.Sprintf("etcd://%s:2379", r.EtcdHost()),
-			Namespace: "/lagrangian-proxy/",
 		},
 		Logger: &config.Logger{
 			Level:    "info",
 			Encoding: "console",
 		},
 		Dashboard: &config.Dashboard{
-			Enable: true,
-			Bind:   fmt.Sprintf(":%d", dashboardPort),
+			Enable:     true,
+			Bind:       fmt.Sprintf(":%d", dashboardPort),
+			RpcTarget:  fmt.Sprintf("%s:%d", r.ServiceNameForMain(), 443),
+			ServerName: r.Spec.Domain,
+			CACertFile: caCertFile,
 		},
 	}
 	b, err := yaml.Marshal(conf)
@@ -524,8 +544,12 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				Locations: locations,
 			}
 		}
+		name := v.Name + "." + v.Spec.Layer + "." + r.Spec.Domain
+		if v.Spec.Layer == "" {
+			name = v.Name + "." + r.Spec.Domain
+		}
 		proxies[i] = &config.Backend{
-			Name:            v.Name + "." + v.Spec.Layer + "." + r.Spec.Domain,
+			Name:            name,
 			Upstream:        v.Spec.Upstream,
 			Permissions:     permissions,
 			WebHook:         v.Spec.Webhook,
@@ -554,6 +578,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			backendHost := ""
 			if bn, ok := backendMap[namespace+"/"+b.Name]; ok {
 				backendHost = bn.Name + "." + bn.Spec.Layer + "." + r.Spec.Domain
+				if bn.Spec.Layer == "" {
+					backendHost = bn.Name + "." + r.Spec.Domain
+				}
 			} else {
 				return nil, fmt.Errorf("controller: %s not found", b.Name)
 			}
@@ -849,6 +876,55 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 }
 
 func (r *LagrangianProxy) Dashboard() (*process, error) {
+	if err := r.checkSelfSignedIssuer(); err != nil {
+		return nil, err
+	}
+
+	volumes := []corev1.Volume{
+		{
+			Name: "config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: r.ConfigNameForDashboard(),
+					},
+				},
+			},
+		},
+	}
+	volumeMounts := []corev1.VolumeMount{
+		{Name: "config", MountPath: configMountPath},
+	}
+	if r.selfSignedIssuer {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.CertificateSecretName(),
+				Namespace: r.Namespace,
+			},
+		}
+		key, err := client.ObjectKeyFromObject(secret)
+		if err != nil {
+			return nil, err
+		}
+		err = r.Client.Get(context.Background(), key, secret)
+		if apierrors.IsNotFound(err) {
+			return nil, err
+		}
+
+		volumes = append(volumes, corev1.Volume{
+			Name: "ca-cert",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: r.caSecretName,
+					Items: []corev1.KeyToPath{
+						{Key: r.caFilename, Path: r.caFilename},
+					},
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath})
+	}
+
 	var replicas int32 = 3
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -897,32 +973,10 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 							},
-							VolumeMounts: []corev1.VolumeMount{
-								{Name: "ca-cert", MountPath: caCertMountPath},
-								{Name: "config", MountPath: configMountPath},
-							},
+							VolumeMounts: volumeMounts,
 						},
 					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "ca-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.CASecretName(),
-								},
-							},
-						},
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: r.ConfigNameForDashboard(),
-									},
-								},
-							},
-						},
-					},
+					Volumes: volumes,
 				},
 			},
 		},
@@ -977,4 +1031,54 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 		Secrets:             []*corev1.Secret{caSecret},
 		ConfigMaps:          []*corev1.ConfigMap{conf},
 	}, nil
+}
+
+func (r *LagrangianProxy) checkSelfSignedIssuer() error {
+	var issuerObj runtime.Object
+	switch r.Spec.IssuerRef.Kind {
+	case certmanager.ClusterIssuerKind:
+		issuerObj = &certmanager.ClusterIssuer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: r.Spec.IssuerRef.Name,
+			},
+		}
+	case certmanager.IssuerKind:
+		issuerObj = &certmanager.Issuer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.Spec.IssuerRef.Name,
+				Namespace: r.Namespace,
+			},
+		}
+	}
+	issuerKey, err := client.ObjectKeyFromObject(issuerObj)
+	if err != nil {
+		return err
+	}
+	if err := r.Client.Get(context.Background(), issuerKey, issuerObj); err != nil {
+		return err
+	}
+	switch v := issuerObj.(type) {
+	case *certmanager.ClusterIssuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+			r.caSecretName = r.CertificateSecretName()
+			r.caFilename = caCertificateFilename
+		}
+		if v.Spec.CA != nil {
+			return errors.New("controllers: ClusterIssuer.Spec.CA is not supported")
+		}
+	case *certmanager.Issuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+			r.caSecretName = r.CertificateSecretName()
+			r.caFilename = caCertificateFilename
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+			r.caSecretName = v.Spec.CA.SecretName
+			r.caFilename = "tls.crt"
+		}
+	}
+
+	return nil
 }

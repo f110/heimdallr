@@ -19,18 +19,22 @@ const (
 )
 
 type Loader struct {
-	tmpl *template.Template
-	dir  string
+	tmpl    *template.Template
+	dir     string
+	funcMap template.FuncMap
 }
 
-func New(data map[string]string, typ, dir string) *Loader {
-	loader := &Loader{dir: dir}
+func New(data map[string]string, typ, dir string, funcMap template.FuncMap) *Loader {
+	loader := &Loader{dir: dir, funcMap: funcMap}
 	if typ == LoaderTypeEmbed {
 		d := dir
 		if !strings.HasSuffix(dir, "/") {
 			d = dir + "/"
 		}
 		t := template.New("")
+		if funcMap != nil {
+			t = t.Funcs(funcMap)
+		}
 		for k, v := range data {
 			name := strings.TrimPrefix(k, d)
 			t = t.New(name)
@@ -47,6 +51,9 @@ func (l *Loader) Render(w io.Writer, name string, data interface{}) error {
 	var tmpl *template.Template
 	if l.tmpl == nil {
 		t := template.New("")
+		if l.funcMap != nil {
+			t = t.Funcs(l.funcMap)
+		}
 		parsed := make(map[string]struct{})
 		_ = filepath.Walk(l.dir, func(path string, info os.FileInfo, err error) error {
 			if os.IsNotExist(err) {

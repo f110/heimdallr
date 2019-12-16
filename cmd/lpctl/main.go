@@ -22,6 +22,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
@@ -162,7 +163,7 @@ func generateNewCertificateAuthority(conf *config.Config, dir string) error {
 }
 
 func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certificate, caPrivateKey crypto.PrivateKey) error {
-	cert, privateKey, err := auth.GenerateServerCertificate(ca, caPrivateKey, 1000, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev"})
+	cert, privateKey, err := auth.GenerateServerCertificate(ca, caPrivateKey, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev"})
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
@@ -209,7 +210,7 @@ func commandCluster(args []string) error {
 	if conf.General.Debug {
 		cp = conf.General.CertificateAuthority.CertPool
 	}
-	c, err := rpc.NewClient(cp, conf.General.ServerName)
+	c, err := rpcclient.NewClientWithStaticToken(cp, conf.General.ServerName)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -246,7 +247,7 @@ func commandAdmin(args []string) error {
 	if conf.General.Debug {
 		cp = conf.General.CertificateAuthority.CertPool
 	}
-	c, err := rpc.NewClient(cp, conf.General.ServerName)
+	c, err := rpcclient.NewClientWithStaticToken(cp, conf.General.ServerName)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

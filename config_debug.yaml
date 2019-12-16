@@ -34,5 +34,8 @@ frontend_proxy:
 dashboard:
   enable: true
   bind: :4100
+  rpc_target: 127.0.0.1:4000
+  server_name: local-proxy.f110.dev
+  ca_cert_file: ./ca.crt
   template:
     loader: shotgun

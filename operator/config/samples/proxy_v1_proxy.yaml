@@ -13,8 +13,8 @@ spec:
   roleSelector:
     instance: proxy-sample
   issuerRef:
-    name: self-signed
-    kind: ClusterIssuer
+    name: ca-issuer
+    kind: Issuer
   identityProvider:
     provider: google
     clientId: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com

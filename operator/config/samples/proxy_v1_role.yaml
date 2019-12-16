@@ -10,3 +10,5 @@ spec:
   bindings:
     - name: backend-sample
       permission: all
+    - name: dashboard
+      permission: all

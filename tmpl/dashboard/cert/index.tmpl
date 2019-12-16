@@ -51,23 +51,12 @@
     <tbody>
     {{ range .RevokedCertificates }}
     <tr>
-      <td>0x{{ .SerialNumber.Text 16 }}</td>
+      <td>0x{{ .SerialNumber }}</td>
       <td>{{ .CommonName }}</td>
       <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
       <td>{{ .RevokedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
     </tr>
     {{ end }}
-    </tbody>
-  </table>
-
-  <div class="ui divider"></div>
-  <h1 class="ui header">Certificate Authority</h1>
-  <table class="ui table definition">
-    <tbody>
-      <tr>
-        <td>CommonName</td>
-        <td>{{ .CertificateAuthority.Subject.CommonName }}</td>
-      </tr>
     </tbody>
   </table>
 </div>

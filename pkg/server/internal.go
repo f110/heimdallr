@@ -4,11 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"go.uber.org/zap"
-
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
 )
 
 type Internal struct {

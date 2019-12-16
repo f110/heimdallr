@@ -72,7 +72,7 @@
     <tbody>
       {{ range .RevokedCertificates -}}
       <tr>
-        <td>0x{{ .SerialNumber.Text 16 }}</td>
+        <td>0x{{ .SerialNumber }}</td>
         <td>{{ .CommonName }}</td>
         <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
         <td>{{ .RevokedAt.Format "2006/01/02 15:04:05 -0700" }}</td>

@@ -42,7 +42,7 @@ var (
 type Config struct {
 	General          *General          `json:"general"`
 	IdentityProvider *IdentityProvider `json:"identity_provider,omitempty"`
-	Datastore        *Datastore        `json:"datastore"`
+	Datastore        *Datastore        `json:"datastore,omitempty"`
 	Logger           *Logger           `json:"logger,omitempty"`
 	FrontendProxy    *FrontendProxy    `json:"frontend_proxy,omitempty"`
 	Dashboard        *Dashboard        `json:"dashboard,omitempty"`
@@ -58,7 +58,7 @@ type General struct {
 	KeyFile              string                `json:"key_file,omitempty"`
 	RoleFile             string                `json:"role_file,omitempty"`
 	ProxyFile            string                `json:"proxy_file,omitempty"`
-	CertificateAuthority *CertificateAuthority `json:"certificate_authority"`
+	CertificateAuthority *CertificateAuthority `json:"certificate_authority,omitempty"`
 	RootUsers            []string              `json:"root_users,omitempty"`
 
 	mu                sync.RWMutex        `json:"-"`
@@ -68,9 +68,10 @@ type General struct {
 	roleNameToRole    map[string]Role     `json:"-"`
 	watcher           *k8s.VolumeWatcher  `json:"-"`
 
-	Certificate   tls.Certificate `json:"-"`
-	AuthEndpoint  string          `json:"-"`
-	TokenEndpoint string          `json:"-"`
+	Certificate    tls.Certificate `json:"-"`
+	AuthEndpoint   string          `json:"-"`
+	TokenEndpoint  string          `json:"-"`
+	ServerNameHost string          `json:"-"`
 }
 
 type CertificateAuthority struct {
@@ -121,8 +122,8 @@ type Role struct {
 }
 
 type Binding struct {
-	Backend    string `json:"backend"`    // Backend is Backend.Name
-	Permission string `json:"permission"` // Permission is Permission.Name
+	Backend    string `json:"backend,omitempty"`    // Backend is Backend.Name
+	Permission string `json:"permission,omitempty"` // Permission is Permission.Name
 }
 
 type Backend struct {
@@ -183,9 +184,14 @@ type Session struct {
 }
 
 type Dashboard struct {
-	Enable   bool      `json:"enable"`
-	Bind     string    `json:"bind,omitempty"`
-	Template *Template `json:"template,omitempty"`
+	Enable     bool      `json:"enable"`
+	Bind       string    `json:"bind,omitempty"`
+	RpcTarget  string    `json:"rpc_target,omitempty"`
+	CACertFile string    `json:"ca_cert_file,omitempty"`
+	ServerName string    `json:"server_name,omitempty"`
+	Template   *Template `json:"template,omitempty"`
+
+	CertPool *x509.CertPool `json:"-"`
 }
 
 type Template struct {
@@ -194,6 +200,21 @@ type Template struct {
 }
 
 func (d *Dashboard) Inflate(dir string) error {
+	if d.CACertFile != "" {
+		d.CACertFile = absPath(d.CACertFile, dir)
+		b, err := ioutil.ReadFile(d.CACertFile)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		block, _ := pem.Decode(b)
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		d.CertPool = x509.NewCertPool()
+		d.CertPool.AddCert(cert)
+	}
+
 	return d.Template.inflate(dir)
 }
 
@@ -218,7 +239,7 @@ func (idp *IdentityProvider) Inflate(dir string) error {
 }
 
 func (ca *CertificateAuthority) inflate(dir string) error {
-	if ca.CertFile != "" && ca.KeyFile != "" {
+	if ca.CertFile != "" {
 		b, err := ioutil.ReadFile(absPath(ca.CertFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -231,12 +252,14 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 		ca.Certificate = cert
 		ca.CertPool = x509.NewCertPool()
 		ca.CertPool.AddCert(cert)
+	}
 
-		b, err = ioutil.ReadFile(absPath(ca.KeyFile, dir))
+	if ca.KeyFile != "" {
+		b, err := ioutil.ReadFile(absPath(ca.KeyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		block, _ = pem.Decode(b)
+		block, _ := pem.Decode(b)
 		switch block.Type {
 		case "EC PRIVATE KEY":
 			privateKey, err := x509.ParseECPrivateKey(block.Bytes)
@@ -444,6 +467,11 @@ func (g *General) Inflate(dir string) error {
 
 	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.ServerName)
 	g.TokenEndpoint = fmt.Sprintf("https://%s/token", g.ServerName)
+	g.ServerNameHost = g.ServerName
+	if strings.Contains(g.ServerName, ":") {
+		s := strings.Split(g.ServerName, ":")
+		g.ServerNameHost = s[0]
+	}
 
 	return g.Load(backends, roles)
 }

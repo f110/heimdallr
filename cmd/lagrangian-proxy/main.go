@@ -161,7 +161,7 @@ func (m *mainProcess) startServer() {
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	resourceServer := internalapi.NewResourceServer(m.config)
 	ctReport := ct.NewServer()
-	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator)
+	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
 
 	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, resourceServer, ctReport)
 	m.server = s
@@ -181,7 +181,7 @@ func (m *mainProcess) startInternalApiServer() {
 }
 
 func (m *mainProcess) startDashboard() {
-	dashboardServer := dashboard.NewServer(m.config, m.userDatabase, m.caDatabase)
+	dashboardServer := dashboard.NewServer(m.config)
 	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -223,38 +223,43 @@ func (m *mainProcess) Setup() error {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-	client, err := m.config.Datastore.GetEtcdClient()
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	m.readiness = &etcd.TapReadiness{
-		Watcher: etcd.NewTapWatcher(client.Watcher),
-		Lease:   etcd.NewTapLease(client.Lease),
-	}
-	client.Watcher = m.readiness.Watcher
-	client.Lease = m.readiness.Lease
-	m.etcdClient = client
 
-	m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
+	if m.config.Datastore.Url != nil {
+		client, err := m.config.Datastore.GetEtcdClient()
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		m.readiness = &etcd.TapReadiness{
+			Watcher: etcd.NewTapWatcher(client.Watcher),
+			Lease:   etcd.NewTapLease(client.Lease),
+		}
+		client.Watcher = m.readiness.Watcher
+		client.Lease = m.readiness.Lease
+		m.etcdClient = client
 
-	if m.config.General.Enable {
-		m.tokenDatabase = etcd.NewTemporaryToken(client)
-		m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 
+		if m.config.General.Enable {
+			m.tokenDatabase = etcd.NewTemporaryToken(client)
+			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+		}
+	}
+
+	if m.config.General.Enable {
 		switch m.config.FrontendProxy.Session.Type {
 		case config.SessionTypeSecureCookie:
 			m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)

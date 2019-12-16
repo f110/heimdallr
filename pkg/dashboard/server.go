@@ -10,34 +10,38 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/template"
 	"github.com/f110/lagrangian-proxy/tmpl/dashboard"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 )
 
 type Server struct {
-	Config       *config.Config
-	loader       *template.Loader
-	server       *http.Server
-	userDatabase database.UserDatabase
-	ca           database.CertificateAuthority
-	router       *httprouter.Router
+	Config *config.Config
+
+	client *rpcclient.ClientWithUserToken
+	loader *template.Loader
+	server *http.Server
+	router *httprouter.Router
 }
 
-func NewServer(config *config.Config, userDatabase database.UserDatabase, ca database.CertificateAuthority) *Server {
+func NewServer(config *config.Config) *Server {
 	s := &Server{
-		userDatabase: userDatabase,
-		ca:           ca,
-		Config:       config,
-		loader:       template.New(dashboard.Data, config.Dashboard.Template.Loader, config.Dashboard.Template.Dir),
+		Config: config,
+		loader: template.New(
+			dashboard.Data,
+			config.Dashboard.Template.Loader,
+			config.Dashboard.Template.Dir,
+			map[string]interface{}{
+				"includes":     includeArray,
+				"ToTimeFormat": fromUnixToTimeFormat,
+			},
+		),
 		server: &http.Server{
 			Addr: config.Dashboard.Bind,
 		},
@@ -45,97 +49,51 @@ func NewServer(config *config.Config, userDatabase database.UserDatabase, ca dat
 	mux := httprouter.New()
 	s.router = mux
 	s.Get("/", s.handleIndex)
-	s.Get("/user", s.handleUserIndex, s.AdminOnly)
-	s.Get("/users", s.handleUsers, s.AdminOnly)
-	s.Post("/user", s.handleAddUser, s.AdminOnly)
-	s.Get("/user/:id", s.handleGetUser, s.AdminOnly)
-	s.Post("/user/:id/delete", s.handleDeleteUser, s.AdminOnly)
-	s.Post("/user/:id/maintainer", s.handleMakeMaintainer, s.AdminOnly)
-	s.Post("/user/:id/admin", s.handleMakeAdmin, s.AdminOnly)
-	s.Get("/cert", s.handleCertIndex, s.AdminOnly)
-	s.Get("/cert/new", s.handleNewCert, s.AdminOnly)
-	s.Post("/cert/new", s.handleNewClientCert, s.AdminOnly)
-	s.Post("/cert/revoke", s.handleRevokeCert, s.AdminOnly)
-	s.Get("/cert/download", s.handleDownloadCert, s.AdminOnly)
-	s.Get("/agent", s.handleAgentIndex, s.AdminOnly)
-	s.Get("/agent/new", s.handleNewAgent, s.AdminOnly)
-	s.Post("/agent/new", s.handleAgentRegister, s.AdminOnly)
-	s.Get("/sa", s.handleServiceAccount, s.AdminOnly)
-	s.Get("/sa/new", s.handleNewServiceAccount, s.AdminOnly)
-	s.Post("/sa/new", s.handleCreateServiceAccount, s.AdminOnly)
-	s.Get("/service_account/:id/token", s.handleServiceAccountToken, s.AdminOnly)
-	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken, s.AdminOnly)
+	s.Get("/user", s.handleUserIndex)
+	s.Get("/users", s.handleUsers)
+	s.Post("/user", s.handleAddUser)
+	s.Get("/user/:id", s.handleGetUser)
+	s.Post("/user/:id/delete", s.handleDeleteUser)
+	s.Post("/user/:id/maintainer", s.handleMakeMaintainer)
+	s.Post("/user/:id/admin", s.handleMakeAdmin)
+	s.Get("/cert", s.handleCertIndex)
+	s.Get("/cert/new", s.handleNewCert)
+	s.Post("/cert/new", s.handleNewClientCert)
+	s.Post("/cert/revoke", s.handleRevokeCert)
+	s.Get("/cert/download", s.handleDownloadCert)
+	s.Get("/agent", s.handleAgentIndex)
+	s.Get("/agent/new", s.handleNewAgent)
+	s.Post("/agent/new", s.handleAgentRegister)
+	s.Get("/sa", s.handleServiceAccount)
+	s.Get("/sa/new", s.handleNewServiceAccount)
+	s.Post("/sa/new", s.handleCreateServiceAccount)
+	s.Get("/service_account/:id/token", s.handleServiceAccountToken)
+	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken)
 	s.server.Handler = mux
 
 	return s
 }
 
-type filterFunc func(w http.ResponseWriter, req *http.Request) (*database.User, error)
-type handleFunc func(user *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params)
-
-func (s *Server) Get(path string, handle handleFunc, filter ...filterFunc) {
-	s.method(s.router.GET, path, handle, filter...)
+func (s *Server) Get(path string, handle httprouter.Handle) {
+	s.router.GET(path, handle)
 }
 
-func (s *Server) Post(path string, handle handleFunc, filter ...filterFunc) {
-	s.method(s.router.POST, path, handle, filter...)
-}
-
-func (s *Server) method(method func(string, httprouter.Handle), path string, handle handleFunc, filter ...filterFunc) {
-	method(path, func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		var user *database.User
-		if len(filter) > 0 {
-			u, err := filter[0](w, req)
-			if err != nil {
-				logger.Log.Debug("Unauthorized", zap.Error(err))
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			user = u
-		}
-		handle(user, w, req, params)
-	})
-}
-
-func (s *Server) AdminOnly(w http.ResponseWriter, req *http.Request) (*database.User, error) {
-	h := req.Header.Get(frontproxy.TokenHeaderName)
-	if h == "" {
-		return nil, xerrors.New("dashboard: token header not found")
-	}
-
-	claims := &jwt.StandardClaims{}
-	_, err := jwt.ParseWithClaims(h, claims, func(token *jwt.Token) (i interface{}, e error) {
-		if token.Method != jwt.SigningMethodES256 {
-			return nil, xerrors.New("dashboard: invalid signing method")
-		}
-		return &s.Config.FrontendProxy.SigningPublicKey, nil
-	})
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-	if err := claims.Valid(); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	for _, v := range s.Config.General.RootUsers {
-		if v == claims.Id {
-			return &database.User{Id: claims.Id, Admin: true}, nil
-		}
-	}
-
-	user, err := s.userDatabase.Get(claims.Id)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-	if user.Admin {
-		return user, nil
-	}
-
-	return nil, xerrors.New("dashboard: user is not admin")
+func (s *Server) Post(path string, handle httprouter.Handle) {
+	s.router.POST(path, handle)
 }
 
 func (s *Server) Start() error {
 	logger.Log.Info("Start dashboard", zap.String("listen", s.server.Addr))
+	var cp *x509.CertPool
+	if s.Config.Dashboard.CertPool != nil {
+		cp = s.Config.Dashboard.CertPool
+	}
+	client, err := rpcclient.NewClientWithUserToken(cp, s.Config.Dashboard.RpcTarget, s.Config.General.ServerNameHost)
+	if err != nil {
+		return err
+	}
+	s.client = client
+
 	return s.server.ListenAndServe()
 }
 
@@ -148,12 +106,14 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) handleIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "index.tmpl", nil)
 }
 
-func (s *Server) handleServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users, err := s.userDatabase.GetAllServiceAccount()
+func (s *Server) handleServiceAccount(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	users, err := client.ListServiceAccount()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -164,23 +124,25 @@ func (s *Server) handleServiceAccount(_ *database.User, w http.ResponseWriter, r
 	})
 
 	s.RenderTemplate(w, "service_account/index.tmpl", struct {
-		Accounts []*database.User
+		Accounts []*rpc.UserItem
 	}{
 		Accounts: users,
 	})
 }
 
-func (s *Server) handleNewServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewServiceAccount(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "service_account/new.tmpl", nil)
 }
 
-func (s *Server) handleCreateServiceAccount(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleCreateServiceAccount(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	err := s.userDatabase.Set(req.Context(), &database.User{Id: req.FormValue("id"), Comment: req.FormValue("comment"), Type: database.UserTypeServiceAccount})
+	err := client.NewServiceAccount(req.FormValue("id"), req.FormValue("comment"))
 	if err != nil {
 		logger.Log.Info("Failed create service account", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -190,8 +152,10 @@ func (s *Server) handleCreateServiceAccount(_ *database.User, w http.ResponseWri
 	http.Redirect(w, req, "/service_account", http.StatusFound)
 }
 
-func (s *Server) handleServiceAccountToken(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	tokens, err := s.userDatabase.GetAccessTokens(params.ByName("id"))
+func (s *Server) handleServiceAccountToken(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	user, err := client.GetUser(params.ByName("id"), true)
 	if err != nil {
 		logger.Log.Info("Failed get tokens", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -200,26 +164,23 @@ func (s *Server) handleServiceAccountToken(_ *database.User, w http.ResponseWrit
 
 	s.RenderTemplate(w, "service_account/token.tmpl", struct {
 		Id     string
-		Tokens []*database.AccessToken
+		Tokens []*rpc.AccessTokenItem
 	}{
 		Id:     params.ByName("id"),
-		Tokens: tokens,
+		Tokens: user.Tokens,
 	})
 }
 
-func (s *Server) handleNewServiceAccountToken(user *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleNewServiceAccountToken(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	newToken, err := auth.NewAccessToken(req.FormValue("name"), params.ByName("id"), user.Id)
+	newToken, err := client.NewToken(req.FormValue("name"), params.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if err := s.userDatabase.SetAccessToken(req.Context(), newToken); err != nil {
-		logger.Log.Info("Failed set access token", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -233,33 +194,42 @@ func (s *Server) handleNewServiceAccountToken(user *database.User, w http.Respon
 	})
 }
 
-type signedCertificate struct {
+type certificate struct {
 	SerialNumber string
 	CommonName   string
 	IssuedAt     time.Time
+	RevokedAt    time.Time
 	Comment      string
 	DownloadUrl  string
 	P12          bool
 }
 
-func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	signed, err := s.ca.GetSignedCertificates(req.Context())
+func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	signed, err := client.ListCert()
 	if err != nil {
 		logger.Log.Info("Can't get signed certificates", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	signedCertificates := make([]*signedCertificate, 0, len(signed))
+	signedCertificates := make([]*certificate, 0, len(signed))
 	for _, v := range signed {
 		if v.Agent {
 			continue
 		}
-		signedCertificates = append(signedCertificates, &signedCertificate{
-			SerialNumber: v.Certificate.SerialNumber.Text(16),
-			CommonName:   v.Certificate.Subject.CommonName,
-			IssuedAt:     v.IssuedAt,
+
+		serialNumber := big.NewInt(0)
+		serialNumber.SetBytes(v.SerialNumber)
+		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
+		if err != nil {
+			continue
+		}
+		signedCertificates = append(signedCertificates, &certificate{
+			SerialNumber: serialNumber.Text(16),
+			CommonName:   v.CommonName,
+			IssuedAt:     issuedAt,
 			Comment:      v.Comment,
-			P12:          len(v.P12) > 0,
 		})
 	}
 
@@ -267,40 +237,61 @@ func (s *Server) handleCertIndex(_ *database.User, w http.ResponseWriter, req *h
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked := s.ca.GetRevokedCertificates()
+	revoked, err := client.ListRevokedCert()
+	if err != nil {
+		logger.Log.Info("Can't get revoked certificate", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	sort.Slice(revoked, func(i, j int) bool {
-		return revoked[i].RevokedAt.After(revoked[j].RevokedAt)
+		return revoked[i].RevokedAt.Seconds > revoked[j].RevokedAt.Seconds
 	})
-	revokedList := make([]*database.RevokedCertificate, 0, len(revoked))
+	revokedList := make([]*certificate, 0, len(revoked))
 	for _, v := range revoked {
 		if v.Agent {
 			continue
 		}
-		revokedList = append(revokedList, v)
+
+		serialNumber := big.NewInt(0)
+		serialNumber.SetBytes(v.SerialNumber)
+		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
+		if err != nil {
+			continue
+		}
+		revokedAt, err := ptypes.Timestamp(v.RevokedAt)
+		if err != nil {
+			continue
+		}
+		revokedList = append(revokedList, &certificate{
+			SerialNumber: serialNumber.Text(16),
+			CommonName:   v.CommonName,
+			IssuedAt:     issuedAt,
+			RevokedAt:    revokedAt,
+		})
 	}
 
 	s.RenderTemplate(w, "cert/index.tmpl", struct {
-		CertificateAuthority *x509.Certificate
-		SignedCertificates   []*signedCertificate
-		RevokedCertificates  []*database.RevokedCertificate
+		SignedCertificates  []*certificate
+		RevokedCertificates []*certificate
 	}{
-		CertificateAuthority: s.Config.General.CertificateAuthority.Certificate,
-		SignedCertificates:   signedCertificates,
-		RevokedCertificates:  revokedList,
+		SignedCertificates:  signedCertificates,
+		RevokedCertificates: revokedList,
 	})
 }
 
-func (s *Server) handleNewCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "cert/new.tmpl", nil)
 }
 
-func (s *Server) handleNewClientCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	_, err := s.ca.NewClientCertificate(req.Context(), req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
+	err := client.NewCert(req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
 	if err != nil {
 		logger.Log.Info("Failed create new client certificate", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -310,7 +301,9 @@ func (s *Server) handleNewClientCert(_ *database.User, w http.ResponseWriter, re
 	http.Redirect(w, req, "/cert", http.StatusFound)
 }
 
-func (s *Server) handleRevokeCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -324,14 +317,7 @@ func (s *Server) handleRevokeCert(_ *database.User, w http.ResponseWriter, req *
 		return
 	}
 
-	signedCertificate, err := s.ca.GetSignedCertificate(req.Context(), i)
-	if err != nil {
-		logger.Log.Info("Can't get signed certificate", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = s.ca.Revoke(req.Context(), signedCertificate)
+	err := client.RevokeCert(i)
 	if err != nil {
 		logger.Log.Info("Failed revoke certificate", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -345,7 +331,9 @@ func (s *Server) handleRevokeCert(_ *database.User, w http.ResponseWriter, req *
 	}
 }
 
-func (s *Server) handleDownloadCert(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	i := &big.Int{}
 	i, ok := i.SetString(req.FormValue("serial"), 16)
 	if !ok {
@@ -354,23 +342,23 @@ func (s *Server) handleDownloadCert(_ *database.User, w http.ResponseWriter, req
 		return
 	}
 
-	certificate, err := s.ca.GetSignedCertificate(req.Context(), i)
+	cert, err := client.GetCert(i)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	ext := "crt"
-	if len(certificate.P12) > 0 {
+	if len(cert.P12) > 0 {
 		ext = "p12"
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", certificate.Certificate.SerialNumber.Text(16), ext))
-	if len(certificate.P12) > 0 {
-		w.Write(certificate.P12)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", i.Text(16), ext))
+	if len(cert.P12) > 0 {
+		w.Write(cert.P12)
 	} else {
-		w.Write(certificate.Certificate.Raw)
+		w.Write(cert.Certificate)
 	}
 }
 
@@ -383,36 +371,51 @@ type user struct {
 }
 
 type roleAndUser struct {
-	Role  config.Role
+	Role  *rpc.RoleItem
 	Users []user
 }
 
-func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users, err := s.userDatabase.GetAll()
+func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	users, err := client.ListUser("")
 	if err != nil {
+		logger.Log.Info("Can't get users", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	userMap := make(map[string][]*database.User)
+	userMap := make(map[string][]*rpc.UserItem)
 	for _, v := range users {
 		for _, r := range v.Roles {
 			if _, ok := userMap[r]; !ok {
-				userMap[r] = make([]*database.User, 0)
+				userMap[r] = make([]*rpc.UserItem, 0)
 			}
 			userMap[r] = append(userMap[r], v)
 		}
 	}
 
+	roles, err := client.ListRole()
+	if err != nil {
+		logger.Log.Info("Can't get roles", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	sortedUsers := make([]roleAndUser, 0)
-	for _, v := range s.Config.General.GetAllRoles() {
+	for _, v := range roles {
 		u := make([]user, 0, len(v.Name))
 		for _, k := range userMap[v.Name] {
 			maintainer := false
-			if v, ok := k.MaintainRoles[v.Name]; ok {
-				maintainer = v
+			for _, r := range k.MaintainRoles {
+				if r == v.Name {
+					maintainer = true
+				}
 			}
-			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer, Admin: k.Admin, ServiceAccount: k.ServiceAccount()})
+			serviceAccount := false
+			if k.Type == rpc.UserType_SERVICE_ACCOUNT {
+				serviceAccount = true
+			}
+			u = append(u, user{Id: k.Id, Role: v.Name, Maintainer: maintainer, Admin: k.Admin, ServiceAccount: serviceAccount})
 		}
 		sort.Slice(u, func(i, j int) bool {
 			return strings.Compare(u[i].Id, u[j].Id) < 0
@@ -421,16 +424,18 @@ func (s *Server) handleUserIndex(_ *database.User, w http.ResponseWriter, req *h
 	}
 
 	s.RenderTemplate(w, "user/index.tmpl", struct {
-		Roles []config.Role
+		Roles []*rpc.RoleItem
 		Users []roleAndUser
 	}{
-		Roles: s.Config.General.GetAllRoles(),
+		Roles: roles,
 		Users: sortedUsers,
 	})
 }
 
-func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users, err := s.userDatabase.GetAll()
+func (s *Server) handleUsers(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	users, err := client.ListAllUser()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -445,10 +450,15 @@ func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.
 
 	userList := make([]user, 0, len(users))
 	for _, v := range users {
+		serviceAccount := false
+		switch v.Type {
+		case rpc.UserType_SERVICE_ACCOUNT:
+			serviceAccount = true
+		}
 		userList = append(userList, user{
 			Id:             v.Id,
 			Admin:          v.Admin,
-			ServiceAccount: v.ServiceAccount(),
+			ServiceAccount: serviceAccount,
 		})
 	}
 
@@ -459,14 +469,16 @@ func (s *Server) handleUsers(_ *database.User, w http.ResponseWriter, req *http.
 	})
 }
 
-func (s *Server) handleGetUser(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	id := params.ByName("id")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	u, err := s.userDatabase.Get(id)
+	u, err := client.GetUser(id, false)
 	if err != nil {
 		logger.Log.Info("User not found", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -476,7 +488,9 @@ func (s *Server) handleGetUser(_ *database.User, w http.ResponseWriter, req *htt
 	s.RenderTemplate(w, "user/show.tmpl", u)
 }
 
-func (s *Server) handleAddUser(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -487,21 +501,7 @@ func (s *Server) handleAddUser(_ *database.User, w http.ResponseWriter, req *htt
 		return
 	}
 
-	u, err := s.userDatabase.Get(req.FormValue("id"))
-	if err != nil && err != database.ErrUserNotFound {
-		logger.Log.Info("Failure get user", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if u != nil {
-		u.Roles = append(u.Roles, req.FormValue("role"))
-	} else {
-		u = &database.User{Id: req.FormValue("id"), Roles: []string{req.FormValue("role")}}
-	}
-
-	if err := s.userDatabase.Set(req.Context(), u); err != nil {
-		logger.Log.Warn("Failure create or update user", zap.Error(err))
+	if err := client.AddUser(req.FormValue("id"), req.FormValue("role")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -509,37 +509,15 @@ func (s *Server) handleAddUser(_ *database.User, w http.ResponseWriter, req *htt
 	http.Redirect(w, req, "/user", http.StatusFound)
 }
 
-func (s *Server) handleDeleteUser(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	u, err := s.userDatabase.Get(params.ByName("id"))
-	if err != nil {
-		logger.Log.Info("Failure get user", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if req.FormValue("role") == "" {
-		if err := s.userDatabase.Delete(req.Context(), u.Id); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, req, "/users", http.StatusFound)
-		return
-	}
-
-	for i := range u.Roles {
-		if u.Roles[i] == req.FormValue("role") {
-			u.Roles = append(u.Roles[:i], u.Roles[i+1:]...)
-			break
-		}
-	}
-
-	if err := s.userDatabase.Set(req.Context(), u); err != nil {
-		logger.Log.Warn("Failure delete role", zap.Error(err))
+	if err := client.DeleteUser(params.ByName("id"), req.FormValue("role")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -547,7 +525,9 @@ func (s *Server) handleDeleteUser(_ *database.User, w http.ResponseWriter, req *
 	http.Redirect(w, req, "/user", http.StatusFound)
 }
 
-func (s *Server) handleMakeMaintainer(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -558,17 +538,8 @@ func (s *Server) handleMakeMaintainer(_ *database.User, w http.ResponseWriter, r
 		return
 	}
 
-	u, err := s.userDatabase.Get(params.ByName("id"))
-	if err != nil {
-		logger.Log.Info("Failure get user", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	u.MaintainRoles[req.FormValue("role")] = true
-
-	if err := s.userDatabase.Set(req.Context(), u); err != nil {
-		logger.Log.Warn("Failure update user", zap.Error(err))
+	if err := client.UserBecomeMaintainer(params.ByName("id"), req.FormValue("role")); err != nil {
+		logger.Log.Info("Failure becoming maintainer", zap.String("id", params.ByName("id")), zap.String("role", req.FormValue("role")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -576,16 +547,10 @@ func (s *Server) handleMakeMaintainer(_ *database.User, w http.ResponseWriter, r
 	http.Redirect(w, req, "/user", http.StatusFound)
 }
 
-func (s *Server) handleMakeAdmin(_ *database.User, w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	u, err := s.userDatabase.Get(params.ByName("id"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+func (s *Server) handleMakeAdmin(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
 
-	u.Admin = !u.Admin
-
-	if err := s.userDatabase.Set(req.Context(), u); err != nil {
+	if err := client.ToggleAdmin(params.ByName("id")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -593,22 +558,31 @@ func (s *Server) handleMakeAdmin(_ *database.User, w http.ResponseWriter, req *h
 	http.Redirect(w, req, "/users", http.StatusFound)
 }
 
-func (s *Server) handleAgentIndex(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	signed, err := s.ca.GetSignedCertificates(req.Context())
+func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	signed, err := client.ListCert()
 	if err != nil {
 		logger.Log.Info("Can't get signed certificates", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	signedCertificates := make([]*signedCertificate, 0, len(signed))
+	signedCertificates := make([]*certificate, 0, len(signed))
 	for _, v := range signed {
 		if !v.Agent {
 			continue
 		}
-		signedCertificates = append(signedCertificates, &signedCertificate{
-			SerialNumber: v.Certificate.SerialNumber.Text(16),
-			CommonName:   v.Certificate.Subject.CommonName,
-			IssuedAt:     v.IssuedAt,
+
+		serialNumber := big.NewInt(0)
+		serialNumber.SetBytes(v.SerialNumber)
+		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
+		if err != nil {
+			continue
+		}
+		signedCertificates = append(signedCertificates, &certificate{
+			SerialNumber: serialNumber.Text(16),
+			CommonName:   v.CommonName,
+			IssuedAt:     issuedAt,
 			Comment:      v.Comment,
 			P12:          len(v.P12) > 0,
 		})
@@ -618,34 +592,60 @@ func (s *Server) handleAgentIndex(_ *database.User, w http.ResponseWriter, req *
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked := s.ca.GetRevokedCertificates()
-	revokedList := make([]*database.RevokedCertificate, 0, len(revoked))
+	revoked, err := client.ListRevokedCert()
+	if err != nil {
+		logger.Log.Info("Can't get revoked certificates", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	revokedList := make([]*certificate, 0, len(revoked))
 	for _, v := range revoked {
 		if !v.Agent {
 			continue
 		}
-		revokedList = append(revokedList, v)
+
+		serialNumber := big.NewInt(0)
+		serialNumber.SetBytes(v.SerialNumber)
+		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
+		if err != nil {
+			continue
+		}
+		revokedAt, err := ptypes.Timestamp(v.RevokedAt)
+		if err != nil {
+			continue
+		}
+		revokedList = append(revokedList, &certificate{
+			SerialNumber: serialNumber.Text(16),
+			CommonName:   v.CommonName,
+			IssuedAt:     issuedAt,
+			RevokedAt:    revokedAt,
+		})
 	}
 	sort.Slice(revokedList, func(i, j int) bool {
 		return revokedList[i].RevokedAt.After(revokedList[j].RevokedAt)
 	})
 
 	s.RenderTemplate(w, "agent/index.tmpl", struct {
-		SignedCertificates  []*signedCertificate
-		RevokedCertificates []*database.RevokedCertificate
+		SignedCertificates  []*certificate
+		RevokedCertificates []*certificate
 	}{
 		SignedCertificates:  signedCertificates,
 		RevokedCertificates: revokedList,
 	})
 }
 
-func (s *Server) handleNewAgent(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	backends := s.Config.General.GetAllBackends()
+func (s *Server) handleNewAgent(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	backends, err := client.ListAgentBackend()
+	if err != nil {
+		logger.Log.Info("Can't get backends from rpc server", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	names := make([]string, 0, len(backends))
 	for _, v := range backends {
-		if !v.Agent {
-			continue
-		}
 		names = append(names, v.Name)
 	}
 
@@ -656,19 +656,15 @@ func (s *Server) handleNewAgent(_ *database.User, w http.ResponseWriter, req *ht
 	})
 }
 
-func (s *Server) handleAgentRegister(_ *database.User, w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
 	if err := req.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	backend, ok := s.Config.General.GetBackend(req.FormValue("id"))
-	if !ok || !backend.Agent {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	_, err := s.ca.NewAgentCertificate(req.Context(), req.FormValue("id"), req.FormValue("comment"))
+	err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
 	if err != nil {
 		logger.Log.Info("Failed create new client certificate", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -681,7 +677,21 @@ func (s *Server) handleAgentRegister(_ *database.User, w http.ResponseWriter, re
 func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interface{}) {
 	err := s.loader.Render(w, name, data)
 	if err != nil {
-		logger.Log.Debug("Failed render template", zap.Error(err))
+		logger.Log.Info("Failed render template", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func includeArray(ary []string, m string) bool {
+	for _, v := range ary {
+		if v == m {
+			return true
+		}
+	}
+
+	return false
+}
+
+func fromUnixToTimeFormat(i int64, format string) string {
+	return time.Unix(i, 0).Format(format)
 }

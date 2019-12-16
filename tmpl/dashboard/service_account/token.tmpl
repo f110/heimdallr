@@ -16,7 +16,7 @@
     <tr>
       <td>{{ .Name }}</td>
       <td>{{ .Issuer }}</td>
-      <td>{{ .CreatedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+      <td>{{ ToTimeFormat .IssuedAt.Seconds "2006/01/02 15:04:05 -0700" }}</td>
     </tr>
     {{ end }}
     </tbody>

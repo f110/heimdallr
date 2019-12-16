@@ -2,10 +2,12 @@ package auth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"net/http"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -40,6 +42,7 @@ type authenticator struct {
 	userDatabase  database.UserDatabase
 	ca            database.CertificateAuthority
 	tokenDatabase database.TokenDatabase
+	publicKey     ecdsa.PublicKey
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
@@ -49,6 +52,7 @@ func Init(conf *config.Config, sessionStore session.Store, userDatabase database
 	defaultAuthenticator.userDatabase = userDatabase
 	defaultAuthenticator.ca = ca
 	defaultAuthenticator.tokenDatabase = tokenDatabase
+	defaultAuthenticator.publicKey = conf.FrontendProxy.SigningPublicKey
 
 	v, err := unauthorizedError.WithDetails(&rpc.ErrorUnauthorized{
 		Endpoint: conf.General.TokenEndpoint,
@@ -161,10 +165,11 @@ func (a *authenticator) UnaryInterceptor(ctx context.Context, req interface{}, _
 		return nil, unauthorizedError.Err()
 	}
 
-	err := a.authenticateByMetadata(ctx, md)
+	user, err := a.authenticateByMetadata(ctx, md)
 	if err != nil {
 		return nil, unauthorizedError.Err()
 	}
+	ctx = context.WithValue(ctx, "user", user)
 
 	return handler(ctx, req)
 }
@@ -175,7 +180,7 @@ func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream,
 		return unauthorizedError.Err()
 	}
 
-	err := a.authenticateByMetadata(ss.Context(), md)
+	_, err := a.authenticateByMetadata(ss.Context(), md)
 	if err != nil {
 		return unauthorizedError.Err()
 	}
@@ -183,29 +188,56 @@ func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream,
 	return handler(srv, ss)
 }
 
-func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.MD) error {
-	if len(md.Get("token")) == 0 {
-		return unauthorizedError.Err()
-	}
-	tokenString := md.Get(rpc.TokenMetadataKey)[0]
-
-	token, err := a.tokenDatabase.FindToken(ctx, tokenString)
-	if err != nil {
-		logger.Log.Info("Could not find token", zap.Error(err))
-		return unauthorizedError.Err()
+func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.MD) (*database.User, error) {
+	if len(md.Get(rpc.TokenMetadataKey)) == 0 && len(md.Get(rpc.JwtTokenMetadataKey)) == 0 {
+		return nil, unauthorizedError.Err()
 	}
 
-	user, err := a.userDatabase.Get(token.UserId)
+	userId := ""
+	if len(md.Get(rpc.TokenMetadataKey)) > 0 {
+		tokenString := md.Get(rpc.TokenMetadataKey)[0]
+
+		token, err := a.tokenDatabase.FindToken(ctx, tokenString)
+		if err != nil {
+			logger.Log.Info("Could not find token", zap.Error(err))
+			return nil, unauthorizedError.Err()
+		}
+		userId = token.UserId
+	} else if len(md.Get(rpc.JwtTokenMetadataKey)) > 0 {
+		j := md.Get(rpc.JwtTokenMetadataKey)[0]
+		claims := &jwt.StandardClaims{}
+		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i interface{}, e error) {
+			if token.Method != jwt.SigningMethodES256 {
+				return nil, xerrors.New("dashboard: invalid signing method")
+			}
+			return &a.publicKey, nil
+		})
+		if err != nil {
+			return nil, unauthorizedError.Err()
+		}
+		if err := claims.Valid(); err != nil {
+			return nil, unauthorizedError.Err()
+		}
+		userId = claims.Id
+	}
+
+	for _, v := range a.Config.RootUsers {
+		if v == userId {
+			return &database.User{Id: userId, Admin: true}, nil
+		}
+	}
+
+	user, err := a.userDatabase.Get(userId)
 	if err != nil {
 		logger.Log.Info("Could not find user", zap.Error(err))
-		return unauthorizedError.Err()
+		return nil, unauthorizedError.Err()
 	}
 
 	if !user.Admin {
-		return status.New(codes.PermissionDenied, "You don't have privilege").Err()
+		return nil, status.New(codes.PermissionDenied, "You don't have privilege").Err()
 	}
 
-	return nil
+	return user, nil
 }
 
 func (a *authenticator) findUser(req *http.Request) (*database.User, error) {

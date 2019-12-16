@@ -29,7 +29,7 @@ var _ server.ChildServer = &Server{}
 func New(conf *config.Config, sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
 	return &Server{
 		Config:        conf,
-		loader:        template.New(ui.Data, template.LoaderTypeEmbed, "tmpl/ui/token"),
+		loader:        template.New(ui.Data, template.LoaderTypeEmbed, "tmpl/ui/token", nil),
 		sessionStore:  sessionStore,
 		tokenDatabase: tokenDatabase,
 	}

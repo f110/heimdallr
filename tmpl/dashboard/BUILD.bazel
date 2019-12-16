@@ -11,10 +11,11 @@ go_embed_data(
     name = "embed",
     srcs = [
         ":tmpl",
-        "//tmpl/dashboard/include:tmpl",
-        "//tmpl/dashboard/user:tmpl",
         "//tmpl/dashboard/agent:tmpl",
+        "//tmpl/dashboard/cert:tmpl",
+        "//tmpl/dashboard/include:tmpl",
         "//tmpl/dashboard/service_account:tmpl",
+        "//tmpl/dashboard/user:tmpl",
     ],
     string = True,
     visibility = ["//visibility:private"],

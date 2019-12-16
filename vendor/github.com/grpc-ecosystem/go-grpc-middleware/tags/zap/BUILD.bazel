@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["context.go"],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware/tags/zap",
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware/tags/zap",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/go.uber.org/zap/zapcore:go_default_library",
+    ],
+)
