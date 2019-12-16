@@ -184,23 +184,34 @@ func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
 	}
 
 	res := backends.Items
-	res = append(res, proxyv1.Backend{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "dashboard",
-		},
-		Spec: proxyv1.BackendSpec{
-			Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
-			AllowRootUser: true,
-			Permissions: []proxyv1.Permission{
-				{
-					Name: "all",
-					Locations: []proxyv1.Location{
-						{Any: "/"},
+
+	found := false
+	for _, v := range backends.Items {
+		if v.Name == "dashboard" && v.Spec.Layer == "" {
+			found = true
+		}
+	}
+
+	if !found {
+		res = append(res, proxyv1.Backend{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dashboard",
+			},
+			Spec: proxyv1.BackendSpec{
+				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
+				AllowRootUser: true,
+				Permissions: []proxyv1.Permission{
+					{
+						Name: "all",
+						Locations: []proxyv1.Location{
+							{Any: "/"},
+						},
 					},
 				},
 			},
-		},
-	})
+		})
+	}
+
 	return res, nil
 }
 
