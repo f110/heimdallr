@@ -102,6 +102,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
+	s.client.Client.Close()
 	logger.Log.Info("Shutdown dashboard")
 	return s.server.Shutdown(ctx)
 }

@@ -251,6 +251,9 @@ func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.
 	if user == nil && rootUser != nil {
 		return rootUser, nil
 	}
+	if rootUser != nil {
+		user.Admin = true
+	}
 
 	return user, nil
 }

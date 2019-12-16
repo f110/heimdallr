@@ -85,13 +85,19 @@ func (s *AdminService) Ping(_ context.Context, _ *rpc.RequestPing) (*rpc.Respons
 	return &rpc.ResponsePong{}, nil
 }
 
-func (s *AdminService) UserList(_ context.Context, req *rpc.RequestUserList) (*rpc.ResponseUserList, error) {
+func (s *AdminService) UserList(ctx context.Context, req *rpc.RequestUserList) (*rpc.ResponseUserList, error) {
+	user, err := extractUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	users, err := s.userDatabase.GetAll()
 	if err != nil {
 		return nil, err
 	}
 	res := make([]*rpc.UserItem, 0, len(users))
 	for _, v := range users {
+		// filtered by request parameter
 		if req.Role != "" {
 			ok := false
 			for _, r := range v.Roles {
@@ -106,6 +112,20 @@ func (s *AdminService) UserList(_ context.Context, req *rpc.RequestUserList) (*r
 		}
 		if req.ServiceAccount {
 			if !v.ServiceAccount() {
+				continue
+			}
+		}
+
+		// filtered by privilege of requester
+		if !user.Admin {
+			permit := false
+			for _, r := range v.Roles {
+				if _, ok := user.MaintainRoles[r]; ok {
+					permit = true
+					break
+				}
+			}
+			if !permit {
 				continue
 			}
 		}
@@ -192,6 +212,9 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 			u.Roles = append(u.Roles[:i], u.Roles[i+1:]...)
 			break
 		}
+	}
+	if _, ok := u.MaintainRoles[req.Role]; ok {
+		delete(u.MaintainRoles, req.Role)
 	}
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
@@ -290,16 +313,27 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 	}}, nil
 }
 
-func (s *AdminService) RoleList(_ context.Context, _ *rpc.RequestRoleList) (*rpc.ResponseRoleList, error) {
+func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*rpc.ResponseRoleList, error) {
+	user, err := extractUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	roles := s.Config.General.GetAllRoles()
 
-	res := make([]*rpc.RoleItem, len(roles))
-	for i, v := range roles {
-		res[i] = &rpc.RoleItem{
+	res := make([]*rpc.RoleItem, 0, len(roles))
+	for _, v := range roles {
+		if !user.Admin {
+			if _, ok := user.MaintainRoles[v.Name]; !ok {
+				continue
+			}
+		}
+
+		res = append(res, &rpc.RoleItem{
 			Name:        v.Name,
 			Title:       v.Title,
 			Description: v.Description,
-		}
+		})
 	}
 
 	return &rpc.ResponseRoleList{Items: res}, nil
@@ -390,4 +424,17 @@ func (s *AdminService) CertGet(ctx context.Context, req *rpc.RequestCertGet) (*r
 	}
 
 	return &rpc.ResponseCertGet{Item: rpc.DatabaseCertToRPCCertWithByte(cert)}, nil
+}
+
+func extractUser(ctx context.Context) (*database.User, error) {
+	u := ctx.Value("user")
+	if u != nil {
+		if v, ok := u.(*database.User); ok {
+			return v, nil
+		} else {
+			return nil, xerrors.New("rpcservice: unauthorized")
+		}
+	} else {
+		return nil, xerrors.New("rpcservice: unauthorized")
+	}
 }

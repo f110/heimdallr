@@ -1,4 +1,3 @@
-- name: superuser
+- name: dashboard-user
   allow:
-    - proxy.rpc.cluster.*
     - proxy.rpc.admin.*
