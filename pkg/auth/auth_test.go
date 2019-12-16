@@ -31,7 +31,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		sessionStore: s,
 		userDatabase: u,
 	}
-	err := a.Config.Load()
+	err := a.Config.Load(a.Config.Backends, a.Config.Roles, []*config.RpcPermission{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/f110/lagrangian-proxy/pkg/k8s"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/gorilla/mux"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
@@ -58,15 +59,18 @@ type General struct {
 	KeyFile              string                `json:"key_file,omitempty"`
 	RoleFile             string                `json:"role_file,omitempty"`
 	ProxyFile            string                `json:"proxy_file,omitempty"`
+	RpcPermissionFile    string                `json:"rpc_permission_file,omitempty"`
 	CertificateAuthority *CertificateAuthority `json:"certificate_authority,omitempty"`
 	RootUsers            []string              `json:"root_users,omitempty"`
 
-	mu                sync.RWMutex        `json:"-"`
-	Roles             []Role              `json:"-"`
-	Backends          []*Backend          `json:"-"`
-	hostnameToBackend map[string]*Backend `json:"-"`
-	roleNameToRole    map[string]Role     `json:"-"`
-	watcher           *k8s.VolumeWatcher  `json:"-"`
+	mu                  sync.RWMutex              `json:"-"`
+	Roles               []Role                    `json:"-"`
+	Backends            []*Backend                `json:"-"`
+	RpcPermissions      []*RpcPermission          `json:"-"`
+	hostnameToBackend   map[string]*Backend       `json:"-"`
+	roleNameToRole      map[string]Role           `json:"-"`
+	nameToRpcPermission map[string]*RpcPermission `json:"-"`
+	watcher             *k8s.VolumeWatcher        `json:"-"`
 
 	Certificate    tls.Certificate `json:"-"`
 	AuthEndpoint   string          `json:"-"`
@@ -119,9 +123,12 @@ type Role struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description,omitempty"`
 	Bindings    []Binding `json:"bindings"`
+
+	RPCMethodMatcher *rpc.MethodMatcher `json:"-"`
 }
 
 type Binding struct {
+	Rpc        string `json:"rpc,omitempty"`
 	Backend    string `json:"backend,omitempty"`    // Backend is Backend.Name
 	Permission string `json:"permission,omitempty"` // Permission is Permission.Name
 }
@@ -145,6 +152,11 @@ type Permission struct {
 	Locations []Location `json:"locations"`
 
 	router *mux.Router `json:"-"`
+}
+
+type RpcPermission struct {
+	Name  string   `json:"name"`
+	Allow []string `json:"allow"`
 }
 
 type Location struct {
@@ -408,6 +420,17 @@ func (g *General) GetRole(name string) (Role, error) {
 	return Role{}, ErrRoleNotFound
 }
 
+func (g *General) GetRpcPermission(name string) (*RpcPermission, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if v, ok := g.nameToRpcPermission[name]; ok {
+		return v, true
+	}
+
+	return nil, false
+}
+
 func (g *General) Inflate(dir string) error {
 	if g.CertFile != "" && g.KeyFile != "" {
 		g.CertFile = absPath(g.CertFile, dir)
@@ -422,6 +445,7 @@ func (g *General) Inflate(dir string) error {
 
 	roles := make([]Role, 0)
 	backends := make([]*Backend, 0)
+	rpcPermissions := make([]*RpcPermission, 0)
 	if g.RoleFile != "" {
 		g.RoleFile = absPath(g.RoleFile, dir)
 
@@ -441,6 +465,17 @@ func (g *General) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 		if err := yaml.Unmarshal(b, &backends); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+	}
+	if g.RpcPermissionFile != "" {
+		g.RpcPermissionFile = absPath(g.RpcPermissionFile, dir)
+
+		b, err := ioutil.ReadFile(g.RpcPermissionFile)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		if err := yaml.Unmarshal(b, &rpcPermissions); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
@@ -473,10 +508,10 @@ func (g *General) Inflate(dir string) error {
 		g.ServerNameHost = s[0]
 	}
 
-	return g.Load(backends, roles)
+	return g.Load(backends, roles, rpcPermissions)
 }
 
-func (g *General) Load(backends []*Backend, roles []Role) error {
+func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcPermission) error {
 	hostnameToBackend := make(map[string]*Backend)
 	for _, v := range backends {
 		if err := v.inflate(); err != nil {
@@ -485,16 +520,36 @@ func (g *General) Load(backends []*Backend, roles []Role) error {
 		hostnameToBackend[v.Name] = v
 	}
 
+	nameToRpcPermission := make(map[string]*RpcPermission)
+	for _, v := range rpcPermissions {
+		nameToRpcPermission[v.Name] = v
+	}
+
 	roleNameToRole := make(map[string]Role)
 	for _, v := range roles {
+		m := rpc.NewMethodMatcher()
+		for _, v := range v.Bindings {
+			if v.Rpc == "" {
+				continue
+			}
+			p := nameToRpcPermission[v.Rpc]
+			for _, method := range p.Allow {
+				if err := m.Add(method); err != nil {
+					return err
+				}
+			}
+		}
+		v.RPCMethodMatcher = m
 		roleNameToRole[v.Name] = v
 	}
 
 	g.mu.Lock()
 	g.Backends = backends
 	g.Roles = roles
+	g.RpcPermissions = rpcPermissions
 	g.hostnameToBackend = hostnameToBackend
 	g.roleNameToRole = roleNameToRole
+	g.nameToRpcPermission = nameToRpcPermission
 	g.mu.Unlock()
 	return nil
 }
@@ -522,7 +577,18 @@ func (g *General) reloadConfig() {
 		return
 	}
 
-	if err := g.Load(backends, roles); err != nil {
+	rpcPermissions := make([]*RpcPermission, 0)
+	b, err = ioutil.ReadFile(g.RpcPermissionFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+	if err := yaml.Unmarshal(b, nil); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return
+	}
+
+	if err := g.Load(backends, roles, rpcPermissions); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
 	}
 	fmt.Fprintf(os.Stderr, "%s\tReload role and proxy config file\n", time.Now().Format(time.RFC3339))

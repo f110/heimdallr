@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["util.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/cert",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/config:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
+    ],
+)

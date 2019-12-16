@@ -1,0 +1,4 @@
+- name: superuser
+  allow:
+    - proxy.rpc.cluster.*
+    - proxy.rpc.admin.*

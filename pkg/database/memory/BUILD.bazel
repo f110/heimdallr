@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/pkg/database/memory",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/connector:go_default_library",
         "//pkg/database:go_default_library",

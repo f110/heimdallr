@@ -10,7 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+
 	"github.com/spf13/pflag"
 )
 
@@ -116,7 +117,7 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Found proxy process: %s\n", pid)
 	fmt.Fprintf(os.Stderr, "Initial memory usage: %d\n", rss)
 
-	c, err := rpc.NewClient(pool, host)
+	c, err := rpcclient.NewClientWithStaticToken(pool, host)
 	if err != nil {
 		panic(err)
 	}

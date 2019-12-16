@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/connector"
-
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"golang.org/x/xerrors"
 )
@@ -78,7 +78,7 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, password, comm
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	data, clientCert, err := database.CreateNewCertificateForClient(
+	data, clientCert, err := cert.CreateNewCertificateForClient(
 		pkix.Name{
 			Organization:       []string{c.config.Organization},
 			OrganizationalUnit: []string{c.config.OrganizationUnit},

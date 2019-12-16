@@ -6,6 +6,7 @@ general:
   key_file: ./tls.key
   role_file: ./roles.yaml
   proxy_file: ./proxies.yaml
+  rpc_permission_file: ./rpc_permissions.yaml
   certificate_authority:
     cert_file: ./ca.crt
     key_file: ./ca.key

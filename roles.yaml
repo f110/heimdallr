@@ -2,6 +2,7 @@
   title: Administrator
   description: for administrator
   bindings:
+    - rpc: superuser
     - backend: test.local-proxy.f110.dev
       permission: all
     - backend: dashboard.local-proxy.f110.dev

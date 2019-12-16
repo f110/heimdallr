@@ -159,7 +159,7 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	return nil, ErrNotAllowed
 }
 
-func (a *authenticator) UnaryInterceptor(ctx context.Context, req interface{}, _info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func (a *authenticator) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, unauthorizedError.Err()
@@ -171,10 +171,25 @@ func (a *authenticator) UnaryInterceptor(ctx context.Context, req interface{}, _
 	}
 	ctx = context.WithValue(ctx, "user", user)
 
+	ok = false
+	for _, v := range user.Roles {
+		role, err := a.Config.GetRole(v)
+		if err != nil {
+			continue
+		}
+		if v := role.RPCMethodMatcher.Match(info.FullMethod); v {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return nil, unauthorizedError.Err()
+	}
+
 	return handler(ctx, req)
 }
 
-func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	md, ok := metadata.FromIncomingContext(ss.Context())
 	if !ok {
 		return unauthorizedError.Err()
@@ -190,7 +205,7 @@ func (a *authenticator) StreamInterceptor(srv interface{}, ss grpc.ServerStream,
 
 func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.MD) (*database.User, error) {
 	if len(md.Get(rpc.TokenMetadataKey)) == 0 && len(md.Get(rpc.JwtTokenMetadataKey)) == 0 {
-		return nil, unauthorizedError.Err()
+		return nil, ErrSessionNotFound
 	}
 
 	userId := ""
@@ -200,7 +215,7 @@ func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.
 		token, err := a.tokenDatabase.FindToken(ctx, tokenString)
 		if err != nil {
 			logger.Log.Info("Could not find token", zap.Error(err))
-			return nil, unauthorizedError.Err()
+			return nil, ErrInvalidToken
 		}
 		userId = token.UserId
 	} else if len(md.Get(rpc.JwtTokenMetadataKey)) > 0 {
@@ -208,33 +223,33 @@ func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.
 		claims := &jwt.StandardClaims{}
 		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i interface{}, e error) {
 			if token.Method != jwt.SigningMethodES256 {
-				return nil, xerrors.New("dashboard: invalid signing method")
+				return nil, xerrors.New("auth: invalid signing method")
 			}
 			return &a.publicKey, nil
 		})
 		if err != nil {
-			return nil, unauthorizedError.Err()
+			return nil, ErrInvalidToken
 		}
 		if err := claims.Valid(); err != nil {
-			return nil, unauthorizedError.Err()
+			return nil, ErrInvalidToken
 		}
 		userId = claims.Id
 	}
 
+	var rootUser *database.User
 	for _, v := range a.Config.RootUsers {
 		if v == userId {
-			return &database.User{Id: userId, Admin: true}, nil
+			rootUser = &database.User{Id: userId, Admin: true}
 		}
 	}
 
 	user, err := a.userDatabase.Get(userId)
-	if err != nil {
+	if err != nil && rootUser == nil {
 		logger.Log.Info("Could not find user", zap.Error(err))
-		return nil, unauthorizedError.Err()
+		return nil, ErrUserNotFound
 	}
-
-	if !user.Admin {
-		return nil, status.New(codes.PermissionDenied, "You don't have privilege").Err()
+	if user == nil && rootUser != nil {
+		return rootUser, nil
 	}
 
 	return user, nil
