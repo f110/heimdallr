@@ -190,6 +190,7 @@ func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*r
 		return nil, err
 	}
 
+	logger.Audit.Info("Add user", zap.Any("user", u), auditBy(ctx))
 	return &rpc.ResponseUserAdd{Ok: true}, nil
 }
 
@@ -204,6 +205,8 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 		if err := s.userDatabase.Delete(ctx, u.Id); err != nil {
 			return nil, err
 		}
+
+		logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("by", u.Id))
 		return &rpc.ResponseUserDel{Ok: true}, nil
 	}
 
@@ -221,6 +224,8 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 		logger.Log.Warn("Failure delete role", zap.Error(err))
 		return nil, err
 	}
+
+	logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("role", req.Role), auditBy(ctx))
 	return &rpc.ResponseUserDel{Ok: true}, nil
 }
 
@@ -252,6 +257,7 @@ func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBec
 		return nil, err
 	}
 
+	logger.Audit.Info("Become maintainer", zap.String("user", u.Id), zap.String("role", req.Role), auditBy(ctx))
 	return &rpc.ResponseBecomeMaintainer{Ok: true}, nil
 }
 
@@ -267,6 +273,8 @@ func (s *AdminService) ToggleAdmin(ctx context.Context, req *rpc.RequestToggleAd
 		logger.Log.Warn("Failure update user", zap.Error(err))
 		return nil, err
 	}
+
+	logger.Audit.Info("Change admin privilege", zap.String("user", u.Id), zap.Bool("to", u.Admin), auditBy(ctx))
 	return &rpc.ResponseToggleAdmin{Ok: true}, nil
 }
 
@@ -305,6 +313,8 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Audit.Info("Issue token", zap.String("user", req.UserId), auditBy(ctx))
 	return &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{
 		Name:     newToken.Name,
 		Value:    newToken.Value,
@@ -394,6 +404,7 @@ func (s *AdminService) CertNew(ctx context.Context, req *rpc.RequestCertNew) (*r
 		return nil, err
 	}
 
+	logger.Audit.Info("Generate certificate", zap.String("common_name", req.CommonName), auditBy(ctx))
 	return &rpc.ResponseCertNew{Ok: true}, nil
 }
 
@@ -411,6 +422,7 @@ func (s *AdminService) CertRevoke(ctx context.Context, req *rpc.RequestCertRevok
 		return nil, err
 	}
 
+	logger.Audit.Info("Revoke certificate", zap.String("common_name", signed.Certificate.Subject.CommonName), auditBy(ctx))
 	return &rpc.ResponseCertRevoke{Ok: true}, nil
 }
 
@@ -437,4 +449,13 @@ func extractUser(ctx context.Context) (*database.User, error) {
 	} else {
 		return nil, xerrors.New("rpcservice: unauthorized")
 	}
+}
+
+func auditBy(ctx context.Context) zap.Field {
+	user, err := extractUser(ctx)
+	if err != nil {
+		return zap.Skip()
+	}
+
+	return zap.String("by", user.Id)
 }
