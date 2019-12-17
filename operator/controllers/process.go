@@ -188,8 +188,9 @@ func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
 
 	found := false
 	for _, v := range backends.Items {
-		if v.Name == "dashboard" && v.Spec.Layer == "" {
+		if v.Name == "dashboard" && v.Namespace == r.Namespace && v.Spec.Layer == "" {
 			found = true
+			break
 		}
 	}
 
@@ -227,7 +228,32 @@ func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
 		return nil, err
 	}
 
-	return roleList.Items, nil
+	res := roleList.Items
+	found := false
+	for _, v := range roleList.Items {
+		if v.Name == "admin" && v.Namespace == r.Namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		res = append(res, proxyv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "admin",
+				Namespace: r.Namespace,
+			},
+			Spec: proxyv1.RoleSpec{
+				Title:       "administrator",
+				Description: fmt.Sprintf("%s administrators", r.Name),
+				Bindings: []proxyv1.Binding{
+					{BackendName: "dashboard", Namespace: r.Namespace},
+					{RpcPermissionName: "admin"},
+				},
+			},
+		})
+	}
+
+	return res, nil
 }
 
 func (r *LagrangianProxy) RpcPermissions() ([]proxyv1.RpcPermission, error) {
@@ -240,7 +266,27 @@ func (r *LagrangianProxy) RpcPermissions() ([]proxyv1.RpcPermission, error) {
 		return nil, err
 	}
 
-	return rpcPermissionList.Items, nil
+	res := rpcPermissionList.Items
+	found := false
+	for _, v := range rpcPermissionList.Items {
+		if v.Name == "admin" && v.Namespace == r.Namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		res = append(res, proxyv1.RpcPermission{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "admin",
+				Namespace: r.Namespace,
+			},
+			Spec: proxyv1.RpcPermissionSpec{
+				Allow: []string{"proxy.rpc.admin.*"},
+			},
+		})
+	}
+
+	return res, nil
 }
 
 func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
