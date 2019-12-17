@@ -110,12 +110,12 @@ func (s *Server) Start() error {
 		return err
 	}
 	listener := tls.NewListener(l, &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		CipherSuites: allowCipherSuites,
-		Certificates: []tls.Certificate{s.Config.General.Certificate},
-		ClientAuth:   tls.RequestClientCert,
-		ClientCAs:    s.Config.General.CertificateAuthority.CertPool,
-		NextProtos:   []string{connector.ProtocolName, frontproxy.SocketProxyNextProto, http2.NextProtoTLS},
+		MinVersion:     tls.VersionTLS12,
+		CipherSuites:   allowCipherSuites,
+		GetCertificate: s.Config.General.GetCertificate,
+		ClientAuth:     tls.RequestClientCert,
+		ClientCAs:      s.Config.General.CertificateAuthority.CertPool,
+		NextProtos:     []string{connector.ProtocolName, frontproxy.SocketProxyNextProto, http2.NextProtoTLS},
 	})
 
 	if err := http2.ConfigureServer(s.server, nil); err != nil {

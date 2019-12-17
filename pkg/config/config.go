@@ -72,10 +72,12 @@ type General struct {
 	nameToRpcPermission map[string]*RpcPermission `json:"-"`
 	watcher             *k8s.VolumeWatcher        `json:"-"`
 
-	Certificate    tls.Certificate `json:"-"`
-	AuthEndpoint   string          `json:"-"`
-	TokenEndpoint  string          `json:"-"`
-	ServerNameHost string          `json:"-"`
+	AuthEndpoint   string `json:"-"`
+	TokenEndpoint  string `json:"-"`
+	ServerNameHost string `json:"-"`
+
+	certMu      sync.RWMutex
+	certificate *tls.Certificate `json:"-"`
 }
 
 type CertificateAuthority struct {
@@ -436,11 +438,22 @@ func (g *General) Inflate(dir string) error {
 		g.CertFile = absPath(g.CertFile, dir)
 		g.KeyFile = absPath(g.KeyFile, dir)
 
-		cert, err := tls.LoadX509KeyPair(g.CertFile, g.KeyFile)
-		if err != nil {
+		g.reloadCertificate()
+		if _, err := g.GetCertificate(nil); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		g.Certificate = cert
+
+		if k8s.CanWatchVolume(g.RoleFile) {
+			mountPath, err := k8s.FindMountPath(g.CertFile)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			fmt.Fprintf(os.Stderr, "watch volume: %s\n", mountPath)
+			_, err = k8s.NewVolumeWatcher(mountPath, g.reloadCertificate)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+		}
 	}
 
 	roles := make([]Role, 0)
@@ -479,7 +492,7 @@ func (g *General) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-	if g.RoleFile != "" && g.ProxyFile != "" {
+	if g.RoleFile != "" && g.ProxyFile != "" && g.RpcPermissionFile != "" {
 		if k8s.CanWatchVolume(g.RoleFile) {
 			mountPath, err := k8s.FindMountPath(g.RoleFile)
 			if err != nil {
@@ -554,6 +567,17 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 	return nil
 }
 
+func (g *General) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	g.certMu.RLock()
+	defer g.certMu.RUnlock()
+
+	if g.certificate == nil {
+		return nil, xerrors.New("config: certificate not loaded yet")
+	}
+
+	return g.certificate, nil
+}
+
 func (g *General) reloadConfig() {
 	roles := make([]Role, 0)
 	b, err := ioutil.ReadFile(g.RoleFile)
@@ -592,6 +616,18 @@ func (g *General) reloadConfig() {
 		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
 	}
 	fmt.Fprintf(os.Stderr, "%s\tReload role and proxy config file\n", time.Now().Format(time.RFC3339))
+}
+
+func (g *General) reloadCertificate() {
+	cert, err := tls.LoadX509KeyPair(g.CertFile, g.KeyFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed load server certificate: %v\n", err)
+		return
+	}
+
+	g.certMu.Lock()
+	g.certificate = &cert
+	g.certMu.Unlock()
 }
 
 func (d *Datastore) Inflate(dir string) error {
