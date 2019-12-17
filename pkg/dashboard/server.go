@@ -48,6 +48,8 @@ func NewServer(config *config.Config) *Server {
 	}
 	mux := httprouter.New()
 	s.router = mux
+	s.Get("/liveness", s.handleLiveness)
+	s.Get("/readiness", s.handleReadiness)
 	s.Get("/", s.handleIndex)
 	s.Get("/user", s.handleUserIndex)
 	s.Get("/users", s.handleUsers)
@@ -105,6 +107,14 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	s.client.Client.Close()
 	logger.Log.Info("Shutdown dashboard")
 	return s.server.Shutdown(ctx)
+}
+
+func (s *Server) handleLiveness(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {}
+
+func (s *Server) handleReadiness(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	if !s.client.Alive() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {

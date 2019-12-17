@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
@@ -16,7 +17,9 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -48,7 +51,11 @@ func NewClientWithUserToken(pool *x509.CertPool, host, serverName string) (*Clie
 
 	c := &ClientWithUserToken{}
 	cred := credentials.NewTLS(&tls.Config{ServerName: serverName, RootCAs: pool})
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(cred))
+	conn, err := grpc.Dial(
+		host,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -67,13 +74,18 @@ type Client struct {
 	adminClient   rpc.AdminClient
 	clusterClient rpc.ClusterClient
 	md            context.Context
+	ka            keepalive.ClientParameters
 }
 
 func NewClientWithStaticToken(pool *x509.CertPool, host string) (*Client, error) {
 	overrideGrpcLogger()
 
 	cred := credentials.NewClientTLSFromCert(pool, "")
-	conn, err := grpc.Dial(fmt.Sprintf("%s", host), grpc.WithTransportCredentials(cred))
+	conn, err := grpc.Dial(
+		fmt.Sprintf("%s", host),
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -105,6 +117,15 @@ func NewClientWithStaticToken(pool *x509.CertPool, host string) (*Client, error)
 
 func (c *Client) Close() {
 	c.conn.Close()
+}
+
+func (c *Client) Alive() bool {
+	switch c.conn.GetState() {
+	case connectivity.Ready:
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *Client) AddUser(id, role string) error {

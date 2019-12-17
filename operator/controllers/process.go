@@ -1048,7 +1048,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/", // TODO: use readiness probe
+										Path: "/readiness",
 										Port: intstr.FromInt(dashboardPort),
 									},
 								},
@@ -1056,7 +1056,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/",
+										Path: "/liveness",
 										Port: intstr.FromInt(dashboardPort),
 									},
 								},
