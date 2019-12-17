@@ -4,13 +4,33 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
+	"github.com/f110/lagrangian-proxy/pkg/version"
+	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 )
 
+func printVersion() {
+	fmt.Printf("Version: %s\n", version.Version)
+	fmt.Printf("Go version: %s\n", runtime.Version())
+}
+
 func proxy(args []string) error {
+	version := false
+	fs := pflag.NewFlagSet("lagrangian-proxy", pflag.ContinueOnError)
+	fs.BoolVarP(&version, "version", "v", version, "Show version")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if version {
+		printVersion()
+		return nil
+	}
+
 	tokenClient := token.NewTokenClient("token")
 	t, err := tokenClient.GetToken()
 	if err != nil {

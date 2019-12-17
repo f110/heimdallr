@@ -15,6 +15,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"github.com/f110/lagrangian-proxy/pkg/version"
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
@@ -272,6 +274,18 @@ func commandAdmin(args []string) error {
 }
 
 func cli(args []string) error {
+	version := false
+	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs.BoolVarP(&version, "version", "v", version, "Show version")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if version {
+		printVersion()
+		return nil
+	}
+
 	switch args[1] {
 	case "bootstrap":
 		return commandBootstrap(args[2:])
@@ -296,6 +310,11 @@ func absPath(path, dir string) string {
 		return a
 	}
 	return path
+}
+
+func printVersion() {
+	fmt.Printf("Version: %s\n", version.Version)
+	fmt.Printf("Go version: %s\n", runtime.Version())
 }
 
 func main() {

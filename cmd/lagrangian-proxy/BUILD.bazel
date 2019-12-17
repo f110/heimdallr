@@ -22,6 +22,7 @@ go_library(
         "//pkg/server/rpc:go_default_library",
         "//pkg/server/token:go_default_library",
         "//pkg/session:go_default_library",
+        "//pkg/version:go_default_library",
         "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
         "//vendor/github.com/coreos/etcd/embed:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",

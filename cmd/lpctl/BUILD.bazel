@@ -11,6 +11,7 @@ go_library(
         "//pkg/config/configreader:go_default_library",
         "//pkg/rpc:go_default_library",
         "//pkg/rpc/rpcclient:go_default_library",
+        "//pkg/version:go_default_library",
         "//vendor/github.com/gorilla/securecookie:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",

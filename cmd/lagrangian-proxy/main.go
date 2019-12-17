@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/server/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/server/token"
 	"github.com/f110/lagrangian-proxy/pkg/session"
+	"github.com/f110/lagrangian-proxy/pkg/version"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -314,12 +316,24 @@ func (m *mainProcess) WaitShutdown() {
 	}
 }
 
+func printVersion() {
+	fmt.Printf("Version: %s\n", version.Version)
+	fmt.Printf("Go version: %s\n", runtime.Version())
+}
+
 func command(args []string) error {
 	confFile := ""
+	version := false
 	fs := pflag.NewFlagSet("lagrangian-proxy", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
+	fs.BoolVarP(&version, "version", "v", version, "Show version")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+
+	if version {
+		printVersion()
+		return nil
 	}
 
 	mainProcess := newMainProcess()

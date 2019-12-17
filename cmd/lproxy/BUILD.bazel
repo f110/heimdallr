@@ -8,6 +8,8 @@ go_library(
     deps = [
         "//pkg/auth/token:go_default_library",
         "//pkg/localproxy:go_default_library",
+        "//pkg/version:go_default_library",
+        "//vendor/github.com/spf13/pflag:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
     ],
 )
