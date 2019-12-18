@@ -6,7 +6,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -719,6 +721,12 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 		return nil, err
 	}
 
+	conf, err := r.ConfigForMain()
+	if err != nil {
+		return nil, err
+	}
+	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.DeploymentNameForMain(),
@@ -732,6 +740,9 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: r.LabelsForMain(),
+					Annotations: map[string]string{
+						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -928,10 +939,6 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 		},
 	}
 
-	conf, err := r.ConfigForMain()
-	if err != nil {
-		return nil, err
-	}
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
 		return nil, err
@@ -1022,6 +1029,12 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath})
 	}
 
+	conf, err := r.ConfigForDashboard()
+	if err != nil {
+		return nil, err
+	}
+	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
+
 	var replicas int32 = 3
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1036,6 +1049,9 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: r.LabelsForDashboard(),
+					Annotations: map[string]string{
+						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -1112,11 +1128,6 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 	}
 
 	caSecret, err := r.CASecret()
-	if err != nil {
-		return nil, err
-	}
-
-	conf, err := r.ConfigForDashboard()
 	if err != nil {
 		return nil, err
 	}
