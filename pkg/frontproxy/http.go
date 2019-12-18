@@ -314,7 +314,7 @@ func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *h
 	if v != nil {
 		switch s := v.(type) {
 		case time.Time:
-			appTime = int(time.Now().Sub(s) / time.Millisecond)
+			appTime = int(time.Now().Sub(s).Milliseconds())
 		}
 	}
 	remoteAddr := strings.Split(req.RemoteAddr, ":")
@@ -324,7 +324,6 @@ func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *h
 	}
 
 	l := AccessLog{
-		Time:      time.Now(),
 		Host:      req.Host,
 		Protocol:  req.Proto,
 		Method:    req.Method,
