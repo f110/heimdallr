@@ -9,6 +9,8 @@ if [ -d controller-tools ]; then
   rm -rf controller-tools
 fi
 git clone --depth 1 https://github.com/kubernetes-sigs/controller-tools.git -b "$VERSION"
+find controller-tools -name "*_test.go" -delete
+find controller-tools -name "testdata" -type d | xargs rm -rf
 cd controller-tools
 
 find . -name ".*" -maxdepth 1 | grep -v "^.$" | xargs rm -rf {} +

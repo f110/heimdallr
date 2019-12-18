@@ -5,12 +5,6 @@ github.com/gobuffalo/flect
 # github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/google/go-cmp v0.3.0
-github.com/google/go-cmp/cmp
-github.com/google/go-cmp/cmp/internal/diff
-github.com/google/go-cmp/cmp/internal/flags
-github.com/google/go-cmp/cmp/internal/function
-github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
 # github.com/hpcloud/tail v1.0.0
@@ -44,29 +38,11 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.5.0
-github.com/onsi/gomega
-github.com/onsi/gomega/format
-github.com/onsi/gomega/gstruct
-github.com/onsi/gomega/gstruct/errors
-github.com/onsi/gomega/internal/assertion
-github.com/onsi/gomega/internal/asyncassertion
-github.com/onsi/gomega/internal/oraclematcher
-github.com/onsi/gomega/internal/testingtsupport
-github.com/onsi/gomega/matchers
-github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
-github.com/onsi/gomega/matchers/support/goraph/edge
-github.com/onsi/gomega/matchers/support/goraph/node
-github.com/onsi/gomega/matchers/support/goraph/util
-github.com/onsi/gomega/types
 # github.com/spf13/cobra v0.0.5
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
 # golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
-golang.org/x/net/html
-golang.org/x/net/html/atom
-golang.org/x/net/html/charset
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
@@ -74,22 +50,6 @@ golang.org/x/net/idna
 # golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
-golang.org/x/text/encoding
-golang.org/x/text/encoding/charmap
-golang.org/x/text/encoding/htmlindex
-golang.org/x/text/encoding/internal
-golang.org/x/text/encoding/internal/identifier
-golang.org/x/text/encoding/japanese
-golang.org/x/text/encoding/korean
-golang.org/x/text/encoding/simplifiedchinese
-golang.org/x/text/encoding/traditionalchinese
-golang.org/x/text/encoding/unicode
-golang.org/x/text/internal/language
-golang.org/x/text/internal/language/compact
-golang.org/x/text/internal/tag
-golang.org/x/text/internal/utf8internal
-golang.org/x/text/language
-golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
