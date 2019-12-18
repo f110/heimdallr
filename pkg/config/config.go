@@ -177,7 +177,6 @@ type Location struct {
 type FrontendProxy struct {
 	SigningSecretKeyFile    string   `json:"signing_secret_key_file"`
 	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
-	AccessLogFile           string   `json:"access_log"`
 	ExpectCT                bool     `json:"expect_ct"`
 	Session                 *Session `json:"session,omitempty"`
 
@@ -185,7 +184,6 @@ type FrontendProxy struct {
 	SigningPrivateKey   *ecdsa.PrivateKey `json:"-"`
 	SigningPublicKey    ecdsa.PublicKey   `json:"-"`
 	GithubWebhookSecret []byte            `json:"-"`
-	AccessLog           *os.File          `json:"-"`
 }
 
 type Session struct {
@@ -326,14 +324,6 @@ func (f *FrontendProxy) Inflate(dir string) error {
 		if err := f.Session.Inflate(dir); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-	}
-	if f.AccessLogFile != "" {
-		f.AccessLogFile = absPath(f.AccessLogFile, dir)
-		file, err := os.OpenFile(f.AccessLogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		f.AccessLog = file
 	}
 
 	return nil

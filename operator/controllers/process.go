@@ -504,7 +504,6 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			Namespace: "/lagrangian-proxy/",
 		},
 		FrontendProxy: &config.FrontendProxy{
-			AccessLogFile:           "/tmp/access.log",
 			SigningSecretKeyFile:    fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 			GithubWebHookSecretFile: fmt.Sprintf("%s/%s", githubSecretPath, githubWebhookSecretFilename),
 			ExpectCT:                true,

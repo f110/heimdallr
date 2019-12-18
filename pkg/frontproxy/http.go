@@ -3,7 +3,6 @@ package frontproxy
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -21,6 +20,7 @@ import (
 	"github.com/google/go-github/v28/github"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -33,17 +33,31 @@ const (
 var TokenExpiration = 5 * time.Minute
 
 type AccessLog struct {
-	Time      time.Time `json:"time"`
-	Host      string    `json:"host"`
-	Protocol  string    `json:"protocol"`
-	Method    string    `json:"method"`
-	Path      string    `json:"path"`
-	Status    int       `json:"status"`
-	UserAgent string    `json:"user_agent"`
-	ClientIp  string    `json:"client_ip"`
-	AppTime   int       `json:"app_time_ms"`
-	RequestId string    `json:"request_id"`
-	UserId    string    `json:"user_id"`
+	Host      string `json:"host"`
+	Protocol  string `json:"protocol"`
+	Method    string `json:"method"`
+	Path      string `json:"path"`
+	Status    int    `json:"status"`
+	UserAgent string `json:"user_agent"`
+	ClientIp  string `json:"client_ip"`
+	AppTime   int    `json:"app_time_ms"`
+	RequestId string `json:"request_id"`
+	UserId    string `json:"user_id"`
+}
+
+func (a AccessLog) Fields() []zap.Field {
+	return []zap.Field{
+		zap.String("host", a.Host),
+		zap.String("protocol", a.Protocol),
+		zap.String("method", a.Method),
+		zap.String("path", a.Path),
+		zap.Int("status", a.Status),
+		zap.String("user_agent", a.UserAgent),
+		zap.String("client_ip", a.ClientIp),
+		zap.Int("app_time_ms", a.AppTime),
+		zap.String("request_id", a.RequestId),
+		zap.String("user_id", a.UserId),
+	}
 }
 
 type loggedResponseWriter struct {
@@ -65,13 +79,48 @@ func (w *loggedResponseWriter) WriteHeader(statusCode int) {
 }
 
 type accessLogger struct {
-	internal *json.Encoder
+	internal *zap.Logger
+}
+
+func newAccessLogger(conf *config.Logger) *accessLogger {
+	encoding := "json"
+	if conf.Encoding != "" {
+		encoding = conf.Encoding
+	}
+
+	encoderConf := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "",
+		NameKey:        "tag",
+		CallerKey:      "",
+		MessageKey:     "",
+		StacktraceKey:  "",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+
+	zapConf := zap.Config{
+		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		Development:      false,
+		Sampling:         nil,
+		Encoding:         encoding,
+		EncoderConfig:    encoderConf,
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+	}
+	l, err := zapConf.Build()
+	if err != nil {
+		return nil
+	}
+	l = l.Named("access_log")
+	return &accessLogger{internal: l}
 }
 
 func (a *accessLogger) Log(l AccessLog) {
-	if err := a.internal.Encode(l); err != nil {
-		logger.Log.Warn("Failed encoding access log", zap.Error(err))
-	}
+	a.internal.Info("", l.Fields()...)
 }
 
 type Transport struct {
@@ -118,7 +167,7 @@ func NewHttpProxy(conf *config.Config, ct *connector.Server) *HttpProxy {
 			ErrorLog:  logger.CompatibleLogger,
 			Transport: NewTransport(conf, ct),
 		},
-		accessLogger: &accessLogger{json.NewEncoder(conf.FrontendProxy.AccessLog)},
+		accessLogger: newAccessLogger(conf.Logger),
 	}
 	p.reverseProxy.Director = p.director
 
