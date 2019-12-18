@@ -75,7 +75,7 @@ func initAuditLogger(conf *config.Logger) error {
 	encoderConf := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
-		NameKey:        "logger",
+		NameKey:        "tag",
 		CallerKey:      "",
 		MessageKey:     "msg",
 		StacktraceKey:  "",
