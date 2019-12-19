@@ -22,7 +22,9 @@ service Admin {
 
     rpc RoleList (RequestRoleList) returns (ResponseRoleList);
     rpc BackendList (RequestBackendList) returns (ResponseBackendList);
+}
 
+service CertificateAuthority {
     rpc CertList (RequestCertList) returns (ResponseCertList);
     rpc RevokedCertList (RequestRevokedCertList) returns (ResponseRevokedCertList);
     rpc CertNew (RequestCertNew) returns (ResponseCertNew);

@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "admin.go",
+        "certificate_authority.go",
         "cluster.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice",

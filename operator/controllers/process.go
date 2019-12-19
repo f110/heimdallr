@@ -283,7 +283,7 @@ func (r *LagrangianProxy) RpcPermissions() ([]proxyv1.RpcPermission, error) {
 				Namespace: r.Namespace,
 			},
 			Spec: proxyv1.RpcPermissionSpec{
-				Allow: []string{"proxy.rpc.admin.*"},
+				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
 			},
 		})
 	}

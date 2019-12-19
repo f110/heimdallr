@@ -40,6 +40,7 @@ func (u *ClientWithUserToken) WithRequest(req *http.Request) *ClientWithUserToke
 		conn:          u.Client.conn,
 		adminClient:   u.Client.adminClient,
 		clusterClient: u.Client.clusterClient,
+		caClient:      u.Client.caClient,
 		md:            ctx,
 	}
 
@@ -63,6 +64,7 @@ func NewClientWithUserToken(pool *x509.CertPool, host, serverName string) (*Clie
 		conn:          conn,
 		adminClient:   rpc.NewAdminClient(conn),
 		clusterClient: rpc.NewClusterClient(conn),
+		caClient:      rpc.NewCertificateAuthorityClient(conn),
 		md:            context.Background(),
 	}
 
@@ -73,6 +75,7 @@ type Client struct {
 	conn          *grpc.ClientConn
 	adminClient   rpc.AdminClient
 	clusterClient rpc.ClusterClient
+	caClient      rpc.CertificateAuthorityClient
 	md            context.Context
 	ka            keepalive.ClientParameters
 }
@@ -238,7 +241,7 @@ func (c *Client) ListAgentBackend() ([]*rpc.BackendItem, error) {
 }
 
 func (c *Client) ListCert() ([]*rpc.CertItem, error) {
-	res, err := c.adminClient.CertList(c.md, &rpc.RequestCertList{})
+	res, err := c.caClient.CertList(c.md, &rpc.RequestCertList{})
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +250,7 @@ func (c *Client) ListCert() ([]*rpc.CertItem, error) {
 }
 
 func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
-	res, err := c.adminClient.RevokedCertList(c.md, &rpc.RequestRevokedCertList{})
+	res, err := c.caClient.RevokedCertList(c.md, &rpc.RequestRevokedCertList{})
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +259,7 @@ func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
 }
 
 func (c *Client) NewCert(commonName, password, comment string) error {
-	_, err := c.adminClient.CertNew(c.md, &rpc.RequestCertNew{CommonName: commonName, Password: password, Comment: comment})
+	_, err := c.caClient.CertNew(c.md, &rpc.RequestCertNew{CommonName: commonName, Password: password, Comment: comment})
 	if err != nil {
 		return err
 	}
@@ -265,7 +268,7 @@ func (c *Client) NewCert(commonName, password, comment string) error {
 }
 
 func (c *Client) NewAgentCert(commonName, comment string) error {
-	_, err := c.adminClient.CertNew(c.md, &rpc.RequestCertNew{Agent: true, CommonName: commonName, Comment: comment})
+	_, err := c.caClient.CertNew(c.md, &rpc.RequestCertNew{Agent: true, CommonName: commonName, Comment: comment})
 	if err != nil {
 		return err
 	}
@@ -274,7 +277,7 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 }
 
 func (c *Client) RevokeCert(serialNumber *big.Int) error {
-	_, err := c.adminClient.CertRevoke(c.md, &rpc.RequestCertRevoke{SerialNumber: serialNumber.Bytes()})
+	_, err := c.caClient.CertRevoke(c.md, &rpc.RequestCertRevoke{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
 		return err
 	}
@@ -283,7 +286,7 @@ func (c *Client) RevokeCert(serialNumber *big.Int) error {
 }
 
 func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
-	res, err := c.adminClient.CertGet(c.md, &rpc.RequestCertGet{SerialNumber: serialNumber.Bytes()})
+	res, err := c.caClient.CertGet(c.md, &rpc.RequestCertGet{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
 		return nil, err
 	}
