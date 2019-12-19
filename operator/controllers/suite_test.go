@@ -16,6 +16,7 @@ limitations under the License.
 package controllers
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -23,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	"github.com/f110/lagrangian-proxy/operator/bazeltesting"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +53,12 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
 	By("bootstrapping test environment")
+	if path, err := bazeltesting.FindEtcd(); err == nil {
+		os.Setenv("TEST_ASSET_ETCD", path)
+	}
+	if path, err := bazeltesting.FindKubeApiserver(); err == nil {
+		os.Setenv("TEST_ASSET_KUBE_APISERVER", path)
+	}
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
 	}

@@ -48,8 +48,6 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
-
-
 load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
 load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos = "repositories")
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
@@ -68,3 +66,15 @@ container_pull(
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
+
+load("//build/rules/k8s_testing:deps.bzl", "etcd", "kube_apiserver")
+
+etcd(
+    name = "io_etcd",
+    version = "3.4.3",
+)
+
+kube_apiserver(
+    name = "io_k8s_kube_apiserver",
+    version = "1.16.4",
+)

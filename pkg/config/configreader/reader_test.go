@@ -103,7 +103,7 @@ logger:
 		t.Fatal(err)
 	}
 
-	cert, privateKey, err = auth.GenerateServerCertificate(ca, privateKey, 1, []string{"test.example.com"})
+	cert, privateKey, err = auth.GenerateServerCertificate(ca, privateKey, []string{"test.example.com"})
 	privKey, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
 		t.Fatal(err)

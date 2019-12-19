@@ -259,7 +259,7 @@ func (a *authenticator) authenticateByMetadata(ctx context.Context, md metadata.
 }
 
 func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
-	if len(req.TLS.PeerCertificates) > 0 {
+	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
 		// Client Certificate Authorization
 		cert := req.TLS.PeerCertificates[0]
 		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
