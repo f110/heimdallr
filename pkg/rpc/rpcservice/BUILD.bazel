@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
+    srcs = [
+        "admin.go",
+        "cluster.go",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice",
     visibility = ["//visibility:public"],
     deps = [
