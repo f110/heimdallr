@@ -2,7 +2,6 @@ load("//build/rules/go:vendor.bzl", "go_vendor")
 
 # gazelle:proto disable_global
 # gazelle:prefix github.com/f110/lagrangian-proxy
-# gazelle:resolve go github.com/f110/lagrangian-proxy/pkg/server/rpc //pkg/server/rpc:go_default_library
 
 go_vendor(
     name = "vendor",
@@ -18,9 +17,7 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image", "cont
 pkg_tar(
     name = "bin",
     srcs = [
-        "//cmd/lag-rpcserver",
         "//cmd/lagrangian-proxy",
-        "@grpc_health_probe//file",
     ],
     mode = "0755",
     package_dir = "/usr/local/bin",
@@ -43,6 +40,32 @@ container_push(
 )
 
 pkg_tar(
+    name = "bin_rpcserver",
+    srcs = [
+        "//cmd/lag-rpcserver",
+        "@grpc_health_probe//file",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_rpcserver",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/lag-rpcserver"],
+    tars = [":bin_rpcserver"],
+)
+
+container_push(
+    name = "push_rpcserver",
+    format = "Docker",
+    image = ":image_rpcserver",
+    registry = "docker.pkg.github.com",
+    repository = "f110/lagrangian-proxy/rpcserver",
+    tag = "latest",
+)
+
+pkg_tar(
     name = "bin_ctl",
     srcs = ["//cmd/lpctl"],
     mode = "0755",
@@ -61,6 +84,6 @@ container_push(
     format = "Docker",
     image = ":image_ctl",
     registry = "docker.pkg.github.com",
-    repository = "f110/lagrangian-proxy/proxy",
+    repository = "f110/lagrangian-proxy/ctl",
     tag = "latest",
 )

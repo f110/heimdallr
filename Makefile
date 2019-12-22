@@ -14,14 +14,24 @@ update-deps:
 	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
 	@bazel run //:vendor
 
-push:
+push: push-proxy push-ctl push-rpcserver
+
+push-proxy:
 	bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //:image.tar
-	bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //:image_ctl.tar
 	docker load -i bazel-bin/image.tar
-	docker load -i bazel-bin/image_ctl.tar
 	docker tag bazel:image quay.io/f110/lagrangian-proxy:latest
-	docker tag bazel:image_ctl quay.io/f110/lagrangian-proxy-ctl:latest
 	docker push quay.io/f110/lagrangian-proxy:latest
+
+push-rpcserver:
+	bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //:image_rpcserver.tar
+	docker load -i bazel-bin/image_rpcserver.tar
+	docker tag bazel:image_rpcserver quay.io/f110/lagrangian-proxy-rpcserver:latest
+	docker push quay.io/f110/lagrangian-proxy-rpcserver:latest
+
+push-ctl:
+	bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //:image_ctl.tar
+	docker load -i bazel-bin/image_ctl.tar
+	docker tag bazel:image_ctl quay.io/f110/lagrangian-proxy-ctl:latest
 	docker push quay.io/f110/lagrangian-proxy-ctl:latest
 
-.PHONY: run run-operator install-operator update-deps push
+.PHONY: run run-operator install-operator update-deps push push-proxy push-rpcserver push-ctl

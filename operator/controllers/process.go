@@ -43,6 +43,8 @@ const (
 
 	imageRepository            = "quay.io/f110/lagrangian-proxy"
 	defaultImageTag            = "latest"
+	rpcServerImageRepositry    = "quay.io/f110/lagrangian-proxy-rpcserver"
+	rpcServerDefaultImageTag   = "latest"
 	ctlImageRepository         = "quay.io/f110/lagrangian-proxy-ctl"
 	ctlDefaultImageTag         = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
@@ -1402,7 +1404,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:    "rpcserver",
-							Image:   fmt.Sprintf("%s:%s", imageRepository, defaultImageTag),
+							Image:   fmt.Sprintf("%s:%s", rpcServerImageRepositry, rpcServerDefaultImageTag),
 							Command: []string{rpcServerCommand},
 							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
