@@ -24,6 +24,8 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/k8s"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 )
@@ -690,14 +692,28 @@ func (d *Datastore) Inflate(dir string) error {
 	return nil
 }
 
-func (d *Datastore) GetEtcdClient() (*clientv3.Client, error) {
+func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) {
 	if d.etcdClient != nil {
 		return d.etcdClient, nil
 	}
 
+	encoder := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{d.EtcdUrl.String()},
 		DialTimeout: 1 * time.Second,
+		LogConfig:   loggerConf.ZapConfig(encoder),
 	})
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -777,6 +793,28 @@ func (l *Location) AddRouter(r *mux.Router) {
 	}
 	if l.Patch != "" {
 		r.Methods(http.MethodPatch).PathPrefix(l.Patch)
+	}
+}
+
+func (l *Logger) ZapConfig(encoder zapcore.EncoderConfig) *zap.Config {
+	level := zap.InfoLevel
+	switch l.Level {
+	case "debug":
+		level = zap.DebugLevel
+	}
+	encoding := "json"
+	if l.Encoding != "" {
+		encoding = l.Encoding
+	}
+
+	return &zap.Config{
+		Level:            zap.NewAtomicLevelAt(level),
+		Development:      false,
+		Sampling:         nil, // disable sampling
+		Encoding:         encoding,
+		EncoderConfig:    encoder,
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
 	}
 }
 

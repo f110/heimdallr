@@ -62,7 +62,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	if m.Config.Datastore.Url != nil {
-		client, err := m.Config.Datastore.GetEtcdClient()
+		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -112,6 +112,21 @@ func (m *mainProcess) Start() error {
 		if err := m.server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 			m.err = err
+			m.Stop()
+		}
+	}()
+
+	c, err := etcd.NewCompactor(m.etcdClient)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+
+		if err := c.Start(context.Background()); err != nil {
+			m.err = err
+			m.Stop()
 		}
 	}()
 

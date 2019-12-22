@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	Log   *zap.Logger
-	Audit *zap.Logger
+	Log       *zap.Logger
+	LogConfig *zap.Config
+	Audit     *zap.Logger
 )
 
 func Init(conf *config.Logger) error {
@@ -24,16 +25,6 @@ func Init(conf *config.Logger) error {
 }
 
 func initLogger(conf *config.Logger) error {
-	level := zap.InfoLevel
-	switch conf.Level {
-	case "debug":
-		level = zap.DebugLevel
-	}
-	encoding := "json"
-	if conf.Encoding != "" {
-		encoding = conf.Encoding
-	}
-
 	encoderConf := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -48,30 +39,18 @@ func initLogger(conf *config.Logger) error {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
-	zapConf := zap.Config{
-		Level:            zap.NewAtomicLevelAt(level),
-		Development:      false,
-		Sampling:         nil, // disable sampling
-		Encoding:         encoding,
-		EncoderConfig:    encoderConf,
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
+	zapConf := conf.ZapConfig(encoderConf)
 	l, err := zapConf.Build()
 	if err != nil {
 		return err
 	}
 
 	Log = l
+	LogConfig = zapConf
 	return nil
 }
 
 func initAuditLogger(conf *config.Logger) error {
-	encoding := "json"
-	if conf.Encoding != "" {
-		encoding = conf.Encoding
-	}
-
 	encoderConf := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -85,15 +64,7 @@ func initAuditLogger(conf *config.Logger) error {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
-	zapConf := zap.Config{
-		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
-		Development:      false,
-		Sampling:         nil, // disable sampling
-		Encoding:         encoding,
-		EncoderConfig:    encoderConf,
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
+	zapConf := conf.ZapConfig(encoderConf)
 	l, err := zapConf.Build()
 	if err != nil {
 		return err

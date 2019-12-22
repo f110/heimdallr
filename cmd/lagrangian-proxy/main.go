@@ -143,7 +143,7 @@ func (m *mainProcess) Shutdown(ctx context.Context) {
 	case <-done:
 	}
 
-	client, _ := m.config.Datastore.GetEtcdClient()
+	client, _ := m.config.Datastore.GetEtcdClient(m.config.Logger)
 	if err := client.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
@@ -251,7 +251,7 @@ func (m *mainProcess) Setup() error {
 	}
 
 	if m.config.Datastore.Url != nil {
-		client, err := m.config.Datastore.GetEtcdClient()
+		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -349,6 +349,12 @@ func (m *mainProcess) StartRPCServer() error {
 			conn.Close()
 			break
 		}
+
+		c, err := etcd.NewCompactor(m.etcdClient)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		go c.Start(context.Background())
 	}
 
 	return nil

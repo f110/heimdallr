@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "ca.go",
         "cluster.go",
+        "compactor.go",
         "readiness.go",
         "relay.go",
         "token.go",
