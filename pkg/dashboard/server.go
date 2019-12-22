@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -19,20 +18,23 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type Server struct {
 	Config *config.Config
 
+	conn   *grpc.ClientConn
 	client *rpcclient.ClientWithUserToken
 	loader *template.Loader
 	server *http.Server
 	router *httprouter.Router
 }
 
-func NewServer(config *config.Config) *Server {
+func NewServer(config *config.Config, grpcConn *grpc.ClientConn) *Server {
 	s := &Server{
 		Config: config,
+		conn:   grpcConn,
 		loader: template.New(
 			dashboard.Data,
 			config.Dashboard.Template.Loader,
@@ -86,14 +88,7 @@ func (s *Server) Post(path string, handle httprouter.Handle) {
 
 func (s *Server) Start() error {
 	logger.Log.Info("Start dashboard", zap.String("listen", s.server.Addr))
-	var cp *x509.CertPool
-	if s.Config.Dashboard.CertPool != nil {
-		cp = s.Config.Dashboard.CertPool
-	}
-	client, err := rpcclient.NewClientWithUserToken(cp, s.Config.Dashboard.RpcTarget, s.Config.General.ServerNameHost)
-	if err != nil {
-		return err
-	}
+	client := rpcclient.NewClientWithUserToken(s.conn)
 	s.client = client
 
 	return s.server.ListenAndServe()
@@ -414,6 +409,10 @@ func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _ htt
 	}
 	sortedUsers := make([]roleAndUser, 0)
 	for _, v := range roles {
+		if v.System {
+			continue
+		}
+
 		u := make([]user, 0, len(v.Name))
 		for _, k := range userMap[v.Name] {
 			maintainer := false

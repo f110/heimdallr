@@ -32,6 +32,9 @@ type CA struct {
 
 	mu          sync.RWMutex
 	revokedList []*database.RevokedCertificate
+
+	wMu     sync.RWMutex
+	watchCh []chan *database.RevokedCertificate
 }
 
 var _ database.CertificateAuthority = &CA{}
@@ -60,6 +63,15 @@ func NewCA(ctx context.Context, config *config.CertificateAuthority, client *cli
 	ca := &CA{config: config, client: client, revokedList: revoked}
 	go ca.watchRevokeList(ctx, res.Header.Revision)
 	return ca, nil
+}
+
+func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
+	ch := make(chan *database.RevokedCertificate)
+	c.wMu.Lock()
+	defer c.wMu.Unlock()
+
+	c.watchCh = append(c.watchCh, ch)
+	return ch
 }
 
 func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
@@ -282,6 +294,16 @@ func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
 				c.revokedList = append(c.revokedList, r)
 				c.mu.Unlock()
 				logger.Log.Debug("Add new revoked certificate", zap.String("serial", r.SerialNumber.Text(16)))
+
+				c.wMu.RLock()
+				for i, ch := range c.watchCh {
+					select {
+					case ch <- r:
+					default:
+						c.watchCh = append(c.watchCh[:i], c.watchCh[i+1:]...)
+					}
+				}
+				c.wMu.RUnlock()
 			}
 		case <-ctx.Done():
 			return

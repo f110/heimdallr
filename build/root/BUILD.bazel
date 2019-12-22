@@ -17,7 +17,11 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image", "cont
 
 pkg_tar(
     name = "bin",
-    srcs = ["//cmd/lagrangian-proxy"],
+    srcs = [
+        "//cmd/lag-rpcserver",
+        "//cmd/lagrangian-proxy",
+        "@grpc_health_probe//file",
+    ],
     mode = "0755",
     package_dir = "/usr/local/bin",
 )

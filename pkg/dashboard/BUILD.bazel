@@ -15,5 +15,6 @@ go_library(
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/julienschmidt/httprouter:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
     ],
 )

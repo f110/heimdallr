@@ -2,26 +2,24 @@ package rpcclient
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
 	"math/big"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	TokenHeaderName = "X-Auth-Token"
 )
 
 var loggerOnce sync.Once
@@ -31,11 +29,11 @@ type ClientWithUserToken struct {
 }
 
 func (u *ClientWithUserToken) WithRequest(req *http.Request) *ClientWithUserToken {
-	if req.Header.Get(frontproxy.TokenHeaderName) == "" {
+	if req.Header.Get(TokenHeaderName) == "" {
 		return u
 	}
 
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, req.Header.Get(frontproxy.TokenHeaderName))
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, req.Header.Get(TokenHeaderName))
 	c := &Client{
 		conn:          u.Client.conn,
 		adminClient:   u.Client.adminClient,
@@ -47,19 +45,8 @@ func (u *ClientWithUserToken) WithRequest(req *http.Request) *ClientWithUserToke
 	return &ClientWithUserToken{Client: c}
 }
 
-func NewClientWithUserToken(pool *x509.CertPool, host, serverName string) (*ClientWithUserToken, error) {
-	overrideGrpcLogger()
-
+func NewClientWithUserToken(conn *grpc.ClientConn) *ClientWithUserToken {
 	c := &ClientWithUserToken{}
-	cred := credentials.NewTLS(&tls.Config{ServerName: serverName, RootCAs: pool})
-	conn, err := grpc.Dial(
-		host,
-		grpc.WithTransportCredentials(cred),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-	)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
 	c.Client = &Client{
 		conn:          conn,
 		adminClient:   rpc.NewAdminClient(conn),
@@ -68,7 +55,7 @@ func NewClientWithUserToken(pool *x509.CertPool, host, serverName string) (*Clie
 		md:            context.Background(),
 	}
 
-	return c, nil
+	return c
 }
 
 type Client struct {
@@ -80,18 +67,7 @@ type Client struct {
 	ka            keepalive.ClientParameters
 }
 
-func NewClientWithStaticToken(pool *x509.CertPool, host string) (*Client, error) {
-	overrideGrpcLogger()
-
-	cred := credentials.NewClientTLSFromCert(pool, "")
-	conn, err := grpc.Dial(
-		fmt.Sprintf("%s", host),
-		grpc.WithTransportCredentials(cred),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-	)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
+func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 	adminClient := rpc.NewAdminClient(conn)
 
 	tokenClient := token.NewTokenClient("token")
@@ -241,7 +217,7 @@ func (c *Client) ListAgentBackend() ([]*rpc.BackendItem, error) {
 }
 
 func (c *Client) ListCert() ([]*rpc.CertItem, error) {
-	res, err := c.caClient.CertList(c.md, &rpc.RequestCertList{})
+	res, err := c.caClient.GetSignedList(c.md, &rpc.RequestGetSignedList{})
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +226,7 @@ func (c *Client) ListCert() ([]*rpc.CertItem, error) {
 }
 
 func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
-	res, err := c.caClient.RevokedCertList(c.md, &rpc.RequestRevokedCertList{})
+	res, err := c.caClient.GetRevokedList(c.md, &rpc.RequestGetRevokedList{})
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +235,7 @@ func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
 }
 
 func (c *Client) NewCert(commonName, password, comment string) error {
-	_, err := c.caClient.CertNew(c.md, &rpc.RequestCertNew{CommonName: commonName, Password: password, Comment: comment})
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{CommonName: commonName, Password: password, Comment: comment})
 	if err != nil {
 		return err
 	}
@@ -268,7 +244,7 @@ func (c *Client) NewCert(commonName, password, comment string) error {
 }
 
 func (c *Client) NewAgentCert(commonName, comment string) error {
-	_, err := c.caClient.CertNew(c.md, &rpc.RequestCertNew{Agent: true, CommonName: commonName, Comment: comment})
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, CommonName: commonName, Comment: comment})
 	if err != nil {
 		return err
 	}
@@ -277,7 +253,7 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 }
 
 func (c *Client) RevokeCert(serialNumber *big.Int) error {
-	_, err := c.caClient.CertRevoke(c.md, &rpc.RequestCertRevoke{SerialNumber: serialNumber.Bytes()})
+	_, err := c.caClient.Revoke(c.md, &rpc.CARequestRevoke{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
 		return err
 	}
@@ -286,7 +262,7 @@ func (c *Client) RevokeCert(serialNumber *big.Int) error {
 }
 
 func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
-	res, err := c.caClient.CertGet(c.md, &rpc.RequestCertGet{SerialNumber: serialNumber.Bytes()})
+	res, err := c.caClient.Get(c.md, &rpc.CARequestGet{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +286,7 @@ func extractEndpointFromError(err error) (string, error) {
 	return "", err
 }
 
-func overrideGrpcLogger() {
+func OverrideGrpcLogger() {
 	loggerOnce.Do(func() {
 		grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
 	})

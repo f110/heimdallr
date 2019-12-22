@@ -8,6 +8,9 @@ go_library(
     deps = [
         "//pkg/rpc/rpcclient:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+        "//vendor/google.golang.org/grpc/credentials:go_default_library",
+        "//vendor/google.golang.org/grpc/keepalive:go_default_library",
     ],
 )
 

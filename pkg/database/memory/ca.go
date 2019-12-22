@@ -38,6 +38,10 @@ func NewCA(config *config.CertificateAuthority) *CA {
 	}
 }
 
+func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
+	return nil
+}
+
 func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

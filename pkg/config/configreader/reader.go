@@ -43,6 +43,9 @@ func ReadConfig(filename string) (*config.Config, error) {
 		Datastore: &config.Datastore{
 			Namespace: "/lp",
 		},
+		RPCServer: &config.RPCServer{
+			Enable: false,
+		},
 		FrontendProxy: &config.FrontendProxy{},
 		IdentityProvider: &config.IdentityProvider{
 			RedirectUrl: "https://local-proxy.f110.dev:4000/auth/callback",

@@ -12,15 +12,10 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/server/rpc"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/xerrors"
-)
-
-const (
-	GrpcContentType = "application/grpc"
 )
 
 var allowCipherSuites = []uint16{
@@ -46,11 +41,10 @@ type HostMultiplexer struct {
 
 	frontProxy http.Handler
 	utilities  http.Handler
-	grpc       http.Handler
 }
 
-func NewHostMultiplexer(conf *config.Config, frontProxy, utilities, grpc http.Handler) *HostMultiplexer {
-	return &HostMultiplexer{Config: conf, frontProxy: frontProxy, utilities: utilities, grpc: grpc}
+func NewHostMultiplexer(conf *config.Config, frontProxy, utilities http.Handler) *HostMultiplexer {
+	return &HostMultiplexer{Config: conf, frontProxy: frontProxy, utilities: utilities}
 }
 
 func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -61,11 +55,6 @@ func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if host == h.Config.General.ServerNameHost {
-		if req.Header.Get("Content-Type") == GrpcContentType {
-			h.grpc.ServeHTTP(w, req)
-			return
-		}
-
 		h.utilities.ServeHTTP(w, req)
 		return
 	}
@@ -81,14 +70,13 @@ type Server struct {
 	clusterDatabase database.ClusterDatabase
 }
 
-func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *frontproxy.FrontendProxy, grpc *rpc.Server, c *connector.Server, child ...ChildServer) *Server {
+func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *frontproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
 	}
 
-	hostMultiplexer := NewHostMultiplexer(conf, frontProxy, mux, grpc)
-
+	hostMultiplexer := NewHostMultiplexer(conf, frontProxy, mux)
 	return &Server{
 		Config: conf,
 		server: &http.Server{

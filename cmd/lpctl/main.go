@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -19,7 +20,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
+
+	"github.com/f110/lagrangian-proxy/pkg/cert"
+
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
@@ -71,7 +77,7 @@ func commandBootstrap(args []string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 	block, _ := pem.Decode(b)
-	cert, err := x509.ParseCertificate(block.Bytes)
+	c, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -90,12 +96,12 @@ func commandBootstrap(args []string) error {
 	_, err = os.Stat(absPath(conf.General.KeyFile, dir))
 	keyFileExist = !os.IsNotExist(err)
 	if !certFileExist && !keyFileExist {
-		if err := createNewServerCertificate(conf, dir, cert, privateKey); err != nil {
+		if err := createNewServerCertificate(conf, dir, c, privateKey); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
 
-	_, err = os.Stat(absPath(conf.FrontendProxy.SigningSecretKeyFile, dir))
+	_, err = os.Stat(absPath(conf.General.SigningPrivateKeyFile, dir))
 	if os.IsNotExist(err) {
 		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
@@ -105,7 +111,7 @@ func commandBootstrap(args []string) error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := auth.PemEncode(absPath(conf.FrontendProxy.SigningSecretKeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+		if err := cert.PemEncode(absPath(conf.General.SigningPrivateKeyFile, dir), "EC PRIVATE KEY", b); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
@@ -145,7 +151,7 @@ func commandBootstrap(args []string) error {
 }
 
 func generateNewCertificateAuthority(conf *config.Config, dir string) error {
-	cert, privateKey, err := auth.CreateCertificateAuthorityForConfig(conf)
+	c, privateKey, err := cert.CreateCertificateAuthorityForConfig(conf)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -154,27 +160,27 @@ func generateNewCertificateAuthority(conf *config.Config, dir string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := auth.PemEncode(absPath(conf.General.CertificateAuthority.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if err := auth.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", cert); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", c); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil
 }
 
 func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certificate, caPrivateKey crypto.PrivateKey) error {
-	cert, privateKey, err := auth.GenerateServerCertificate(ca, caPrivateKey, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev"})
+	c, privateKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev"})
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := auth.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := auth.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", cert); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", c); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil
@@ -212,7 +218,17 @@ func commandCluster(args []string) error {
 	if conf.General.Debug {
 		cp = conf.General.CertificateAuthority.CertPool
 	}
-	c, err := rpcclient.NewClientWithStaticToken(cp, conf.General.ServerName)
+	cred := credentials.NewTLS(&tls.Config{ServerName: conf.General.ServerNameHost, RootCAs: cp})
+	conn, err := grpc.Dial(
+		conf.General.ServerName,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	c, err := rpcclient.NewClientWithStaticToken(conn)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -249,7 +265,17 @@ func commandAdmin(args []string) error {
 	if conf.General.Debug {
 		cp = conf.General.CertificateAuthority.CertPool
 	}
-	c, err := rpcclient.NewClientWithStaticToken(cp, conf.General.ServerName)
+	cred := credentials.NewTLS(&tls.Config{ServerName: conf.General.ServerNameHost, RootCAs: cp})
+	conn, err := grpc.Dial(
+		conf.General.ServerName,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	c, err := rpcclient.NewClientWithStaticToken(conn)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

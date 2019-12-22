@@ -102,7 +102,11 @@ func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{Requeue: requeue, RequeueAfter: 30 * time.Second}, nil
 	}
 
-	if err := r.ReconcileDashboardProcess(lp); err != nil {
+	if err := r.ReconcileRPCServer(lp); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.ReconcileDashboard(lp); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -209,8 +213,17 @@ func (r *ProxyReconciler) ReconcileMainProcess(lp *LagrangianProxy) error {
 	return r.reconcileProcess(lp, objs)
 }
 
-func (r *ProxyReconciler) ReconcileDashboardProcess(lp *LagrangianProxy) error {
+func (r *ProxyReconciler) ReconcileDashboard(lp *LagrangianProxy) error {
 	objs, err := lp.Dashboard()
+	if err != nil {
+		return err
+	}
+
+	return r.reconcileProcess(lp, objs)
+}
+
+func (r *ProxyReconciler) ReconcileRPCServer(lp *LagrangianProxy) error {
+	objs, err := lp.RPCServer()
 	if err != nil {
 		return err
 	}

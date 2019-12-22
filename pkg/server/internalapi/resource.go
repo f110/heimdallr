@@ -25,7 +25,7 @@ func NewResourceServer(conf *config.Config) *ResourceServer {
 
 func (r *ResourceServer) Route(mux *httprouter.Router) {
 	buf := new(bytes.Buffer)
-	b, err := x509.MarshalPKIXPublicKey(&r.Config.FrontendProxy.SigningPublicKey)
+	b, err := x509.MarshalPKIXPublicKey(&r.Config.General.SigningPublicKey)
 	if err != nil {
 		logger.Log.Error("Failed marshal public key", zap.Error(err))
 	}

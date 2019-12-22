@@ -25,11 +25,13 @@ service Admin {
 }
 
 service CertificateAuthority {
-    rpc CertList (RequestCertList) returns (ResponseCertList);
-    rpc RevokedCertList (RequestRevokedCertList) returns (ResponseRevokedCertList);
-    rpc CertNew (RequestCertNew) returns (ResponseCertNew);
-    rpc CertRevoke (RequestCertRevoke) returns (ResponseCertRevoke);
-    rpc CertGet (RequestCertGet) returns (ResponseCertGet);
+    rpc GetSignedList (RequestGetSignedList) returns (ResponseGetSignedList);
+    rpc NewClientCert (RequestNewClientCert) returns (ResponseNewClientCert);
+    rpc NewServerCert (RequestNewServerCert) returns (ResponseNewServerCert);
+    rpc Revoke (CARequestRevoke) returns (CAResponseRevoke);
+    rpc Get (CARequestGet) returns (CAResponseGet);
+    rpc GetRevokedList (RequestGetRevokedList) returns (ResponseGetRevokedList);
+    rpc WatchRevokedCert (RequestWatchRevokedCert) returns (stream ResponseWatchRevokedCert);
 }
 
 message RequestPing {}
@@ -81,6 +83,7 @@ message RoleItem {
     string name = 1;
     string title = 2;
     string description = 3;
+    bool system = 4;
 }
 
 message BackendItem {
@@ -177,43 +180,57 @@ message ResponseBackendList {
     repeated BackendItem items = 1;
 }
 
-message RequestCertList {}
+message RequestGetSignedList {}
 
-message ResponseCertList {
+message ResponseGetSignedList {
     repeated CertItem items = 1;
 }
 
-message RequestRevokedCertList {}
-
-message ResponseRevokedCertList {
-    repeated CertItem items = 1;
-}
-
-message RequestCertNew {
+message RequestNewClientCert {
     string common_name = 1;
     string password = 2;
     string comment = 3;
     bool agent = 4;
 }
 
-message ResponseCertNew {
+message ResponseNewClientCert {
     bool ok = 1;
 }
 
-message RequestCertRevoke {
+message CARequestRevoke {
     bytes serial_number = 1;
 }
 
-message ResponseCertRevoke {
+message CAResponseRevoke {
     bool ok = 1;
 }
 
-message RequestCertGet {
+message CARequestGet {
     bytes serial_number = 1;
 }
 
-message ResponseCertGet {
+message CAResponseGet {
     CertItem item = 1;
+}
+
+message RequestGetRevokedList {}
+
+message ResponseGetRevokedList {
+    repeated CertItem items = 1;
+}
+
+message RequestWatchRevokedCert {}
+
+message ResponseWatchRevokedCert {
+    repeated CertItem items = 1;
+}
+
+message RequestNewServerCert {
+    bytes signing_request = 1;
+}
+
+message ResponseNewServerCert {
+    bytes certificate = 1;
 }
 
 message ErrorUnauthorized {

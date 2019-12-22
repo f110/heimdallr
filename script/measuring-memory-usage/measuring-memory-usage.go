@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -9,6 +10,11 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 
@@ -117,7 +123,17 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Found proxy process: %s\n", pid)
 	fmt.Fprintf(os.Stderr, "Initial memory usage: %d\n", rss)
 
-	c, err := rpcclient.NewClientWithStaticToken(pool, host)
+	cred := credentials.NewTLS(&tls.Config{ServerName: host, RootCAs: pool})
+	conn, err := grpc.Dial(
+		host,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	c, err := rpcclient.NewClientWithStaticToken(conn)
 	if err != nil {
 		panic(err)
 	}

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,17 +24,21 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcserver"
 	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/f110/lagrangian-proxy/pkg/server/ct"
 	"github.com/f110/lagrangian-proxy/pkg/server/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/server/internalapi"
-	"github.com/f110/lagrangian-proxy/pkg/server/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/server/token"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/f110/lagrangian-proxy/pkg/version"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 type mainProcess struct {
@@ -50,10 +56,15 @@ type mainProcess struct {
 	sessionStore    session.Store
 	connector       *connector.Server
 
+	rpcServerConn *grpc.ClientConn
+	revokedCert   *rpcclient.RevokedCertificateWatcher
+
 	server      *server.Server
 	internalApi *server.Internal
 	dashboard   *dashboard.Server
-	etcd        *embed.Etcd
+	rpcServer   *rpcserver.Server
+
+	etcd *embed.Etcd
 
 	probeCh   chan struct{}
 	readiness *etcd.TapReadiness
@@ -77,7 +88,7 @@ func (m *mainProcess) ReadConfig(p string) error {
 	return nil
 }
 
-func (m *mainProcess) shutdown(ctx context.Context) {
+func (m *mainProcess) Shutdown(ctx context.Context) {
 	done := make(chan struct{})
 	var wg sync.WaitGroup
 	if m.server != nil {
@@ -105,6 +116,17 @@ func (m *mainProcess) shutdown(ctx context.Context) {
 		go func() {
 			defer wg.Done()
 			if err := m.dashboard.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
+	}
+
+	if m.rpcServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := m.rpcServer.Shutdown(ctx); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
 			}
 		}()
@@ -140,7 +162,7 @@ func (m *mainProcess) signalHandling() {
 			case syscall.SIGTERM, os.Interrupt:
 				m.Stop()
 				ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-				m.shutdown(ctx)
+				m.Shutdown(ctx)
 				cancelFunc()
 				return
 			}
@@ -149,7 +171,10 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) IsReady() bool {
-	return m.readiness.IsReady() && m.clusterDatabase.Alive()
+	if !m.revokedCert.IsReady() {
+		logger.Log.Warn("Revoked certificate watcher error", zap.Error(m.revokedCert.Error()))
+	}
+	return m.readiness.IsReady() && m.clusterDatabase.Alive() && m.revokedCert.IsReady()
 }
 
 func (m *mainProcess) startServer() {
@@ -163,9 +188,8 @@ func (m *mainProcess) startServer() {
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	resourceServer := internalapi.NewResourceServer(m.config)
 	ctReport := ct.NewServer()
-	rpcServer := rpc.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
 
-	s := server.New(m.config, m.clusterDatabase, front, rpcServer, m.connector, idp, t, resourceServer, ctReport)
+	s := server.New(m.config, m.clusterDatabase, front, m.connector, idp, t, resourceServer, ctReport)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -183,7 +207,7 @@ func (m *mainProcess) startInternalApiServer() {
 }
 
 func (m *mainProcess) startDashboard() {
-	dashboardServer := dashboard.NewServer(m.config)
+	dashboardServer := dashboard.NewServer(m.config, m.rpcServerConn)
 	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -239,7 +263,7 @@ func (m *mainProcess) Setup() error {
 		client.Lease = m.readiness.Lease
 		m.etcdClient = client
 
-		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client)
+		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -272,7 +296,61 @@ func (m *mainProcess) Setup() error {
 		m.connector = connector.NewServer(m.config, m.caDatabase, m.relayLocator)
 	}
 
-	auth.Init(m.config, m.sessionStore, m.userDatabase, m.caDatabase, m.tokenDatabase)
+	auth.InitInterceptor(m.config, m.userDatabase, m.tokenDatabase)
+	return nil
+}
+
+func (m *mainProcess) SetupAfterStartingRPCServer() error {
+	rpcclient.OverrideGrpcLogger()
+	cred := credentials.NewTLS(&tls.Config{ServerName: m.config.General.ServerNameHost, RootCAs: m.config.General.CertificateAuthority.CertPool})
+	conn, err := grpc.Dial(
+		m.config.General.RpcTarget,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	m.rpcServerConn = conn
+	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.General.SigningPrivateKey)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	auth.Init(m.config, m.sessionStore, m.userDatabase, m.tokenDatabase, m.revokedCert)
+	return nil
+}
+
+func (m *mainProcess) StartRPCServer() error {
+	if m.config.RPCServer.Enable {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+
+			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
+			if err := m.rpcServer.Start(); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
+
+		logger.Log.Debug("Waiting for start rpcserver")
+		retry := 0
+		for {
+			if retry > 10 {
+				return xerrors.New("main: waiting for start rpcserver is timed out")
+			}
+
+			conn, err := net.DialTimeout("tcp", m.config.RPCServer.Bind, 10*time.Millisecond)
+			if err != nil {
+				retry++
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
+			conn.Close()
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -336,19 +414,25 @@ func command(args []string) error {
 		return nil
 	}
 
-	mainProcess := newMainProcess()
-	if err := mainProcess.ReadConfig(confFile); err != nil {
+	process := newMainProcess()
+	if err := process.ReadConfig(confFile); err != nil {
 		return err
 	}
-	if err := mainProcess.Setup(); err != nil {
+	if err := process.Setup(); err != nil {
+		return err
+	}
+	if err := process.StartRPCServer(); err != nil {
+		return err
+	}
+	if err := process.SetupAfterStartingRPCServer(); err != nil {
 		return err
 	}
 
-	if err := mainProcess.Start(); err != nil {
+	if err := process.Start(); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	mainProcess.Wait()
-	mainProcess.WaitShutdown()
+	process.Wait()
+	process.WaitShutdown()
 
 	return nil
 }

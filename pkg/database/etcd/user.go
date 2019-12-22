@@ -28,7 +28,7 @@ type UserDatabase struct {
 
 var _ database.UserDatabase = &UserDatabase{}
 
-func NewUserDatabase(ctx context.Context, client *clientv3.Client) (*UserDatabase, error) {
+func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers ...*database.User) (*UserDatabase, error) {
 	res, err := client.Get(ctx, "user/", clientv3.WithPrefix())
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -44,6 +44,9 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client) (*UserDatabas
 	}
 	users := make(map[string]*database.User)
 	for _, v := range allUser {
+		users[v.Id] = v
+	}
+	for _, v := range systemUsers {
 		users[v.Id] = v
 	}
 

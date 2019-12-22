@@ -14,7 +14,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//operator/api/v1:go_default_library",
-        "//pkg/auth:go_default_library",
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/netutil:go_default_library",
         "//vendor/github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2:go_default_library",

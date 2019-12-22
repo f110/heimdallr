@@ -42,6 +42,7 @@ var (
 
 type Config struct {
 	General          *General          `json:"general"`
+	RPCServer        *RPCServer        `json:"rpc_server,omitempty"`
 	IdentityProvider *IdentityProvider `json:"identity_provider,omitempty"`
 	Datastore        *Datastore        `json:"datastore,omitempty"`
 	Logger           *Logger           `json:"logger,omitempty"`
@@ -50,18 +51,20 @@ type Config struct {
 }
 
 type General struct {
-	Enable               bool                  `json:"enable"`
-	Debug                bool                  `json:"debug,omitempty"`
-	Bind                 string                `json:"bind,omitempty"`
-	BindInternalApi      string                `json:"bind_internal_api,omitempty"`
-	ServerName           string                `json:"server_name,omitempty"`
-	CertFile             string                `json:"cert_file,omitempty"`
-	KeyFile              string                `json:"key_file,omitempty"`
-	RoleFile             string                `json:"role_file,omitempty"`
-	ProxyFile            string                `json:"proxy_file,omitempty"`
-	RpcPermissionFile    string                `json:"rpc_permission_file,omitempty"`
-	CertificateAuthority *CertificateAuthority `json:"certificate_authority,omitempty"`
-	RootUsers            []string              `json:"root_users,omitempty"`
+	Enable                bool                  `json:"enable"`
+	Debug                 bool                  `json:"debug,omitempty"`
+	Bind                  string                `json:"bind,omitempty"`
+	BindInternalApi       string                `json:"bind_internal_api,omitempty"`
+	ServerName            string                `json:"server_name,omitempty"`
+	CertFile              string                `json:"cert_file,omitempty"`
+	KeyFile               string                `json:"key_file,omitempty"`
+	RoleFile              string                `json:"role_file,omitempty"`
+	ProxyFile             string                `json:"proxy_file,omitempty"`
+	RpcPermissionFile     string                `json:"rpc_permission_file,omitempty"`
+	RpcTarget             string                `json:"rpc_target,omitempty"`
+	CertificateAuthority  *CertificateAuthority `json:"certificate_authority,omitempty"`
+	RootUsers             []string              `json:"root_users,omitempty"`
+	SigningPrivateKeyFile string                `json:"signing_private_key_file,omitempty"`
 
 	mu                  sync.RWMutex              `json:"-"`
 	Roles               []Role                    `json:"-"`
@@ -71,6 +74,9 @@ type General struct {
 	roleNameToRole      map[string]Role           `json:"-"`
 	nameToRpcPermission map[string]*RpcPermission `json:"-"`
 	watcher             *k8s.VolumeWatcher        `json:"-"`
+
+	SigningPrivateKey *ecdsa.PrivateKey `json:"-"`
+	SigningPublicKey  ecdsa.PublicKey   `json:"-"`
 
 	AuthEndpoint   string `json:"-"`
 	TokenEndpoint  string `json:"-"`
@@ -91,6 +97,11 @@ type CertificateAuthority struct {
 	Certificate *x509.Certificate `json:"-"`
 	PrivateKey  crypto.PrivateKey `json:"-"`
 	CertPool    *x509.CertPool    `json:"-"`
+}
+
+type RPCServer struct {
+	Bind   string `json:"bind,omitempty"`
+	Enable bool   `json:"enable,omitempty"`
 }
 
 type IdentityProvider struct {
@@ -127,6 +138,7 @@ type Role struct {
 	Bindings    []Binding `json:"bindings"`
 
 	RPCMethodMatcher *rpc.MethodMatcher `json:"-"`
+	System           bool               `json:"-"`
 }
 
 type Binding struct {
@@ -175,15 +187,12 @@ type Location struct {
 }
 
 type FrontendProxy struct {
-	SigningSecretKeyFile    string   `json:"signing_secret_key_file"`
 	GithubWebHookSecretFile string   `json:"github_webhook_secret_file"`
 	ExpectCT                bool     `json:"expect_ct"`
 	Session                 *Session `json:"session,omitempty"`
 
-	Certificate         tls.Certificate   `json:"-"`
-	SigningPrivateKey   *ecdsa.PrivateKey `json:"-"`
-	SigningPublicKey    ecdsa.PublicKey   `json:"-"`
-	GithubWebhookSecret []byte            `json:"-"`
+	Certificate         tls.Certificate `json:"-"`
+	GithubWebhookSecret []byte          `json:"-"`
 }
 
 type Session struct {
@@ -196,14 +205,9 @@ type Session struct {
 }
 
 type Dashboard struct {
-	Enable     bool      `json:"enable"`
-	Bind       string    `json:"bind,omitempty"`
-	RpcTarget  string    `json:"rpc_target,omitempty"`
-	CACertFile string    `json:"ca_cert_file,omitempty"`
-	ServerName string    `json:"server_name,omitempty"`
-	Template   *Template `json:"template,omitempty"`
-
-	CertPool *x509.CertPool `json:"-"`
+	Enable   bool      `json:"enable"`
+	Bind     string    `json:"bind,omitempty"`
+	Template *Template `json:"template,omitempty"`
 }
 
 type Template struct {
@@ -212,21 +216,6 @@ type Template struct {
 }
 
 func (d *Dashboard) Inflate(dir string) error {
-	if d.CACertFile != "" {
-		d.CACertFile = absPath(d.CACertFile, dir)
-		b, err := ioutil.ReadFile(d.CACertFile)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		block, _ := pem.Decode(b)
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		d.CertPool = x509.NewCertPool()
-		d.CertPool.AddCert(cert)
-	}
-
 	return d.Template.inflate(dir)
 }
 
@@ -305,14 +294,6 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 }
 
 func (f *FrontendProxy) Inflate(dir string) error {
-	if f.SigningSecretKeyFile != "" {
-		privateKey, err := readPrivateKey(absPath(f.SigningSecretKeyFile, dir))
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		f.SigningPrivateKey = privateKey
-		f.SigningPublicKey = privateKey.PublicKey
-	}
 	if f.GithubWebHookSecretFile != "" {
 		b, err := ioutil.ReadFile(absPath(f.GithubWebHookSecretFile, dir))
 		if err != nil {
@@ -503,6 +484,15 @@ func (g *General) Inflate(dir string) error {
 		}
 	}
 
+	if g.SigningPrivateKeyFile != "" {
+		privateKey, err := readPrivateKey(absPath(g.SigningPrivateKeyFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		g.SigningPrivateKey = privateKey
+		g.SigningPublicKey = privateKey.PublicKey
+	}
+
 	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.ServerName)
 	g.TokenEndpoint = fmt.Sprintf("https://%s/token", g.ServerName)
 	g.ServerNameHost = g.ServerName
@@ -515,6 +505,18 @@ func (g *General) Inflate(dir string) error {
 }
 
 func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcPermission) error {
+	rpcPermissions = append(rpcPermissions, &RpcPermission{
+		Name:  "system:proxy",
+		Allow: []string{"proxy.rpc.certificateauthority.watchrevokedcert"},
+	})
+	roles = append(roles, Role{
+		Name: "system:proxy",
+		Bindings: []Binding{
+			{Rpc: "system:proxy"},
+		},
+		System: true,
+	})
+
 	hostnameToBackend := make(map[string]*Backend)
 	for _, v := range backends {
 		if err := v.inflate(); err != nil {
@@ -597,7 +599,7 @@ func (g *General) reloadConfig() {
 		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
 		return
 	}
-	if err := yaml.Unmarshal(b, nil); err != nil {
+	if err := yaml.Unmarshal(b, &rpcPermissions); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
 		return
 	}

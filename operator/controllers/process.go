@@ -16,7 +16,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
 
@@ -42,9 +42,11 @@ const (
 	imageRepository            = "quay.io/f110/lagrangian-proxy"
 	defaultImageTag            = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
+	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
 	proxyPort                  = 4000
 	internalApiPort            = 4004
 	dashboardPort              = 4100
+	rpcServerPort              = 4001
 	configVolumePath           = "/etc/lagrangian-proxy"
 	configMountPath            = configVolumePath + "/config"
 	proxyConfigMountPath       = configVolumePath + "/proxy"
@@ -144,6 +146,10 @@ func (r *LagrangianProxy) ConfigNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
+func (r *LagrangianProxy) ConfigNameForRPCServer() string {
+	return r.Name + "-rpcserver"
+}
+
 func (r *LagrangianProxy) DeploymentNameForMain() string {
 	return r.Name
 }
@@ -160,12 +166,20 @@ func (r *LagrangianProxy) DeploymentNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
+func (r *LagrangianProxy) DeploymentNameForRPCServer() string {
+	return r.Name + "-rpcserver"
+}
+
 func (r *LagrangianProxy) PodDisruptionBudgetNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
 func (r *LagrangianProxy) ServiceNameForDashboard() string {
 	return r.Name + "-dashboard"
+}
+
+func (r *LagrangianProxy) ServiceNameForRPCServer() string {
+	return r.Name + "-rpcserver"
 }
 
 func (r *LagrangianProxy) ReverseProxyConfigName() string {
@@ -248,7 +262,7 @@ func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
 				Title:       "administrator",
 				Description: fmt.Sprintf("%s administrators", r.Name),
 				Bindings: []proxyv1.Binding{
-					{BackendName: "dashboard", Namespace: r.Namespace},
+					{BackendName: "dashboard", Namespace: r.Namespace, Permission: "all"},
 					{RpcPermissionName: "admin"},
 				},
 			},
@@ -357,7 +371,7 @@ func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 		if r.Spec.Country != "" {
 			country = r.Spec.Country
 		}
-		cert, privateKey, err := auth.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
+		cert, privateKey, err := cert.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
 		if err != nil {
 			return nil, err
 		}
@@ -480,6 +494,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			Enable:            true,
 			Bind:              fmt.Sprintf(":%d", proxyPort),
 			ServerName:        r.Spec.Domain,
+			RpcTarget:         fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
 			RootUsers:         r.Spec.RootUsers,
 			CertFile:          fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
 			KeyFile:           fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
@@ -487,12 +502,9 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
 			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
 			CertificateAuthority: &config.CertificateAuthority{
-				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
-				Organization:     r.Spec.Organization,
-				OrganizationUnit: r.Spec.AdministratorUnit,
-				Country:          r.Spec.Country,
+				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
+			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 		},
 		IdentityProvider: &config.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
@@ -506,7 +518,6 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			Namespace: "/lagrangian-proxy/",
 		},
 		FrontendProxy: &config.FrontendProxy{
-			SigningSecretKeyFile:    fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 			GithubWebHookSecretFile: fmt.Sprintf("%s/%s", githubSecretPath, githubWebhookSecretFilename),
 			ExpectCT:                true,
 			Session: &config.Session{
@@ -540,24 +551,23 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 }
 
 func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
-	caCertFile := ""
-	if r.selfSignedIssuer {
-		caCertFile = fmt.Sprintf("%s/%s", caCertMountPath, r.caFilename)
-	}
 	conf := &config.Config{
 		General: &config.General{
-			Enable: false,
+			Enable:     false,
+			ServerName: r.Spec.Domain,
+			RpcTarget:  fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			CertificateAuthority: &config.CertificateAuthority{
+				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			},
+			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 		},
 		Logger: &config.Logger{
 			Level:    "info",
 			Encoding: "console",
 		},
 		Dashboard: &config.Dashboard{
-			Enable:     true,
-			Bind:       fmt.Sprintf(":%d", dashboardPort),
-			RpcTarget:  fmt.Sprintf("%s:%d", r.ServiceNameForMain(), 443),
-			ServerName: r.Spec.Domain,
-			CACertFile: caCertFile,
+			Enable: true,
+			Bind:   fmt.Sprintf(":%d", dashboardPort),
 		},
 	}
 	b, err := yaml.Marshal(conf)
@@ -577,12 +587,66 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
+func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
+	conf := &config.Config{
+		General: &config.General{
+			Enable:            false,
+			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
+			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
+			CertificateAuthority: &config.CertificateAuthority{
+				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
+				Organization:     r.Spec.Organization,
+				OrganizationUnit: r.Spec.AdministratorUnit,
+				Country:          r.Spec.Country,
+			},
+			RootUsers:             r.Spec.RootUsers,
+			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+		},
+		Logger: &config.Logger{
+			Level:    "info",
+			Encoding: "console",
+		},
+		Datastore: &config.Datastore{
+			RawUrl:    fmt.Sprintf("etcd://%s:2379", r.EtcdHost()),
+			Namespace: "/lagrangian-proxy/",
+		},
+		RPCServer: &config.RPCServer{
+			Bind:   fmt.Sprintf(":%d", rpcServerPort),
+			Enable: true,
+		},
+		Dashboard: &config.Dashboard{
+			Enable: false,
+		},
+	}
+	b, err := yaml.Marshal(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ConfigNameForRPCServer(),
+			Namespace: r.Namespace,
+		},
+		Data: make(map[string]string),
+	}
+	configMap.Data[configFilename] = string(b)
+
+	return configMap, nil
+}
+
 func (r *LagrangianProxy) LabelsForMain() map[string]string {
 	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "proxy"}
 }
 
 func (r *LagrangianProxy) LabelsForDashboard() map[string]string {
 	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "dashboard"}
+}
+
+func (r *LagrangianProxy) LabelsForRPCServer() map[string]string {
+	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "rpcserver"}
 }
 
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
@@ -789,7 +853,7 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceCPU:    resource.MustParse("200m"),
 									corev1.ResourceMemory: resource.MustParse("128Mi"),
 								},
 								Limits: corev1.ResourceList{
@@ -823,6 +887,9 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: r.CASecretName(),
+									Items: []corev1.KeyToPath{
+										{Key: caCertificateFilename, Path: caCertificateFilename},
+									},
 								},
 							},
 						},
@@ -1019,14 +1086,24 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 			Name: "ca-cert",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: r.caSecretName,
+					SecretName: r.CASecretName(),
 					Items: []corev1.KeyToPath{
-						{Key: r.caFilename, Path: r.caFilename},
+						{Key: caCertificateFilename, Path: caCertificateFilename},
 					},
 				},
 			},
+		}, corev1.Volume{
+			Name: "privatekey",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: r.PrivateKeySecretName(),
+				},
+			},
 		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath})
+		volumeMounts = append(volumeMounts,
+			corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath},
+			corev1.VolumeMount{Name: "privatekey", MountPath: signPrivateKeyPath},
+		)
 	}
 
 	conf, err := r.ConfigForDashboard()
@@ -1078,7 +1155,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("128Mi"),
 								},
 								Limits: corev1.ResourceList{
@@ -1138,6 +1215,158 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 		Service:             []*corev1.Service{svc},
 		Secrets:             []*corev1.Secret{caSecret},
 		ConfigMaps:          []*corev1.ConfigMap{conf},
+	}, nil
+}
+
+func (r *LagrangianProxy) RPCServer() (*process, error) {
+	caSecret, err := r.CASecret()
+	if err != nil {
+		return nil, err
+	}
+
+	conf, err := r.ConfigForRPCServer()
+	if err != nil {
+		return nil, err
+	}
+	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
+
+	var replicas int32 = 2
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.DeploymentNameForRPCServer(),
+			Namespace: r.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: r.LabelsForRPCServer(),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: r.LabelsForRPCServer(),
+					Annotations: map[string]string{
+						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    "rpcserver",
+							Image:   fmt.Sprintf("%s:%s", imageRepository, defaultImageTag),
+							Command: []string{rpcServerCommand},
+							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"/usr/local/bin/grpc_health_probe",
+											fmt.Sprintf("-addr=:%d", rpcServerPort),
+											"-tls",
+											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
+											fmt.Sprintf("-tls-server-name=%s", r.Spec.Domain),
+										},
+									},
+								},
+								InitialDelaySeconds: 5,
+							},
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"/usr/local/bin/grpc_health_probe",
+											fmt.Sprintf("-addr=:%d", rpcServerPort),
+											"-tls",
+											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
+											fmt.Sprintf("-tls-server-name=%s", r.Spec.Domain),
+										},
+									},
+								},
+								InitialDelaySeconds: 10,
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{Name: "ca-cert", MountPath: caCertMountPath},
+								{Name: "privatekey", MountPath: signPrivateKeyPath},
+								{Name: "config", MountPath: configMountPath},
+								{Name: "config-proxy", MountPath: proxyConfigMountPath},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "ca-cert",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: r.CASecretName(),
+								},
+							},
+						},
+						{
+							Name: "privatekey",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: r.PrivateKeySecretName(),
+								},
+							},
+						},
+						{
+							Name: "config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: r.ConfigNameForRPCServer(),
+									},
+								},
+							},
+						},
+						{
+							Name: "config-proxy",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: r.ReverseProxyConfigName(),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ServiceNameForRPCServer(),
+			Namespace: r.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: r.LabelsForRPCServer(),
+			Type:     corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "h2",
+					Port:       rpcServerPort,
+					TargetPort: intstr.FromInt(rpcServerPort),
+				},
+			},
+		},
+	}
+
+	return &process{
+		Deployment: deployment,
+		Service:    []*corev1.Service{svc},
+		Secrets:    []*corev1.Secret{caSecret},
+		ConfigMaps: []*corev1.ConfigMap{conf},
 	}, nil
 }
 

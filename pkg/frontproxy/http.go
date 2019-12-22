@@ -273,7 +273,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
 	})
-	token, err := claim.SignedString(p.Config.FrontendProxy.SigningPrivateKey)
+	token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
 	if err != nil {
 		logger.Log.Debug("Failed sign jwt", zap.Error(err))
 		return

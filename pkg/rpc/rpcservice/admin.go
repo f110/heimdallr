@@ -291,6 +291,7 @@ func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*r
 			Name:        v.Name,
 			Title:       v.Title,
 			Description: v.Description,
+			System:      v.System,
 		})
 	}
 

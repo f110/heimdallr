@@ -16,6 +16,7 @@ type CertificateAuthority interface {
 	NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error)
 	NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error)
 	Revoke(ctx context.Context, certificate *SignedCertificate) error
+	WatchRevokeCertificate() chan *RevokedCertificate
 }
 
 type SignedCertificate struct {

@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
+
 	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
@@ -76,7 +77,7 @@ logger:
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
 		t.Fatal(err)
 	}
-	cert, privateKey, err := auth.CreateCertificateAuthorityForConfig(
+	c, privateKey, err := cert.CreateCertificateAuthorityForConfig(
 		&config.Config{General: &config.General{
 			CertificateAuthority: &config.CertificateAuthority{
 				Organization:     "Test",
@@ -92,26 +93,26 @@ logger:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := auth.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := auth.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", cert); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", c); err != nil {
 		t.Fatal(err)
 	}
-	ca, err := x509.ParseCertificate(cert)
+	ca, err := x509.ParseCertificate(c)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cert, privateKey, err = auth.GenerateServerCertificate(ca, privateKey, []string{"test.example.com"})
+	c, privateKey, err = cert.GenerateServerCertificate(ca, privateKey, []string{"test.example.com"})
 	privKey, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := auth.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := auth.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", cert); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c); err != nil {
 		t.Fatal(err)
 	}
 

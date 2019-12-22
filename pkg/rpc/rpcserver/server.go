@@ -1,0 +1,114 @@
+package rpcserver
+
+import (
+	"bytes"
+	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"net"
+
+	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
+	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"go.uber.org/zap"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+)
+
+type Server struct {
+	Config *config.Config
+
+	server  *grpc.Server
+	privKey crypto.PrivateKey
+}
+
+func unaryAccessLogInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	logger.Log.Debug("Unary", zap.String("method", info.FullMethod))
+	return handler(ctx, req)
+}
+
+func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	logger.Log.Debug("Stream", zap.String("method", info.FullMethod))
+	return handler(srv, ss)
+}
+
+func NewServer(conf *config.Config, user database.UserDatabase, token database.TokenDatabase, cluster database.ClusterDatabase, relay database.RelayLocator, ca database.CertificateAuthority) *Server {
+	grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			unaryAccessLogInterceptor,
+			auth.UnaryInterceptor,
+		)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			streamAccessLogInterceptor,
+			auth.StreamInterceptor,
+		)),
+	)
+	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
+	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user, ca))
+	rpc.RegisterCertificateAuthorityServer(s, rpcservice.NewCertificateAuthorityService(conf, ca))
+	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService())
+
+	return &Server{
+		Config: conf,
+		server: s,
+	}
+}
+
+func (s *Server) Start() error {
+	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", s.Config.General.ServerNameHost))
+	c, privKey, err := cert.GenerateServerCertificate(
+		s.Config.General.CertificateAuthority.Certificate,
+		s.Config.General.CertificateAuthority.PrivateKey,
+		[]string{s.Config.General.ServerNameHost},
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	b, err := x509.MarshalECPrivateKey(privKey.(*ecdsa.PrivateKey))
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	key := new(bytes.Buffer)
+	if err := pem.Encode(key, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	pemEncodedPrivateKey := key.Bytes()
+	s.privKey = privKey
+
+	cb := new(bytes.Buffer)
+	if err := pem.Encode(cb, &pem.Block{Type: "CERTIFICATE", Bytes: c}); err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	l, err := net.Listen("tcp", s.Config.RPCServer.Bind)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	tlsCert, err := tls.X509KeyPair(cb.Bytes(), pemEncodedPrivateKey)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	listener := tls.NewListener(l, &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+	})
+
+	return s.server.Serve(listener)
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	logger.Log.Info("Shutdown RPC server")
+	s.server.GracefulStop()
+	return nil
+}

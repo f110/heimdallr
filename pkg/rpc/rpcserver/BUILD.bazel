@@ -2,11 +2,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["rpc.go"],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/server/rpc",
+    srcs = ["server.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpcserver",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth:go_default_library",
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
@@ -15,6 +16,8 @@ go_library(
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware:go_default_library",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
         "//vendor/google.golang.org/grpc:go_default_library",
+        "//vendor/google.golang.org/grpc/health/grpc_health_v1:go_default_library",
     ],
 )

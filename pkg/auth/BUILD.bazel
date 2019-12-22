@@ -5,16 +5,15 @@ go_library(
     srcs = [
         "access_token.go",
         "auth.go",
-        "ca.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/auth",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
-        "//pkg/database/etcd:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/rpc:go_default_library",
+        "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/session:go_default_library",
         "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",

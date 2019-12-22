@@ -469,6 +469,7 @@ type RoleItem struct {
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Title                string   `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Description          string   `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	System               bool     `protobuf:"varint,4,opt,name=system,proto3" json:"system,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -518,6 +519,13 @@ func (m *RoleItem) GetDescription() string {
 		return m.Description
 	}
 	return ""
+}
+
+func (m *RoleItem) GetSystem() bool {
+	if m != nil {
+		return m.System
+	}
+	return false
 }
 
 type BackendItem struct {
@@ -1420,147 +1428,77 @@ func (m *ResponseBackendList) GetItems() []*BackendItem {
 	return nil
 }
 
-type RequestCertList struct {
+type RequestGetSignedList struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RequestCertList) Reset()         { *m = RequestCertList{} }
-func (m *RequestCertList) String() string { return proto.CompactTextString(m) }
-func (*RequestCertList) ProtoMessage()    {}
-func (*RequestCertList) Descriptor() ([]byte, []int) {
+func (m *RequestGetSignedList) Reset()         { *m = RequestGetSignedList{} }
+func (m *RequestGetSignedList) String() string { return proto.CompactTextString(m) }
+func (*RequestGetSignedList) ProtoMessage()    {}
+func (*RequestGetSignedList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_bd1e66095a603e73, []int{30}
 }
 
-func (m *RequestCertList) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RequestCertList.Unmarshal(m, b)
+func (m *RequestGetSignedList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RequestGetSignedList.Unmarshal(m, b)
 }
-func (m *RequestCertList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RequestCertList.Marshal(b, m, deterministic)
+func (m *RequestGetSignedList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RequestGetSignedList.Marshal(b, m, deterministic)
 }
-func (m *RequestCertList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestCertList.Merge(m, src)
+func (m *RequestGetSignedList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RequestGetSignedList.Merge(m, src)
 }
-func (m *RequestCertList) XXX_Size() int {
-	return xxx_messageInfo_RequestCertList.Size(m)
+func (m *RequestGetSignedList) XXX_Size() int {
+	return xxx_messageInfo_RequestGetSignedList.Size(m)
 }
-func (m *RequestCertList) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestCertList.DiscardUnknown(m)
+func (m *RequestGetSignedList) XXX_DiscardUnknown() {
+	xxx_messageInfo_RequestGetSignedList.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RequestCertList proto.InternalMessageInfo
+var xxx_messageInfo_RequestGetSignedList proto.InternalMessageInfo
 
-type ResponseCertList struct {
+type ResponseGetSignedList struct {
 	Items                []*CertItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
 }
 
-func (m *ResponseCertList) Reset()         { *m = ResponseCertList{} }
-func (m *ResponseCertList) String() string { return proto.CompactTextString(m) }
-func (*ResponseCertList) ProtoMessage()    {}
-func (*ResponseCertList) Descriptor() ([]byte, []int) {
+func (m *ResponseGetSignedList) Reset()         { *m = ResponseGetSignedList{} }
+func (m *ResponseGetSignedList) String() string { return proto.CompactTextString(m) }
+func (*ResponseGetSignedList) ProtoMessage()    {}
+func (*ResponseGetSignedList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_bd1e66095a603e73, []int{31}
 }
 
-func (m *ResponseCertList) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ResponseCertList.Unmarshal(m, b)
+func (m *ResponseGetSignedList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResponseGetSignedList.Unmarshal(m, b)
 }
-func (m *ResponseCertList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ResponseCertList.Marshal(b, m, deterministic)
+func (m *ResponseGetSignedList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResponseGetSignedList.Marshal(b, m, deterministic)
 }
-func (m *ResponseCertList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResponseCertList.Merge(m, src)
+func (m *ResponseGetSignedList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResponseGetSignedList.Merge(m, src)
 }
-func (m *ResponseCertList) XXX_Size() int {
-	return xxx_messageInfo_ResponseCertList.Size(m)
+func (m *ResponseGetSignedList) XXX_Size() int {
+	return xxx_messageInfo_ResponseGetSignedList.Size(m)
 }
-func (m *ResponseCertList) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResponseCertList.DiscardUnknown(m)
+func (m *ResponseGetSignedList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResponseGetSignedList.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResponseCertList proto.InternalMessageInfo
+var xxx_messageInfo_ResponseGetSignedList proto.InternalMessageInfo
 
-func (m *ResponseCertList) GetItems() []*CertItem {
+func (m *ResponseGetSignedList) GetItems() []*CertItem {
 	if m != nil {
 		return m.Items
 	}
 	return nil
 }
 
-type RequestRevokedCertList struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *RequestRevokedCertList) Reset()         { *m = RequestRevokedCertList{} }
-func (m *RequestRevokedCertList) String() string { return proto.CompactTextString(m) }
-func (*RequestRevokedCertList) ProtoMessage()    {}
-func (*RequestRevokedCertList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{32}
-}
-
-func (m *RequestRevokedCertList) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RequestRevokedCertList.Unmarshal(m, b)
-}
-func (m *RequestRevokedCertList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RequestRevokedCertList.Marshal(b, m, deterministic)
-}
-func (m *RequestRevokedCertList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestRevokedCertList.Merge(m, src)
-}
-func (m *RequestRevokedCertList) XXX_Size() int {
-	return xxx_messageInfo_RequestRevokedCertList.Size(m)
-}
-func (m *RequestRevokedCertList) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestRevokedCertList.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RequestRevokedCertList proto.InternalMessageInfo
-
-type ResponseRevokedCertList struct {
-	Items                []*CertItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
-}
-
-func (m *ResponseRevokedCertList) Reset()         { *m = ResponseRevokedCertList{} }
-func (m *ResponseRevokedCertList) String() string { return proto.CompactTextString(m) }
-func (*ResponseRevokedCertList) ProtoMessage()    {}
-func (*ResponseRevokedCertList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{33}
-}
-
-func (m *ResponseRevokedCertList) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ResponseRevokedCertList.Unmarshal(m, b)
-}
-func (m *ResponseRevokedCertList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ResponseRevokedCertList.Marshal(b, m, deterministic)
-}
-func (m *ResponseRevokedCertList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResponseRevokedCertList.Merge(m, src)
-}
-func (m *ResponseRevokedCertList) XXX_Size() int {
-	return xxx_messageInfo_ResponseRevokedCertList.Size(m)
-}
-func (m *ResponseRevokedCertList) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResponseRevokedCertList.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ResponseRevokedCertList proto.InternalMessageInfo
-
-func (m *ResponseRevokedCertList) GetItems() []*CertItem {
-	if m != nil {
-		return m.Items
-	}
-	return nil
-}
-
-type RequestCertNew struct {
+type RequestNewClientCert struct {
 	CommonName           string   `protobuf:"bytes,1,opt,name=common_name,json=commonName,proto3" json:"common_name,omitempty"`
 	Password             string   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	Comment              string   `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
@@ -1570,250 +1508,468 @@ type RequestCertNew struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RequestCertNew) Reset()         { *m = RequestCertNew{} }
-func (m *RequestCertNew) String() string { return proto.CompactTextString(m) }
-func (*RequestCertNew) ProtoMessage()    {}
-func (*RequestCertNew) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{34}
+func (m *RequestNewClientCert) Reset()         { *m = RequestNewClientCert{} }
+func (m *RequestNewClientCert) String() string { return proto.CompactTextString(m) }
+func (*RequestNewClientCert) ProtoMessage()    {}
+func (*RequestNewClientCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{32}
 }
 
-func (m *RequestCertNew) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RequestCertNew.Unmarshal(m, b)
+func (m *RequestNewClientCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RequestNewClientCert.Unmarshal(m, b)
 }
-func (m *RequestCertNew) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RequestCertNew.Marshal(b, m, deterministic)
+func (m *RequestNewClientCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RequestNewClientCert.Marshal(b, m, deterministic)
 }
-func (m *RequestCertNew) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestCertNew.Merge(m, src)
+func (m *RequestNewClientCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RequestNewClientCert.Merge(m, src)
 }
-func (m *RequestCertNew) XXX_Size() int {
-	return xxx_messageInfo_RequestCertNew.Size(m)
+func (m *RequestNewClientCert) XXX_Size() int {
+	return xxx_messageInfo_RequestNewClientCert.Size(m)
 }
-func (m *RequestCertNew) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestCertNew.DiscardUnknown(m)
+func (m *RequestNewClientCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_RequestNewClientCert.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RequestCertNew proto.InternalMessageInfo
+var xxx_messageInfo_RequestNewClientCert proto.InternalMessageInfo
 
-func (m *RequestCertNew) GetCommonName() string {
+func (m *RequestNewClientCert) GetCommonName() string {
 	if m != nil {
 		return m.CommonName
 	}
 	return ""
 }
 
-func (m *RequestCertNew) GetPassword() string {
+func (m *RequestNewClientCert) GetPassword() string {
 	if m != nil {
 		return m.Password
 	}
 	return ""
 }
 
-func (m *RequestCertNew) GetComment() string {
+func (m *RequestNewClientCert) GetComment() string {
 	if m != nil {
 		return m.Comment
 	}
 	return ""
 }
 
-func (m *RequestCertNew) GetAgent() bool {
+func (m *RequestNewClientCert) GetAgent() bool {
 	if m != nil {
 		return m.Agent
 	}
 	return false
 }
 
-type ResponseCertNew struct {
+type ResponseNewClientCert struct {
 	Ok                   bool     `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ResponseCertNew) Reset()         { *m = ResponseCertNew{} }
-func (m *ResponseCertNew) String() string { return proto.CompactTextString(m) }
-func (*ResponseCertNew) ProtoMessage()    {}
-func (*ResponseCertNew) Descriptor() ([]byte, []int) {
+func (m *ResponseNewClientCert) Reset()         { *m = ResponseNewClientCert{} }
+func (m *ResponseNewClientCert) String() string { return proto.CompactTextString(m) }
+func (*ResponseNewClientCert) ProtoMessage()    {}
+func (*ResponseNewClientCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{33}
+}
+
+func (m *ResponseNewClientCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResponseNewClientCert.Unmarshal(m, b)
+}
+func (m *ResponseNewClientCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResponseNewClientCert.Marshal(b, m, deterministic)
+}
+func (m *ResponseNewClientCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResponseNewClientCert.Merge(m, src)
+}
+func (m *ResponseNewClientCert) XXX_Size() int {
+	return xxx_messageInfo_ResponseNewClientCert.Size(m)
+}
+func (m *ResponseNewClientCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResponseNewClientCert.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResponseNewClientCert proto.InternalMessageInfo
+
+func (m *ResponseNewClientCert) GetOk() bool {
+	if m != nil {
+		return m.Ok
+	}
+	return false
+}
+
+type CARequestRevoke struct {
+	SerialNumber         []byte   `protobuf:"bytes,1,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CARequestRevoke) Reset()         { *m = CARequestRevoke{} }
+func (m *CARequestRevoke) String() string { return proto.CompactTextString(m) }
+func (*CARequestRevoke) ProtoMessage()    {}
+func (*CARequestRevoke) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{34}
+}
+
+func (m *CARequestRevoke) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CARequestRevoke.Unmarshal(m, b)
+}
+func (m *CARequestRevoke) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CARequestRevoke.Marshal(b, m, deterministic)
+}
+func (m *CARequestRevoke) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CARequestRevoke.Merge(m, src)
+}
+func (m *CARequestRevoke) XXX_Size() int {
+	return xxx_messageInfo_CARequestRevoke.Size(m)
+}
+func (m *CARequestRevoke) XXX_DiscardUnknown() {
+	xxx_messageInfo_CARequestRevoke.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CARequestRevoke proto.InternalMessageInfo
+
+func (m *CARequestRevoke) GetSerialNumber() []byte {
+	if m != nil {
+		return m.SerialNumber
+	}
+	return nil
+}
+
+type CAResponseRevoke struct {
+	Ok                   bool     `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CAResponseRevoke) Reset()         { *m = CAResponseRevoke{} }
+func (m *CAResponseRevoke) String() string { return proto.CompactTextString(m) }
+func (*CAResponseRevoke) ProtoMessage()    {}
+func (*CAResponseRevoke) Descriptor() ([]byte, []int) {
 	return fileDescriptor_bd1e66095a603e73, []int{35}
 }
 
-func (m *ResponseCertNew) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ResponseCertNew.Unmarshal(m, b)
+func (m *CAResponseRevoke) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CAResponseRevoke.Unmarshal(m, b)
 }
-func (m *ResponseCertNew) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ResponseCertNew.Marshal(b, m, deterministic)
+func (m *CAResponseRevoke) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CAResponseRevoke.Marshal(b, m, deterministic)
 }
-func (m *ResponseCertNew) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResponseCertNew.Merge(m, src)
+func (m *CAResponseRevoke) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CAResponseRevoke.Merge(m, src)
 }
-func (m *ResponseCertNew) XXX_Size() int {
-	return xxx_messageInfo_ResponseCertNew.Size(m)
+func (m *CAResponseRevoke) XXX_Size() int {
+	return xxx_messageInfo_CAResponseRevoke.Size(m)
 }
-func (m *ResponseCertNew) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResponseCertNew.DiscardUnknown(m)
+func (m *CAResponseRevoke) XXX_DiscardUnknown() {
+	xxx_messageInfo_CAResponseRevoke.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResponseCertNew proto.InternalMessageInfo
+var xxx_messageInfo_CAResponseRevoke proto.InternalMessageInfo
 
-func (m *ResponseCertNew) GetOk() bool {
+func (m *CAResponseRevoke) GetOk() bool {
 	if m != nil {
 		return m.Ok
 	}
 	return false
 }
 
-type RequestCertRevoke struct {
+type CARequestGet struct {
 	SerialNumber         []byte   `protobuf:"bytes,1,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RequestCertRevoke) Reset()         { *m = RequestCertRevoke{} }
-func (m *RequestCertRevoke) String() string { return proto.CompactTextString(m) }
-func (*RequestCertRevoke) ProtoMessage()    {}
-func (*RequestCertRevoke) Descriptor() ([]byte, []int) {
+func (m *CARequestGet) Reset()         { *m = CARequestGet{} }
+func (m *CARequestGet) String() string { return proto.CompactTextString(m) }
+func (*CARequestGet) ProtoMessage()    {}
+func (*CARequestGet) Descriptor() ([]byte, []int) {
 	return fileDescriptor_bd1e66095a603e73, []int{36}
 }
 
-func (m *RequestCertRevoke) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RequestCertRevoke.Unmarshal(m, b)
+func (m *CARequestGet) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CARequestGet.Unmarshal(m, b)
 }
-func (m *RequestCertRevoke) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RequestCertRevoke.Marshal(b, m, deterministic)
+func (m *CARequestGet) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CARequestGet.Marshal(b, m, deterministic)
 }
-func (m *RequestCertRevoke) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestCertRevoke.Merge(m, src)
+func (m *CARequestGet) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CARequestGet.Merge(m, src)
 }
-func (m *RequestCertRevoke) XXX_Size() int {
-	return xxx_messageInfo_RequestCertRevoke.Size(m)
+func (m *CARequestGet) XXX_Size() int {
+	return xxx_messageInfo_CARequestGet.Size(m)
 }
-func (m *RequestCertRevoke) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestCertRevoke.DiscardUnknown(m)
+func (m *CARequestGet) XXX_DiscardUnknown() {
+	xxx_messageInfo_CARequestGet.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RequestCertRevoke proto.InternalMessageInfo
+var xxx_messageInfo_CARequestGet proto.InternalMessageInfo
 
-func (m *RequestCertRevoke) GetSerialNumber() []byte {
+func (m *CARequestGet) GetSerialNumber() []byte {
 	if m != nil {
 		return m.SerialNumber
 	}
 	return nil
 }
 
-type ResponseCertRevoke struct {
-	Ok                   bool     `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ResponseCertRevoke) Reset()         { *m = ResponseCertRevoke{} }
-func (m *ResponseCertRevoke) String() string { return proto.CompactTextString(m) }
-func (*ResponseCertRevoke) ProtoMessage()    {}
-func (*ResponseCertRevoke) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{37}
-}
-
-func (m *ResponseCertRevoke) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ResponseCertRevoke.Unmarshal(m, b)
-}
-func (m *ResponseCertRevoke) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ResponseCertRevoke.Marshal(b, m, deterministic)
-}
-func (m *ResponseCertRevoke) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResponseCertRevoke.Merge(m, src)
-}
-func (m *ResponseCertRevoke) XXX_Size() int {
-	return xxx_messageInfo_ResponseCertRevoke.Size(m)
-}
-func (m *ResponseCertRevoke) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResponseCertRevoke.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ResponseCertRevoke proto.InternalMessageInfo
-
-func (m *ResponseCertRevoke) GetOk() bool {
-	if m != nil {
-		return m.Ok
-	}
-	return false
-}
-
-type RequestCertGet struct {
-	SerialNumber         []byte   `protobuf:"bytes,1,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *RequestCertGet) Reset()         { *m = RequestCertGet{} }
-func (m *RequestCertGet) String() string { return proto.CompactTextString(m) }
-func (*RequestCertGet) ProtoMessage()    {}
-func (*RequestCertGet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{38}
-}
-
-func (m *RequestCertGet) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RequestCertGet.Unmarshal(m, b)
-}
-func (m *RequestCertGet) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RequestCertGet.Marshal(b, m, deterministic)
-}
-func (m *RequestCertGet) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestCertGet.Merge(m, src)
-}
-func (m *RequestCertGet) XXX_Size() int {
-	return xxx_messageInfo_RequestCertGet.Size(m)
-}
-func (m *RequestCertGet) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestCertGet.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RequestCertGet proto.InternalMessageInfo
-
-func (m *RequestCertGet) GetSerialNumber() []byte {
-	if m != nil {
-		return m.SerialNumber
-	}
-	return nil
-}
-
-type ResponseCertGet struct {
+type CAResponseGet struct {
 	Item                 *CertItem `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
 	XXX_unrecognized     []byte    `json:"-"`
 	XXX_sizecache        int32     `json:"-"`
 }
 
-func (m *ResponseCertGet) Reset()         { *m = ResponseCertGet{} }
-func (m *ResponseCertGet) String() string { return proto.CompactTextString(m) }
-func (*ResponseCertGet) ProtoMessage()    {}
-func (*ResponseCertGet) Descriptor() ([]byte, []int) {
+func (m *CAResponseGet) Reset()         { *m = CAResponseGet{} }
+func (m *CAResponseGet) String() string { return proto.CompactTextString(m) }
+func (*CAResponseGet) ProtoMessage()    {}
+func (*CAResponseGet) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{37}
+}
+
+func (m *CAResponseGet) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CAResponseGet.Unmarshal(m, b)
+}
+func (m *CAResponseGet) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CAResponseGet.Marshal(b, m, deterministic)
+}
+func (m *CAResponseGet) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CAResponseGet.Merge(m, src)
+}
+func (m *CAResponseGet) XXX_Size() int {
+	return xxx_messageInfo_CAResponseGet.Size(m)
+}
+func (m *CAResponseGet) XXX_DiscardUnknown() {
+	xxx_messageInfo_CAResponseGet.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CAResponseGet proto.InternalMessageInfo
+
+func (m *CAResponseGet) GetItem() *CertItem {
+	if m != nil {
+		return m.Item
+	}
+	return nil
+}
+
+type RequestGetRevokedList struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RequestGetRevokedList) Reset()         { *m = RequestGetRevokedList{} }
+func (m *RequestGetRevokedList) String() string { return proto.CompactTextString(m) }
+func (*RequestGetRevokedList) ProtoMessage()    {}
+func (*RequestGetRevokedList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{38}
+}
+
+func (m *RequestGetRevokedList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RequestGetRevokedList.Unmarshal(m, b)
+}
+func (m *RequestGetRevokedList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RequestGetRevokedList.Marshal(b, m, deterministic)
+}
+func (m *RequestGetRevokedList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RequestGetRevokedList.Merge(m, src)
+}
+func (m *RequestGetRevokedList) XXX_Size() int {
+	return xxx_messageInfo_RequestGetRevokedList.Size(m)
+}
+func (m *RequestGetRevokedList) XXX_DiscardUnknown() {
+	xxx_messageInfo_RequestGetRevokedList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RequestGetRevokedList proto.InternalMessageInfo
+
+type ResponseGetRevokedList struct {
+	Items                []*CertItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *ResponseGetRevokedList) Reset()         { *m = ResponseGetRevokedList{} }
+func (m *ResponseGetRevokedList) String() string { return proto.CompactTextString(m) }
+func (*ResponseGetRevokedList) ProtoMessage()    {}
+func (*ResponseGetRevokedList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_bd1e66095a603e73, []int{39}
 }
 
-func (m *ResponseCertGet) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ResponseCertGet.Unmarshal(m, b)
+func (m *ResponseGetRevokedList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResponseGetRevokedList.Unmarshal(m, b)
 }
-func (m *ResponseCertGet) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ResponseCertGet.Marshal(b, m, deterministic)
+func (m *ResponseGetRevokedList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResponseGetRevokedList.Marshal(b, m, deterministic)
 }
-func (m *ResponseCertGet) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResponseCertGet.Merge(m, src)
+func (m *ResponseGetRevokedList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResponseGetRevokedList.Merge(m, src)
 }
-func (m *ResponseCertGet) XXX_Size() int {
-	return xxx_messageInfo_ResponseCertGet.Size(m)
+func (m *ResponseGetRevokedList) XXX_Size() int {
+	return xxx_messageInfo_ResponseGetRevokedList.Size(m)
 }
-func (m *ResponseCertGet) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResponseCertGet.DiscardUnknown(m)
+func (m *ResponseGetRevokedList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResponseGetRevokedList.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResponseCertGet proto.InternalMessageInfo
+var xxx_messageInfo_ResponseGetRevokedList proto.InternalMessageInfo
 
-func (m *ResponseCertGet) GetItem() *CertItem {
+func (m *ResponseGetRevokedList) GetItems() []*CertItem {
 	if m != nil {
-		return m.Item
+		return m.Items
+	}
+	return nil
+}
+
+type RequestWatchRevokedCert struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RequestWatchRevokedCert) Reset()         { *m = RequestWatchRevokedCert{} }
+func (m *RequestWatchRevokedCert) String() string { return proto.CompactTextString(m) }
+func (*RequestWatchRevokedCert) ProtoMessage()    {}
+func (*RequestWatchRevokedCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{40}
+}
+
+func (m *RequestWatchRevokedCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RequestWatchRevokedCert.Unmarshal(m, b)
+}
+func (m *RequestWatchRevokedCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RequestWatchRevokedCert.Marshal(b, m, deterministic)
+}
+func (m *RequestWatchRevokedCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RequestWatchRevokedCert.Merge(m, src)
+}
+func (m *RequestWatchRevokedCert) XXX_Size() int {
+	return xxx_messageInfo_RequestWatchRevokedCert.Size(m)
+}
+func (m *RequestWatchRevokedCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_RequestWatchRevokedCert.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RequestWatchRevokedCert proto.InternalMessageInfo
+
+type ResponseWatchRevokedCert struct {
+	Items                []*CertItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *ResponseWatchRevokedCert) Reset()         { *m = ResponseWatchRevokedCert{} }
+func (m *ResponseWatchRevokedCert) String() string { return proto.CompactTextString(m) }
+func (*ResponseWatchRevokedCert) ProtoMessage()    {}
+func (*ResponseWatchRevokedCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{41}
+}
+
+func (m *ResponseWatchRevokedCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResponseWatchRevokedCert.Unmarshal(m, b)
+}
+func (m *ResponseWatchRevokedCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResponseWatchRevokedCert.Marshal(b, m, deterministic)
+}
+func (m *ResponseWatchRevokedCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResponseWatchRevokedCert.Merge(m, src)
+}
+func (m *ResponseWatchRevokedCert) XXX_Size() int {
+	return xxx_messageInfo_ResponseWatchRevokedCert.Size(m)
+}
+func (m *ResponseWatchRevokedCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResponseWatchRevokedCert.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResponseWatchRevokedCert proto.InternalMessageInfo
+
+func (m *ResponseWatchRevokedCert) GetItems() []*CertItem {
+	if m != nil {
+		return m.Items
+	}
+	return nil
+}
+
+type RequestNewServerCert struct {
+	SigningRequest       []byte   `protobuf:"bytes,1,opt,name=signing_request,json=signingRequest,proto3" json:"signing_request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RequestNewServerCert) Reset()         { *m = RequestNewServerCert{} }
+func (m *RequestNewServerCert) String() string { return proto.CompactTextString(m) }
+func (*RequestNewServerCert) ProtoMessage()    {}
+func (*RequestNewServerCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{42}
+}
+
+func (m *RequestNewServerCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RequestNewServerCert.Unmarshal(m, b)
+}
+func (m *RequestNewServerCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RequestNewServerCert.Marshal(b, m, deterministic)
+}
+func (m *RequestNewServerCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RequestNewServerCert.Merge(m, src)
+}
+func (m *RequestNewServerCert) XXX_Size() int {
+	return xxx_messageInfo_RequestNewServerCert.Size(m)
+}
+func (m *RequestNewServerCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_RequestNewServerCert.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RequestNewServerCert proto.InternalMessageInfo
+
+func (m *RequestNewServerCert) GetSigningRequest() []byte {
+	if m != nil {
+		return m.SigningRequest
+	}
+	return nil
+}
+
+type ResponseNewServerCert struct {
+	Certificate          []byte   `protobuf:"bytes,1,opt,name=certificate,proto3" json:"certificate,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ResponseNewServerCert) Reset()         { *m = ResponseNewServerCert{} }
+func (m *ResponseNewServerCert) String() string { return proto.CompactTextString(m) }
+func (*ResponseNewServerCert) ProtoMessage()    {}
+func (*ResponseNewServerCert) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bd1e66095a603e73, []int{43}
+}
+
+func (m *ResponseNewServerCert) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResponseNewServerCert.Unmarshal(m, b)
+}
+func (m *ResponseNewServerCert) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResponseNewServerCert.Marshal(b, m, deterministic)
+}
+func (m *ResponseNewServerCert) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResponseNewServerCert.Merge(m, src)
+}
+func (m *ResponseNewServerCert) XXX_Size() int {
+	return xxx_messageInfo_ResponseNewServerCert.Size(m)
+}
+func (m *ResponseNewServerCert) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResponseNewServerCert.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResponseNewServerCert proto.InternalMessageInfo
+
+func (m *ResponseNewServerCert) GetCertificate() []byte {
+	if m != nil {
+		return m.Certificate
 	}
 	return nil
 }
@@ -1829,7 +1985,7 @@ func (m *ErrorUnauthorized) Reset()         { *m = ErrorUnauthorized{} }
 func (m *ErrorUnauthorized) String() string { return proto.CompactTextString(m) }
 func (*ErrorUnauthorized) ProtoMessage()    {}
 func (*ErrorUnauthorized) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bd1e66095a603e73, []int{40}
+	return fileDescriptor_bd1e66095a603e73, []int{44}
 }
 
 func (m *ErrorUnauthorized) XXX_Unmarshal(b []byte) error {
@@ -1889,112 +2045,124 @@ func init() {
 	proto.RegisterType((*ResponseRoleList)(nil), "proxy.rpc.ResponseRoleList")
 	proto.RegisterType((*RequestBackendList)(nil), "proxy.rpc.RequestBackendList")
 	proto.RegisterType((*ResponseBackendList)(nil), "proxy.rpc.ResponseBackendList")
-	proto.RegisterType((*RequestCertList)(nil), "proxy.rpc.RequestCertList")
-	proto.RegisterType((*ResponseCertList)(nil), "proxy.rpc.ResponseCertList")
-	proto.RegisterType((*RequestRevokedCertList)(nil), "proxy.rpc.RequestRevokedCertList")
-	proto.RegisterType((*ResponseRevokedCertList)(nil), "proxy.rpc.ResponseRevokedCertList")
-	proto.RegisterType((*RequestCertNew)(nil), "proxy.rpc.RequestCertNew")
-	proto.RegisterType((*ResponseCertNew)(nil), "proxy.rpc.ResponseCertNew")
-	proto.RegisterType((*RequestCertRevoke)(nil), "proxy.rpc.RequestCertRevoke")
-	proto.RegisterType((*ResponseCertRevoke)(nil), "proxy.rpc.ResponseCertRevoke")
-	proto.RegisterType((*RequestCertGet)(nil), "proxy.rpc.RequestCertGet")
-	proto.RegisterType((*ResponseCertGet)(nil), "proxy.rpc.ResponseCertGet")
+	proto.RegisterType((*RequestGetSignedList)(nil), "proxy.rpc.RequestGetSignedList")
+	proto.RegisterType((*ResponseGetSignedList)(nil), "proxy.rpc.ResponseGetSignedList")
+	proto.RegisterType((*RequestNewClientCert)(nil), "proxy.rpc.RequestNewClientCert")
+	proto.RegisterType((*ResponseNewClientCert)(nil), "proxy.rpc.ResponseNewClientCert")
+	proto.RegisterType((*CARequestRevoke)(nil), "proxy.rpc.CARequestRevoke")
+	proto.RegisterType((*CAResponseRevoke)(nil), "proxy.rpc.CAResponseRevoke")
+	proto.RegisterType((*CARequestGet)(nil), "proxy.rpc.CARequestGet")
+	proto.RegisterType((*CAResponseGet)(nil), "proxy.rpc.CAResponseGet")
+	proto.RegisterType((*RequestGetRevokedList)(nil), "proxy.rpc.RequestGetRevokedList")
+	proto.RegisterType((*ResponseGetRevokedList)(nil), "proxy.rpc.ResponseGetRevokedList")
+	proto.RegisterType((*RequestWatchRevokedCert)(nil), "proxy.rpc.RequestWatchRevokedCert")
+	proto.RegisterType((*ResponseWatchRevokedCert)(nil), "proxy.rpc.ResponseWatchRevokedCert")
+	proto.RegisterType((*RequestNewServerCert)(nil), "proxy.rpc.RequestNewServerCert")
+	proto.RegisterType((*ResponseNewServerCert)(nil), "proxy.rpc.ResponseNewServerCert")
 	proto.RegisterType((*ErrorUnauthorized)(nil), "proxy.rpc.ErrorUnauthorized")
 }
 
 func init() { proto.RegisterFile("pkg/rpc/rpc.proto", fileDescriptor_bd1e66095a603e73) }
 
 var fileDescriptor_bd1e66095a603e73 = []byte{
-	// 1418 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x57, 0xdb, 0x6e, 0xdb, 0x46,
-	0x13, 0x8e, 0x4e, 0x96, 0x34, 0x8a, 0x4f, 0x6b, 0xc3, 0x61, 0xf8, 0x27, 0xbf, 0x15, 0xa6, 0x41,
-	0xdc, 0xb4, 0x95, 0x62, 0xb5, 0x45, 0xda, 0x02, 0x29, 0x22, 0xcb, 0x41, 0xe0, 0xd6, 0x71, 0x02,
-	0xc6, 0x09, 0x8a, 0xf6, 0x42, 0xa0, 0xc9, 0x8d, 0x42, 0x48, 0x22, 0xd9, 0xe5, 0x2a, 0xae, 0x0b,
-	0xf4, 0xae, 0x97, 0xbd, 0xee, 0x0b, 0xf4, 0xa6, 0x4f, 0xd3, 0xa7, 0xe8, 0x83, 0x14, 0xb3, 0x07,
-	0x8a, 0xa4, 0x28, 0xc3, 0xb9, 0x30, 0xa0, 0x9d, 0x99, 0xfd, 0xf6, 0x9b, 0xe1, 0xcc, 0xb7, 0x6b,
-	0xd8, 0x8c, 0xc6, 0xa3, 0x2e, 0x8b, 0x5c, 0xfc, 0xeb, 0x44, 0x2c, 0xe4, 0x21, 0x69, 0x46, 0x2c,
-	0xfc, 0xe5, 0xa2, 0xc3, 0x22, 0xd7, 0xdc, 0x1d, 0x85, 0xe1, 0x68, 0x42, 0xbb, 0xc2, 0x71, 0x36,
-	0x7b, 0xdb, 0xe5, 0xfe, 0x94, 0xc6, 0xdc, 0x99, 0x46, 0x32, 0xd6, 0x5a, 0x85, 0x96, 0x4d, 0x7f,
-	0x9e, 0xd1, 0x98, 0xbf, 0xf4, 0x83, 0x91, 0xb5, 0x06, 0xd7, 0x6d, 0x1a, 0x47, 0x61, 0x10, 0xd3,
-	0x97, 0x61, 0x30, 0xb2, 0xb6, 0x60, 0x53, 0xb9, 0x9f, 0xd3, 0xe9, 0x19, 0x65, 0xc7, 0x7e, 0xcc,
-	0xad, 0x43, 0x20, 0x3a, 0x68, 0x6e, 0x25, 0x1d, 0xa8, 0xf9, 0x9c, 0x4e, 0x63, 0xa3, 0xd4, 0xae,
-	0xec, 0xb5, 0x7a, 0x46, 0x27, 0x61, 0xd1, 0x19, 0x4c, 0x66, 0x31, 0xa7, 0x4c, 0x06, 0xdb, 0x32,
-	0x6c, 0x01, 0xfa, 0x15, 0x77, 0xb8, 0xf5, 0x67, 0x29, 0x8f, 0x8d, 0x66, 0xb2, 0x06, 0x65, 0xdf,
-	0x33, 0x4a, 0xed, 0xd2, 0x5e, 0xd3, 0x2e, 0xfb, 0x1e, 0xb9, 0x0d, 0x30, 0x8b, 0x29, 0x1b, 0xba,
-	0xe1, 0x2c, 0xe0, 0x46, 0xb9, 0x5d, 0xda, 0xab, 0xd9, 0x4d, 0xb4, 0x0c, 0xd0, 0x40, 0x76, 0xa1,
-	0xc5, 0xc3, 0x31, 0x0d, 0x94, 0xbf, 0x22, 0xfc, 0x20, 0x4c, 0x32, 0xe0, 0x21, 0x6c, 0x4f, 0xfc,
-	0x98, 0xd3, 0x80, 0x7a, 0x43, 0x46, 0x27, 0xce, 0xc5, 0xd0, 0xf1, 0x3c, 0x16, 0x1b, 0xd5, 0x76,
-	0x65, 0xaf, 0x69, 0x13, 0xed, 0xb3, 0xd1, 0xd5, 0x47, 0x8f, 0xb5, 0x0b, 0xab, 0x99, 0x2c, 0xf2,
-	0x94, 0xac, 0x7f, 0x4b, 0xd0, 0x78, 0x1d, 0x53, 0x76, 0xc4, 0xe9, 0x74, 0x81, 0xef, 0x36, 0xd4,
-	0x58, 0x38, 0xa1, 0xb1, 0x51, 0x16, 0x07, 0xc8, 0x05, 0xb9, 0x07, 0x6b, 0x53, 0xc7, 0x0f, 0xb8,
-	0xe3, 0x07, 0x43, 0xe9, 0xae, 0x08, 0xf7, 0xaa, 0xb6, 0xda, 0x22, 0x6c, 0x1b, 0x6a, 0x8e, 0x37,
-	0xf5, 0x03, 0xa3, 0xda, 0x2e, 0xed, 0x35, 0x6c, 0xb9, 0x20, 0xf7, 0xa1, 0xca, 0x2f, 0x22, 0x6a,
-	0xd4, 0xda, 0xa5, 0xbd, 0xb5, 0xde, 0x56, 0xaa, 0xda, 0xc8, 0xe2, 0xf4, 0x22, 0xa2, 0xb6, 0x08,
-	0x20, 0x06, 0xd4, 0xdd, 0x70, 0x3a, 0xa5, 0x01, 0x37, 0x56, 0x04, 0x21, 0xbd, 0x24, 0x3d, 0x58,
-	0x11, 0x35, 0x89, 0x8d, 0xba, 0xf8, 0x64, 0x66, 0x0a, 0xa4, 0xef, 0xba, 0x34, 0x8e, 0x4f, 0xd1,
-	0x8d, 0x19, 0xd9, 0x2a, 0xd2, 0xfa, 0xa3, 0x04, 0xeb, 0x39, 0x1f, 0x21, 0x50, 0x0d, 0x9c, 0x29,
-	0x55, 0xf9, 0x8a, 0xdf, 0x48, 0xfa, 0xbd, 0x33, 0x99, 0x51, 0xf1, 0x71, 0x9a, 0xb6, 0x5c, 0x90,
-	0x1d, 0x58, 0xf1, 0xe3, 0x78, 0x46, 0x99, 0xf8, 0x26, 0x4d, 0x5b, 0xad, 0xc8, 0x23, 0x68, 0x8a,
-	0x5f, 0xde, 0xd0, 0xe1, 0x22, 0x4d, 0x24, 0x23, 0x5b, 0xb7, 0xa3, 0x5b, 0xb7, 0x73, 0xaa, 0x5b,
-	0xd7, 0x6e, 0xc8, 0xe0, 0x3e, 0xb7, 0xde, 0x40, 0x03, 0x8b, 0x74, 0x19, 0x0d, 0xee, 0xf3, 0x49,
-	0x42, 0x43, 0x2c, 0x48, 0x1b, 0x5a, 0x1e, 0x8d, 0x5d, 0xe6, 0x47, 0xdc, 0x0f, 0x03, 0xc5, 0x25,
-	0x6d, 0xb2, 0xee, 0x40, 0xeb, 0xc0, 0x71, 0xc7, 0x34, 0xf0, 0x96, 0x41, 0x5b, 0x7f, 0x97, 0xa1,
-	0x31, 0xa0, 0x8c, 0x8b, 0x80, 0xbb, 0xb0, 0x1a, 0x53, 0xe6, 0x3b, 0x93, 0x61, 0x30, 0xc3, 0xf6,
-	0x10, 0x91, 0xd7, 0xed, 0xeb, 0xd2, 0x78, 0x22, 0x6c, 0xd8, 0x96, 0x58, 0xfa, 0x30, 0x18, 0x0a,
-	0x30, 0x49, 0x09, 0xa4, 0xe9, 0x04, 0xd9, 0x66, 0xca, 0x50, 0xb9, 0x7a, 0x19, 0xc8, 0xd7, 0x00,
-	0x8c, 0xbe, 0x0f, 0xc7, 0x57, 0x2d, 0x60, 0x53, 0x45, 0xf7, 0xb9, 0xe8, 0xae, 0x11, 0x36, 0x47,
-	0x4d, 0x75, 0x17, 0x2e, 0x2e, 0x69, 0x9a, 0x36, 0xb4, 0x5c, 0xca, 0xb8, 0xff, 0xd6, 0x77, 0x1d,
-	0x4e, 0x8d, 0xba, 0xc8, 0x33, 0x6d, 0x22, 0x1b, 0x50, 0x89, 0xf6, 0x7b, 0x46, 0x43, 0x78, 0xf0,
-	0xa7, 0x75, 0x02, 0xeb, 0x6a, 0xd4, 0xb1, 0x37, 0x85, 0x5a, 0x10, 0xa8, 0x62, 0xcb, 0xeb, 0x8a,
-	0xe2, 0x6f, 0x72, 0x1f, 0xd6, 0x63, 0xca, 0xde, 0xfb, 0x2e, 0x1d, 0x3a, 0xee, 0x7c, 0xb4, 0x1b,
-	0xf6, 0x9a, 0x32, 0xf7, 0xa5, 0xd5, 0x7a, 0x0c, 0x1b, 0x5a, 0x24, 0x12, 0xc0, 0x8f, 0xb3, 0xf2,
-	0x93, 0x1f, 0x08, 0xd1, 0xc4, 0x4a, 0x79, 0xce, 0x61, 0x2d, 0x45, 0xa7, 0xef, 0x79, 0x0b, 0xf3,
-	0xaa, 0xd9, 0x95, 0x33, 0xec, 0xe4, 0xc0, 0x55, 0x3e, 0x60, 0xe0, 0xaa, 0x99, 0xda, 0x59, 0x77,
-	0xb0, 0x0e, 0x73, 0xde, 0xea, 0xe4, 0x70, 0x2c, 0x4e, 0x6e, 0xd8, 0xe5, 0x70, 0x6c, 0x7d, 0x91,
-	0xe1, 0x76, 0x48, 0x27, 0x57, 0xe1, 0x96, 0x07, 0x56, 0xdb, 0x32, 0xc0, 0xfd, 0x0c, 0xf0, 0x33,
-	0xba, 0x28, 0xaa, 0xbb, 0xd0, 0x3a, 0xf7, 0xf9, 0xbb, 0xa1, 0xd2, 0x04, 0x59, 0x7a, 0x40, 0xd3,
-	0xa9, 0x9c, 0xfd, 0xef, 0xb2, 0xa7, 0x20, 0xc6, 0x7d, 0xa8, 0xa2, 0xec, 0x0a, 0x94, 0x25, 0x45,
-	0x17, 0x01, 0x8a, 0x4e, 0x39, 0xa1, 0xf3, 0x18, 0x6e, 0x28, 0x3a, 0x07, 0xd4, 0x0d, 0xa7, 0xf4,
-	0xb9, 0x92, 0xbc, 0x45, 0x65, 0x2d, 0x4c, 0xf8, 0x01, 0x18, 0x9a, 0x4a, 0xd1, 0xfe, 0x4c, 0xe6,
-	0x1f, 0xe1, 0x95, 0x22, 0x8e, 0x3a, 0x0d, 0x47, 0xa3, 0x09, 0xed, 0x0b, 0xfd, 0xcc, 0xeb, 0xf7,
-	0x3d, 0xd8, 0xd2, 0x88, 0xb9, 0xb0, 0x0c, 0xd8, 0xb7, 0x49, 0x2b, 0x8b, 0xa2, 0x9c, 0xd0, 0x73,
-	0x72, 0x03, 0xea, 0xe2, 0x32, 0x4a, 0xe0, 0x56, 0x70, 0x79, 0xe4, 0x25, 0xaa, 0x51, 0x4e, 0xa9,
-	0xc6, 0xc1, 0xbc, 0x75, 0x13, 0x80, 0x0e, 0x54, 0xb1, 0x31, 0x55, 0x11, 0x2f, 0x53, 0x61, 0x11,
-	0x67, 0x6d, 0x26, 0x1c, 0x50, 0xfb, 0xc4, 0x95, 0x9c, 0x9a, 0x08, 0x6d, 0xbb, 0x6c, 0x22, 0xb4,
-	0x66, 0xea, 0x89, 0x78, 0x90, 0x94, 0x48, 0xa9, 0x9e, 0x00, 0x48, 0xa4, 0xa1, 0x94, 0x92, 0x06,
-	0x6b, 0x30, 0x2f, 0x54, 0x3a, 0xf8, 0xd3, 0xec, 0x69, 0x3b, 0xa9, 0xd3, 0x52, 0x4a, 0xaa, 0x0f,
-	0x9c, 0xa7, 0x80, 0x12, 0x9a, 0x4f, 0x41, 0xdb, 0x2e, 0x4b, 0x41, 0x4b, 0xaf, 0x46, 0x34, 0x60,
-	0x47, 0x17, 0x45, 0x6a, 0x5b, 0x02, 0x7c, 0x88, 0xad, 0xa6, 0x6a, 0x93, 0x75, 0x7d, 0x08, 0xfe,
-	0x6f, 0xc9, 0xfc, 0xa0, 0x07, 0x3f, 0x5b, 0x4e, 0xce, 0x4b, 0x0b, 0x72, 0x6e, 0x42, 0x23, 0x72,
-	0xe2, 0xf8, 0x3c, 0x64, 0x9e, 0xea, 0x81, 0x64, 0x9d, 0x16, 0x89, 0x4a, 0x56, 0x60, 0x93, 0xaa,
-	0x57, 0xd3, 0x55, 0x4f, 0x4d, 0xb8, 0x3e, 0x3f, 0xdf, 0x9a, 0x5f, 0x25, 0x0f, 0x2a, 0x8c, 0x90,
-	0xa9, 0x5e, 0xe9, 0x62, 0x92, 0x13, 0x32, 0x07, 0x57, 0x5b, 0xf3, 0xf8, 0x5f, 0x66, 0x2a, 0x80,
-	0xd3, 0x7f, 0x25, 0xf0, 0x6f, 0xb2, 0xcc, 0x95, 0x6a, 0xa4, 0x1a, 0xbe, 0xb0, 0xea, 0xb2, 0xd3,
-	0xbb, 0xb0, 0xf9, 0x94, 0xb1, 0x90, 0xbd, 0x0e, 0x9c, 0x19, 0x7f, 0x17, 0x32, 0xff, 0x57, 0xea,
-	0x61, 0x59, 0x69, 0xe0, 0x45, 0xa1, 0xaf, 0x3a, 0xb3, 0x69, 0x27, 0xeb, 0x07, 0x9f, 0xc8, 0x47,
-	0x18, 0xaa, 0x31, 0x01, 0x58, 0x39, 0x79, 0x61, 0x3f, 0xef, 0x1f, 0x6f, 0x5c, 0x23, 0x5b, 0xb0,
-	0xfe, 0xea, 0xa9, 0xfd, 0xe6, 0x68, 0xf0, 0x74, 0xd8, 0x1f, 0x0c, 0x5e, 0xbc, 0x3e, 0x39, 0xdd,
-	0x28, 0xf5, 0xfe, 0x2a, 0x41, 0x5d, 0x3d, 0xea, 0xc8, 0xf7, 0x00, 0xa9, 0xb7, 0xec, 0xad, 0xf4,
-	0xac, 0xe4, 0xdf, 0xbf, 0xe6, 0xed, 0x8c, 0x37, 0xff, 0x10, 0xb6, 0xae, 0xcd, 0xc1, 0xc4, 0xe3,
-	0x75, 0x29, 0x18, 0x7a, 0x2f, 0x01, 0x13, 0x0f, 0xe2, 0x6b, 0xbd, 0x7f, 0x6a, 0x50, 0x93, 0x5a,
-	0xf4, 0x08, 0xaa, 0xf8, 0x48, 0x27, 0x3b, 0x8b, 0x80, 0x68, 0x37, 0x6f, 0x14, 0x40, 0xe1, 0x2b,
-	0x9e, 0x0c, 0x64, 0x55, 0x44, 0x6a, 0xe6, 0xe2, 0x66, 0xed, 0x33, 0xff, 0x57, 0x00, 0x90, 0x6c,
-	0x7c, 0x02, 0x75, 0x7d, 0x69, 0xdd, 0x2c, 0xc6, 0xe8, 0x7b, 0x9e, 0x69, 0x2e, 0x81, 0xc0, 0x6d,
-	0x0a, 0x01, 0x6f, 0xa7, 0x25, 0x08, 0x87, 0x74, 0xb2, 0x14, 0x01, 0xb7, 0x29, 0x04, 0xec, 0xa1,
-	0x25, 0x08, 0xcf, 0x28, 0x5f, 0x8a, 0x80, 0xdb, 0x7e, 0x82, 0x8d, 0x85, 0x0b, 0xc3, 0x5a, 0x84,
-	0xca, 0xc7, 0x98, 0x77, 0x0b, 0x30, 0x17, 0x80, 0x8e, 0xa1, 0x95, 0xbe, 0x3b, 0x6e, 0x2f, 0xe2,
-	0xa6, 0xdc, 0xe6, 0xff, 0x0b, 0x20, 0xd3, 0xdb, 0x07, 0xd0, 0x48, 0xae, 0x08, 0xb3, 0x08, 0x4a,
-	0xfa, 0x0a, 0xbf, 0x5a, 0xb2, 0x71, 0x20, 0x1f, 0xc8, 0xcb, 0x3e, 0xbd, 0xf6, 0x15, 0x82, 0x24,
-	0x1b, 0x8f, 0x93, 0xd7, 0xb0, 0x58, 0x16, 0xe4, 0x95, 0x72, 0x17, 0xe6, 0x95, 0xf2, 0xf7, 0x7e,
-	0xaf, 0xc0, 0xf6, 0x60, 0xfe, 0x5e, 0xec, 0xcb, 0xc9, 0xe6, 0x17, 0xc8, 0x35, 0x51, 0xe6, 0x02,
-	0xae, 0xda, 0x57, 0xc8, 0x35, 0xd9, 0xf8, 0x03, 0xca, 0x4d, 0x56, 0xe5, 0xef, 0x14, 0xe4, 0x9d,
-	0x0d, 0x31, 0xad, 0xa2, 0xf4, 0x73, 0x30, 0x4f, 0xa0, 0xae, 0xa5, 0xf7, 0x66, 0x31, 0x3b, 0xfc,
-	0x1a, 0xe6, 0x12, 0x72, 0xb8, 0xed, 0x08, 0x20, 0xa5, 0xaf, 0xb7, 0x8a, 0x41, 0xa4, 0xb7, 0x50,
-	0x17, 0x52, 0x9b, 0x15, 0x99, 0x25, 0x93, 0xa0, 0x5c, 0x4b, 0xc9, 0x3c, 0xa3, 0xfc, 0x60, 0xff,
-	0xc7, 0xee, 0xc8, 0xe7, 0xef, 0x66, 0x67, 0x1d, 0x37, 0x9c, 0x76, 0xdf, 0xee, 0xef, 0x3f, 0xec,
-	0x4e, 0x9c, 0x11, 0x73, 0x82, 0x91, 0xef, 0x04, 0x9f, 0x89, 0x7d, 0xdd, 0x68, 0x3c, 0xea, 0xe2,
-	0xdb, 0x9b, 0xb2, 0x2e, 0x8b, 0xdc, 0xb3, 0x15, 0xf1, 0xaf, 0xc4, 0xe7, 0xff, 0x05, 0x00, 0x00,
-	0xff, 0xff, 0x9f, 0xb0, 0x46, 0x63, 0x74, 0x10, 0x00, 0x00,
+	// 1546 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x57, 0xcd, 0x6e, 0xdb, 0xc6,
+	0x16, 0x0e, 0xf5, 0x63, 0x4b, 0x47, 0xb6, 0x6c, 0xd3, 0xbe, 0x36, 0xc3, 0x7b, 0x73, 0xad, 0x30,
+	0x37, 0xb0, 0x6f, 0xda, 0x4a, 0xb1, 0x53, 0x34, 0xc9, 0x22, 0x6d, 0x69, 0xc6, 0x08, 0xd2, 0x3a,
+	0x4e, 0x40, 0xdb, 0x2d, 0xd0, 0xa2, 0x10, 0x68, 0x72, 0x42, 0x13, 0x92, 0x48, 0x76, 0x38, 0xb2,
+	0xeb, 0x6e, 0xbb, 0xed, 0xba, 0x2f, 0xd0, 0x4d, 0x5f, 0xa4, 0xdb, 0x3e, 0x45, 0x1f, 0xa4, 0x98,
+	0x1f, 0x52, 0xc3, 0x1f, 0x19, 0xce, 0x42, 0x80, 0xe6, 0xfc, 0x7c, 0x73, 0xe6, 0xcc, 0x39, 0xdf,
+	0xe1, 0xc0, 0x5a, 0x3c, 0xf2, 0x07, 0x38, 0x76, 0xe9, 0xaf, 0x1f, 0xe3, 0x88, 0x44, 0x6a, 0x3b,
+	0xc6, 0xd1, 0x4f, 0xd7, 0x7d, 0x1c, 0xbb, 0xfa, 0xb6, 0x1f, 0x45, 0xfe, 0x18, 0x0d, 0x98, 0xe2,
+	0x7c, 0xfa, 0x7e, 0x40, 0x82, 0x09, 0x4a, 0x88, 0x33, 0x89, 0xb9, 0xad, 0xb1, 0x0c, 0x1d, 0x1b,
+	0xfd, 0x38, 0x45, 0x09, 0x79, 0x17, 0x84, 0xbe, 0xd1, 0x85, 0x25, 0x1b, 0x25, 0x71, 0x14, 0x26,
+	0xe8, 0x5d, 0x14, 0xfa, 0xc6, 0x3a, 0xac, 0x09, 0xf5, 0x1b, 0x34, 0x39, 0x47, 0xf8, 0x28, 0x48,
+	0x88, 0xf1, 0x12, 0xd4, 0xd4, 0x68, 0x26, 0x55, 0xfb, 0xd0, 0x0c, 0x08, 0x9a, 0x24, 0x9a, 0xd2,
+	0xab, 0xef, 0x76, 0xf6, 0xb5, 0x7e, 0x16, 0x45, 0xdf, 0x1a, 0x4f, 0x13, 0x82, 0x30, 0x37, 0xb6,
+	0xb9, 0x59, 0x09, 0xfa, 0x84, 0x38, 0xc4, 0xf8, 0x4d, 0x29, 0x62, 0x53, 0xb1, 0xda, 0x85, 0x5a,
+	0xe0, 0x69, 0x4a, 0x4f, 0xd9, 0x6d, 0xdb, 0xb5, 0xc0, 0x53, 0xef, 0x01, 0x4c, 0x13, 0x84, 0x87,
+	0x6e, 0x34, 0x0d, 0x89, 0x56, 0xeb, 0x29, 0xbb, 0x4d, 0xbb, 0x4d, 0x25, 0x16, 0x15, 0xa8, 0xdb,
+	0xd0, 0x21, 0xd1, 0x08, 0x85, 0x42, 0x5f, 0x67, 0x7a, 0x60, 0x22, 0x6e, 0xf0, 0x18, 0x36, 0xc6,
+	0x41, 0x42, 0x50, 0x88, 0xbc, 0x21, 0x46, 0x63, 0xe7, 0x7a, 0xe8, 0x78, 0x1e, 0x4e, 0xb4, 0x46,
+	0xaf, 0xbe, 0xdb, 0xb6, 0xd5, 0x54, 0x67, 0x53, 0x95, 0x49, 0x35, 0xc6, 0x36, 0x2c, 0xe7, 0x4e,
+	0x51, 0x0c, 0xc9, 0xf8, 0x5b, 0x81, 0xd6, 0x59, 0x82, 0xf0, 0x6b, 0x82, 0x26, 0xa5, 0x78, 0x37,
+	0xa0, 0x89, 0xa3, 0x31, 0x4a, 0xb4, 0x1a, 0xdb, 0x80, 0x2f, 0xd4, 0x87, 0xd0, 0x9d, 0x38, 0x41,
+	0x48, 0x9c, 0x20, 0x1c, 0x72, 0x75, 0x9d, 0xa9, 0x97, 0x53, 0xa9, 0xcd, 0xcc, 0x36, 0xa0, 0xe9,
+	0x78, 0x93, 0x20, 0xd4, 0x1a, 0x3d, 0x65, 0xb7, 0x65, 0xf3, 0x85, 0xba, 0x03, 0x0d, 0x72, 0x1d,
+	0x23, 0xad, 0xd9, 0x53, 0x76, 0xbb, 0xfb, 0xeb, 0x52, 0xb6, 0x69, 0x14, 0xa7, 0xd7, 0x31, 0xb2,
+	0x99, 0x81, 0xaa, 0xc1, 0xa2, 0x1b, 0x4d, 0x26, 0x28, 0x24, 0xda, 0x02, 0x0b, 0x28, 0x5d, 0xaa,
+	0xfb, 0xb0, 0xc0, 0x72, 0x92, 0x68, 0x8b, 0xec, 0xca, 0x74, 0x09, 0xc4, 0x74, 0x5d, 0x94, 0x24,
+	0xa7, 0x54, 0x4d, 0x4f, 0x64, 0x0b, 0x4b, 0xe3, 0x57, 0x05, 0x56, 0x0a, 0x3a, 0x55, 0x85, 0x46,
+	0xe8, 0x4c, 0x90, 0x38, 0x2f, 0xfb, 0x4f, 0x83, 0xbe, 0x74, 0xc6, 0x53, 0xc4, 0x2e, 0xa7, 0x6d,
+	0xf3, 0x85, 0xba, 0x09, 0x0b, 0x41, 0x92, 0x4c, 0x11, 0x66, 0x77, 0xd2, 0xb6, 0xc5, 0x4a, 0x7d,
+	0x0a, 0x6d, 0xf6, 0xcf, 0x1b, 0x3a, 0x84, 0x1d, 0x93, 0x06, 0xc3, 0x4b, 0xb7, 0x9f, 0x96, 0x6e,
+	0xff, 0x34, 0x2d, 0x5d, 0xbb, 0xc5, 0x8d, 0x4d, 0x62, 0x84, 0xd0, 0xa2, 0x49, 0xba, 0x29, 0x0c,
+	0x12, 0x90, 0x71, 0x16, 0x06, 0x5b, 0xa8, 0x3d, 0xe8, 0x78, 0x28, 0x71, 0x71, 0x10, 0x93, 0x20,
+	0x0a, 0x45, 0x2c, 0xb2, 0x88, 0x06, 0x9a, 0x5c, 0x27, 0x04, 0x4d, 0x44, 0xd2, 0xc5, 0xca, 0xb8,
+	0x0f, 0x9d, 0x03, 0xc7, 0x1d, 0xa1, 0xd0, 0x9b, 0xb7, 0xa5, 0xf1, 0x47, 0x0d, 0x5a, 0x16, 0xc2,
+	0x84, 0x19, 0x3c, 0x80, 0xe5, 0x04, 0xe1, 0xc0, 0x19, 0x0f, 0xc3, 0x29, 0x2d, 0x1b, 0x66, 0xb9,
+	0x64, 0x2f, 0x71, 0xe1, 0x31, 0x93, 0xd1, 0x72, 0xa5, 0x57, 0x12, 0x85, 0x43, 0x06, 0xc6, 0x43,
+	0x05, 0x2e, 0x3a, 0xa6, 0xa7, 0xc8, 0xa5, 0xa7, 0x7e, 0xfb, 0xf4, 0xa8, 0xcf, 0x01, 0x30, 0xba,
+	0x8c, 0x46, 0xb7, 0x4d, 0x6c, 0x5b, 0x58, 0x9b, 0x84, 0x55, 0x9d, 0x4f, 0x8b, 0xa6, 0x29, 0xaa,
+	0x8e, 0x2e, 0x6e, 0x28, 0xa6, 0x1e, 0x74, 0x5c, 0x84, 0x49, 0xf0, 0x3e, 0x70, 0x1d, 0x82, 0xb4,
+	0x45, 0x76, 0x4e, 0x59, 0xa4, 0xae, 0x42, 0x3d, 0xde, 0xdb, 0xd7, 0x5a, 0x4c, 0x43, 0xff, 0x1a,
+	0xc7, 0xb0, 0x22, 0x28, 0x80, 0xd6, 0x2c, 0x63, 0x11, 0x15, 0x1a, 0xb4, 0x15, 0xd2, 0x8c, 0xd2,
+	0xff, 0xea, 0x0e, 0xac, 0x24, 0x08, 0x5f, 0x06, 0x2e, 0x1a, 0x3a, 0xee, 0xac, 0xe5, 0x5b, 0x76,
+	0x57, 0x88, 0x4d, 0x2e, 0x35, 0x5e, 0xc0, 0x6a, 0x4a, 0x1e, 0x19, 0xe0, 0xff, 0xf3, 0xb4, 0x54,
+	0x6c, 0x14, 0x56, 0xdc, 0x82, 0x91, 0xae, 0xa0, 0x2b, 0x85, 0x63, 0x7a, 0x5e, 0xa9, 0x8f, 0xd3,
+	0xe8, 0x6a, 0xb9, 0xe8, 0x78, 0x23, 0xd6, 0x3f, 0xa0, 0x11, 0x1b, 0xb9, 0xdc, 0x19, 0xf7, 0x69,
+	0x1e, 0x66, 0x71, 0x8b, 0x9d, 0xa3, 0x11, 0xdb, 0xb9, 0x65, 0xd7, 0xa2, 0x91, 0xf1, 0x69, 0x2e,
+	0xb6, 0x97, 0x68, 0x7c, 0x9b, 0xd8, 0x8a, 0xc0, 0xc2, 0x2d, 0x07, 0x6c, 0xe6, 0x80, 0x5f, 0xa1,
+	0x32, 0xd9, 0x6e, 0x43, 0xe7, 0x2a, 0x20, 0x17, 0x43, 0xc1, 0x15, 0x3c, 0xf5, 0x40, 0x45, 0xa7,
+	0x9c, 0x13, 0xbe, 0xca, 0xef, 0x42, 0x31, 0x76, 0xa0, 0x41, 0xe9, 0x98, 0xa1, 0xcc, 0x49, 0x3a,
+	0x33, 0x10, 0xe1, 0xd4, 0xb2, 0x70, 0x5e, 0xc0, 0x96, 0x08, 0xe7, 0x00, 0xb9, 0xd1, 0x04, 0xbd,
+	0x11, 0x54, 0x58, 0x66, 0xdc, 0xca, 0x03, 0x3f, 0x02, 0x2d, 0x0d, 0xa5, 0xca, 0x3f, 0x77, 0xf2,
+	0xff, 0xd1, 0x51, 0xc3, 0xb6, 0x3a, 0x8d, 0x7c, 0x7f, 0x8c, 0x4c, 0xc6, 0xab, 0x45, 0x5e, 0x7f,
+	0x08, 0xeb, 0x29, 0x62, 0xc1, 0x2c, 0x07, 0xf6, 0x79, 0x56, 0xca, 0x2c, 0x29, 0xc7, 0xe8, 0x4a,
+	0xdd, 0x82, 0x45, 0x36, 0xa4, 0x32, 0xb8, 0x05, 0xba, 0x7c, 0xed, 0x65, 0xac, 0x51, 0x93, 0x58,
+	0xe3, 0x60, 0x56, 0xba, 0x19, 0x40, 0x1f, 0x1a, 0xb4, 0x30, 0x45, 0x12, 0x6f, 0x62, 0x67, 0x66,
+	0x67, 0xac, 0x65, 0x31, 0x50, 0x4e, 0x64, 0xa3, 0x5a, 0xea, 0x88, 0x54, 0x76, 0x53, 0x47, 0xa4,
+	0x5c, 0x9a, 0x76, 0xc4, 0xa3, 0x2c, 0x45, 0x82, 0xf5, 0x18, 0x40, 0x46, 0x0d, 0x8a, 0x44, 0x0d,
+	0x86, 0x35, 0x4b, 0x94, 0x6c, 0xfc, 0x71, 0x7e, 0xb7, 0x4d, 0x69, 0x37, 0x89, 0x49, 0xd3, 0x0d,
+	0x37, 0x61, 0x43, 0x6c, 0xf8, 0x0a, 0x91, 0x93, 0xc0, 0x0f, 0x11, 0x43, 0x31, 0x0e, 0xe0, 0x5f,
+	0x29, 0x78, 0x4e, 0x71, 0xd3, 0x61, 0x52, 0x12, 0x4e, 0xb1, 0x7f, 0x51, 0x32, 0xf0, 0x63, 0x74,
+	0x65, 0x8d, 0x03, 0x14, 0x12, 0x6a, 0x53, 0xe4, 0x5f, 0xa5, 0xc4, 0xbf, 0x3a, 0xb4, 0x62, 0x27,
+	0x49, 0xae, 0x22, 0xec, 0x89, 0x4b, 0xcb, 0xd6, 0x72, 0x57, 0xd7, 0xf3, 0x8c, 0x98, 0xa5, 0xa9,
+	0x21, 0xa7, 0x69, 0x67, 0x76, 0x92, 0x7c, 0x14, 0xc5, 0x8a, 0xfa, 0x0c, 0x56, 0x2c, 0x33, 0xbd,
+	0x4f, 0x46, 0xcb, 0xb7, 0x9a, 0x26, 0x86, 0x01, 0xab, 0xd4, 0x4f, 0x5c, 0x3a, 0x77, 0x2c, 0x62,
+	0x3f, 0x81, 0xa5, 0x0c, 0x9b, 0xb6, 0xeb, 0xad, 0x80, 0x9f, 0xc1, 0xf2, 0x0c, 0x58, 0x34, 0xb9,
+	0x54, 0x9f, 0x95, 0xa9, 0xe7, 0x85, 0xb9, 0x45, 0xcf, 0x9c, 0x6e, 0xc6, 0x43, 0xe2, 0xd7, 0x6a,
+	0xc1, 0xa6, 0x04, 0x28, 0x69, 0x3e, 0xe4, 0x5e, 0xef, 0x66, 0x94, 0xf1, 0xad, 0x43, 0xdc, 0x0b,
+	0x81, 0x42, 0xad, 0x8c, 0xc3, 0x19, 0x1d, 0x14, 0x75, 0x1f, 0xb2, 0xc3, 0x17, 0x72, 0xe1, 0x9c,
+	0x20, 0x7c, 0x89, 0x30, 0x83, 0xa0, 0x83, 0x29, 0xf0, 0xc3, 0x20, 0xf4, 0x87, 0x98, 0xeb, 0x45,
+	0xe2, 0xba, 0x42, 0x2c, 0xbc, 0x8c, 0xe7, 0xb9, 0x4b, 0x97, 0x10, 0x0a, 0x53, 0x53, 0x29, 0x4d,
+	0x4d, 0x63, 0x00, 0x6b, 0x87, 0x18, 0x47, 0xf8, 0x2c, 0x74, 0xa6, 0xe4, 0x22, 0xc2, 0xc1, 0xcf,
+	0xc8, 0xa3, 0x05, 0x89, 0x42, 0x2f, 0x8e, 0x02, 0xd1, 0x84, 0x6d, 0x3b, 0x5b, 0x3f, 0xfa, 0x88,
+	0x7f, 0x87, 0xd2, 0xc1, 0xa3, 0x02, 0x2c, 0x1c, 0xbf, 0xb5, 0xdf, 0x98, 0x47, 0xab, 0x77, 0xd4,
+	0x75, 0x58, 0x39, 0x39, 0xb4, 0xbf, 0x79, 0x6d, 0x1d, 0x0e, 0x4d, 0xcb, 0x7a, 0x7b, 0x76, 0x7c,
+	0xba, 0xaa, 0xec, 0xff, 0xae, 0xc0, 0xa2, 0xf8, 0xae, 0x55, 0xbf, 0x06, 0x90, 0x3e, 0xe7, 0xff,
+	0x23, 0xd3, 0x42, 0xf1, 0x09, 0xa0, 0xdf, 0xcb, 0x69, 0x8b, 0x6f, 0x01, 0xe3, 0xce, 0x0c, 0x8c,
+	0x7d, 0xbf, 0xcf, 0x05, 0xa3, 0xda, 0x1b, 0xc0, 0xd8, 0x9b, 0xe0, 0xce, 0xfe, 0x5f, 0x4d, 0x68,
+	0x72, 0xda, 0x7d, 0x0a, 0x0d, 0xfa, 0x4e, 0x51, 0x37, 0xcb, 0x80, 0x54, 0xae, 0x6f, 0x55, 0x40,
+	0xd1, 0x87, 0x8c, 0x6a, 0xf1, 0xac, 0xb0, 0xa3, 0xe9, 0x65, 0xe7, 0x54, 0xa7, 0xff, 0xbb, 0x02,
+	0x20, 0x73, 0xfc, 0x12, 0x16, 0xd3, 0xf9, 0x7c, 0xb7, 0x1a, 0xc3, 0xf4, 0x3c, 0x5d, 0x9f, 0x03,
+	0x41, 0xdd, 0x04, 0x02, 0x1d, 0xc4, 0x73, 0x10, 0x5e, 0xa2, 0xf1, 0x5c, 0x04, 0xea, 0x26, 0x10,
+	0x68, 0xff, 0xcd, 0x41, 0x78, 0x85, 0xc8, 0x5c, 0x04, 0xea, 0xf6, 0x3d, 0xac, 0x96, 0x66, 0xa3,
+	0x51, 0x86, 0x2a, 0xda, 0xe8, 0x0f, 0x2a, 0x30, 0x4b, 0x40, 0x47, 0xd0, 0x91, 0xc7, 0xe4, 0xbd,
+	0x32, 0xae, 0xa4, 0xd6, 0xff, 0x5b, 0x01, 0x29, 0xbb, 0x5b, 0xd0, 0xca, 0xa6, 0xa1, 0x5e, 0x05,
+	0xc5, 0x75, 0x95, 0xb7, 0x96, 0x39, 0x5a, 0xfc, 0x8d, 0x30, 0xef, 0xea, 0x53, 0x5d, 0x25, 0x48,
+	0xe6, 0x78, 0x94, 0x7d, 0xf8, 0xb3, 0x65, 0xc5, 0xb9, 0x24, 0x75, 0xe5, 0xb9, 0x24, 0xfd, 0xfe,
+	0x9f, 0x0d, 0xd8, 0xb0, 0x66, 0x4d, 0x6e, 0xf2, 0xce, 0x26, 0xd7, 0xaa, 0x0d, 0xcb, 0xf9, 0xf9,
+	0xb6, 0x5d, 0xde, 0x28, 0x67, 0xa0, 0xf7, 0x2a, 0xb6, 0xca, 0x43, 0xd8, 0xb0, 0x5c, 0x98, 0x77,
+	0x65, 0xcc, 0x9c, 0x41, 0x25, 0x66, 0x1e, 0x82, 0x63, 0x4a, 0x44, 0x56, 0x8d, 0x39, 0x33, 0x98,
+	0x87, 0x29, 0x41, 0x98, 0xb0, 0x20, 0xc6, 0x95, 0x7c, 0x4b, 0x85, 0x19, 0x98, 0xbb, 0xa5, 0xd2,
+	0x9c, 0x7b, 0x06, 0x75, 0x5a, 0xe1, 0x5b, 0x55, 0xfe, 0xb4, 0x2d, 0xb4, 0x4a, 0x67, 0xea, 0x72,
+	0x06, 0xdd, 0xc2, 0x04, 0xea, 0x55, 0x66, 0x5e, 0xb2, 0xd0, 0xef, 0x57, 0xa7, 0x5e, 0x06, 0xf9,
+	0x01, 0x56, 0x4b, 0x83, 0xa7, 0xa2, 0xd7, 0x8a, 0x36, 0x95, 0xbd, 0x56, 0x34, 0x7a, 0xac, 0x1c,
+	0xec, 0x7d, 0x37, 0xf0, 0x03, 0x72, 0x31, 0x3d, 0xef, 0xbb, 0xd1, 0x64, 0xf0, 0x7e, 0x6f, 0xef,
+	0xf1, 0x60, 0xec, 0xf8, 0xd8, 0x09, 0xfd, 0xc0, 0x09, 0x3f, 0x61, 0x10, 0x83, 0x78, 0xe4, 0x0f,
+	0x12, 0x96, 0xe5, 0x01, 0x8e, 0xdd, 0xf3, 0x05, 0xf6, 0xec, 0x7b, 0xf2, 0x4f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x88, 0xda, 0x0b, 0xcd, 0x38, 0x12, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2513,11 +2681,13 @@ var _Admin_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type CertificateAuthorityClient interface {
-	CertList(ctx context.Context, in *RequestCertList, opts ...grpc.CallOption) (*ResponseCertList, error)
-	RevokedCertList(ctx context.Context, in *RequestRevokedCertList, opts ...grpc.CallOption) (*ResponseRevokedCertList, error)
-	CertNew(ctx context.Context, in *RequestCertNew, opts ...grpc.CallOption) (*ResponseCertNew, error)
-	CertRevoke(ctx context.Context, in *RequestCertRevoke, opts ...grpc.CallOption) (*ResponseCertRevoke, error)
-	CertGet(ctx context.Context, in *RequestCertGet, opts ...grpc.CallOption) (*ResponseCertGet, error)
+	GetSignedList(ctx context.Context, in *RequestGetSignedList, opts ...grpc.CallOption) (*ResponseGetSignedList, error)
+	NewClientCert(ctx context.Context, in *RequestNewClientCert, opts ...grpc.CallOption) (*ResponseNewClientCert, error)
+	NewServerCert(ctx context.Context, in *RequestNewServerCert, opts ...grpc.CallOption) (*ResponseNewServerCert, error)
+	Revoke(ctx context.Context, in *CARequestRevoke, opts ...grpc.CallOption) (*CAResponseRevoke, error)
+	Get(ctx context.Context, in *CARequestGet, opts ...grpc.CallOption) (*CAResponseGet, error)
+	GetRevokedList(ctx context.Context, in *RequestGetRevokedList, opts ...grpc.CallOption) (*ResponseGetRevokedList, error)
+	WatchRevokedCert(ctx context.Context, in *RequestWatchRevokedCert, opts ...grpc.CallOption) (CertificateAuthority_WatchRevokedCertClient, error)
 }
 
 type certificateAuthorityClient struct {
@@ -2528,172 +2698,260 @@ func NewCertificateAuthorityClient(cc *grpc.ClientConn) CertificateAuthorityClie
 	return &certificateAuthorityClient{cc}
 }
 
-func (c *certificateAuthorityClient) CertList(ctx context.Context, in *RequestCertList, opts ...grpc.CallOption) (*ResponseCertList, error) {
-	out := new(ResponseCertList)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/CertList", in, out, opts...)
+func (c *certificateAuthorityClient) GetSignedList(ctx context.Context, in *RequestGetSignedList, opts ...grpc.CallOption) (*ResponseGetSignedList, error) {
+	out := new(ResponseGetSignedList)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/GetSignedList", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *certificateAuthorityClient) RevokedCertList(ctx context.Context, in *RequestRevokedCertList, opts ...grpc.CallOption) (*ResponseRevokedCertList, error) {
-	out := new(ResponseRevokedCertList)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/RevokedCertList", in, out, opts...)
+func (c *certificateAuthorityClient) NewClientCert(ctx context.Context, in *RequestNewClientCert, opts ...grpc.CallOption) (*ResponseNewClientCert, error) {
+	out := new(ResponseNewClientCert)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/NewClientCert", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *certificateAuthorityClient) CertNew(ctx context.Context, in *RequestCertNew, opts ...grpc.CallOption) (*ResponseCertNew, error) {
-	out := new(ResponseCertNew)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/CertNew", in, out, opts...)
+func (c *certificateAuthorityClient) NewServerCert(ctx context.Context, in *RequestNewServerCert, opts ...grpc.CallOption) (*ResponseNewServerCert, error) {
+	out := new(ResponseNewServerCert)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/NewServerCert", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *certificateAuthorityClient) CertRevoke(ctx context.Context, in *RequestCertRevoke, opts ...grpc.CallOption) (*ResponseCertRevoke, error) {
-	out := new(ResponseCertRevoke)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/CertRevoke", in, out, opts...)
+func (c *certificateAuthorityClient) Revoke(ctx context.Context, in *CARequestRevoke, opts ...grpc.CallOption) (*CAResponseRevoke, error) {
+	out := new(CAResponseRevoke)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/Revoke", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *certificateAuthorityClient) CertGet(ctx context.Context, in *RequestCertGet, opts ...grpc.CallOption) (*ResponseCertGet, error) {
-	out := new(ResponseCertGet)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/CertGet", in, out, opts...)
+func (c *certificateAuthorityClient) Get(ctx context.Context, in *CARequestGet, opts ...grpc.CallOption) (*CAResponseGet, error) {
+	out := new(CAResponseGet)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *certificateAuthorityClient) GetRevokedList(ctx context.Context, in *RequestGetRevokedList, opts ...grpc.CallOption) (*ResponseGetRevokedList, error) {
+	out := new(ResponseGetRevokedList)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.CertificateAuthority/GetRevokedList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *certificateAuthorityClient) WatchRevokedCert(ctx context.Context, in *RequestWatchRevokedCert, opts ...grpc.CallOption) (CertificateAuthority_WatchRevokedCertClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_CertificateAuthority_serviceDesc.Streams[0], "/proxy.rpc.CertificateAuthority/WatchRevokedCert", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &certificateAuthorityWatchRevokedCertClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CertificateAuthority_WatchRevokedCertClient interface {
+	Recv() (*ResponseWatchRevokedCert, error)
+	grpc.ClientStream
+}
+
+type certificateAuthorityWatchRevokedCertClient struct {
+	grpc.ClientStream
+}
+
+func (x *certificateAuthorityWatchRevokedCertClient) Recv() (*ResponseWatchRevokedCert, error) {
+	m := new(ResponseWatchRevokedCert)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // CertificateAuthorityServer is the server API for CertificateAuthority service.
 type CertificateAuthorityServer interface {
-	CertList(context.Context, *RequestCertList) (*ResponseCertList, error)
-	RevokedCertList(context.Context, *RequestRevokedCertList) (*ResponseRevokedCertList, error)
-	CertNew(context.Context, *RequestCertNew) (*ResponseCertNew, error)
-	CertRevoke(context.Context, *RequestCertRevoke) (*ResponseCertRevoke, error)
-	CertGet(context.Context, *RequestCertGet) (*ResponseCertGet, error)
+	GetSignedList(context.Context, *RequestGetSignedList) (*ResponseGetSignedList, error)
+	NewClientCert(context.Context, *RequestNewClientCert) (*ResponseNewClientCert, error)
+	NewServerCert(context.Context, *RequestNewServerCert) (*ResponseNewServerCert, error)
+	Revoke(context.Context, *CARequestRevoke) (*CAResponseRevoke, error)
+	Get(context.Context, *CARequestGet) (*CAResponseGet, error)
+	GetRevokedList(context.Context, *RequestGetRevokedList) (*ResponseGetRevokedList, error)
+	WatchRevokedCert(*RequestWatchRevokedCert, CertificateAuthority_WatchRevokedCertServer) error
 }
 
 // UnimplementedCertificateAuthorityServer can be embedded to have forward compatible implementations.
 type UnimplementedCertificateAuthorityServer struct {
 }
 
-func (*UnimplementedCertificateAuthorityServer) CertList(ctx context.Context, req *RequestCertList) (*ResponseCertList, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CertList not implemented")
+func (*UnimplementedCertificateAuthorityServer) GetSignedList(ctx context.Context, req *RequestGetSignedList) (*ResponseGetSignedList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSignedList not implemented")
 }
-func (*UnimplementedCertificateAuthorityServer) RevokedCertList(ctx context.Context, req *RequestRevokedCertList) (*ResponseRevokedCertList, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RevokedCertList not implemented")
+func (*UnimplementedCertificateAuthorityServer) NewClientCert(ctx context.Context, req *RequestNewClientCert) (*ResponseNewClientCert, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewClientCert not implemented")
 }
-func (*UnimplementedCertificateAuthorityServer) CertNew(ctx context.Context, req *RequestCertNew) (*ResponseCertNew, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CertNew not implemented")
+func (*UnimplementedCertificateAuthorityServer) NewServerCert(ctx context.Context, req *RequestNewServerCert) (*ResponseNewServerCert, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewServerCert not implemented")
 }
-func (*UnimplementedCertificateAuthorityServer) CertRevoke(ctx context.Context, req *RequestCertRevoke) (*ResponseCertRevoke, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CertRevoke not implemented")
+func (*UnimplementedCertificateAuthorityServer) Revoke(ctx context.Context, req *CARequestRevoke) (*CAResponseRevoke, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Revoke not implemented")
 }
-func (*UnimplementedCertificateAuthorityServer) CertGet(ctx context.Context, req *RequestCertGet) (*ResponseCertGet, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CertGet not implemented")
+func (*UnimplementedCertificateAuthorityServer) Get(ctx context.Context, req *CARequestGet) (*CAResponseGet, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (*UnimplementedCertificateAuthorityServer) GetRevokedList(ctx context.Context, req *RequestGetRevokedList) (*ResponseGetRevokedList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRevokedList not implemented")
+}
+func (*UnimplementedCertificateAuthorityServer) WatchRevokedCert(req *RequestWatchRevokedCert, srv CertificateAuthority_WatchRevokedCertServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchRevokedCert not implemented")
 }
 
 func RegisterCertificateAuthorityServer(s *grpc.Server, srv CertificateAuthorityServer) {
 	s.RegisterService(&_CertificateAuthority_serviceDesc, srv)
 }
 
-func _CertificateAuthority_CertList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestCertList)
+func _CertificateAuthority_GetSignedList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestGetSignedList)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CertificateAuthorityServer).CertList(ctx, in)
+		return srv.(CertificateAuthorityServer).GetSignedList(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proxy.rpc.CertificateAuthority/CertList",
+		FullMethod: "/proxy.rpc.CertificateAuthority/GetSignedList",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertificateAuthorityServer).CertList(ctx, req.(*RequestCertList))
+		return srv.(CertificateAuthorityServer).GetSignedList(ctx, req.(*RequestGetSignedList))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CertificateAuthority_RevokedCertList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestRevokedCertList)
+func _CertificateAuthority_NewClientCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestNewClientCert)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CertificateAuthorityServer).RevokedCertList(ctx, in)
+		return srv.(CertificateAuthorityServer).NewClientCert(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proxy.rpc.CertificateAuthority/RevokedCertList",
+		FullMethod: "/proxy.rpc.CertificateAuthority/NewClientCert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertificateAuthorityServer).RevokedCertList(ctx, req.(*RequestRevokedCertList))
+		return srv.(CertificateAuthorityServer).NewClientCert(ctx, req.(*RequestNewClientCert))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CertificateAuthority_CertNew_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestCertNew)
+func _CertificateAuthority_NewServerCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestNewServerCert)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CertificateAuthorityServer).CertNew(ctx, in)
+		return srv.(CertificateAuthorityServer).NewServerCert(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proxy.rpc.CertificateAuthority/CertNew",
+		FullMethod: "/proxy.rpc.CertificateAuthority/NewServerCert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertificateAuthorityServer).CertNew(ctx, req.(*RequestCertNew))
+		return srv.(CertificateAuthorityServer).NewServerCert(ctx, req.(*RequestNewServerCert))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CertificateAuthority_CertRevoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestCertRevoke)
+func _CertificateAuthority_Revoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CARequestRevoke)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CertificateAuthorityServer).CertRevoke(ctx, in)
+		return srv.(CertificateAuthorityServer).Revoke(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proxy.rpc.CertificateAuthority/CertRevoke",
+		FullMethod: "/proxy.rpc.CertificateAuthority/Revoke",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertificateAuthorityServer).CertRevoke(ctx, req.(*RequestCertRevoke))
+		return srv.(CertificateAuthorityServer).Revoke(ctx, req.(*CARequestRevoke))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CertificateAuthority_CertGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestCertGet)
+func _CertificateAuthority_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CARequestGet)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CertificateAuthorityServer).CertGet(ctx, in)
+		return srv.(CertificateAuthorityServer).Get(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proxy.rpc.CertificateAuthority/CertGet",
+		FullMethod: "/proxy.rpc.CertificateAuthority/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CertificateAuthorityServer).CertGet(ctx, req.(*RequestCertGet))
+		return srv.(CertificateAuthorityServer).Get(ctx, req.(*CARequestGet))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _CertificateAuthority_GetRevokedList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestGetRevokedList)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CertificateAuthorityServer).GetRevokedList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proxy.rpc.CertificateAuthority/GetRevokedList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CertificateAuthorityServer).GetRevokedList(ctx, req.(*RequestGetRevokedList))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CertificateAuthority_WatchRevokedCert_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RequestWatchRevokedCert)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CertificateAuthorityServer).WatchRevokedCert(m, &certificateAuthorityWatchRevokedCertServer{stream})
+}
+
+type CertificateAuthority_WatchRevokedCertServer interface {
+	Send(*ResponseWatchRevokedCert) error
+	grpc.ServerStream
+}
+
+type certificateAuthorityWatchRevokedCertServer struct {
+	grpc.ServerStream
+}
+
+func (x *certificateAuthorityWatchRevokedCertServer) Send(m *ResponseWatchRevokedCert) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _CertificateAuthority_serviceDesc = grpc.ServiceDesc{
@@ -2701,26 +2959,36 @@ var _CertificateAuthority_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*CertificateAuthorityServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CertList",
-			Handler:    _CertificateAuthority_CertList_Handler,
+			MethodName: "GetSignedList",
+			Handler:    _CertificateAuthority_GetSignedList_Handler,
 		},
 		{
-			MethodName: "RevokedCertList",
-			Handler:    _CertificateAuthority_RevokedCertList_Handler,
+			MethodName: "NewClientCert",
+			Handler:    _CertificateAuthority_NewClientCert_Handler,
 		},
 		{
-			MethodName: "CertNew",
-			Handler:    _CertificateAuthority_CertNew_Handler,
+			MethodName: "NewServerCert",
+			Handler:    _CertificateAuthority_NewServerCert_Handler,
 		},
 		{
-			MethodName: "CertRevoke",
-			Handler:    _CertificateAuthority_CertRevoke_Handler,
+			MethodName: "Revoke",
+			Handler:    _CertificateAuthority_Revoke_Handler,
 		},
 		{
-			MethodName: "CertGet",
-			Handler:    _CertificateAuthority_CertGet_Handler,
+			MethodName: "Get",
+			Handler:    _CertificateAuthority_Get_Handler,
+		},
+		{
+			MethodName: "GetRevokedList",
+			Handler:    _CertificateAuthority_GetRevokedList_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "WatchRevokedCert",
+			Handler:       _CertificateAuthority_WatchRevokedCert_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "pkg/rpc/rpc.proto",
 }

@@ -17,7 +17,7 @@ go_test(
     srcs = ["reader_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//pkg/auth:go_default_library",
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
     ],
 )

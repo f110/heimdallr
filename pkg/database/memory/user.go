@@ -20,9 +20,14 @@ type UserDatabase struct {
 
 var _ database.UserDatabase = &UserDatabase{}
 
-func NewUserDatabase() *UserDatabase {
+func NewUserDatabase(systemUsers ...*database.User) *UserDatabase {
+	data := make(map[string]*database.User)
+	for _, v := range systemUsers {
+		data[v.Id] = v
+	}
+
 	return &UserDatabase{
-		data:  make(map[string]*database.User),
+		data:  data,
 		state: make(map[string]string),
 	}
 }

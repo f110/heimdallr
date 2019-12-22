@@ -20,6 +20,12 @@ const (
 	UserTypeNormal         = "user"
 )
 
+var SystemUser = &User{
+	Id:    "system@f110.dev",
+	Roles: []string{"system:proxy"},
+	Type:  UserTypeServiceAccount,
+}
+
 type UserDatabase interface {
 	Get(id string) (*User, error)
 	GetAll() ([]*User, error)
