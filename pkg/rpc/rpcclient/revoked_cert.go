@@ -17,8 +17,8 @@ import (
 )
 
 type RevokedCertificateWatcher struct {
-	client rpc.CertificateAuthorityClient
-	md     context.Context
+	client     rpc.CertificateAuthorityClient
+	privateKey *ecdsa.PrivateKey
 
 	mu    sync.Mutex
 	items []*revokedCert
@@ -31,26 +31,17 @@ type revokedCert struct {
 }
 
 func NewRevokedCertificateWatcher(conn *grpc.ClientConn, privateKey *ecdsa.PrivateKey) (*RevokedCertificateWatcher, error) {
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        database.SystemUser.Id,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
-	})
-	token, err := claim.SignedString(privateKey)
-	if err != nil {
-		logger.Log.Info("Failed sign jwt", zap.Error(err))
-		return nil, err
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, token)
-
 	w := &RevokedCertificateWatcher{
-		client: rpc.NewCertificateAuthorityClient(conn),
-		md:     ctx,
-		items:  make([]*revokedCert, 0),
+		client:     rpc.NewCertificateAuthorityClient(conn),
+		privateKey: privateKey,
+		items:      make([]*revokedCert, 0),
 	}
 
 	go func() {
-		w.watch()
+		for {
+			w.watch()
+			time.Sleep(10 * time.Second)
+		}
 	}()
 	return w, nil
 }
@@ -71,7 +62,19 @@ func (w *RevokedCertificateWatcher) Error() error {
 }
 
 func (w *RevokedCertificateWatcher) watch() error {
-	watch, err := w.client.WatchRevokedCert(w.md, &rpc.RequestWatchRevokedCert{})
+	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
+		Id:        database.SystemUser.Id,
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
+	})
+	token, err := claim.SignedString(w.privateKey)
+	if err != nil {
+		logger.Log.Info("Failed sign jwt", zap.Error(err))
+		return err
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, token)
+
+	watch, err := w.client.WatchRevokedCert(ctx, &rpc.RequestWatchRevokedCert{})
 	if err != nil {
 		w.err = err
 		return err
