@@ -778,7 +778,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) MainProcess() (*process, error) {
+func (r *LagrangianProxy) Main() (*process, error) {
 	secret := &corev1.Secret{}
 	err := r.Client.Get(context.Background(), client.ObjectKey{Name: r.Spec.IdentityProvider.ClientSecretRef.Name, Namespace: r.Namespace}, secret)
 	if err != nil && apierrors.IsNotFound(err) {
@@ -862,14 +862,14 @@ func (r *LagrangianProxy) MainProcess() (*process, error) {
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: "server-cert", MountPath: serverCertMountPath},
-								{Name: "ca-cert", MountPath: caCertMountPath},
-								{Name: "privatekey", MountPath: signPrivateKeyPath},
-								{Name: "github-secret", MountPath: githubSecretPath},
-								{Name: "cookie-secret", MountPath: sessionSecretPath},
-								{Name: "config", MountPath: configMountPath},
-								{Name: "config-proxy", MountPath: proxyConfigMountPath},
-								{Name: "idp-secret", MountPath: identityProviderSecretPath},
+								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
+								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
+								{Name: "github-secret", MountPath: githubSecretPath, ReadOnly: true},
+								{Name: "cookie-secret", MountPath: sessionSecretPath, ReadOnly: true},
+								{Name: "config", MountPath: configMountPath, ReadOnly: true},
+								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
+								{Name: "idp-secret", MountPath: identityProviderSecretPath, ReadOnly: true},
 							},
 						},
 					},
@@ -1101,8 +1101,8 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 			},
 		})
 		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath},
-			corev1.VolumeMount{Name: "privatekey", MountPath: signPrivateKeyPath},
+			corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+			corev1.VolumeMount{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
 		)
 	}
 
@@ -1294,10 +1294,10 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: "ca-cert", MountPath: caCertMountPath},
-								{Name: "privatekey", MountPath: signPrivateKeyPath},
-								{Name: "config", MountPath: configMountPath},
-								{Name: "config-proxy", MountPath: proxyConfigMountPath},
+								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
+								{Name: "config", MountPath: configMountPath, ReadOnly: true},
+								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
 							},
 						},
 					},

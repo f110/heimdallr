@@ -205,7 +205,7 @@ func (r *ProxyReconciler) ReconcileMainProcess(lp *LagrangianProxy) error {
 		return err
 	}
 
-	objs, err := lp.MainProcess()
+	objs, err := lp.Main()
 	if err != nil {
 		return err
 	}
