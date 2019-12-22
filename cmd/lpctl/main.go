@@ -247,6 +247,52 @@ func commandCluster(args []string) error {
 	return nil
 }
 
+func commandInternal(args []string) error {
+	confFile := ""
+	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	conf, err := configreader.ReadConfig(confFile)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	cred := credentials.NewTLS(&tls.Config{ServerName: conf.General.ServerNameHost, RootCAs: conf.General.CertificateAuthority.CertPool})
+	conn, err := grpc.Dial(
+		conf.General.RpcTarget,
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	c, err := rpcclient.NewClientWithPrivateKey(conn, conf.General.SigningPrivateKey)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+
+	switch args[0] {
+	case "defragment":
+		result, err := c.Defragment()
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+
+		for k, v := range result {
+			if v {
+				fmt.Printf("%s: Success\n", k)
+			} else {
+				fmt.Printf("%s: Failure\n", k)
+			}
+		}
+	}
+
+	return nil
+}
+
 func commandAdmin(args []string) error {
 	confFile := ""
 	role := ""
@@ -303,9 +349,7 @@ func cli(args []string) error {
 	version := false
 	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
 	fs.BoolVarP(&version, "version", "v", version, "Show version")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
+	fs.Parse(args)
 
 	if version {
 		printVersion()
@@ -321,6 +365,8 @@ func cli(args []string) error {
 		return commandCluster(args[2:])
 	case "admin":
 		return commandAdmin(args[2:])
+	case "internal":
+		return commandInternal(args[2:])
 	}
 
 	return nil

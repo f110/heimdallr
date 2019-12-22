@@ -8,6 +8,7 @@ type ClusterDatabase interface {
 	Leave(ctx context.Context) error
 	MemberList(ctx context.Context) ([]*Member, error)
 	Alive() bool
+	Defragment(ctx context.Context) map[string]error
 }
 
 type Member struct {

@@ -5,8 +5,10 @@ option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
 import "google/protobuf/timestamp.proto";
 
 service Cluster {
-    rpc MemberList(RequestMemberList) returns (ResponseMemberList) {}
-    rpc MemberStat(RequestMemberStat) returns (ResponseMemberStat) {}
+    rpc MemberList (RequestMemberList) returns (ResponseMemberList);
+    rpc MemberStat (RequestMemberStat) returns (ResponseMemberStat);
+
+    rpc DefragmentDatastore (RequestDefragmentDatastore) returns (ResponseDefragmentDatastore);
 }
 
 service Admin {
@@ -51,6 +53,12 @@ message ResponseMemberStat {
     int32 user_count = 2;
     int32 token_count = 3;
     repeated string listened_relay_addrs = 4;
+}
+
+message RequestDefragmentDatastore {}
+
+message ResponseDefragmentDatastore {
+    map<string, bool> ok = 1;
 }
 
 message ClusterMember {

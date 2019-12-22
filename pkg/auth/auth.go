@@ -271,8 +271,9 @@ func (a *authInterceptor) UnaryInterceptor(ctx context.Context, req interface{},
 		return nil, unauthorizedError.Err()
 	}
 
-	// Skip authentication for health check endpoint
-	if info.FullMethod == "/grpc.health.v1.Health/Check" {
+	// Skip authentication
+	switch info.FullMethod {
+	case "/grpc.health.v1.Health/Check", "/proxy.rpc.Admin/Ping":
 		return handler(ctx, req)
 	}
 

@@ -146,6 +146,10 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 	}
 
 	for _, svc := range objs.Service {
+		if svc == nil {
+			continue
+		}
+
 		orig := svc.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, svc, func() error {
 			svc.Spec.Selector = orig.Spec.Selector
@@ -160,11 +164,27 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 	}
 
 	for _, v := range objs.ConfigMaps {
+		if v == nil {
+			continue
+		}
+
 		orig := v.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, v, func() error {
 			v.Data = orig.Data
 
 			return ctrl.SetControllerReference(lp.Object, v, r.Scheme)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if objs.CronJob != nil {
+		orig := objs.CronJob.DeepCopy()
+		_, err := ctrl.CreateOrUpdate(context.Background(), r, objs.CronJob, func() error {
+			objs.CronJob.Spec = orig.Spec
+
+			return ctrl.SetControllerReference(lp.Object, objs.CronJob, r.Scheme)
 		})
 		if err != nil {
 			return err
@@ -184,6 +204,10 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 	}
 
 	for _, v := range objs.Secrets {
+		if v == nil {
+			continue
+		}
+
 		orig := v.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, v, func() error {
 			v.Data = orig.Data

@@ -36,3 +36,7 @@ func (d *ClusterDatabase) MemberList(ctx context.Context) ([]*database.Member, e
 func (d *ClusterDatabase) Alive() bool {
 	return true
 }
+
+func (d *ClusterDatabase) Defragment(_ context.Context) map[string]error {
+	return make(map[string]error)
+}

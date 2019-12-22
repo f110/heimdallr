@@ -47,6 +47,7 @@ type ProxySpec struct {
 	BackendSelector       LabelSelector          `json:"backendSelector,omitempty"`
 	RoleSelector          LabelSelector          `json:"roleSelector,omitempty"`
 	RpcPermissionSelector LabelSelector          `json:"rpcPermissionSelector,omitempty"`
+	Defragment            DefragmentSpec         `json:"defragment,omitempty"`
 }
 
 type IdentityProviderSpec struct {
@@ -59,6 +60,10 @@ type IdentityProviderSpec struct {
 type SessionSpec struct {
 	Type         string         `json:"type"`
 	KeySecretRef SecretSelector `json:"keySecretRef,omitempty"`
+}
+
+type DefragmentSpec struct {
+	Schedule string `json:"schedule,omitempty"`
 }
 
 // ProxyStatus defines the observed state of Proxy

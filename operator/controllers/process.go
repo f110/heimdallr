@@ -31,6 +31,8 @@ import (
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +43,11 @@ const (
 
 	imageRepository            = "quay.io/f110/lagrangian-proxy"
 	defaultImageTag            = "latest"
+	ctlImageRepository         = "quay.io/f110/lagrangian-proxy-ctl"
+	ctlDefaultImageTag         = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
+	ctlCommand                 = "/usr/local/bin/lpctl"
 	proxyPort                  = 4000
 	internalApiPort            = 4004
 	dashboardPort              = 4100
@@ -79,6 +84,7 @@ type process struct {
 	ConfigMaps          []*corev1.ConfigMap
 	Secrets             []*corev1.Secret
 	Certificate         *certmanager.Certificate
+	CronJob             *batchv1beta1.CronJob
 }
 
 type LagrangianProxy struct {
@@ -150,6 +156,10 @@ func (r *LagrangianProxy) ConfigNameForRPCServer() string {
 	return r.Name + "-rpcserver"
 }
 
+func (r *LagrangianProxy) ConfigNameForDefragmentCronJob() string {
+	return r.Name + "-defragment"
+}
+
 func (r *LagrangianProxy) DeploymentNameForMain() string {
 	return r.Name
 }
@@ -188,6 +198,10 @@ func (r *LagrangianProxy) ReverseProxyConfigName() string {
 
 func (r *LagrangianProxy) ServiceNameForInternalApi() string {
 	return r.Name + "-internal"
+}
+
+func (r *LagrangianProxy) DefragmentCronJobName() string {
+	return r.Name + "-defragment"
 }
 
 func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
@@ -637,6 +651,48 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
+func (r *LagrangianProxy) ConfigForDefragmentCronJob() (*corev1.ConfigMap, error) {
+	conf := &config.Config{
+		General: &config.General{
+			Enable:    false,
+			RpcTarget: fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			CertificateAuthority: &config.CertificateAuthority{
+				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			},
+			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+		},
+		Logger: &config.Logger{
+			Level:    "info",
+			Encoding: "console",
+		},
+		Datastore: &config.Datastore{
+			RawUrl:    fmt.Sprintf("etcd://%s:2379", r.EtcdHost()),
+			Namespace: "/lagrangian-proxy/",
+		},
+		RPCServer: &config.RPCServer{
+			Enable: false,
+		},
+		Dashboard: &config.Dashboard{
+			Enable: false,
+		},
+	}
+	b, err := yaml.Marshal(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.ConfigNameForDefragmentCronJob(),
+			Namespace: r.Namespace,
+		},
+		Data: make(map[string]string),
+	}
+	configMap.Data[configFilename] = string(b)
+
+	return configMap, nil
+}
+
 func (r *LagrangianProxy) LabelsForMain() map[string]string {
 	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "proxy"}
 }
@@ -647,6 +703,10 @@ func (r *LagrangianProxy) LabelsForDashboard() map[string]string {
 
 func (r *LagrangianProxy) LabelsForRPCServer() map[string]string {
 	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "rpcserver"}
+}
+
+func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
+	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "job", "job": "defragment"}
 }
 
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
@@ -783,6 +843,95 @@ func (r *LagrangianProxy) Main() (*process, error) {
 	err := r.Client.Get(context.Background(), client.ObjectKey{Name: r.Spec.IdentityProvider.ClientSecretRef.Name, Namespace: r.Namespace}, secret)
 	if err != nil && apierrors.IsNotFound(err) {
 		return nil, err
+	}
+
+	var cronJob *batchv1beta1.CronJob
+	var defragmentConf *corev1.ConfigMap
+	if r.Spec.Defragment.Schedule != "" {
+		cronJob = &batchv1beta1.CronJob{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.DefragmentCronJobName(),
+				Namespace: r.Namespace,
+			},
+			Spec: batchv1beta1.CronJobSpec{
+				Schedule: r.Spec.Defragment.Schedule,
+				JobTemplate: batchv1beta1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: r.LabelsForDefragmentJob(),
+							},
+							Spec: corev1.PodSpec{
+								RestartPolicy: corev1.RestartPolicyNever,
+								Containers: []corev1.Container{
+									{
+										Name:    "ctl",
+										Image:   fmt.Sprintf("%s:%s", ctlImageRepository, ctlDefaultImageTag),
+										Command: []string{ctlCommand},
+										Args: []string{
+											"internal",
+											"defragment",
+											"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename),
+										},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("100m"),
+												corev1.ResourceMemory: resource.MustParse("128Mi"),
+											},
+											Limits: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("1"),
+												corev1.ResourceMemory: resource.MustParse("256Mi"),
+											},
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
+											{Name: "config", MountPath: configMountPath, ReadOnly: true},
+											{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+										},
+									},
+								},
+								Volumes: []corev1.Volume{
+									{
+										Name: "ca-cert",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: r.CASecretName(),
+												Items: []corev1.KeyToPath{
+													{Key: caCertificateFilename, Path: caCertificateFilename},
+												},
+											},
+										},
+									},
+									{
+										Name: "privatekey",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: r.PrivateKeySecretName(),
+											},
+										},
+									},
+									{
+										Name: "config",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: r.ConfigNameForDefragmentCronJob(),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		defragmentConf, err = r.ConfigForDefragmentCronJob()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	conf, err := r.ConfigForMain()
@@ -1037,11 +1186,12 @@ func (r *LagrangianProxy) Main() (*process, error) {
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
 		Service:             []*corev1.Service{svc, internalApiSvc},
-		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
+		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf, defragmentConf},
 		Secrets: []*corev1.Secret{
 			caSecert, privateKey, githubSecret,
 			cookieSecret,
 		},
+		CronJob:     cronJob,
 		Certificate: cert,
 	}, nil
 }

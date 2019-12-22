@@ -82,6 +82,11 @@ spec:
               type: object
             country:
               type: string
+            defragment:
+              properties:
+                schedule:
+                  type: string
+              type: object
             domain:
               type: string
             identityProvider:

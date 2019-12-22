@@ -26,6 +26,8 @@ func (r *ProcessRepository) Get(spec *proxyv1.Proxy) *LagrangianProxy {
 	defer r.Unlock()
 
 	if v, ok := r.data[fmt.Sprintf("%s/%s", spec.Namespace, spec.Name)]; ok {
+		v.Object = spec
+		v.Spec = spec.Spec
 		return v
 	}
 

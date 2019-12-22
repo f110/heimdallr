@@ -508,8 +508,11 @@ func (g *General) Inflate(dir string) error {
 
 func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcPermission) error {
 	rpcPermissions = append(rpcPermissions, &RpcPermission{
-		Name:  "system:proxy",
-		Allow: []string{"proxy.rpc.certificateauthority.watchrevokedcert"},
+		Name: "system:proxy",
+		Allow: []string{
+			"proxy.rpc.certificateauthority.watchrevokedcert",
+			"proxy.rpc.cluster.defragmentdatastore",
+		},
 	})
 	roles = append(roles, Role{
 		Name: "system:proxy",

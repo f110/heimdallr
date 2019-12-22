@@ -2,9 +2,15 @@ package rpcclient
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"math/big"
 	"net/http"
 	"sync"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.uber.org/zap"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -85,6 +91,30 @@ func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 		newToken, err := tokenClient.RequestToken(endpoint)
 		ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 	}
+
+	return &Client{
+		conn:          conn,
+		adminClient:   adminClient,
+		clusterClient: rpc.NewClusterClient(conn),
+		md:            ctx,
+	}, nil
+}
+
+func NewClientWithPrivateKey(conn *grpc.ClientConn, privateKey *ecdsa.PrivateKey) (*Client, error) {
+	adminClient := rpc.NewAdminClient(conn)
+
+	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
+		Id:        database.SystemUser.Id,
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
+	})
+	t, err := claim.SignedString(privateKey)
+	if err != nil {
+		logger.Log.Info("Failed sign jwt", zap.Error(err))
+		return nil, err
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, t)
+	_, err = adminClient.Ping(ctx, &rpc.RequestPing{}, grpc.WaitForReady(true))
 
 	return &Client{
 		conn:          conn,
@@ -187,6 +217,15 @@ func (c *Client) ClusterMemberList() ([]*rpc.ClusterMember, error) {
 	}
 
 	return res.Items, nil
+}
+
+func (c *Client) Defragment() (map[string]bool, error) {
+	res, err := c.clusterClient.DefragmentDatastore(c.md, &rpc.RequestDefragmentDatastore{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Ok, nil
 }
 
 func (c *Client) ListRole() ([]*rpc.RoleItem, error) {

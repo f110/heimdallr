@@ -41,3 +41,26 @@ container_push(
     repository = "f110/lagrangian-proxy/proxy",
     tag = "latest",
 )
+
+pkg_tar(
+    name = "bin_ctl",
+    srcs = ["//cmd/lpctl"],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_ctl",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/lpctl"],
+    tars = [":bin_ctl"],
+)
+
+container_push(
+    name = "push_ctl",
+    format = "Docker",
+    image = ":image_ctl",
+    registry = "docker.pkg.github.com",
+    repository = "f110/lagrangian-proxy/proxy",
+    tag = "latest",
+)

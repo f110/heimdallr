@@ -28,3 +28,5 @@ spec:
     type: secure_cookie
     keySecretRef:
       name: cookie-secret
+  defragment:
+    schedule: "38 10 * * *"
