@@ -51,7 +51,7 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	_, err = d.client.Put(ctx, fmt.Sprintf("cluster/%s", d.Id), string(b), clientv3.WithLease(lease.ID))
+	_, err = d.client.Put(ctx, fmt.Sprintf("cluster/%s", d.Id()), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -84,7 +84,7 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 }
 
 func (d *ClusterDatabase) Leave(ctx context.Context) error {
-	_, err := d.client.Delete(ctx, fmt.Sprintf("cluster/%s", d.Id))
+	_, err := d.client.Delete(ctx, fmt.Sprintf("cluster/%s", d.Id()))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
