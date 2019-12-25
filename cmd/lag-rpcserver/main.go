@@ -124,10 +124,7 @@ func (m *mainProcess) Start() error {
 	go func() {
 		defer m.wg.Done()
 
-		if err := c.Start(context.Background()); err != nil {
-			m.err = err
-			m.Stop()
-		}
+		c.Start(context.Background())
 	}()
 
 	return nil
