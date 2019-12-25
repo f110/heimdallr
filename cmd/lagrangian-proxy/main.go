@@ -41,11 +41,30 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+type state int
+type stateFunc func() error
+
+const (
+	stateInit state = iota
+	stateSetup
+	stateStartRPCServer
+	stateSetupRPCConn
+	stateRun
+	stateShuttingDown
+	stateWaitServerShutdown
+	stateShuttingDownRPCServer
+	stateWaitRPCServerShutdown
+	stateEmbedEtcdShutdown
+	stateWaitEtcdShutdown
+	stateFinish
+)
+
 type mainProcess struct {
 	Stop context.CancelFunc
 
 	ctx             context.Context
 	wg              sync.WaitGroup
+	confFile        string
 	config          *config.Config
 	etcdClient      *clientv3.Client
 	userDatabase    database.UserDatabase
@@ -68,27 +87,89 @@ type mainProcess struct {
 
 	probeCh   chan struct{}
 	readiness *etcd.TapReadiness
+
+	stateCh         chan state
+	rpcServerDoneCh chan struct{}
 }
 
 func newMainProcess() *mainProcess {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	m := &mainProcess{Stop: cancelFunc, ctx: ctx, probeCh: make(chan struct{})}
+	m := &mainProcess{
+		Stop:            cancelFunc,
+		ctx:             ctx,
+		probeCh:         make(chan struct{}),
+		stateCh:         make(chan state),
+		rpcServerDoneCh: make(chan struct{}),
+	}
 
 	m.signalHandling()
 	return m
 }
 
-func (m *mainProcess) ReadConfig(p string) error {
-	conf, err := configreader.ReadConfig(p)
+func (m *mainProcess) NextState(state state) error {
+	m.stateCh <- state
+	return nil
+}
+
+func (m *mainProcess) Loop() {
+	go func() {
+		m.stateCh <- stateInit
+	}()
+
+	for {
+		s := <-m.stateCh
+
+		var fn stateFunc
+		switch s {
+		case stateInit:
+			fn = m.ReadConfig
+		case stateSetup:
+			fn = m.Setup
+		case stateStartRPCServer:
+			fn = m.StartRPCServer
+		case stateSetupRPCConn:
+			fn = m.SetupAfterStartingRPCServer
+		case stateRun:
+			fn = m.Start
+		case stateShuttingDown:
+			fn = m.Shutdown
+		case stateWaitServerShutdown:
+			fn = m.WaitShutdown
+		case stateShuttingDownRPCServer:
+			fn = m.ShutdownRPCServer
+		case stateWaitRPCServerShutdown:
+			fn = m.WaitRPCServerShutdown
+		case stateEmbedEtcdShutdown:
+			fn = m.ShutdownEtcd
+		case stateWaitEtcdShutdown:
+			fn = m.WaitEtcdShutdown
+		case stateFinish:
+			return
+		}
+
+		go func() {
+			if err := fn(); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+				m.NextState(stateShuttingDown)
+			}
+		}()
+	}
+}
+
+func (m *mainProcess) ReadConfig() error {
+	conf, err := configreader.ReadConfig(m.confFile)
 	if err != nil {
 		return err
 	}
 	m.config = conf
 
-	return nil
+	return m.NextState(stateSetup)
 }
 
-func (m *mainProcess) Shutdown(ctx context.Context) {
+func (m *mainProcess) Shutdown() error {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
 	done := make(chan struct{})
 	var wg sync.WaitGroup
 	if m.server != nil {
@@ -121,17 +202,6 @@ func (m *mainProcess) Shutdown(ctx context.Context) {
 		}()
 	}
 
-	if m.rpcServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			if err := m.rpcServer.Shutdown(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "%+v\n", err)
-			}
-		}()
-	}
-
 	go func() {
 		wg.Wait()
 		done <- struct{}{}
@@ -143,13 +213,63 @@ func (m *mainProcess) Shutdown(ctx context.Context) {
 	case <-done:
 	}
 
-	client, _ := m.config.Datastore.GetEtcdClient(m.config.Logger)
-	if err := client.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	return m.NextState(stateWaitServerShutdown)
+}
+
+func (m *mainProcess) WaitShutdown() error {
+	m.wg.Wait()
+	return m.NextState(stateShuttingDownRPCServer)
+}
+
+func (m *mainProcess) WaitRPCServerShutdown() error {
+	<-m.rpcServerDoneCh
+	return m.NextState(stateEmbedEtcdShutdown)
+}
+
+func (m *mainProcess) ShutdownRPCServer() error {
+	if m.config != nil {
+		client, _ := m.config.Datastore.GetEtcdClient(m.config.Logger)
+		if err := client.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		}
 	}
+
+	if m.rpcServer != nil {
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelFunc()
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := m.rpcServer.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			done <- struct{}{}
+		}()
+
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Shutdown phase is timed out")
+		case <-done:
+		}
+	}
+
+	return m.NextState(stateWaitRPCServerShutdown)
+}
+
+func (m *mainProcess) ShutdownEtcd() error {
 	if m.etcd != nil {
 		m.etcd.Server.Stop()
 	}
+
+	return m.NextState(stateWaitEtcdShutdown)
 }
 
 func (m *mainProcess) signalHandling() {
@@ -160,10 +280,8 @@ func (m *mainProcess) signalHandling() {
 		for sig := range signalCh {
 			switch sig {
 			case syscall.SIGTERM, os.Interrupt:
+				m.NextState(stateShuttingDown)
 				m.Stop()
-				ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-				m.Shutdown(ctx)
-				cancelFunc()
 				return
 			}
 		}
@@ -308,11 +426,12 @@ func (m *mainProcess) Setup() error {
 	}
 
 	auth.InitInterceptor(m.config, m.userDatabase, m.tokenDatabase)
-	return nil
+	return m.NextState(stateStartRPCServer)
 }
 
 func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	rpcclient.OverrideGrpcLogger()
+
 	cred := credentials.NewTLS(&tls.Config{ServerName: m.config.General.ServerNameHost, RootCAs: m.config.General.CertificateAuthority.CertPool})
 	conn, err := grpc.Dial(
 		m.config.General.RpcTarget,
@@ -329,36 +448,50 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	}
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.tokenDatabase, m.revokedCert)
-	return nil
+	return m.NextState(stateRun)
 }
 
 func (m *mainProcess) StartRPCServer() error {
 	if m.config.RPCServer.Enable {
-		m.wg.Add(1)
+		errCh := make(chan error)
+
 		go func() {
-			defer m.wg.Done()
+			defer func() {
+				close(errCh)
+				m.rpcServerDoneCh <- struct{}{}
+			}()
 
 			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
 			if err := m.rpcServer.Start(); err != nil {
-				fmt.Fprintf(os.Stderr, "%+v\n", err)
+				errCh <- err
 			}
 		}()
 
-		logger.Log.Debug("Waiting for start rpcserver")
-		retry := 0
-		for {
-			if retry > 10 {
-				return xerrors.New("main: waiting for start rpcserver is timed out")
-			}
+		successCh := make(chan struct{})
+		go func() {
+			logger.Log.Debug("Waiting for start rpcserver")
+			retry := 0
+			for {
+				if retry > 10 {
+					errCh <- xerrors.New("main: waiting for start rpcserver is timed out")
+				}
 
-			conn, err := net.DialTimeout("tcp", m.config.RPCServer.Bind, 10*time.Millisecond)
-			if err != nil {
-				retry++
-				time.Sleep(10 * time.Millisecond)
-				continue
+				conn, err := net.DialTimeout("tcp", m.config.RPCServer.Bind, 10*time.Millisecond)
+				if err != nil {
+					retry++
+					time.Sleep(10 * time.Millisecond)
+					continue
+				}
+				conn.Close()
+				break
 			}
-			conn.Close()
-			break
+			successCh <- struct{}{}
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-successCh:
 		}
 
 		c, err := etcd.NewCompactor(m.etcdClient)
@@ -368,7 +501,7 @@ func (m *mainProcess) StartRPCServer() error {
 		go c.Start(context.Background())
 	}
 
-	return nil
+	return m.NextState(stateSetupRPCConn)
 }
 
 func (m *mainProcess) Start() error {
@@ -400,15 +533,13 @@ func (m *mainProcess) Start() error {
 	return nil
 }
 
-func (m *mainProcess) Wait() {
-	m.wg.Wait()
-}
-
-func (m *mainProcess) WaitShutdown() {
+func (m *mainProcess) WaitEtcdShutdown() error {
 	if m.etcd != nil {
 		<-m.etcd.Server.StopNotify()
 		logger.Log.Debug("Shutdown embed etcd")
 	}
+
+	return m.NextState(stateFinish)
 }
 
 func printVersion() {
@@ -432,24 +563,8 @@ func command(args []string) error {
 	}
 
 	process := newMainProcess()
-	if err := process.ReadConfig(confFile); err != nil {
-		return err
-	}
-	if err := process.Setup(); err != nil {
-		return err
-	}
-	if err := process.StartRPCServer(); err != nil {
-		return err
-	}
-	if err := process.SetupAfterStartingRPCServer(); err != nil {
-		return err
-	}
-
-	if err := process.Start(); err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	process.Wait()
-	process.WaitShutdown()
+	process.confFile = confFile
+	process.Loop()
 
 	return nil
 }

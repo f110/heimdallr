@@ -10,7 +10,9 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type RevokedCertificateWatcher struct {
@@ -75,6 +77,10 @@ func (w *RevokedCertificateWatcher) watch() error {
 	for {
 		res, err := watch.Recv()
 		if err != nil {
+			if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
+				return nil
+			}
+
 			logger.Log.Debug("Recv", zap.Error(err))
 			w.err = err
 			return err

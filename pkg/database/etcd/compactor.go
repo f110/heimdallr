@@ -39,7 +39,7 @@ func NewCompactor(client *clientv3.Client) (*Compactor, error) {
 	return &Compactor{client: client, rev: rev, version: version}, nil
 }
 
-func (c *Compactor) Start(ctx context.Context) error {
+func (c *Compactor) Start(ctx context.Context) {
 	t := time.NewTicker(compactionInterval)
 	defer t.Stop()
 
@@ -47,10 +47,10 @@ func (c *Compactor) Start(ctx context.Context) error {
 		select {
 		case <-t.C:
 			if err := c.compact(); err != nil {
-				return xerrors.Errorf(": %v", err)
+				return
 			}
 		case <-ctx.Done():
-			return nil
+			return
 		}
 	}
 }
