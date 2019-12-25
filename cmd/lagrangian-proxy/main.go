@@ -178,7 +178,13 @@ func (m *mainProcess) IsReady() bool {
 }
 
 func (m *mainProcess) startServer() {
-	front := frontproxy.NewFrontendProxy(m.config, m.connector)
+	front, err := frontproxy.NewFrontendProxy(m.config, m.connector, m.rpcServerConn)
+	if err != nil {
+		m.Stop()
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		return
+	}
+
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {
 		m.Stop()
@@ -186,7 +192,12 @@ func (m *mainProcess) startServer() {
 		return
 	}
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
-	resourceServer := internalapi.NewResourceServer(m.config)
+	resourceServer, err := internalapi.NewResourceServer(m.rpcServerConn, m.config.General.InternalToken)
+	if err != nil {
+		m.Stop()
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		return
+	}
 	ctReport := ct.NewServer()
 
 	s := server.New(m.config, m.clusterDatabase, front, m.connector, idp, t, resourceServer, ctReport)
@@ -312,7 +323,7 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	m.rpcServerConn = conn
-	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.General.SigningPrivateKey)
+	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.General.InternalToken)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

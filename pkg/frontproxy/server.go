@@ -12,6 +12,8 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
 )
 
 type FrontendProxy struct {
@@ -21,9 +23,12 @@ type FrontendProxy struct {
 	socketProxy *SocketProxy
 }
 
-func NewFrontendProxy(conf *config.Config, ct *connector.Server) *FrontendProxy {
+func NewFrontendProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientConn) (*FrontendProxy, error) {
 	s := NewSocketProxy(conf, ct)
-	h := NewHttpProxy(conf, ct)
+	h, err := NewHttpProxy(conf, ct, conn)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
 
 	p := &FrontendProxy{
 		Config:      conf,
@@ -31,7 +36,7 @@ func NewFrontendProxy(conf *config.Config, ct *connector.Server) *FrontendProxy 
 		socketProxy: s,
 	}
 
-	return p
+	return p, nil
 }
 
 func (p *FrontendProxy) Accept(server *http.Server, conn *tls.Conn, handler http.Handler) {

@@ -10,9 +10,11 @@ install-operator:
 	bazel run //operator:manifests
 	kustomize build operator/config/crd | kubectl apply -f -
 
-update-deps:
-	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
+update-deps: gen
 	@bazel run //:vendor
+
+gen:
+	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
 
 push: push-proxy push-ctl push-rpcserver
 
@@ -34,4 +36,4 @@ push-ctl:
 	docker tag bazel:image_ctl quay.io/f110/lagrangian-proxy-ctl:latest
 	docker push quay.io/f110/lagrangian-proxy-ctl:latest
 
-.PHONY: run run-operator install-operator update-deps push push-proxy push-rpcserver push-ctl
+.PHONY: run run-operator install-operator update-deps gen push push-proxy push-rpcserver push-ctl

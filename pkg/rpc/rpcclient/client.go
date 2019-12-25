@@ -2,15 +2,9 @@ package rpcclient
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"math/big"
 	"net/http"
 	"sync"
-	"time"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"go.uber.org/zap"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -40,37 +34,28 @@ func (u *ClientWithUserToken) WithRequest(req *http.Request) *ClientWithUserToke
 	}
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, req.Header.Get(TokenHeaderName))
-	c := &Client{
-		conn:          u.Client.conn,
-		adminClient:   u.Client.adminClient,
-		clusterClient: u.Client.clusterClient,
-		caClient:      u.Client.caClient,
-		md:            ctx,
-	}
+	c := &Client{md: ctx}
+	c.setConn(u.Client.conn)
 
 	return &ClientWithUserToken{Client: c}
 }
 
 func NewClientWithUserToken(conn *grpc.ClientConn) *ClientWithUserToken {
 	c := &ClientWithUserToken{}
-	c.Client = &Client{
-		conn:          conn,
-		adminClient:   rpc.NewAdminClient(conn),
-		clusterClient: rpc.NewClusterClient(conn),
-		caClient:      rpc.NewCertificateAuthorityClient(conn),
-		md:            context.Background(),
-	}
+	c.Client = &Client{md: context.Background()}
+	c.Client.setConn(conn)
 
 	return c
 }
 
 type Client struct {
-	conn          *grpc.ClientConn
-	adminClient   rpc.AdminClient
-	clusterClient rpc.ClusterClient
-	caClient      rpc.CertificateAuthorityClient
-	md            context.Context
-	ka            keepalive.ClientParameters
+	conn            *grpc.ClientConn
+	adminClient     rpc.AdminClient
+	clusterClient   rpc.ClusterClient
+	caClient        rpc.CertificateAuthorityClient
+	authorityClient rpc.AuthorityClient
+	md              context.Context
+	ka              keepalive.ClientParameters
 }
 
 func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
@@ -92,36 +77,27 @@ func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 		ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 	}
 
-	return &Client{
-		conn:          conn,
-		adminClient:   adminClient,
-		clusterClient: rpc.NewClusterClient(conn),
-		md:            ctx,
-	}, nil
+	c := &Client{md: ctx}
+	c.setConn(conn)
+
+	return c, nil
 }
 
-func NewClientWithPrivateKey(conn *grpc.ClientConn, privateKey *ecdsa.PrivateKey) (*Client, error) {
-	adminClient := rpc.NewAdminClient(conn)
+func NewClientForInternal(conn *grpc.ClientConn, token string) (*Client, error) {
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.InternalTokenMetadataKey, token)
 
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        database.SystemUser.Id,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
-	})
-	t, err := claim.SignedString(privateKey)
-	if err != nil {
-		logger.Log.Info("Failed sign jwt", zap.Error(err))
-		return nil, err
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, t)
-	_, err = adminClient.Ping(ctx, &rpc.RequestPing{}, grpc.WaitForReady(true))
+	c := &Client{md: ctx}
+	c.setConn(conn)
 
-	return &Client{
-		conn:          conn,
-		adminClient:   adminClient,
-		clusterClient: rpc.NewClusterClient(conn),
-		md:            ctx,
-	}, nil
+	return c, nil
+}
+
+func (c *Client) setConn(conn *grpc.ClientConn) {
+	c.conn = conn
+	c.adminClient = rpc.NewAdminClient(conn)
+	c.clusterClient = rpc.NewClusterClient(conn)
+	c.authorityClient = rpc.NewAuthorityClient(conn)
+	c.caClient = rpc.NewCertificateAuthorityClient(conn)
 }
 
 func (c *Client) Close() {
@@ -307,6 +283,24 @@ func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
 	}
 
 	return res.Item, nil
+}
+
+func (c *Client) SignRequest(userId string) (string, error) {
+	res, err := c.authorityClient.SignRequest(c.md, &rpc.RequestSignRequest{UserId: userId})
+	if err != nil {
+		return "", err
+	}
+
+	return res.Token, nil
+}
+
+func (c *Client) GetPublicKey() ([]byte, error) {
+	res, err := c.authorityClient.GetPublicKey(c.md, &rpc.RequestGetPublicKey{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.PublicKey, nil
 }
 
 func extractEndpointFromError(err error) (string, error) {

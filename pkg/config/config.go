@@ -67,6 +67,7 @@ type General struct {
 	CertificateAuthority  *CertificateAuthority `json:"certificate_authority,omitempty"`
 	RootUsers             []string              `json:"root_users,omitempty"`
 	SigningPrivateKeyFile string                `json:"signing_private_key_file,omitempty"`
+	InternalTokenFile     string                `json:"internal_token_file,omitempty"`
 
 	mu                  sync.RWMutex              `json:"-"`
 	Roles               []Role                    `json:"-"`
@@ -79,6 +80,7 @@ type General struct {
 
 	SigningPrivateKey *ecdsa.PrivateKey `json:"-"`
 	SigningPublicKey  ecdsa.PublicKey   `json:"-"`
+	InternalToken     string            `json:"-"`
 
 	AuthEndpoint   string `json:"-"`
 	TokenEndpoint  string `json:"-"`
@@ -495,6 +497,14 @@ func (g *General) Inflate(dir string) error {
 		g.SigningPublicKey = privateKey.PublicKey
 	}
 
+	if g.InternalTokenFile != "" {
+		b, err := ioutil.ReadFile(absPath(g.InternalTokenFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		g.InternalToken = string(b)
+	}
+
 	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.ServerName)
 	g.TokenEndpoint = fmt.Sprintf("https://%s/token", g.ServerName)
 	g.ServerNameHost = g.ServerName
@@ -512,6 +522,7 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 		Allow: []string{
 			"proxy.rpc.certificateauthority.watchrevokedcert",
 			"proxy.rpc.cluster.defragmentdatastore",
+			"proxy.rpc.authority.signrequest",
 		},
 	})
 	roles = append(roles, Role{

@@ -36,6 +36,11 @@ service CertificateAuthority {
     rpc WatchRevokedCert (RequestWatchRevokedCert) returns (stream ResponseWatchRevokedCert);
 }
 
+service Authority {
+    rpc SignRequest (RequestSignRequest) returns (ResponseSignResponse);
+    rpc GetPublicKey (RequestGetPublicKey) returns (ResponseGetPublicKey);
+}
+
 message RequestPing {}
 
 message ResponsePong {}
@@ -239,6 +244,20 @@ message RequestNewServerCert {
 
 message ResponseNewServerCert {
     bytes certificate = 1;
+}
+
+message RequestSignRequest {
+    string user_id = 1;
+}
+
+message ResponseSignResponse {
+    string token = 1;
+}
+
+message RequestGetPublicKey {}
+
+message ResponseGetPublicKey {
+    bytes public_key = 1;
 }
 
 message ErrorUnauthorized {

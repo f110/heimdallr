@@ -144,16 +144,16 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
-	asRootUser := false
+	ｒootUser := false
 	for _, v := range s.Config.General.RootUsers {
 		if v == c.Email {
-			asRootUser = true
+			ｒootUser = true
 			break
 		}
 	}
 
 	_, err = s.database.Get(c.Email)
-	if err != nil && !asRootUser {
+	if err != nil && !ｒootUser {
 		logger.Log.Info("Could not get email", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
 		return

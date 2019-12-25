@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	mrand "math/rand"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -20,12 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/keepalive"
-
 	"github.com/f110/lagrangian-proxy/pkg/cert"
-
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
@@ -34,8 +30,13 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	"sigs.k8s.io/yaml"
 )
+
+const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func commandBootstrap(args []string) error {
 	confFile := ""
@@ -114,6 +115,20 @@ func commandBootstrap(args []string) error {
 		if err := cert.PemEncode(absPath(conf.General.SigningPrivateKeyFile, dir), "EC PRIVATE KEY", b); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
+	}
+
+	_, err = os.Stat(absPath(conf.General.InternalTokenFile, dir))
+	if os.IsNotExist(err) {
+		b := make([]byte, 32)
+		for i := range b {
+			b[i] = letters[mrand.Intn(len(letters))]
+		}
+		f, err := os.Create(absPath(conf.General.InternalTokenFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		f.Write(b)
+		f.Close()
 	}
 
 	_, err = os.Stat(absPath(conf.FrontendProxy.GithubWebHookSecretFile, dir))
@@ -269,7 +284,7 @@ func commandInternal(args []string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	c, err := rpcclient.NewClientWithPrivateKey(conn, conf.General.SigningPrivateKey)
+	c, err := rpcclient.NewClientForInternal(conn, conf.General.InternalToken)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

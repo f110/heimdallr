@@ -63,10 +63,12 @@ const (
 	sessionSecretPath          = configVolumePath + "/session"
 	signPrivateKeyPath         = configVolumePath + "/privkey"
 	githubSecretPath           = configVolumePath + "/github_secret"
+	internalTokenMountPath     = configVolumePath + "/internal_token"
 
 	configFilename              = "config.yaml"
 	privateKeyFilename          = "privkey.pem"
 	githubWebhookSecretFilename = "webhook_secret"
+	internalTokenFilename       = "internal_token"
 	cookieSecretFilename        = "cookie_secret"
 	serverCertificateFilename   = "tls.crt"
 	serverPrivateKeyFilename    = "tls.key"
@@ -131,6 +133,10 @@ func (r *LagrangianProxy) PrivateKeySecretName() string {
 
 func (r *LagrangianProxy) GithubSecretName() string {
 	return r.Name + "-github-secret"
+}
+
+func (r *LagrangianProxy) InternalTokenSecretName() string {
+	return r.Name + "-internal-token"
 }
 
 func (r *LagrangianProxy) CookieSecretName() string {
@@ -504,6 +510,31 @@ func (r *LagrangianProxy) CookieSecret() (*corev1.Secret, error) {
 	return secret, nil
 }
 
+func (r *LagrangianProxy) InternalTokenSecret() (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.InternalTokenSecretName(),
+			Namespace: r.Namespace,
+		},
+		Data: make(map[string][]byte),
+	}
+	key, err := client.ObjectKeyFromObject(secret)
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.Client.Get(context.Background(), key, secret)
+	if apierrors.IsNotFound(err) {
+		b := make([]byte, 32)
+		for i := range b {
+			b[i] = letters[mrand.Intn(len(letters))]
+		}
+		secret.Data[internalTokenFilename] = b
+	}
+
+	return secret, nil
+}
+
 func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
@@ -520,7 +551,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
-			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+			InternalTokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		IdentityProvider: &config.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
@@ -619,6 +650,7 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			},
 			RootUsers:             r.Spec.RootUsers,
 			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
 			Level:    "info",
@@ -1015,12 +1047,12 @@ func (r *LagrangianProxy) Main() (*process, error) {
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
 								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
-								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
 								{Name: "github-secret", MountPath: githubSecretPath, ReadOnly: true},
 								{Name: "cookie-secret", MountPath: sessionSecretPath, ReadOnly: true},
 								{Name: "config", MountPath: configMountPath, ReadOnly: true},
 								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
 								{Name: "idp-secret", MountPath: identityProviderSecretPath, ReadOnly: true},
+								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
 							},
 						},
 					},
@@ -1041,14 +1073,6 @@ func (r *LagrangianProxy) Main() (*process, error) {
 									Items: []corev1.KeyToPath{
 										{Key: caCertificateFilename, Path: caCertificateFilename},
 									},
-								},
-							},
-						},
-						{
-							Name: "privatekey",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.PrivateKeySecretName(),
 								},
 							},
 						},
@@ -1093,6 +1117,14 @@ func (r *LagrangianProxy) Main() (*process, error) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: r.Spec.IdentityProvider.ClientSecretRef.Name,
+								},
+							},
+						},
+						{
+							Name: "internal-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: r.InternalTokenSecretName(),
 								},
 							},
 						},
@@ -1166,15 +1198,15 @@ func (r *LagrangianProxy) Main() (*process, error) {
 	if err != nil {
 		return nil, err
 	}
-	privateKey, err := r.PrivateKeyForSign()
-	if err != nil {
-		return nil, err
-	}
 	githubSecret, err := r.GithubSecret()
 	if err != nil {
 		return nil, err
 	}
 	cookieSecret, err := r.CookieSecret()
+	if err != nil {
+		return nil, err
+	}
+	internalTokenSecret, err := r.InternalTokenSecret()
 	if err != nil {
 		return nil, err
 	}
@@ -1190,8 +1222,8 @@ func (r *LagrangianProxy) Main() (*process, error) {
 		Service:             []*corev1.Service{svc, internalApiSvc},
 		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf, defragmentConf},
 		Secrets: []*corev1.Secret{
-			caSecert, privateKey, githubSecret,
-			cookieSecret,
+			caSecert, githubSecret,
+			cookieSecret, internalTokenSecret,
 		},
 		CronJob:     cronJob,
 		Certificate: cert,
@@ -1450,6 +1482,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
 								{Name: "config", MountPath: configMountPath, ReadOnly: true},
 								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
+								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
 							},
 						},
 					},
@@ -1490,6 +1523,14 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 								},
 							},
 						},
+						{
+							Name: "internal-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: r.InternalTokenSecretName(),
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1513,11 +1554,19 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 			},
 		},
 	}
+	internalTokenSecret, err := r.InternalTokenSecret()
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := r.PrivateKeyForSign()
+	if err != nil {
+		return nil, err
+	}
 
 	return &process{
 		Deployment: deployment,
 		Service:    []*corev1.Service{svc},
-		Secrets:    []*corev1.Secret{caSecret},
+		Secrets:    []*corev1.Secret{caSecret, privateKey, internalTokenSecret},
 		ConfigMaps: []*corev1.ConfigMap{conf},
 	}, nil
 }

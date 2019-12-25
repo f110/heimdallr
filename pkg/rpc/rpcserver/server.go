@@ -57,6 +57,7 @@ func NewServer(conf *config.Config, user database.UserDatabase, token database.T
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
 	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user, ca))
 	rpc.RegisterCertificateAuthorityServer(s, rpcservice.NewCertificateAuthorityService(conf, ca))
+	rpc.RegisterAuthorityServer(s, rpcservice.NewAuthorityService(conf))
 	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService())
 
 	return &Server{

@@ -2,13 +2,10 @@ package rpcclient
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"go.uber.org/zap"
@@ -17,8 +14,8 @@ import (
 )
 
 type RevokedCertificateWatcher struct {
-	client     rpc.CertificateAuthorityClient
-	privateKey *ecdsa.PrivateKey
+	client rpc.CertificateAuthorityClient
+	token  string
 
 	mu    sync.Mutex
 	items []*revokedCert
@@ -30,11 +27,11 @@ type revokedCert struct {
 	SerialNumber *big.Int
 }
 
-func NewRevokedCertificateWatcher(conn *grpc.ClientConn, privateKey *ecdsa.PrivateKey) (*RevokedCertificateWatcher, error) {
+func NewRevokedCertificateWatcher(conn *grpc.ClientConn, token string) (*RevokedCertificateWatcher, error) {
 	w := &RevokedCertificateWatcher{
-		client:     rpc.NewCertificateAuthorityClient(conn),
-		privateKey: privateKey,
-		items:      make([]*revokedCert, 0),
+		client: rpc.NewCertificateAuthorityClient(conn),
+		token:  token,
+		items:  make([]*revokedCert, 0),
 	}
 
 	go func() {
@@ -62,17 +59,7 @@ func (w *RevokedCertificateWatcher) Error() error {
 }
 
 func (w *RevokedCertificateWatcher) watch() error {
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        database.SystemUser.Id,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
-	})
-	token, err := claim.SignedString(w.privateKey)
-	if err != nil {
-		logger.Log.Info("Failed sign jwt", zap.Error(err))
-		return err
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, token)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.InternalTokenMetadataKey, w.token)
 
 	watch, err := w.client.WatchRevokedCert(ctx, &rpc.RequestWatchRevokedCert{})
 	if err != nil {

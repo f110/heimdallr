@@ -5,6 +5,7 @@
 /cookie_secret
 /client_secret
 /github_webhook_secret
+/internal_token
 /access.log
 /operator/bin
 

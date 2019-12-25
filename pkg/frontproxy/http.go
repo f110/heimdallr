@@ -10,17 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/google/go-github/v28/github"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -156,22 +158,29 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 type HttpProxy struct {
 	Config *config.Config
 
+	client       *rpcclient.Client
 	accessLogger *accessLogger
 	reverseProxy *httputil.ReverseProxy
 }
 
-func NewHttpProxy(conf *config.Config, ct *connector.Server) *HttpProxy {
+func NewHttpProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientConn) (*HttpProxy, error) {
+	c, err := rpcclient.NewClientForInternal(conn, conf.General.InternalToken)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
 	p := &HttpProxy{
 		Config: conf,
 		reverseProxy: &httputil.ReverseProxy{
 			ErrorLog:  logger.CompatibleLogger,
 			Transport: NewTransport(conf, ct),
 		},
+		client:       c,
 		accessLogger: newAccessLogger(conf.Logger),
 	}
 	p.reverseProxy.Director = p.director
 
-	return p
+	return p, nil
 }
 
 // ServeHTTP has responsibility to serving content to client.
@@ -268,12 +277,7 @@ func (p *HttpProxy) director(req *http.Request) {
 }
 
 func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        user.Id,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
-	})
-	token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
+	token, err := p.client.SignRequest(user.Id)
 	if err != nil {
 		logger.Log.Debug("Failed sign jwt", zap.Error(err))
 		return

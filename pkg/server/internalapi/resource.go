@@ -1,39 +1,38 @@
 package internalapi
 
 import (
-	"bytes"
-	"crypto/x509"
-	"encoding/pem"
 	"net/http"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
 )
 
 type ResourceServer struct {
-	Config *config.Config
+	client *rpcclient.Client
 }
 
 var _ server.ChildServer = &ResourceServer{}
 
-func NewResourceServer(conf *config.Config) *ResourceServer {
-	return &ResourceServer{Config: conf}
+func NewResourceServer(conn *grpc.ClientConn, token string) (*ResourceServer, error) {
+	c, err := rpcclient.NewClientForInternal(conn, token)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	return &ResourceServer{client: c}, nil
 }
 
 func (r *ResourceServer) Route(mux *httprouter.Router) {
-	buf := new(bytes.Buffer)
-	b, err := x509.MarshalPKIXPublicKey(&r.Config.General.SigningPublicKey)
-	if err != nil {
-		logger.Log.Error("Failed marshal public key", zap.Error(err))
-	}
-	if err := pem.Encode(buf, &pem.Block{Type: "PUBLIC KEY", Bytes: b}); err != nil {
-		logger.Log.Error("Failed pem encode", zap.Error(err))
-	}
 	mux.GET("/internal/publickey", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+		b, err := r.client.GetPublicKey()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/x-pem-file")
-		w.Write(buf.Bytes())
+		w.Write(b)
 	})
 }

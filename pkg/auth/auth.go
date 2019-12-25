@@ -260,10 +260,6 @@ func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) 
 	}, nil
 }
 
-func (a *authenticator) findUserByToken(token string) (*database.User, error) {
-	return nil, ErrUserNotFound
-}
-
 func (a *authInterceptor) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -327,7 +323,7 @@ func (a *authInterceptor) StreamInterceptor(srv interface{}, ss grpc.ServerStrea
 }
 
 func (a *authInterceptor) authenticateByMetadata(ctx context.Context, md metadata.MD) (*database.User, error) {
-	if len(md.Get(rpc.TokenMetadataKey)) == 0 && len(md.Get(rpc.JwtTokenMetadataKey)) == 0 {
+	if len(md.Get(rpc.TokenMetadataKey)) == 0 && len(md.Get(rpc.JwtTokenMetadataKey)) == 0 && len(md.Get(rpc.InternalTokenMetadataKey)) == 0 {
 		return nil, ErrSessionNotFound
 	}
 
@@ -359,6 +355,13 @@ func (a *authInterceptor) authenticateByMetadata(ctx context.Context, md metadat
 			return nil, ErrInvalidToken
 		}
 		userId = claims.Id
+	} else if len(md.Get(rpc.InternalTokenMetadataKey)) > 0 {
+		t := md.Get(rpc.InternalTokenMetadataKey)[0]
+		if a.Config.InternalToken != t {
+			return nil, ErrInvalidToken
+		}
+
+		userId = database.SystemUser.Id
 	}
 
 	var rootUser *database.User
