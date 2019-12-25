@@ -67,7 +67,7 @@ container_push(
 
 pkg_tar(
     name = "bin_ctl",
-    srcs = ["//cmd/lpctl"],
+    srcs = ["//cmd/lagctl"],
     mode = "0755",
     package_dir = "/usr/local/bin",
 )
@@ -75,7 +75,7 @@ pkg_tar(
 container_image(
     name = "image_ctl",
     base = "@com_google_distroless_base//image",
-    entrypoint = ["/usr/local/bin/lpctl"],
+    entrypoint = ["/usr/local/bin/lagctl"],
     tars = [":bin_ctl"],
 )
 

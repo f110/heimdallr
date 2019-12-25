@@ -3,22 +3,19 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/f110/lagrangian-proxy/cmd/lagent",
+    importpath = "github.com/f110/lagrangian-proxy/cmd/lag-proxy",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/config:go_default_library",
-        "//pkg/connector:go_default_library",
-        "//pkg/logger:go_default_library",
+        "//pkg/auth/token:go_default_library",
+        "//pkg/localproxy:go_default_library",
         "//pkg/version:go_default_library",
         "//vendor/github.com/spf13/pflag:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
     ],
 )
 
 go_binary(
-    name = "lagent",
+    name = "lag-proxy",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )

@@ -40,7 +40,7 @@ const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func commandBootstrap(args []string) error {
 	confFile := ""
-	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -219,7 +219,7 @@ func commandTestServer() error {
 
 func commandCluster(args []string) error {
 	confFile := ""
-	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -264,7 +264,7 @@ func commandCluster(args []string) error {
 
 func commandInternal(args []string) error {
 	confFile := ""
-	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -311,7 +311,7 @@ func commandInternal(args []string) error {
 func commandAdmin(args []string) error {
 	confFile := ""
 	role := ""
-	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	fs.StringVar(&role, "role", role, "Role")
 	if err := fs.Parse(args); err != nil {
@@ -362,7 +362,7 @@ func commandAdmin(args []string) error {
 
 func cli(args []string) error {
 	version := false
-	fs := pflag.NewFlagSet("lpctl", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.BoolVarP(&version, "version", "v", version, "Show version")
 	fs.Parse(args)
 

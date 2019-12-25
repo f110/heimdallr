@@ -20,7 +20,7 @@ func printVersion() {
 
 func proxy(args []string) error {
 	version := false
-	fs := pflag.NewFlagSet("lagrangian-proxy", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("lag-proxy", pflag.ContinueOnError)
 	fs.BoolVarP(&version, "version", "v", version, "Show version")
 	if err := fs.Parse(args); err != nil {
 		return err

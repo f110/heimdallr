@@ -49,7 +49,7 @@ const (
 	ctlDefaultImageTag         = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
-	ctlCommand                 = "/usr/local/bin/lpctl"
+	ctlCommand                 = "/usr/local/bin/lagctl"
 	proxyPort                  = 4000
 	internalApiPort            = 4004
 	dashboardPort              = 4100

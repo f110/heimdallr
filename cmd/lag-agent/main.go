@@ -35,7 +35,7 @@ func agent(args []string) error {
 	host := "127.0.0.1:443"
 	debug := false
 	v := false
-	fs := pflag.NewFlagSet("lagent", pflag.ExitOnError)
+	fs := pflag.NewFlagSet("lag-agent", pflag.ExitOnError)
 	fs.StringVarP(&credential, "credential", "k", credential, "Credential file (p12)")
 	fs.StringVarP(&privateKey, "privatekey", "p", privateKey, "Private Key")
 	fs.StringVar(&caCertPath, "ca-cert", caCertPath, "CA Certificate Path")
