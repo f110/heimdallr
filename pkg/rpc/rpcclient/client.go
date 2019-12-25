@@ -267,6 +267,15 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 	return nil
 }
 
+func (c *Client) NewServerCert(csr []byte) ([]byte, error) {
+	res, err := c.caClient.NewServerCert(c.md, &rpc.RequestNewServerCert{SigningRequest: csr})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Certificate, nil
+}
+
 func (c *Client) RevokeCert(serialNumber *big.Int) error {
 	_, err := c.caClient.Revoke(c.md, &rpc.CARequestRevoke{SerialNumber: serialNumber.Bytes()})
 	if err != nil {

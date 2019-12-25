@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509/pkix"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -10,9 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
@@ -29,7 +32,7 @@ type Relay struct {
 	accepted map[string]net.Conn
 }
 
-func NewRelay(ca database.CertificateAuthority, name string, server *Server, conn *tls.Conn) (*Relay, error) {
+func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.Conn) (*Relay, error) {
 	hostname, err := netutil.GetHostname()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -41,14 +44,21 @@ func NewRelay(ca database.CertificateAuthority, name string, server *Server, con
 	}
 	addr := l.Addr().(*net.TCPAddr)
 
-	cert, privateKey, err := ca.NewServerCertificate(hostname)
+	subject := pkix.Name{
+		CommonName: hostname,
+	}
+	csr, privateKey, err := cert.CreateSigningCertificateRequest(subject, []string{hostname})
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	c, err := client.NewServerCert(csr)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		Certificates: []tls.Certificate{
 			{
-				Certificate: [][]byte{cert.Raw},
+				Certificate: [][]byte{c},
 				PrivateKey:  privateKey,
 			},
 		},

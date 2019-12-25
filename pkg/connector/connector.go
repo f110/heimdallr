@@ -17,9 +17,11 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/stat"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -292,7 +294,7 @@ type Server struct {
 	Config  *config.Config
 	Locator database.RelayLocator
 	Pool    *ConnectionManager
-	ca      database.CertificateAuthority
+	client  *rpcclient.Client
 
 	mu            sync.RWMutex
 	conns         map[string]*tls.Conn
@@ -301,12 +303,14 @@ type Server struct {
 	roundTrippers map[string]http.RoundTripper
 }
 
-func NewServer(conf *config.Config, ca database.CertificateAuthority, locator database.RelayLocator) *Server {
+func NewServer(conf *config.Config, rpcConn *grpc.ClientConn, locator database.RelayLocator) *Server {
+	c, _ := rpcclient.NewClientForInternal(rpcConn, conf.General.InternalToken)
+
 	return &Server{
 		Config:        conf,
 		Locator:       locator,
 		Pool:          NewConnectionManager(conf, locator),
-		ca:            ca,
+		client:        c,
 		conns:         make(map[string]*tls.Conn),
 		dials:         make(map[uint32]chan *dialSuccess),
 		serveStreams:  make(map[uint32]io.Writer),
@@ -335,7 +339,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 	defer cancelFunc()
 	go s.heartbeat(ctx, conn)
 
-	relay, err := NewRelay(s.ca, b.Name, s, conn)
+	relay, err := NewRelay(s.client, b.Name, s, conn)
 	if err != nil {
 		logger.Log.Warn("Can not start relay", zap.Error(err))
 		return

@@ -412,8 +412,6 @@ func (m *mainProcess) Setup() error {
 		case config.SessionTypeMemcached:
 			m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
 		}
-
-		m.connector = connector.NewServer(m.config, m.caDatabase, m.relayLocator)
 	}
 
 	auth.InitInterceptor(m.config, m.userDatabase, m.tokenDatabase)
@@ -433,6 +431,11 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 		return xerrors.Errorf(": %v", err)
 	}
 	m.rpcServerConn = conn
+
+	if m.config.General.Enable {
+		m.connector = connector.NewServer(m.config, m.rpcServerConn, m.relayLocator)
+	}
+
 	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.General.InternalToken)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)

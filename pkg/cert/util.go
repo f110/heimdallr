@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -53,6 +54,29 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, password str
 	return data, clientCert, nil
 }
 
+func CreateSigningCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, crypto.PrivateKey, error) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	template := &x509.CertificateRequest{
+		Subject:  subject,
+		DNSNames: dnsName,
+	}
+	csr, err := x509.CreateCertificateRequest(rand.Reader, template, privateKey)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	buf := new(bytes.Buffer)
+	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csr}); err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	return buf.Bytes(), privateKey, nil
+}
+
 func SigningCertificateRequest(r *x509.CertificateRequest, ca *config.CertificateAuthority) (*x509.Certificate, error) {
 	serialNumber, err := NewSerialNumber()
 	if err != nil {
@@ -65,7 +89,7 @@ func SigningCertificateRequest(r *x509.CertificateRequest, ca *config.Certificat
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(CertificateExpirationYear, 0, 0),
 	}
-	cert, err := x509.CreateCertificate(rand.Reader, n, ca.Certificate, r.PublicKey, &ca.PrivateKey)
+	cert, err := x509.CreateCertificate(rand.Reader, n, ca.Certificate, r.PublicKey, ca.PrivateKey)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

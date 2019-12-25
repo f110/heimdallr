@@ -521,6 +521,7 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 		Name: "system:proxy",
 		Allow: []string{
 			"proxy.rpc.certificateauthority.watchrevokedcert",
+			"proxy.rpc.certificateauthority.newservercert",
 			"proxy.rpc.cluster.defragmentdatastore",
 			"proxy.rpc.authority.signrequest",
 		},

@@ -11,12 +11,15 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/pkg/connector",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/netutil:go_default_library",
+        "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/stat:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
     ],
 )
