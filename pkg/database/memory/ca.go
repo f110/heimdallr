@@ -77,6 +77,24 @@ func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]b
 	return c.generateClientCertificate(ctx, name, connector.DefaultCertificatePassword, comment, true)
 }
 
+func (c *CA) SignCertficateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) ([]byte, error) {
+	signedCert, err := cert.SigningCertificateRequest(r, c.config)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	if err := c.SetSignedCertificate(ctx, &database.SignedCertificate{
+		Certificate: signedCert,
+		IssuedAt:    time.Now(),
+		Comment:     comment,
+		Agent:       agent,
+	}); err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	return signedCert.Raw, nil
+}
+
 func (c *CA) generateClientCertificate(ctx context.Context, name, password, comment string, agent bool) ([]byte, error) {
 	serial, err := c.newSerialNumber(ctx)
 	if err != nil {

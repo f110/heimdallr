@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"time"
 
@@ -43,12 +44,32 @@ func (s *CertificateAuthorityService) GetSignedList(ctx context.Context, _ *rpc.
 
 func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rpc.RequestNewClientCert) (*rpc.ResponseNewClientCert, error) {
 	var err error
+	commonName := req.CommonName
 	if req.Agent {
-		if _, ok := s.Config.General.GetBackend(req.CommonName); !ok {
+		var csr *x509.CertificateRequest
+		if req.Csr != "" {
+			block, _ := pem.Decode([]byte(req.Csr))
+			if block.Type != "CERTIFICATE REQUEST" {
+				return nil, errors.New("rpcservice: invalid csr")
+			}
+			r, err := x509.ParseCertificateRequest(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			commonName = r.Subject.CommonName
+			csr = r
+		}
+
+		if _, ok := s.Config.General.GetBackend(commonName); !ok {
+			logger.Log.Info("Could not find backend", zap.String("common_name", req.CommonName))
 			return nil, xerrors.New("rpc: unknown backend")
 		}
 
-		_, err = s.ca.NewAgentCertificate(ctx, req.CommonName, req.Comment)
+		if req.Csr == "" {
+			_, err = s.ca.NewAgentCertificate(ctx, req.CommonName, req.Comment)
+		} else {
+			_, err = s.ca.SignCertificateRequest(ctx, csr, req.Comment, req.Agent)
+		}
 	} else {
 		_, err = s.ca.NewClientCertificate(ctx, req.CommonName, req.Password, req.Comment)
 	}
@@ -56,7 +77,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		return nil, err
 	}
 
-	logger.Audit.Info("Generate certificate", zap.String("common_name", req.CommonName), auditBy(ctx))
+	logger.Audit.Info("Generate certificate", zap.String("common_name", commonName), auditBy(ctx))
 	return &rpc.ResponseNewClientCert{Ok: true}, nil
 }
 

@@ -204,10 +204,12 @@ message RequestNewClientCert {
     string password = 2;
     string comment = 3;
     bool agent = 4;
+    string csr = 5;
 }
 
 message ResponseNewClientCert {
     bool ok = 1;
+    bytes certificate = 2;
 }
 
 message CARequestRevoke {

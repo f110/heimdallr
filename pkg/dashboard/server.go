@@ -1,7 +1,9 @@
 package dashboard
 
 import (
+	"bytes"
 	"context"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -65,6 +67,7 @@ func NewServer(config *config.Config, grpcConn *grpc.ClientConn) *Server {
 	s.Post("/cert/new", s.handleNewClientCert)
 	s.Post("/cert/revoke", s.handleRevokeCert)
 	s.Get("/cert/download", s.handleDownloadCert)
+	s.Get("/cert/ca", s.handleDownloadCACert)
 	s.Get("/agent", s.handleAgentIndex)
 	s.Get("/agent/new", s.handleNewAgent)
 	s.Post("/agent/new", s.handleAgentRegister)
@@ -364,8 +367,24 @@ func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ 
 	if len(cert.P12) > 0 {
 		w.Write(cert.P12)
 	} else {
-		w.Write(cert.Certificate)
+		buf := new(bytes.Buffer)
+		if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Certificate}); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write(buf.Bytes())
 	}
+}
+
+func (s *Server) handleDownloadCACert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment; filename=ca.crt")
+	buf := new(bytes.Buffer)
+	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: s.Config.General.CertificateAuthority.Certificate.Raw}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(buf.Bytes())
 }
 
 type user struct {
@@ -674,11 +693,20 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 		return
 	}
 
-	err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
-	if err != nil {
-		logger.Log.Info("Failed create new client certificate", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if req.FormValue("csr") != "" {
+		err := client.NewAgentCertByCSR(req.FormValue("csr"))
+		if err != nil {
+			logger.Log.Info("Failed sign CSR", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
+		if err != nil {
+			logger.Log.Info("Failed create new client certificate", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, req, "/agent", http.StatusFound)

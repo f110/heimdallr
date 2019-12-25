@@ -1,0 +1,47 @@
+<html>
+<head>
+  <title>Lagrangian Proxy Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+  <style type="text/css">
+    body > .ui.container {
+      padding-top: 2em;
+      padding-left: 210px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ui sidebar inverted vertical menu left visible">
+  <a href="./manage_user.html" class="item"><i class="user icon"></i>Users</a>
+  <a href="./manage_service_account.html" class="item"><i class="desktop icon"></i>Service Account</a>
+  <a href="./client_cert.html" class="item"><i class="certificate icon"></i>Client Certificate</a>
+  <a href="./agent.html" class="item"><i class="clone icon"></i>Agent</a>
+</div>
+
+<div class="ui container">
+  <h2 class="ui header">Issue new client certificate for agent</h2>
+  <div class="ui divider"></div>
+  <form class="ui form" action="/agent/new" method="POST">
+    <div class="field">
+      <label>Agent</label>
+      <select class="ui fluid dropdown" name="id">
+        <option value="agent.local-proxy.f110.dev">agent.local-proxy.f110.dev</option>
+        <option value="test-agent.local-proxy.f110.dev">test-agent.local-proxy.f110.dev</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>CSR (Optional)</label>
+      <textarea rows="6"></textarea>
+    </div>
+    <div class="field">
+      <label>Comment</label>
+      <textarea rows="2"></textarea>
+    </div>
+    <button class="ui button primary" type="submit">Issue</button>
+  </form>
+</div>
+
+</body>
+</html>

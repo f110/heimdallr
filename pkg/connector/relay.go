@@ -47,7 +47,7 @@ func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.C
 	subject := pkix.Name{
 		CommonName: hostname,
 	}
-	csr, privateKey, err := cert.CreateSigningCertificateRequest(subject, []string{hostname})
+	csr, privateKey, err := cert.CreateCertificateRequest(subject, []string{hostname})
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

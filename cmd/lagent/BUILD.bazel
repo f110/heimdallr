@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/cmd/lagent",
     visibility = ["//visibility:private"],
     deps = [
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/connector:go_default_library",
         "//pkg/logger:go_default_library",

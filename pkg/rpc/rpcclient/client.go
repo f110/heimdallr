@@ -267,6 +267,15 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 	return nil
 }
 
+func (c *Client) NewAgentCertByCSR(csr string) error {
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, Csr: csr})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) NewServerCert(csr []byte) ([]byte, error) {
 	res, err := c.caClient.NewServerCert(c.md, &rpc.RequestNewServerCert{SigningRequest: csr})
 	if err != nil {

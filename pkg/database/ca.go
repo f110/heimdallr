@@ -15,6 +15,7 @@ type CertificateAuthority interface {
 	NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error)
 	NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error)
 	NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error)
+	SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) ([]byte, error)
 	Revoke(ctx context.Context, certificate *SignedCertificate) error
 	WatchRevokeCertificate() chan *RevokedCertificate
 }

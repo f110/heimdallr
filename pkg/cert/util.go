@@ -54,7 +54,7 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, password str
 	return data, clientCert, nil
 }
 
-func CreateSigningCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, crypto.PrivateKey, error) {
+func CreateCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, *ecdsa.PrivateKey, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
