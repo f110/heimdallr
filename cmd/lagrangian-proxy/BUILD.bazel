@@ -15,6 +15,7 @@ go_library(
         "//pkg/database/etcd:go_default_library",
         "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
+        "//pkg/netutil:go_default_library",
         "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/rpc/rpcserver:go_default_library",
         "//pkg/server:go_default_library",

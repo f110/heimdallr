@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
@@ -60,9 +61,6 @@ const (
 )
 
 type mainProcess struct {
-	Stop context.CancelFunc
-
-	ctx             context.Context
 	wg              sync.WaitGroup
 	confFile        string
 	config          *config.Config
@@ -93,10 +91,7 @@ type mainProcess struct {
 }
 
 func newMainProcess() *mainProcess {
-	ctx, cancelFunc := context.WithCancel(context.Background())
 	m := &mainProcess{
-		Stop:            cancelFunc,
-		ctx:             ctx,
 		probeCh:         make(chan struct{}),
 		stateCh:         make(chan state),
 		rpcServerDoneCh: make(chan struct{}),
@@ -150,7 +145,7 @@ func (m *mainProcess) Loop() {
 		go func() {
 			if err := fn(); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
-				m.NextState(stateShuttingDown)
+				_ = m.NextState(stateShuttingDown)
 			}
 		}()
 	}
@@ -280,8 +275,7 @@ func (m *mainProcess) signalHandling() {
 		for sig := range signalCh {
 			switch sig {
 			case syscall.SIGTERM, os.Interrupt:
-				m.NextState(stateShuttingDown)
-				m.Stop()
+				_ = m.NextState(stateShuttingDown)
 				return
 			}
 		}
@@ -298,21 +292,18 @@ func (m *mainProcess) IsReady() bool {
 func (m *mainProcess) startServer() {
 	front, err := frontproxy.NewFrontendProxy(m.config, m.connector, m.rpcServerConn)
 	if err != nil {
-		m.Stop()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
 
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {
-		m.Stop()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
 	resourceServer, err := internalapi.NewResourceServer(m.rpcServerConn, m.config.General.InternalToken)
 	if err != nil {
-		m.Stop()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
@@ -470,20 +461,9 @@ func (m *mainProcess) StartRPCServer() error {
 		successCh := make(chan struct{})
 		go func() {
 			logger.Log.Debug("Waiting for start rpcserver")
-			retry := 0
-			for {
-				if retry > 10 {
-					errCh <- xerrors.New("main: waiting for start rpcserver is timed out")
-				}
-
-				conn, err := net.DialTimeout("tcp", m.config.RPCServer.Bind, 10*time.Millisecond)
-				if err != nil {
-					retry++
-					time.Sleep(10 * time.Millisecond)
-					continue
-				}
-				conn.Close()
-				break
+			if err := netutil.WaitListen(m.config.RPCServer.Bind, time.Second); err != nil {
+				errCh <- err
+				return
 			}
 			successCh <- struct{}{}
 		}()
@@ -519,6 +499,13 @@ func (m *mainProcess) Start() error {
 
 			m.startInternalApiServer()
 		}()
+
+		if err := netutil.WaitListen(m.config.General.Bind, time.Second); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		if err := netutil.WaitListen(m.config.General.BindInternalApi, time.Second); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
 	}
 
 	if m.config.Dashboard.Enable {
@@ -528,6 +515,10 @@ func (m *mainProcess) Start() error {
 
 			m.startDashboard()
 		}()
+
+		if err := netutil.WaitListen(m.config.Dashboard.Bind, time.Second); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
 	}
 
 	return nil

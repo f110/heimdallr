@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["hostname.go"],
+    srcs = [
+        "hostname.go",
+        "socket.go",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/netutil",
     visibility = ["//visibility:public"],
     deps = ["//vendor/golang.org/x/xerrors:go_default_library"],

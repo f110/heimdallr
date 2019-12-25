@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
@@ -80,8 +81,9 @@ func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *fron
 	return &Server{
 		Config: conf,
 		server: &http.Server{
-			ErrorLog: logger.CompatibleLogger,
-			Handler:  hostMultiplexer,
+			ErrorLog:    logger.CompatibleLogger,
+			IdleTimeout: 10 * time.Minute,
+			Handler:     hostMultiplexer,
 			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
 				connector.ProtocolName:          c.Accept,
 				frontproxy.SocketProxyNextProto: frontProxy.Accept,
