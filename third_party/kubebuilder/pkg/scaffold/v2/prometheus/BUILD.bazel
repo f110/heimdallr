@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "kustomize.go",
+        "monitor.go",
+    ],
+    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold/v2/prometheus",
+    visibility = ["//visibility:public"],
+    deps = ["//third_party/kubebuilder/pkg/scaffold/input:go_default_library"],
+)

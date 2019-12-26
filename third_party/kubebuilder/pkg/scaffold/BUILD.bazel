@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "api.go",
+        "doc.go",
+        "output.go",
+        "project.go",
+        "scaffold.go",
+    ],
+    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/kubebuilder/cmd/util:go_default_library",
+        "//third_party/kubebuilder/pkg/model:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/input:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/project:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/resource:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/util:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/controller:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/crd:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/manager:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/metricsauth:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/certmanager:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/crd:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/manager:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/metricsauth:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/prometheus:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/webhook:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/gobuffalo/flect:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/spf13/afero:go_default_library",
+        "//third_party/kubebuilder/vendor/golang.org/x/tools/imports:go_default_library",
+        "//third_party/kubebuilder/vendor/sigs.k8s.io/yaml:go_default_library",
+    ],
+)

@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["scaffoldtest.go"],
+    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold/scaffoldtest",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/kubebuilder/pkg/scaffold:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/input:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/onsi/ginkgo:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/onsi/gomega:go_default_library",
+    ],
+)

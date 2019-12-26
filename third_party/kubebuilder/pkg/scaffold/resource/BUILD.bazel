@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["resource.go"],
+    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold/resource",
+    visibility = ["//visibility:public"],
+    deps = ["//third_party/kubebuilder/vendor/github.com/gobuffalo/flect:go_default_library"],
+)

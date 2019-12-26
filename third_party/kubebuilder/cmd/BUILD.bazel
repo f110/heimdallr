@@ -1,0 +1,41 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "alpha.go",
+        "api.go",
+        "create.go",
+        "init_project.go",
+        "main.go",
+        "vendor_update.go",
+        "webhook_v1.go",
+        "webhook_v2.go",
+    ],
+    importpath = "sigs.k8s.io/kubebuilder/cmd",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//third_party/kubebuilder/cmd/util:go_default_library",
+        "//third_party/kubebuilder/cmd/version:go_default_library",
+        "//third_party/kubebuilder/pkg/model:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/input:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/project:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/resource:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/manager:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v1/webhook:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/v2/webhook:go_default_library",
+        "//third_party/kubebuilder/plugins/addon:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/gobuffalo/flect:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/spf13/cobra:go_default_library",
+        "//third_party/kubebuilder/vendor/github.com/spf13/pflag:go_default_library",
+        "//third_party/kubebuilder/vendor/golang.org/x/tools/go/packages:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "cmd",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

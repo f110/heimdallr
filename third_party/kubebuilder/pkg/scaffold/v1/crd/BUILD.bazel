@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "addtoscheme.go",
+        "crd_sample.go",
+        "doc.go",
+        "group.go",
+        "register.go",
+        "types.go",
+        "typestest.go",
+        "version_suitetest.go",
+    ],
+    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold/v1/crd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//third_party/kubebuilder/pkg/scaffold/input:go_default_library",
+        "//third_party/kubebuilder/pkg/scaffold/resource:go_default_library",
+    ],
+)
