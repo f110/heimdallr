@@ -1,4 +1,4 @@
-- name: test.local-proxy.f110.dev
+- name: test
   upstream: http://localhost:4501
   webhook: github
   webhook_path: ["/webhook"]
@@ -6,33 +6,32 @@
     - name: all
       locations:
         - any: /
-- name: content.local-proxy.f110.dev
+- name: content
   upstream: http://localhost:4502
   permissions:
     - name: all
       locations:
         - get: /
-- name: dashboard.local-proxy.f110.dev
+- name: dashboard
   upstream: http://localhost:4100
   allow_as_root_user: true
   permissions:
     - name: all
       locations:
         - any: /
-- name: ssh.local-proxy.f110.dev
+- name: ssh
   upstream: tcp://localhost:22
   permissions:
     - name: all
       locations:
         - any: /
-- name: agent.local-proxy.f110.dev
-  upstream: tcp://localhost:22
+- name: agent
   agent: true
   permissions:
     - name: all
       locations:
         - any: /
-- name: test-agent.local-proxy.f110.dev
+- name: test-agent
   upstream: http://localhost:4501
   agent: true
   permissions:

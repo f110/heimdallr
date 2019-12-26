@@ -70,11 +70,11 @@ type General struct {
 	InternalTokenFile     string                `json:"internal_token_file,omitempty"`
 
 	mu                  sync.RWMutex              `json:"-"`
-	Roles               []Role                    `json:"-"`
+	Roles               []*Role                   `json:"-"`
 	Backends            []*Backend                `json:"-"`
 	RpcPermissions      []*RpcPermission          `json:"-"`
 	hostnameToBackend   map[string]*Backend       `json:"-"`
-	roleNameToRole      map[string]Role           `json:"-"`
+	roleNameToRole      map[string]*Role          `json:"-"`
 	nameToRpcPermission map[string]*RpcPermission `json:"-"`
 	watcher             *k8s.VolumeWatcher        `json:"-"`
 
@@ -136,10 +136,10 @@ type Logger struct {
 }
 
 type Role struct {
-	Name        string    `json:"name"`
-	Title       string    `json:"title"`
-	Description string    `json:"description,omitempty"`
-	Bindings    []Binding `json:"bindings"`
+	Name        string     `json:"name"`
+	Title       string     `json:"title"`
+	Description string     `json:"description,omitempty"`
+	Bindings    []*Binding `json:"bindings"`
 
 	RPCMethodMatcher *rpc.MethodMatcher `json:"-"`
 	System           bool               `json:"-"`
@@ -379,14 +379,14 @@ func (g *General) GetAllBackends() []*Backend {
 	return g.Backends
 }
 
-func (g *General) GetAllRoles() []Role {
+func (g *General) GetAllRoles() []*Role {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	return g.Roles
 }
 
-func (g *General) GetRole(name string) (Role, error) {
+func (g *General) GetRole(name string) (*Role, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -394,7 +394,7 @@ func (g *General) GetRole(name string) (Role, error) {
 		return v, nil
 	}
 
-	return Role{}, ErrRoleNotFound
+	return &Role{}, ErrRoleNotFound
 }
 
 func (g *General) GetRpcPermission(name string) (*RpcPermission, bool) {
@@ -431,7 +431,7 @@ func (g *General) Inflate(dir string) error {
 		}
 	}
 
-	roles := make([]Role, 0)
+	roles := make([]*Role, 0)
 	backends := make([]*Backend, 0)
 	rpcPermissions := make([]*RpcPermission, 0)
 	if g.RoleFile != "" {
@@ -516,7 +516,7 @@ func (g *General) Inflate(dir string) error {
 	return g.Load(backends, roles, rpcPermissions)
 }
 
-func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcPermission) error {
+func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*RpcPermission) error {
 	rpcPermissions = append(rpcPermissions, &RpcPermission{
 		Name: "system:proxy",
 		Allow: []string{
@@ -526,9 +526,9 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 			"proxy.rpc.authority.signrequest",
 		},
 	})
-	roles = append(roles, Role{
+	roles = append(roles, &Role{
 		Name: "system:proxy",
-		Bindings: []Binding{
+		Bindings: []*Binding{
 			{Rpc: "system:proxy"},
 		},
 		System: true,
@@ -539,6 +539,7 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 		if err := v.inflate(); err != nil {
 			return err
 		}
+		v.Name = v.Name + "." + g.ServerNameHost
 		hostnameToBackend[v.Name] = v
 	}
 
@@ -547,10 +548,11 @@ func (g *General) Load(backends []*Backend, roles []Role, rpcPermissions []*RpcP
 		nameToRpcPermission[v.Name] = v
 	}
 
-	roleNameToRole := make(map[string]Role)
+	roleNameToRole := make(map[string]*Role)
 	for _, v := range roles {
 		m := rpc.NewMethodMatcher()
 		for _, v := range v.Bindings {
+			v.Backend = v.Backend + "." + g.ServerNameHost
 			if v.Rpc == "" {
 				continue
 			}
@@ -588,7 +590,7 @@ func (g *General) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, erro
 }
 
 func (g *General) reloadConfig() {
-	roles := make([]Role, 0)
+	roles := make([]*Role, 0)
 	b, err := ioutil.ReadFile(g.RoleFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)

@@ -11,3 +11,18 @@ spec:
     - name: all
       locations:
         - get: /
+---
+apiVersion: proxy.f110.dev/v1
+kind: Backend
+metadata:
+  name: backend-agent-sample
+  labels:
+    instance: proxy-sample
+spec:
+  layer: agent
+  upstream: http://localhost:4502
+  agent: true
+  permissions:
+    - name: all
+      locations:
+        - get: /

@@ -776,9 +776,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				Locations: locations,
 			}
 		}
-		name := v.Name + "." + v.Spec.Layer + "." + r.Spec.Domain
+		name := v.Name + "." + v.Spec.Layer
 		if v.Spec.Layer == "" {
-			name = v.Name + "." + r.Spec.Domain
+			name = v.Name
 		}
 		proxies[i] = &config.Backend{
 			Name:            name,
@@ -801,7 +801,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	}
 	roles := make([]*config.Role, len(roleList))
 	for i, v := range roleList {
-		bindings := make([]config.Binding, len(v.Spec.Bindings))
+		bindings := make([]*config.Binding, len(v.Spec.Bindings))
 		for k, b := range v.Spec.Bindings {
 			switch {
 			case b.BackendName != "":
@@ -811,20 +811,20 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				}
 				backendHost := ""
 				if bn, ok := backendMap[namespace+"/"+b.BackendName]; ok {
-					backendHost = bn.Name + "." + bn.Spec.Layer + "." + r.Spec.Domain
+					backendHost = bn.Name + "." + bn.Spec.Layer
 					if bn.Spec.Layer == "" {
-						backendHost = bn.Name + "." + r.Spec.Domain
+						backendHost = bn.Name
 					}
 				} else {
 					return nil, fmt.Errorf("controller: %s not found", b.BackendName)
 				}
 
-				bindings[k] = config.Binding{
+				bindings[k] = &config.Binding{
 					Permission: b.Permission,
 					Backend:    backendHost,
 				}
 			case b.RpcPermissionName != "":
-				bindings[k] = config.Binding{
+				bindings[k] = &config.Binding{
 					Rpc: b.RpcPermissionName,
 				}
 			}

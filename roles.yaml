@@ -3,19 +3,19 @@
   description: for administrator
   bindings:
     - rpc: dashboard-user
-    - backend: test.local-proxy.f110.dev
+    - backend: test
       permission: all
-    - backend: dashboard.local-proxy.f110.dev
+    - backend: dashboard
       permission: all
-    - backend: ssh.local-proxy.f110.dev
+    - backend: ssh
       permission: all
-    - backend: agent.local-proxy.f110.dev
+    - backend: agent
       permission: all
 - name: user
   title: User
   bindings:
     - rpc: dashboard-user
-    - backend: test.local-proxy.f110.dev
+    - backend: test
       permission: all
-    - backend: dashboard.local-proxy.f110.dev
+    - backend: dashboard
       permission: all
