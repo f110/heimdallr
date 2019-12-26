@@ -68,8 +68,7 @@ type DefragmentSpec struct {
 
 // ProxyStatus defines the observed state of Proxy
 type ProxyStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Deployed bool `json:"deployed,omitempty"`
 }
 
 // +kubebuilder:object:root=true

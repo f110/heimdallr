@@ -252,6 +252,9 @@ spec:
           type: object
         status:
           description: ProxyStatus defines the observed state of Proxy
+          properties:
+            deployed:
+              type: boolean
           type: object
       type: object
   version: v1

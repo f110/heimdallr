@@ -114,7 +114,16 @@ func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	if err := r.FinishReconcile(lp); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (r *ProxyReconciler) FinishReconcile(lp *LagrangianProxy) error {
+	lp.Object.Status.Deployed = true
+	return r.Update(context.Background(), lp.Object)
 }
 
 func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) error {
