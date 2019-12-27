@@ -24,11 +24,13 @@ import (
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	"github.com/f110/lagrangian-proxy/operator/controllers"
+	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -68,6 +70,8 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
+	runtimemetrics.Registry.Register(metrics.NewCollector(mgr.GetClient()))
 
 	repo := controllers.NewProcessRepository()
 	repo.SetClient(mgr.GetClient())

@@ -20,6 +20,11 @@ Depend on
 
 When start up the operator, check to exist some CRDs.
 
+Optional
+++++++++++
+
+* `prometheus-operator <https://github.com/coreos/prometheus-operator>`_
+
 Build & Run
 =============
 
