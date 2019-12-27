@@ -33,4 +33,4 @@ spec:
     labels:
       k8s-app: etcd
   defragment:
-    schedule: "38 10 * * *"
+    schedule: "18 13 * * *"

@@ -635,6 +635,7 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
 			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
 			Level:    "info",
@@ -726,6 +727,7 @@ func (r *LagrangianProxy) ConfigForDefragmentCronJob() (*corev1.ConfigMap, error
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
 			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
 			Level:    "info",
@@ -953,6 +955,7 @@ func (r *LagrangianProxy) Main() (*process, error) {
 											{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
 											{Name: "config", MountPath: configMountPath, ReadOnly: true},
 											{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+											{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
 										},
 									},
 								},
@@ -983,6 +986,14 @@ func (r *LagrangianProxy) Main() (*process, error) {
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: r.ConfigNameForDefragmentCronJob(),
 												},
+											},
+										},
+									},
+									{
+										Name: "internal-token",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: r.InternalTokenSecretName(),
 											},
 										},
 									},
@@ -1278,9 +1289,18 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 				},
 			},
 		},
+		{
+			Name: "internal-token",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: r.InternalTokenSecretName(),
+				},
+			},
+		},
 	}
 	volumeMounts := []corev1.VolumeMount{
 		{Name: "config", MountPath: configMountPath},
+		{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
 	}
 	if r.selfSignedIssuer {
 		secret := &corev1.Secret{
@@ -1424,12 +1444,16 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 	if err != nil {
 		return nil, err
 	}
+	internalTokenSecret, err := r.InternalTokenSecret()
+	if err != nil {
+		return nil, err
+	}
 
 	return &process{
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
 		Service:             []*corev1.Service{svc},
-		Secrets:             []*corev1.Secret{caSecret},
+		Secrets:             []*corev1.Secret{caSecret, internalTokenSecret},
 		ConfigMaps:          []*corev1.ConfigMap{conf},
 	}, nil
 }
