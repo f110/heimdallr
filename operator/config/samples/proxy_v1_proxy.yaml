@@ -28,5 +28,9 @@ spec:
     type: secure_cookie
     keySecretRef:
       name: cookie-secret
+  monitor:
+    prometheusMonitoring: true
+    labels:
+      k8s-app: etcd
   defragment:
     schedule: "38 10 * * *"

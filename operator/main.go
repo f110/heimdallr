@@ -20,6 +20,7 @@ import (
 	"os"
 
 	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
+	prometheus "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
@@ -43,6 +44,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = etcdcluster.AddToScheme(scheme)
 	_ = certmanager.AddToScheme(scheme)
+	_ = prometheus.AddToScheme(scheme)
 
 	_ = proxyv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme

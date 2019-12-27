@@ -104,8 +104,9 @@ type CertificateAuthority struct {
 }
 
 type RPCServer struct {
-	Bind   string `json:"bind,omitempty"`
-	Enable bool   `json:"enable,omitempty"`
+	Bind        string `json:"bind,omitempty"`
+	MetricsBind string `json:"metrics_bind,omitempty"`
+	Enable      bool   `json:"enable,omitempty"`
 }
 
 type IdentityProvider struct {

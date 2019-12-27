@@ -161,6 +161,7 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 
 		orig := svc.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, svc, func() error {
+			svc.Labels = orig.Labels
 			svc.Spec.Selector = orig.Spec.Selector
 			svc.Spec.Type = orig.Spec.Type
 			svc.Spec.Ports = orig.Spec.Ports
@@ -228,6 +229,23 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 		}
 	}
 
+	for _, v := range objs.ServiceMonitors {
+		if v == nil {
+			continue
+		}
+
+		orig := v.DeepCopy()
+		_, err := ctrl.CreateOrUpdate(context.Background(), r, v, func() error {
+			v.Labels = orig.Labels
+			v.Spec = orig.Spec
+
+			return ctrl.SetControllerReference(lp.Object, v, r.Scheme)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -279,7 +297,21 @@ func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 }
 
 func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
-	cluster := lp.EtcdCluster()
+	cluster, serviceMonitor := lp.EtcdCluster()
+
+	if serviceMonitor != nil {
+		orig := serviceMonitor.DeepCopy()
+		_, err := ctrl.CreateOrUpdate(context.Background(), r, serviceMonitor, func() error {
+			serviceMonitor.Labels = orig.Labels
+			serviceMonitor.Spec = orig.Spec
+
+			return ctrl.SetControllerReference(lp.Object, serviceMonitor, r.Scheme)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	orig := cluster.DeepCopy()
 	_, err := ctrl.CreateOrUpdate(context.Background(), r, cluster, func() error {
 		cluster.Spec = orig.Spec

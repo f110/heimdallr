@@ -44,17 +44,22 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.descActiveAgentCount, prometheus.GaugeValue, float64(stat.Value.ActiveAgent()))
 }
 
-type Server struct{}
+type Server struct {
+	r *prometheus.Registry
+}
 
 var _ server.ChildServer = &Server{}
 
 func NewServer() *Server {
-	prometheus.MustRegister(NewCollector())
-	return &Server{}
+	r := prometheus.NewRegistry()
+	r.MustRegister(NewCollector())
+	r.MustRegister(prometheus.NewGoCollector())
+	return &Server{r: r}
 }
 
 func (s *Server) Route(router *httprouter.Router) {
+	handler := promhttp.InstrumentMetricHandler(s.r, promhttp.HandlerFor(s.r, promhttp.HandlerOpts{}))
 	router.GET("/internal/metrics", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		promhttp.Handler().ServeHTTP(w, req)
+		handler.ServeHTTP(w, req)
 	})
 }

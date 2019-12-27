@@ -20,6 +20,7 @@ general:
     - fmhrit@gmail.com
 rpc_server:
   bind: :4001
+  metrics_bind: :4005
   enable: true
 identity_provider:
   provider: google

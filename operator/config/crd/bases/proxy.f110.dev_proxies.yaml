@@ -122,6 +122,17 @@ spec:
               required:
               - name
               type: object
+            monitor:
+              properties:
+                labels:
+                  additionalProperties:
+                    type: string
+                  type: object
+                prometheusMonitoring:
+                  description: PrometheusMonitoring is set to true, then operator
+                    creates ServiceMonitor object.
+                  type: boolean
+              type: object
             name:
               description: Name of proxy. if not present, uses "Lagrangian Proxy CA"
               type: string

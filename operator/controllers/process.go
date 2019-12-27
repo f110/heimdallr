@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -54,6 +55,7 @@ const (
 	internalApiPort            = 4004
 	dashboardPort              = 4100
 	rpcServerPort              = 4001
+	rpcMetricsServerPort       = 4005
 	configVolumePath           = "/etc/lagrangian-proxy"
 	configMountPath            = configVolumePath + "/config"
 	proxyConfigMountPath       = configVolumePath + "/proxy"
@@ -89,6 +91,7 @@ type process struct {
 	Secrets             []*corev1.Secret
 	Certificate         *certmanager.Certificate
 	CronJob             *batchv1beta1.CronJob
+	ServiceMonitors     []*monitoringv1.ServiceMonitor
 }
 
 type LagrangianProxy struct {
@@ -358,7 +361,7 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 	return cert, nil
 }
 
-func (r *LagrangianProxy) EtcdCluster() *etcdcluster.EtcdCluster {
+func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1.ServiceMonitor) {
 	cluster := &etcdcluster.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: r.EtcdClusterName(), Namespace: r.Namespace},
 		Spec: etcdcluster.ClusterSpec{
@@ -366,8 +369,33 @@ func (r *LagrangianProxy) EtcdCluster() *etcdcluster.EtcdCluster {
 			Version: EtcdVersion,
 		},
 	}
+	var sm *monitoringv1.ServiceMonitor
+	if r.Spec.Monitor.PrometheusMonitoring {
+		sm = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.EtcdClusterName(),
+				Namespace: r.Namespace,
+				Labels:    r.Spec.Monitor.Labels,
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				JobLabel: "proxy.f110.dev/name",
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":          "etcd",
+						"etcd_cluster": r.EtcdClusterName(),
+					},
+				},
+				NamespaceSelector: monitoringv1.NamespaceSelector{
+					MatchNames: []string{r.Namespace},
+				},
+				Endpoints: []monitoringv1.Endpoint{
+					{Port: "client", Interval: "30s", HonorLabels: true},
+				},
+			},
+		}
+	}
 
-	return cluster
+	return cluster, sm
 }
 
 func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
@@ -668,6 +696,10 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			Enable: false,
 		},
 	}
+	if r.Spec.Monitor.PrometheusMonitoring {
+		conf.RPCServer.MetricsBind = fmt.Sprintf(":%d", rpcMetricsServerPort)
+	}
+
 	b, err := yaml.Marshal(conf)
 	if err != nil {
 		return nil, err
@@ -1541,6 +1573,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.ServiceNameForRPCServer(),
 			Namespace: r.Namespace,
+			Labels:    r.LabelsForRPCServer(),
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: r.LabelsForRPCServer(),
@@ -1563,11 +1596,42 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 		return nil, err
 	}
 
+	var rpcMetrics *monitoringv1.ServiceMonitor
+	if r.Spec.Monitor.PrometheusMonitoring {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name: "metrics",
+			Port: int32(rpcMetricsServerPort),
+		})
+
+		rpcMetrics = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.ServiceNameForRPCServer(),
+				Namespace: r.Namespace,
+				Labels:    r.Spec.Monitor.Labels,
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				JobLabel: "role",
+				Selector: metav1.LabelSelector{
+					MatchLabels: r.LabelsForRPCServer(),
+				},
+				NamespaceSelector: monitoringv1.NamespaceSelector{MatchNames: []string{r.Namespace}},
+				Endpoints: []monitoringv1.Endpoint{
+					{
+						Port:        "metrics",
+						Interval:    "30s",
+						HonorLabels: true,
+					},
+				},
+			},
+		}
+	}
+
 	return &process{
-		Deployment: deployment,
-		Service:    []*corev1.Service{svc},
-		Secrets:    []*corev1.Secret{caSecret, privateKey, internalTokenSecret},
-		ConfigMaps: []*corev1.ConfigMap{conf},
+		Deployment:      deployment,
+		Service:         []*corev1.Service{svc},
+		Secrets:         []*corev1.Secret{caSecret, privateKey, internalTokenSecret},
+		ConfigMaps:      []*corev1.ConfigMap{conf},
+		ServiceMonitors: []*monitoringv1.ServiceMonitor{rpcMetrics},
 	}, nil
 }
 
