@@ -19,16 +19,21 @@ func printVersion() {
 }
 
 func proxy(args []string) error {
-	version := false
+	v := false
 	fs := pflag.NewFlagSet("lag-proxy", pflag.ContinueOnError)
-	fs.BoolVarP(&version, "version", "v", version, "Show version")
+	fs.BoolVarP(&v, "version", "v", v, "Show version")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	if version {
+	if v {
 		printVersion()
 		return nil
+	}
+
+	idp := localproxy.NewIdentityProvider("token")
+	if _, err := idp.Provide(); err != nil {
+		return xerrors.Errorf(": %v", err)
 	}
 
 	tokenClient := token.NewTokenClient("token")

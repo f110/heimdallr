@@ -19,6 +19,7 @@ go_library(
         "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/rpc/rpcserver:go_default_library",
         "//pkg/server:go_default_library",
+        "//pkg/server/api:go_default_library",
         "//pkg/server/ct:go_default_library",
         "//pkg/server/identityprovider:go_default_library",
         "//pkg/server/internalapi:go_default_library",

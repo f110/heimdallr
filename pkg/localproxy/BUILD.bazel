@@ -2,11 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["localproxy.go"],
+    srcs = [
+        "identity_provider.go",
+        "localproxy.go",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/localproxy",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/auth/token:go_default_library",
         "//pkg/frontproxy:go_default_library",
+        "//vendor/github.com/keybase/go-keychain:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
     ],
 )

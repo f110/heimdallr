@@ -24,6 +24,7 @@ func (e *ErrorTokenAuthorization) Error() string {
 }
 
 type Client struct {
+	cert  *tls.Certificate
 	conn  *tls.Conn
 	inCh  <-chan []byte
 	outCh chan<- []byte
@@ -32,6 +33,8 @@ type Client struct {
 func NewClient(in io.Reader, out io.Writer) *Client {
 	inCh := make(chan []byte)
 	outCh := make(chan []byte)
+	c := &Client{inCh: inCh, outCh: outCh}
+	c.cert = c.GetCertificate()
 
 	go func() {
 		packet := new(bytes.Buffer)
@@ -60,14 +63,20 @@ func NewClient(in io.Reader, out io.Writer) *Client {
 		}
 	}()
 
-	return &Client{inCh: inCh, outCh: outCh}
+	return c
+}
+
+func (c *Client) GetCertificate() *tls.Certificate {
+	return nil
 }
 
 func (c *Client) Dial(addr string, token string) error {
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 3 * time.Second}, "tcp", addr, &tls.Config{
-		NextProtos:         []string{frontproxy.SocketProxyNextProto},
-		InsecureSkipVerify: true,
-	})
+	tlsConfig := &tls.Config{NextProtos: []string{frontproxy.SocketProxyNextProto}}
+	if c.cert != nil {
+		tlsConfig.Certificates = []tls.Certificate{*c.cert}
+	}
+
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 3 * time.Second}, "tcp", addr, tlsConfig)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

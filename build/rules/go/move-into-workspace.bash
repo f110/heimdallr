@@ -4,4 +4,4 @@ FROM=@@FROM@@
 TO=@@TO@@
 
 cd "$BUILD_WORKSPACE_DIRECTORY"
-cp -f "$FROM" "$TO"
+cp -f ${FROM[*]} "$TO"

@@ -3,6 +3,7 @@ package proxy.rpc;
 option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 
 service Cluster {
     rpc MemberList (RequestMemberList) returns (ResponseMemberList);
@@ -28,7 +29,12 @@ service Admin {
 
 service CertificateAuthority {
     rpc GetSignedList (RequestGetSignedList) returns (ResponseGetSignedList);
-    rpc NewClientCert (RequestNewClientCert) returns (ResponseNewClientCert);
+    rpc NewClientCert (RequestNewClientCert) returns (ResponseNewClientCert) {
+        option (google.api.http) = {
+            post: "/certificate_authority/new_client_cert"
+            body: "*"
+        };
+    };
     rpc NewServerCert (RequestNewServerCert) returns (ResponseNewServerCert);
     rpc Revoke (CARequestRevoke) returns (CAResponseRevoke);
     rpc Get (CARequestGet) returns (CAResponseGet);

@@ -5,12 +5,18 @@ proto_library(
     name = "rpc_proto",
     srcs = ["rpc.proto"],
     visibility = ["//visibility:public"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+        "@go_googleapis//google/api:annotations_proto",
+    ],
 )
 
 go_proto_library(
     name = "rpc_go_proto",
-    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    compilers = [
+        "@io_bazel_rules_go//proto:go_grpc",
+        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/server/rpc",
     proto = ":rpc_proto",
     visibility = ["//visibility:private"],
@@ -22,18 +28,24 @@ go_library(
         "const.go",
         "method_matcher.go",
         "rpc.pb.go",
+        "rpc.pb.gw.go",
         "util.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/rpc",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database:go_default_library",
+        "//vendor/github.com/golang/protobuf/descriptor:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/runtime:go_default_library",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/utilities:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/google.golang.org/genproto/googleapis/api/annotations:go_default_library",
         "//vendor/google.golang.org/grpc:go_default_library",
         "//vendor/google.golang.org/grpc/codes:go_default_library",
+        "//vendor/google.golang.org/grpc/grpclog:go_default_library",
         "//vendor/google.golang.org/grpc/status:go_default_library",
     ],
 )

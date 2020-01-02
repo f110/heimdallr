@@ -2,21 +2,17 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "internal.go",
-        "proxy.go",
-    ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/server",
+    srcs = ["api.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/server/api",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",
-        "//pkg/connector:go_default_library",
-        "//pkg/database:go_default_library",
         "//pkg/frontproxy:go_default_library",
         "//pkg/logger:go_default_library",
-        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
+        "//pkg/rpc:go_default_library",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/runtime:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/golang.org/x/net/http2:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
     ],
 )

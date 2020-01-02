@@ -19,9 +19,10 @@ general:
   root_users:
     - fmhrit@gmail.com
 rpc_server:
+  enable: true
   bind: :4001
   metrics_bind: :4005
-  enable: true
+  rest_bind: :4006
 identity_provider:
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com

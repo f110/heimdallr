@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
-
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
@@ -25,9 +23,11 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcserver"
 	"github.com/f110/lagrangian-proxy/pkg/server"
+	"github.com/f110/lagrangian-proxy/pkg/server/api"
 	"github.com/f110/lagrangian-proxy/pkg/server/ct"
 	"github.com/f110/lagrangian-proxy/pkg/server/identityprovider"
 	"github.com/f110/lagrangian-proxy/pkg/server/internalapi"
@@ -76,10 +76,11 @@ type mainProcess struct {
 	rpcServerConn *grpc.ClientConn
 	revokedCert   *rpcclient.RevokedCertificateWatcher
 
-	server      *server.Server
-	internalApi *server.Internal
-	dashboard   *dashboard.Server
-	rpcServer   *rpcserver.Server
+	server        *server.Server
+	internalApi   *server.Internal
+	dashboard     *dashboard.Server
+	rpcServer     *rpcserver.Server
+	restApiServer *api.Server
 
 	etcd *embed.Etcd
 
@@ -197,6 +198,16 @@ func (m *mainProcess) Shutdown() error {
 		}()
 	}
 
+	if m.restApiServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := m.restApiServer.Shutdown(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
+		}()
+	}
+
 	go func() {
 		wg.Wait()
 		done <- struct{}{}
@@ -227,6 +238,10 @@ func (m *mainProcess) ShutdownRPCServer() error {
 		if err := client.Close(); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
+	}
+
+	if m.rpcServerConn != nil {
+		m.rpcServerConn.Close()
 	}
 
 	if m.rpcServer != nil {
@@ -322,6 +337,18 @@ func (m *mainProcess) startInternalApiServer() {
 	s := server.NewInternal(m.config, internalApi, probe)
 	m.internalApi = s
 	if err := m.internalApi.Start(); err != nil && err != http.ErrServerClosed {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	}
+}
+
+func (m *mainProcess) startRestApiServer() {
+	s, err := api.NewServer(context.Background(), m.config.RPCServer, m.rpcServerConn)
+	if err != nil {
+		return
+	}
+	m.restApiServer = s
+
+	if err := m.restApiServer.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 }
@@ -503,7 +530,7 @@ func (m *mainProcess) Start() error {
 			m.startInternalApiServer()
 		}()
 
-		if err := netutil.WaitListen(m.config.General.Bind, time.Second); err != nil {
+		if err := netutil.WaitListen(m.config.General.Bind, 100*time.Millisecond); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		if err := netutil.WaitListen(m.config.General.BindInternalApi, time.Second); err != nil {
@@ -520,6 +547,19 @@ func (m *mainProcess) Start() error {
 		}()
 
 		if err := netutil.WaitListen(m.config.Dashboard.Bind, time.Second); err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+	}
+
+	if m.config.RPCServer.RestBind != "" {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+
+			m.startRestApiServer()
+		}()
+
+		if err := netutil.WaitListen(m.config.RPCServer.MetricsBind, time.Second); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}

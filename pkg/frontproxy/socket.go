@@ -215,7 +215,7 @@ func (st *Stream) handshake() error {
 }
 
 func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
-	user, err := auth.AuthenticateForSocket(ctx, st.token, st.host)
+	user, err := auth.AuthenticateForSocket(ctx, st.conn.ConnectionState().PeerCertificates, st.token, st.host)
 	switch err {
 	case auth.ErrNotAllowed, auth.ErrUserNotFound, auth.ErrHostnameNotFound:
 		st.sendMessage(SocketErrorNotAccessible)

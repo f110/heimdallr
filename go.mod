@@ -22,9 +22,10 @@ require (
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/grpc-ecosystem/grpc-gateway v1.11.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.11.1
 	github.com/jetstack/cert-manager v0.12.0
 	github.com/julienschmidt/httprouter v1.2.0
+	github.com/keybase/go-keychain v0.0.0-20191220220820-f65a47cbe0b1
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
@@ -38,7 +39,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191224085550-c709ea063b76 // indirect
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
-	google.golang.org/genproto v0.0.0-20191223191004-3caeed10a8bf // indirect
+	google.golang.org/genproto v0.0.0-20191223191004-3caeed10a8bf
 	google.golang.org/grpc v1.26.0
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
@@ -50,6 +51,7 @@ require (
 )
 
 replace (
+	github.com/keybase/go-keychain => ../go-keychain
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
 )

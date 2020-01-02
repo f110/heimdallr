@@ -106,6 +106,7 @@ type CertificateAuthority struct {
 type RPCServer struct {
 	Bind        string `json:"bind,omitempty"`
 	MetricsBind string `json:"metrics_bind,omitempty"`
+	RestBind    string `json:"rest_bind,omitempty"`
 	Enable      bool   `json:"enable,omitempty"`
 }
 

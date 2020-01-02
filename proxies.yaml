@@ -19,6 +19,12 @@
     - name: all
       locations:
         - any: /
+- name: api
+  upstream: http://localhost:4006
+  permissions:
+    - name: all
+      locations:
+        - any: /
 - name: ssh
   upstream: tcp://localhost:22
   permissions:

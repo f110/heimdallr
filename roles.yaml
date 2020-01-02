@@ -11,6 +11,8 @@
       permission: all
     - backend: agent
       permission: all
+    - backend: api
+      permission: all
 - name: user
   title: User
   bindings:

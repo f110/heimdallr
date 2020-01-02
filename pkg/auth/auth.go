@@ -81,8 +81,8 @@ func Authenticate(req *http.Request) (*database.User, error) {
 	return defaultAuthenticator.Authenticate(req)
 }
 
-func AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
-	return defaultAuthenticator.AuthenticateForSocket(ctx, token, host)
+func AuthenticateForSocket(ctx context.Context, peerCerts []*x509.Certificate, token, host string) (*database.User, error) {
+	return defaultAuthenticator.AuthenticateForSocket(ctx, peerCerts, token, host)
 }
 
 func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -134,23 +134,33 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 	return nil, ErrNotAllowed
 }
 
-func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
-	if token == "" {
-		return nil, ErrInvalidToken
+func (a *authenticator) AuthenticateForSocket(ctx context.Context, peerCerts []*x509.Certificate, token, host string) (*database.User, error) {
+	var userId string
+	if peerCerts != nil && len(peerCerts) > 0 {
+		for _, v := range peerCerts {
+			userId = v.Subject.CommonName
+			break
+		}
+	} else {
+		if token == "" {
+			return nil, ErrInvalidToken
+		}
+		t, err := a.tokenDatabase.FindToken(ctx, token)
+		if err != nil {
+			return nil, ErrInvalidToken
+		}
+		userId = t.UserId
 	}
 	if host == "" {
 		return nil, ErrHostnameNotFound
 	}
+
 	backend, ok := a.Config.GetBackendByHostname(host)
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}
 
-	t, err := a.tokenDatabase.FindToken(ctx, token)
-	if err != nil {
-		return nil, ErrInvalidToken
-	}
-	user, err := a.userDatabase.Get(t.UserId)
+	user, err := a.userDatabase.Get(userId)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}

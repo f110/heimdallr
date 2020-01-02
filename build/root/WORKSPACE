@@ -85,3 +85,14 @@ http_file(
     sha256 = "bfbe82e34645e91cdf3bacbb0d2dc7786f3c3cc4da6b64a446e5fdfb7bb0429f",
     urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.3.1/grpc_health_probe-linux-amd64"],
 )
+
+http_archive(
+    name = "grpc_ecosystem_grpc_gateway",
+    sha256 = "d6ce34977c3db8cdaa8752205d2c5ce94618d85fb41268bd82a4656f41e7ad98",
+    strip_prefix = "grpc-gateway-f7120437bb4f6c71f7f5076ad65a45310de2c009",
+    urls = ["https://github.com/grpc-ecosystem/grpc-gateway/archive/f7120437bb4f6c71f7f5076ad65a45310de2c009.tar.gz"],
+)
+
+load("@grpc_ecosystem_grpc_gateway//:repositories.bzl", "go_repositories")
+
+go_repositories()

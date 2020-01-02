@@ -131,6 +131,7 @@ github.com/gogo/protobuf/sortkeys
 # github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.2
+github.com/golang/protobuf/descriptor
 github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -206,6 +207,8 @@ github.com/jonboulle/clockwork
 github.com/json-iterator/go
 # github.com/julienschmidt/httprouter v1.2.0
 github.com/julienschmidt/httprouter
+# github.com/keybase/go-keychain v0.0.0-20191220220820-f65a47cbe0b1 => ../go-keychain
+github.com/keybase/go-keychain
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63
@@ -252,7 +255,7 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.8.2-0.20190227000051-27936f6d90f9
 github.com/pkg/errors
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol

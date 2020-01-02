@@ -7,8 +7,9 @@ load("@io_bazel_rules_go_compat//:compat.bzl", "get_proto")
 
 def _vendor_grpc_source_impl(ctx):
     generated = ctx.attr.src[OutputGroupInfo].go_generated_srcs.to_list()
+    files = [v.path for v in generated]
     substitutions = {
-        "@@FROM@@": shell.quote(generated[0].path),
+        "@@FROM@@": shell.array_literal(files),
         "@@TO@@": shell.quote(ctx.attr.dir),
     }
     out = ctx.actions.declare_file(ctx.label.name + ".sh")
@@ -18,7 +19,7 @@ def _vendor_grpc_source_impl(ctx):
         substitutions = substitutions,
         is_executable = True,
     )
-    runfiles = ctx.runfiles(files = [generated[0]])
+    runfiles = ctx.runfiles(files = generated)
     return [
         DefaultInfo(
             runfiles = runfiles,
