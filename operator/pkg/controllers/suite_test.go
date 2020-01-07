@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
-	"github.com/f110/lagrangian-proxy/operator/bazeltesting"
+	"github.com/f110/lagrangian-proxy/operator/pkg/bazeltesting"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"

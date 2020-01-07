@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["find.go"],
-    importpath = "github.com/f110/lagrangian-proxy/operator/bazeltesting",
+    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/bazeltesting",
     visibility = ["//visibility:public"],
 )

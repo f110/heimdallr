@@ -24,7 +24,7 @@ import (
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
-	"github.com/f110/lagrangian-proxy/operator/controllers"
+	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
 	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
