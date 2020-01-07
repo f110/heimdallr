@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
-
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/f110/lagrangian-proxy/pkg/auth"
@@ -25,6 +23,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database/etcd"
 	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcserver"
 	"github.com/f110/lagrangian-proxy/pkg/server"
@@ -408,7 +407,11 @@ func (m *mainProcess) Setup() error {
 	if m.config.General.Enable {
 		switch m.config.FrontendProxy.Session.Type {
 		case config.SessionTypeSecureCookie:
-			m.sessionStore = session.NewSecureCookieStore(m.config.FrontendProxy.Session.HashKey, m.config.FrontendProxy.Session.BlockKey)
+			m.sessionStore = session.NewSecureCookieStore(
+				m.config.FrontendProxy.Session.HashKey,
+				m.config.FrontendProxy.Session.BlockKey,
+				m.config.General.ServerNameHost,
+			)
 		case config.SessionTypeMemcached:
 			m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
 		}

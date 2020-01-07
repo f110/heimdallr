@@ -48,11 +48,12 @@ type Store interface {
 }
 
 type SecureCookieStore struct {
-	s *securecookie.SecureCookie
+	Domain string
+	s      *securecookie.SecureCookie
 }
 
-func NewSecureCookieStore(hasKey, blockKey []byte) *SecureCookieStore {
-	return &SecureCookieStore{s: securecookie.New(hasKey, blockKey)}
+func NewSecureCookieStore(hasKey, blockKey []byte, domain string) *SecureCookieStore {
+	return &SecureCookieStore{s: securecookie.New(hasKey, blockKey), Domain: domain}
 }
 
 func (s *SecureCookieStore) GetSession(req *http.Request) (*Session, error) {
@@ -92,7 +93,7 @@ func (s *SecureCookieStore) Cookie(sess *Session) (*http.Cookie, error) {
 		Name:     CookieName,
 		Value:    v,
 		Path:     "/",
-		Domain:   "local-proxy.f110.dev",
+		Domain:   s.Domain,
 		HttpOnly: true,
 		Expires:  time.Now().Add(24 * time.Hour),
 		Secure:   true,
