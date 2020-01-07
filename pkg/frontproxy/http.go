@@ -277,6 +277,13 @@ func (p *HttpProxy) director(req *http.Request) {
 }
 
 func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
+	req.Header.Set("X-Forwarded-Host", req.Host)
+	req.Header.Set("X-Forwarded-Proto", "https")
+
+	if user.Id == "" {
+		return
+	}
+
 	token, err := p.client.SignRequest(user.Id)
 	if err != nil {
 		logger.Log.Debug("Failed sign jwt", zap.Error(err))
@@ -292,9 +299,6 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
 		}
 		req.AddCookie(c)
 	}
-
-	req.Header.Set("X-Forwarded-Host", req.Host)
-	req.Header.Set("X-Forwarded-Proto", "https")
 }
 
 func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *http.Request, user *database.User) {

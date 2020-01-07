@@ -12,19 +12,20 @@ import (
 )
 
 func TestAuthenticator_Authenticate(t *testing.T) {
-	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"))
+	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	u := memory.NewUserDatabase()
 	a := &authenticator{
 		Config: &config.General{
+			ServerNameHost: "proxy.example.com",
 			Backends: []*config.Backend{
-				{Name: "test.example.com", Permissions: []*config.Permission{
+				{Name: "test", Permissions: []*config.Permission{
 					{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
 					{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
 				}},
 			},
-			Roles: []config.Role{
-				{Name: "test", Bindings: []config.Binding{
-					{Backend: "test.example.com", Permission: "ok"},
+			Roles: []*config.Role{
+				{Name: "test", Bindings: []*config.Binding{
+					{Backend: "test", Permission: "ok"},
 				}},
 			},
 		},
@@ -40,7 +41,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/ok", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
@@ -58,7 +59,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("not have cookie", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/ok", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 
 		_, err := a.Authenticate(req)
 		if err != ErrSessionNotFound {
@@ -69,7 +70,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("user not found", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/ok", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 		c, err := s.Cookie(session.New("foo@example.com"))
 		if err != nil {
 			t.Fatal(err)
@@ -95,7 +96,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("not allowed path", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/no_good", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/no_good", nil)
 		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
@@ -110,7 +111,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("role not have clearance", func(t *testing.T) {
 		t.Parallel()
 
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/no_bind", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/no_bind", nil)
 		c, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)

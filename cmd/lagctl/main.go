@@ -186,7 +186,7 @@ func generateNewCertificateAuthority(conf *config.Config, dir string) error {
 }
 
 func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certificate, caPrivateKey crypto.PrivateKey) error {
-	c, privateKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev"})
+	c, privateKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{"local-proxy.f110.dev", "*.local-proxy.f110.dev", "short.f110.dev"})
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {

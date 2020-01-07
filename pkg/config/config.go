@@ -150,16 +150,20 @@ type Binding struct {
 	Rpc        string `json:"rpc,omitempty"`
 	Backend    string `json:"backend,omitempty"`    // Backend is Backend.Name
 	Permission string `json:"permission,omitempty"` // Permission is Permission.Name
+
+	FQDN string `json:"-"`
 }
 
 type Backend struct {
 	Name            string        `json:"name"` // Name is an identifier
+	FQDN            string        `json:"fqdn,omitempty"`
 	Upstream        string        `json:"upstream"`
 	Permissions     []*Permission `json:"permissions"`
 	WebHook         string        `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
 	WebHookPath     []string      `json:"webhook_path,omitempty"`
 	Agent           bool          `json:"agent,omitempty"`
 	AllowAsRootUser bool          `json:"allow_as_root_user,omitempty"`
+	DisableAuthn    bool          `json:"disable_authn,omitempty"`
 
 	Url           *url.URL    `json:"-"`
 	Socket        bool        `json:"-"`
@@ -536,12 +540,16 @@ func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*Rpc
 	})
 
 	hostnameToBackend := make(map[string]*Backend)
+	nameToBackend := make(map[string]*Backend)
 	for _, v := range backends {
 		if err := v.inflate(); err != nil {
 			return err
 		}
-		v.Name = v.Name + "." + g.ServerNameHost
-		hostnameToBackend[v.Name] = v
+		if v.FQDN == "" {
+			v.FQDN = v.Name + "." + g.ServerNameHost
+		}
+		hostnameToBackend[v.FQDN] = v
+		nameToBackend[v.Name] = v
 	}
 
 	nameToRpcPermission := make(map[string]*RpcPermission)
@@ -553,16 +561,16 @@ func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*Rpc
 	for _, v := range roles {
 		m := rpc.NewMethodMatcher()
 		for _, v := range v.Bindings {
-			v.Backend = v.Backend + "." + g.ServerNameHost
-			if v.Rpc == "" {
+			if v.Rpc != "" {
+				p := nameToRpcPermission[v.Rpc]
+				for _, method := range p.Allow {
+					if err := m.Add(method); err != nil {
+						return err
+					}
+				}
 				continue
 			}
-			p := nameToRpcPermission[v.Rpc]
-			for _, method := range p.Allow {
-				if err := m.Add(method); err != nil {
-					return err
-				}
-			}
+			v.FQDN = nameToBackend[v.Backend].FQDN
 		}
 		v.RPCMethodMatcher = m
 		roleNameToRole[v.Name] = v

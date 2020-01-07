@@ -77,8 +77,8 @@ func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]b
 	return c.generateClientCertificate(ctx, name, connector.DefaultCertificatePassword, comment, true)
 }
 
-func (c *CA) SignCertficateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) ([]byte, error) {
-	signedCert, err := cert.SigningCertificateRequest(r, c.config)
+func (c *CA) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) ([]byte, error) {
+	signedCert, err := cert.SigningCertificateRequest(csr, c.config)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

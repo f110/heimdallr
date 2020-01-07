@@ -98,6 +98,9 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}
+	if backend.DisableAuthn {
+		return &database.User{}, nil
+	}
 
 	user, err := a.findUser(req)
 	if backend.AllowAsRootUser && err == ErrUserNotFound {
@@ -123,7 +126,7 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 			continue
 		}
 		for _, b := range role.Bindings {
-			if b.Backend == backend.Name {
+			if b.FQDN == backend.FQDN {
 				if _, ok := matched[b.Permission]; ok {
 					return user, nil
 				}

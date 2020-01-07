@@ -38,3 +38,11 @@
     - name: all
       locations:
         - any: /
+- name: short
+  fqdn: short.f110.dev
+  disable_authn: true
+  upstream: http://localhost:4501
+  permissions:
+    - name: all
+      locations:
+        - any: /
