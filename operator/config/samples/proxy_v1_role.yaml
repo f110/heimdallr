@@ -13,3 +13,5 @@ spec:
       permission: all
     - backendName: dashboard
       permission: all
+    - backendName: backend-fqdn
+      permission: all

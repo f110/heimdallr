@@ -816,12 +816,14 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		}
 		proxies[i] = &config.Backend{
 			Name:            name,
+			FQDN:            v.Spec.FQDN,
 			Upstream:        v.Spec.Upstream,
 			Permissions:     permissions,
 			WebHook:         v.Spec.Webhook,
 			WebHookPath:     v.Spec.WebhookPath,
 			Agent:           v.Spec.Agent,
 			AllowAsRootUser: v.Spec.AllowRootUser,
+			DisableAuthn:    v.Spec.DisableAuthn,
 		}
 	}
 	proxyBinary, err := yaml.Marshal(proxies)

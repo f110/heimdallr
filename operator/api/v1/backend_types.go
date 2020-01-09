@@ -21,12 +21,14 @@ import (
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	Layer         string       `json:"layer"`
+	FQDN          string       `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
+	Layer         string       `json:"layer,omitempty"`
 	Upstream      string       `json:"upstream,omitempty"`
 	Webhook       string       `json:"webhook,omitempty"`
 	WebhookPath   []string     `json:"webhookPath,omitempty"`
 	AllowRootUser bool         `json:"allowRootUser,omitempty"`
 	Agent         bool         `json:"agent,omitempty"`
+	DisableAuthn  bool         `json:"disableAuthn,omitempty"`
 	Permissions   []Permission `json:"permissions,omitempty"`
 }
 

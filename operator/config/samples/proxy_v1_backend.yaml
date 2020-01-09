@@ -26,3 +26,17 @@ spec:
     - name: all
       locations:
         - get: /
+---
+apiVersion: proxy.f110.dev/v1
+kind: Backend
+metadata:
+  name: backend-fqdn
+  labels:
+    instance: proxy-sample
+spec:
+  fqdn: short.f110.dev
+  upstream: http://localhost:4502
+  permissions:
+    - name: all
+      locations:
+        - any: /

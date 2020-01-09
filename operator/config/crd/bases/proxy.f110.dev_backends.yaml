@@ -38,6 +38,10 @@ spec:
               type: boolean
             allowRootUser:
               type: boolean
+            disableAuthn:
+              type: boolean
+            fqdn:
+              type: string
             layer:
               type: string
             permissions:
@@ -80,8 +84,6 @@ spec:
               items:
                 type: string
               type: array
-          required:
-          - layer
           type: object
         status:
           description: BackendStatus defines the observed state of Backend
