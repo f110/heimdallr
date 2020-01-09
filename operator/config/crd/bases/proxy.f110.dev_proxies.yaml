@@ -252,6 +252,8 @@ spec:
               required:
               - type
               type: object
+            version:
+              type: string
           required:
           - administratorUnit
           - domain

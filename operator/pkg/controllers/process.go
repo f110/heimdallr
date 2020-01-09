@@ -45,9 +45,7 @@ const (
 	imageRepository            = "quay.io/f110/lagrangian-proxy"
 	defaultImageTag            = "latest"
 	rpcServerImageRepositry    = "quay.io/f110/lagrangian-proxy-rpcserver"
-	rpcServerDefaultImageTag   = "latest"
 	ctlImageRepository         = "quay.io/f110/lagrangian-proxy-ctl"
-	ctlDefaultImageTag         = "latest"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
 	ctlCommand                 = "/usr/local/bin/lagctl"
@@ -116,6 +114,14 @@ func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client) *LagrangianPr
 		Object:    spec,
 		Spec:      spec.Spec,
 	}
+}
+
+func (r *LagrangianProxy) Version() string {
+	if r.Spec.Version != "" {
+		return r.Spec.Version
+	}
+
+	return defaultImageTag
 }
 
 func (r *LagrangianProxy) EtcdClusterName() string {
@@ -936,7 +942,7 @@ func (r *LagrangianProxy) Main() (*process, error) {
 								Containers: []corev1.Container{
 									{
 										Name:    "ctl",
-										Image:   fmt.Sprintf("%s:%s", ctlImageRepository, ctlDefaultImageTag),
+										Image:   fmt.Sprintf("%s:%s", ctlImageRepository, r.Version()),
 										Command: []string{ctlCommand},
 										Args: []string{
 											"internal",
@@ -1040,7 +1046,7 @@ func (r *LagrangianProxy) Main() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:    "proxy",
-							Image:   fmt.Sprintf("%s:%s", imageRepository, defaultImageTag),
+							Image:   fmt.Sprintf("%s:%s", imageRepository, r.Version()),
 							Command: []string{defaultCommand},
 							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
@@ -1372,7 +1378,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:    "proxy",
-							Image:   fmt.Sprintf("%s:%s", imageRepository, defaultImageTag),
+							Image:   fmt.Sprintf("%s:%s", imageRepository, r.Version()),
 							Command: []string{defaultCommand},
 							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
@@ -1494,7 +1500,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:    "rpcserver",
-							Image:   fmt.Sprintf("%s:%s", rpcServerImageRepositry, rpcServerDefaultImageTag),
+							Image:   fmt.Sprintf("%s:%s", rpcServerImageRepositry, r.Version()),
 							Command: []string{rpcServerCommand},
 							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
