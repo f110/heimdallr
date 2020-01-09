@@ -799,9 +799,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	}
 
 	proxies := make([]*config.Backend, len(backends))
-	backendMap := make(map[string]*proxyv1.Backend)
+	backendMap := make(map[string]proxyv1.Backend)
 	for i, v := range backends {
-		backendMap[v.Namespace+"/"+v.Name] = &v
+		backendMap[v.Namespace+"/"+v.Name] = v
 
 		permissions := make([]*config.Permission, len(v.Spec.Permissions))
 		for k, p := range v.Spec.Permissions {
