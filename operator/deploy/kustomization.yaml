@@ -1,0 +1,5 @@
+namespace: lag-proxy
+bases:
+  - ../config/manager
+  - ../config/crd
+  - ../config/rbac

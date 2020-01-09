@@ -1,4 +1,4 @@
-VERSION = v0.1.0
+VERSION = v0.1.4
 
 run:
 	bazel run //cmd/lagrangian-proxy -- -c $(CURDIR)/config_debug.yaml
@@ -17,6 +17,9 @@ update-deps: gen
 
 gen:
 	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
+
+generate-deploy-manifests:
+	kustomize build operator/deploy > operator/deploy/all-in-one.yaml
 
 push: push-proxy push-ctl push-rpcserver push-operator
 

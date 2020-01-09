@@ -342,13 +342,22 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 		return nil, err
 	}
 	layers := make(map[string]struct{})
+	fqdn := make([]string, 0)
 	for _, v := range backends {
+		if v.Spec.Layer == "" {
+			if v.Spec.FQDN != "" {
+				fqdn = append(fqdn, v.Spec.FQDN)
+			}
+			continue
+		}
+
 		if _, ok := layers[v.Spec.Layer]; !ok {
 			layers[v.Spec.Layer] = struct{}{}
 		}
 	}
 
 	domains := []string{r.Spec.Domain, fmt.Sprintf("*.%s", r.Spec.Domain)}
+	domains = append(domains, fqdn...)
 	for v := range layers {
 		domains = append(domains, fmt.Sprintf("*.%s.%s", v, r.Spec.Domain))
 	}
@@ -640,8 +649,7 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
-			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
-			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+			InternalTokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
 			Level:    "info",
@@ -673,6 +681,7 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
 			Enable:            false,
+			ServerName:        r.Spec.Domain,
 			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
 			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
 			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
@@ -1305,11 +1314,24 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 				},
 			},
 		},
+		{
+			Name: "ca-cert",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: r.CASecretName(),
+					Items: []corev1.KeyToPath{
+						{Key: caCertificateFilename, Path: caCertificateFilename},
+					},
+				},
+			},
+		},
 	}
 	volumeMounts := []corev1.VolumeMount{
 		{Name: "config", MountPath: configMountPath},
 		{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
+		{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
 	}
+
 	if r.selfSignedIssuer {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1327,16 +1349,6 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 		}
 
 		volumes = append(volumes, corev1.Volume{
-			Name: "ca-cert",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: r.CASecretName(),
-					Items: []corev1.KeyToPath{
-						{Key: caCertificateFilename, Path: caCertificateFilename},
-					},
-				},
-			},
-		}, corev1.Volume{
 			Name: "privatekey",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -1345,7 +1357,6 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 			},
 		})
 		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
 			corev1.VolumeMount{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
 		)
 	}

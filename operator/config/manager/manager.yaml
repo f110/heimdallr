@@ -3,13 +3,12 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: system
+  name: lag-proxy
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: system
   labels:
     control-plane: controller-manager
 spec:
@@ -22,18 +21,16 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      serviceAccountName: lag-proxy
       containers:
-      - command:
-        - /manager
-        args:
-        - --enable-leader-election
-        image: controller:latest
-        name: manager
-        resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
-          requests:
-            cpu: 100m
-            memory: 20Mi
+        - name: operator
+          image: quay.io/f110/lagrangian-proxy-operator:v0.1.4
+          args: []
+          resources:
+            limits:
+              cpu: 100m
+              memory: 30Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
       terminationGracePeriodSeconds: 10
