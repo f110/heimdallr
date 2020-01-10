@@ -839,6 +839,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			Agent:           v.Spec.Agent,
 			AllowAsRootUser: v.Spec.AllowRootUser,
 			DisableAuthn:    v.Spec.DisableAuthn,
+			Insecure:        v.Spec.Insecure,
 		}
 	}
 	proxyBinary, err := yaml.Marshal(proxies)

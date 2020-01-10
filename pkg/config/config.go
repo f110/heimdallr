@@ -164,10 +164,12 @@ type Backend struct {
 	Agent           bool          `json:"agent,omitempty"`
 	AllowAsRootUser bool          `json:"allow_as_root_user,omitempty"`
 	DisableAuthn    bool          `json:"disable_authn,omitempty"`
+	Insecure        bool          `json:"insecure,omitempty"`
 
-	Url           *url.URL    `json:"-"`
-	Socket        bool        `json:"-"`
-	WebHookRouter *mux.Router `json:"-"`
+	Url           *url.URL        `json:"-"`
+	Socket        bool            `json:"-"`
+	WebHookRouter *mux.Router     `json:"-"`
+	Transport     *http.Transport `json:"-"`
 }
 
 type Permission struct {
@@ -772,6 +774,22 @@ func (b *Backend) inflate() error {
 			mux.PathPrefix(v)
 		}
 		b.WebHookRouter = mux
+	}
+
+	var tlsConfig *tls.Config
+	if b.Insecure {
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+	b.Transport = &http.Transport{
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		MaxConnsPerHost:       16,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig,
 	}
 
 	return nil

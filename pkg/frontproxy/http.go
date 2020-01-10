@@ -128,21 +128,12 @@ func (a *accessLogger) Log(l AccessLog) {
 type Transport struct {
 	config    *config.Config
 	connector *connector.Server
-	internal  *http.Transport
 }
 
 func NewTransport(conf *config.Config, ct *connector.Server) *Transport {
 	return &Transport{
 		config:    conf,
 		connector: ct,
-		internal: &http.Transport{
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			MaxConnsPerHost:       16,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
 	}
 }
 
@@ -152,7 +143,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return t.connector.RoundTrip(b, req)
 	}
 
-	return t.internal.RoundTrip(req)
+	return b.Transport.RoundTrip(req)
 }
 
 type HttpProxy struct {

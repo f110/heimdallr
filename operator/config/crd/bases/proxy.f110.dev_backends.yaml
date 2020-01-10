@@ -42,6 +42,8 @@ spec:
               type: boolean
             fqdn:
               type: string
+            insecure:
+              type: boolean
             layer:
               type: string
             permissions:
