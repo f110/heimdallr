@@ -1,9 +1,4 @@
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@io_bazel_rules_go//proto:compiler.bzl", "GoProtoCompiler")
-load("@io_bazel_rules_go//proto:def.bzl", "get_imports")
-load("@io_bazel_rules_go//go:def.bzl", "go_context")
-load("@io_bazel_rules_go//go/private:rules/rule.bzl", "go_rule")
-load("@io_bazel_rules_go_compat//:compat.bzl", "get_proto")
 
 def _vendor_grpc_source_impl(ctx):
     generated = ctx.attr.src[OutputGroupInfo].go_generated_srcs.to_list()
