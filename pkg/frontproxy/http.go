@@ -32,8 +32,6 @@ const (
 	requestIdLength = 32
 )
 
-var TokenExpiration = 5 * time.Minute
-
 type AccessLog struct {
 	Host      string `json:"host"`
 	Protocol  string `json:"protocol"`
@@ -63,21 +61,15 @@ func (a AccessLog) Fields() []zap.Field {
 }
 
 type loggedResponseWriter struct {
-	internal http.ResponseWriter
-	status   int
-}
-
-func (w *loggedResponseWriter) Header() http.Header {
-	return w.internal.Header()
-}
-
-func (w *loggedResponseWriter) Write(b []byte) (n int, err error) {
-	return w.internal.Write(b)
+	http.ResponseWriter
+	http.Hijacker
+	http.Flusher
+	status int
 }
 
 func (w *loggedResponseWriter) WriteHeader(statusCode int) {
 	w.status = statusCode
-	w.internal.WriteHeader(statusCode)
+	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 type accessLogger struct {
@@ -177,7 +169,14 @@ func NewHttpProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientCo
 // ServeHTTP has responsibility to serving content to client.
 // ctx should be used instead of req.Context().
 func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *http.Request) {
-	w = &loggedResponseWriter{internal: w}
+	logged := &loggedResponseWriter{ResponseWriter: w}
+	if h, ok := w.(http.Hijacker); ok {
+		logged.Hijacker = h
+	}
+	if f, ok := w.(http.Flusher); ok {
+		logged.Flusher = f
+	}
+	w = logged
 
 	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 	if p.Config.FrontendProxy.ExpectCT {

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	mrand "math/rand"
 	"net/http"
 	"net/http/httputil"
@@ -28,6 +29,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/version"
 	"github.com/gorilla/securecookie"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -212,6 +214,47 @@ func commandTestServer() error {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(5 * time.Millisecond)
 		io.WriteString(w, "It's working!")
+	})
+	http.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
+		upgrader := &websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
+		conn, err := upgrader.Upgrade(w, req, nil)
+		if err != nil {
+			return
+		}
+
+		go func() {
+			for {
+				typ, buf, err := conn.ReadMessage()
+				if err != nil {
+					log.Print(err)
+					return
+				}
+				log.Print(string(buf))
+
+				if err := conn.WriteMessage(typ, buf); err != nil {
+					log.Print(err)
+					return
+				}
+			}
+		}()
+	})
+	http.HandleFunc("/ws_client", func(w http.ResponseWriter, req *http.Request) {
+		io.WriteString(w, `<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+window.onload = function () {
+	conn = new WebSocket("wss://" + document.location.host + "/ws");
+	conn.onmessage = function (evt) {
+		console.log(evt);
+	};
+	setInterval(function() {conn.send("test")}, 1000);
+};
+</script>
+</head>
+<body>
+</body>
+</html>`)
 	})
 	fmt.Println("Listen :4501")
 	return http.ListenAndServe(":4501", nil)
