@@ -851,7 +851,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		if upstream == "" && service != nil {
 			for _, p := range service.Spec.Ports {
 				if p.Name == v.Spec.ServiceSelector.Port {
-					upstream = fmt.Sprintf("%s://%s:%d", v.Spec.ServiceSelector.Scheme, service.Spec.ClusterIP, p.TargetPort.IntVal)
+					upstream = fmt.Sprintf("%s://%s:%d", v.Spec.ServiceSelector.Scheme, service.Spec.ClusterIP, p.Port)
 					break
 				}
 			}
