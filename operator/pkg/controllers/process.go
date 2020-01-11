@@ -736,8 +736,9 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 func (r *LagrangianProxy) ConfigForDefragmentCronJob() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
-			Enable:    false,
-			RpcTarget: fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			Enable:     false,
+			ServerName: r.Spec.Domain,
+			RpcTarget:  fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
