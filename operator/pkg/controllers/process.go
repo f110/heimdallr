@@ -803,6 +803,24 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	for i, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = v
 
+		var service *corev1.Service
+		if len(v.Spec.ServiceSelector.MatchLabels) > 0 {
+			selector, err := metav1.LabelSelectorAsSelector(&v.Spec.ServiceSelector.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+
+			svc := &corev1.ServiceList{}
+			if err := r.Client.List(context.Background(), svc, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.BackendSelector.Namespace}); err != nil {
+				return nil, err
+			}
+			if len(svc.Items) == 0 {
+				continue
+			}
+
+			service = &svc.Items[0]
+		}
+
 		permissions := make([]*config.Permission, len(v.Spec.Permissions))
 		for k, p := range v.Spec.Permissions {
 			locations := make([]config.Location, len(p.Locations))
@@ -829,10 +847,19 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		if v.Spec.Layer == "" {
 			name = v.Name
 		}
+		upstream := v.Spec.Upstream
+		if upstream == "" && service != nil {
+			for _, p := range service.Spec.Ports {
+				if p.Name == v.Spec.ServiceSelector.Port {
+					upstream = fmt.Sprintf("%s://%s:%d", v.Spec.ServiceSelector.Scheme, service.Spec.ClusterIP, p.TargetPort.IntVal)
+					break
+				}
+			}
+		}
 		proxies[i] = &config.Backend{
 			Name:            name,
 			FQDN:            v.Spec.FQDN,
-			Upstream:        v.Spec.Upstream,
+			Upstream:        upstream,
 			Permissions:     permissions,
 			WebHook:         v.Spec.Webhook,
 			WebHookPath:     v.Spec.WebhookPath,

@@ -19,18 +19,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ServiceSelector struct {
+	metav1.LabelSelector `json:",inline"`
+	Namespace            string `json:"namespace,omitempty"`
+	Port                 string `json:"port,omitempty"`
+	Scheme               string `json:"scheme,omitempty"`
+}
+
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	FQDN          string       `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
-	Layer         string       `json:"layer,omitempty"`
-	Upstream      string       `json:"upstream,omitempty"`
-	Webhook       string       `json:"webhook,omitempty"`
-	WebhookPath   []string     `json:"webhookPath,omitempty"`
-	AllowRootUser bool         `json:"allowRootUser,omitempty"`
-	Agent         bool         `json:"agent,omitempty"`
-	DisableAuthn  bool         `json:"disableAuthn,omitempty"`
-	Insecure      bool         `json:"insecure,omitempty"`
-	Permissions   []Permission `json:"permissions,omitempty"`
+	FQDN            string          `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
+	Layer           string          `json:"layer,omitempty"`
+	Upstream        string          `json:"upstream,omitempty"`
+	ServiceSelector ServiceSelector `json:"serviceSelector,omitempty"`
+	Webhook         string          `json:"webhook,omitempty"`
+	WebhookPath     []string        `json:"webhookPath,omitempty"`
+	AllowRootUser   bool            `json:"allowRootUser,omitempty"`
+	Agent           bool            `json:"agent,omitempty"`
+	DisableAuthn    bool            `json:"disableAuthn,omitempty"`
+	Insecure        bool            `json:"insecure,omitempty"`
+	Permissions     []Permission    `json:"permissions,omitempty"`
 }
 
 type Permission struct {
