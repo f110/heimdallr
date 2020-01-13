@@ -16,6 +16,7 @@ go_library(
         "//operator/api/v1:go_default_library",
         "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
+        "//pkg/k8s:go_default_library",
         "//pkg/netutil:go_default_library",
         "//vendor/github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2:go_default_library",
         "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",

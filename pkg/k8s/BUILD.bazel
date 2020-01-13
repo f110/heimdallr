@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["notify.go"],
+    srcs = [
+        "net.go",
+        "notify.go",
+    ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/k8s",
     visibility = ["//visibility:public"],
     deps = [

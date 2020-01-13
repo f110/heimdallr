@@ -18,6 +18,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/k8s"
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -799,6 +800,10 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 
+	clusterDomain, err := k8s.GetClusterDomain()
+	if err != nil {
+		clusterDomain = "cluster.local"
+	}
 	proxies := make([]*config.Backend, len(backends))
 	backendMap := make(map[string]proxyv1.Backend)
 	for i, v := range backends {
@@ -852,7 +857,15 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		if upstream == "" && service != nil {
 			for _, p := range service.Spec.Ports {
 				if p.Name == v.Spec.ServiceSelector.Port {
-					upstream = fmt.Sprintf("%s://%s:%d", v.Spec.ServiceSelector.Scheme, service.Spec.ClusterIP, p.Port)
+					scheme := v.Spec.ServiceSelector.Scheme
+					if scheme == "" {
+						switch p.Name {
+						case "http", "https":
+							scheme = p.Name
+						}
+					}
+
+					upstream = fmt.Sprintf("%s://%s.%s.svc.%s:%d", scheme, service.Name, service.Namespace, clusterDomain, p.Port)
 					break
 				}
 			}
