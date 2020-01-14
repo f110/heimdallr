@@ -19,7 +19,8 @@ gen:
 	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
 
 generate-deploy-manifests:
-	kustomize build operator/deploy > operator/deploy/all-in-one.yaml
+	bazel run //operator:manifests
+	kubectl kustomize operator/deploy | bazel run //operator/hack/manifest-finalizer > operator/deploy/all-in-one.yaml
 
 push: push-proxy push-ctl push-rpcserver push-operator
 

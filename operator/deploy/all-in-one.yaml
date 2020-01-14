@@ -1,16 +1,6 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: lag-proxy
----
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (unknown)
-  creationTimestamp: null
   name: backends.proxy.f110.dev
 spec:
   group: proxy.f110.dev
@@ -20,98 +10,139 @@ spec:
     plural: backends
     singular: backend
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: Backend is the Schema for the backends API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: BackendSpec defines the desired state of Backend
-          properties:
-            agent:
-              type: boolean
-            allowRootUser:
-              type: boolean
-            disableAuthn:
-              type: boolean
-            fqdn:
-              type: string
-            layer:
-              type: string
-            permissions:
-              items:
-                properties:
-                  locations:
-                    items:
-                      properties:
-                        any:
-                          type: string
-                        connect:
-                          type: string
-                        delete:
-                          type: string
-                        get:
-                          type: string
-                        head:
-                          type: string
-                        options:
-                          type: string
-                        patch:
-                          type: string
-                        post:
-                          type: string
-                        put:
-                          type: string
-                        trace:
-                          type: string
-                      type: object
-                    type: array
-                  name:
-                    type: string
-                type: object
-              type: array
-            upstream:
-              type: string
-            webhook:
-              type: string
-            webhookPath:
-              items:
-                type: string
-              type: array
-          type: object
-        status:
-          description: BackendStatus defines the observed state of Backend
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Backend is the Schema for the backends API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BackendSpec defines the desired state of Backend
+            properties:
+              agent:
+                type: boolean
+              allowRootUser:
+                type: boolean
+              disableAuthn:
+                type: boolean
+              fqdn:
+                type: string
+              insecure:
+                type: boolean
+              layer:
+                type: string
+              permissions:
+                items:
+                  properties:
+                    locations:
+                      items:
+                        properties:
+                          any:
+                            type: string
+                          connect:
+                            type: string
+                          delete:
+                            type: string
+                          get:
+                            type: string
+                          head:
+                            type: string
+                          options:
+                            type: string
+                          patch:
+                            type: string
+                          post:
+                            type: string
+                          put:
+                            type: string
+                          trace:
+                            type: string
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                  type: object
+                type: array
+              serviceSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                  port:
+                    type: string
+                  scheme:
+                    type: string
+                type: object
+              upstream:
+                type: string
+              webhook:
+                type: string
+              webhookPath:
+                items:
+                  type: string
+                type: array
+            type: object
+          status:
+            description: BackendStatus defines the observed state of Backend
+            type: object
+        type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (unknown)
-  creationTimestamp: null
   name: proxies.proxy.f110.dev
 spec:
   group: proxy.f110.dev
@@ -121,279 +152,273 @@ spec:
     plural: proxies
     singular: proxy
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: Proxy is the Schema for the proxies API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: ProxySpec defines the desired state of Proxy
-          properties:
-            administratorUnit:
-              type: string
-            backendSelector:
-              properties:
-                matchExpressions:
-                  description: matchExpressions is a list of label selector requirements.
-                    The requirements are ANDed.
-                  items:
-                    description: A label selector requirement is a selector that contains
-                      values, a key, and an operator that relates the key and values.
-                    properties:
-                      key:
-                        description: key is the label key that the selector applies
-                          to.
-                        type: string
-                      operator:
-                        description: operator represents a key's relationship to a
-                          set of values. Valid operators are In, NotIn, Exists and
-                          DoesNotExist.
-                        type: string
-                      values:
-                        description: values is an array of string values. If the operator
-                          is In or NotIn, the values array must be non-empty. If the
-                          operator is Exists or DoesNotExist, the values array must
-                          be empty. This array is replaced during a strategic merge
-                          patch.
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - key
-                    - operator
-                    type: object
-                  type: array
-                matchLabels:
-                  additionalProperties:
-                    type: string
-                  description: matchLabels is a map of {key,value} pairs. A single
-                    {key,value} in the matchLabels map is equivalent to an element
-                    of matchExpressions, whose key field is "key", the operator is
-                    "In", and the values array contains only "value". The requirements
-                    are ANDed.
-                  type: object
-                namespace:
-                  type: string
-              type: object
-            country:
-              type: string
-            defragment:
-              properties:
-                schedule:
-                  type: string
-              type: object
-            domain:
-              type: string
-            identityProvider:
-              properties:
-                clientId:
-                  type: string
-                clientSecretRef:
-                  properties:
-                    key:
-                      type: string
-                    name:
-                      type: string
-                  required:
-                  - name
-                  type: object
-                provider:
-                  type: string
-                redirectUrl:
-                  type: string
-              required:
-              - provider
-              type: object
-            issuerRef:
-              description: ObjectReference is a reference to an object with a given
-                name, kind and group.
-              properties:
-                group:
-                  type: string
-                kind:
-                  type: string
-                name:
-                  type: string
-              required:
-              - name
-              type: object
-            monitor:
-              properties:
-                labels:
-                  additionalProperties:
-                    type: string
-                  type: object
-                prometheusMonitoring:
-                  description: PrometheusMonitoring is set to true, then operator
-                    creates ServiceMonitor object.
-                  type: boolean
-              type: object
-            name:
-              description: Name of proxy. if not present, uses "Lagrangian Proxy CA"
-              type: string
-            organization:
-              type: string
-            port:
-              format: int32
-              type: integer
-            replicas:
-              format: int32
-              type: integer
-            roleSelector:
-              properties:
-                matchExpressions:
-                  description: matchExpressions is a list of label selector requirements.
-                    The requirements are ANDed.
-                  items:
-                    description: A label selector requirement is a selector that contains
-                      values, a key, and an operator that relates the key and values.
-                    properties:
-                      key:
-                        description: key is the label key that the selector applies
-                          to.
-                        type: string
-                      operator:
-                        description: operator represents a key's relationship to a
-                          set of values. Valid operators are In, NotIn, Exists and
-                          DoesNotExist.
-                        type: string
-                      values:
-                        description: values is an array of string values. If the operator
-                          is In or NotIn, the values array must be non-empty. If the
-                          operator is Exists or DoesNotExist, the values array must
-                          be empty. This array is replaced during a strategic merge
-                          patch.
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - key
-                    - operator
-                    type: object
-                  type: array
-                matchLabels:
-                  additionalProperties:
-                    type: string
-                  description: matchLabels is a map of {key,value} pairs. A single
-                    {key,value} in the matchLabels map is equivalent to an element
-                    of matchExpressions, whose key field is "key", the operator is
-                    "In", and the values array contains only "value". The requirements
-                    are ANDed.
-                  type: object
-                namespace:
-                  type: string
-              type: object
-            rootUsers:
-              items:
-                type: string
-              type: array
-            rpcPermissionSelector:
-              properties:
-                matchExpressions:
-                  description: matchExpressions is a list of label selector requirements.
-                    The requirements are ANDed.
-                  items:
-                    description: A label selector requirement is a selector that contains
-                      values, a key, and an operator that relates the key and values.
-                    properties:
-                      key:
-                        description: key is the label key that the selector applies
-                          to.
-                        type: string
-                      operator:
-                        description: operator represents a key's relationship to a
-                          set of values. Valid operators are In, NotIn, Exists and
-                          DoesNotExist.
-                        type: string
-                      values:
-                        description: values is an array of string values. If the operator
-                          is In or NotIn, the values array must be non-empty. If the
-                          operator is Exists or DoesNotExist, the values array must
-                          be empty. This array is replaced during a strategic merge
-                          patch.
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - key
-                    - operator
-                    type: object
-                  type: array
-                matchLabels:
-                  additionalProperties:
-                    type: string
-                  description: matchLabels is a map of {key,value} pairs. A single
-                    {key,value} in the matchLabels map is equivalent to an element
-                    of matchExpressions, whose key field is "key", the operator is
-                    "In", and the values array contains only "value". The requirements
-                    are ANDed.
-                  type: object
-                namespace:
-                  type: string
-              type: object
-            session:
-              properties:
-                keySecretRef:
-                  properties:
-                    key:
-                      type: string
-                    name:
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type:
-                  type: string
-              required:
-              - type
-              type: object
-            version:
-              type: string
-          required:
-          - administratorUnit
-          - domain
-          - identityProvider
-          - issuerRef
-          - organization
-          - replicas
-          - session
-          type: object
-        status:
-          description: ProxyStatus defines the observed state of Proxy
-          properties:
-            deployed:
-              type: boolean
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Proxy is the Schema for the proxies API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProxySpec defines the desired state of Proxy
+            properties:
+              administratorUnit:
+                type: string
+              backendSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              country:
+                type: string
+              defragment:
+                properties:
+                  schedule:
+                    type: string
+                type: object
+              domain:
+                type: string
+              identityProvider:
+                properties:
+                  clientId:
+                    type: string
+                  clientSecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  provider:
+                    type: string
+                  redirectUrl:
+                    type: string
+                required:
+                - provider
+                type: object
+              issuerRef:
+                description: ObjectReference is a reference to an object with a given
+                  name, kind and group.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              monitor:
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  prometheusMonitoring:
+                    description: PrometheusMonitoring is set to true, then operator
+                      creates ServiceMonitor object.
+                    type: boolean
+                type: object
+              name:
+                description: Name of proxy. if not present, uses "Lagrangian Proxy
+                  CA"
+                type: string
+              organization:
+                type: string
+              port:
+                format: int32
+                type: integer
+              replicas:
+                format: int32
+                type: integer
+              roleSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              rootUsers:
+                items:
+                  type: string
+                type: array
+              rpcPermissionSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              session:
+                properties:
+                  keySecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    type: string
+                required:
+                - type
+                type: object
+              version:
+                type: string
+            required:
+            - administratorUnit
+            - domain
+            - identityProvider
+            - issuerRef
+            - organization
+            - replicas
+            - session
+            type: object
+          status:
+            description: ProxyStatus defines the observed state of Proxy
+            properties:
+              deployed:
+                type: boolean
+            type: object
+        type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (unknown)
-  creationTimestamp: null
   name: roles.proxy.f110.dev
 spec:
   group: proxy.f110.dev
@@ -403,65 +428,55 @@ spec:
     plural: roles
     singular: role
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: Role is the Schema for the roles API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: RoleSpec defines the desired state of Role
-          properties:
-            bindings:
-              items:
-                properties:
-                  backendName:
-                    type: string
-                  namespace:
-                    type: string
-                  permission:
-                    type: string
-                  rpcPermissionName:
-                    type: string
-                type: object
-              type: array
-            description:
-              type: string
-            title:
-              type: string
-          type: object
-        status:
-          description: RoleStatus defines the observed state of Role
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Role is the Schema for the roles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RoleSpec defines the desired state of Role
+            properties:
+              bindings:
+                items:
+                  properties:
+                    backendName:
+                      type: string
+                    namespace:
+                      type: string
+                    permission:
+                      type: string
+                    rpcPermissionName:
+                      type: string
+                  type: object
+                type: array
+              description:
+                type: string
+              title:
+                type: string
+            type: object
+          status:
+            description: RoleStatus defines the observed state of Role
+            type: object
+        type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (unknown)
-  creationTimestamp: null
   name: rpcpermissions.proxy.f110.dev
 spec:
   group: proxy.f110.dev
@@ -471,47 +486,40 @@ spec:
     plural: rpcpermissions
     singular: rpcpermission
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: RpcPermission is the Schema for the rpcpermissions API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: RpcPermissionSpec defines the desired state of RpcPermission
-          properties:
-            allow:
-              items:
-                type: string
-              type: array
-          required:
-          - allow
-          type: object
-        status:
-          description: RpcPermissionStatus defines the observed state of RpcPermission
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: RpcPermission is the Schema for the rpcpermissions API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RpcPermissionSpec defines the desired state of RpcPermission
+            properties:
+              allow:
+                items:
+                  type: string
+                type: array
+            required:
+            - allow
+            type: object
+          status:
+            description: RpcPermissionStatus defines the observed state of RpcPermission
+            type: object
+        type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -555,8 +563,62 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: basic-manager-role
+rules:
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - list
+  - get
+  - create
+  - delete
+  - update
+  - patch
+  - watch
+- apiGroups:
+  - etcd.database.coreos.com
+  resources:
+  - etcdclusters
+  verbs:
+  - list
+  - get
+  - create
+  - delete
+  - update
+  - patch
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - update
+  - patch
+- apiGroups:
+  - '*'
+  resources:
+  - secrets
+  - configmaps
+  - deployments
+  - services
+  - poddisruptionbudgets
+  - cronjobs
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   creationTimestamp: null
-  name: lag-proxy-manager-role
+  name: manager-role
 rules:
 - apiGroups:
   - proxy.f110.dev
@@ -656,11 +718,24 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: lag-proxy-manager-rolebinding
+  name: basic-manager-role-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: lag-proxy-manager-role
+  name: basic-manager-role
+subjects:
+- kind: ServiceAccount
+  name: lag-proxy
+  namespace: lag-proxy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manager-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: manager-role
 subjects:
 - kind: ServiceAccount
   name: lag-proxy
@@ -684,9 +759,8 @@ spec:
         control-plane: controller-manager
     spec:
       containers:
-      - args:
-        - --enable-leader-election
-        image: quay.io/f110/lagrangian-proxy-operator:v0.1.0
+      - args: []
+        image: quay.io/f110/lagrangian-proxy-operator:v0.1.4
         name: operator
         resources:
           limits:
@@ -695,4 +769,5 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+      serviceAccountName: lag-proxy
       terminationGracePeriodSeconds: 10
