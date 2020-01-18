@@ -10,10 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
+
+	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 )
 
 type FrontendProxy struct {

@@ -18,11 +18,12 @@ package controllers
 import (
 	"context"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 )
 
 // BackendReconciler reconciles a Backend object

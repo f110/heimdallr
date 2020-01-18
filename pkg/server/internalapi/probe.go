@@ -3,8 +3,9 @@ package internalapi
 import (
 	"net/http"
 
-	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/f110/lagrangian-proxy/pkg/server"
 )
 
 type Probe struct {

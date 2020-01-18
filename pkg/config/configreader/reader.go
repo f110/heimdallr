@@ -4,9 +4,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
+
+	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
 func ReadConfig(filename string) (*config.Config, error) {

@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/f110/lagrangian-proxy/pkg/config"
 	"golang.org/x/xerrors"
+
+	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
 type MemcachedStore struct {

@@ -3,10 +3,11 @@ package rpcservice
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"go.uber.org/zap"
 )
 
 type ClusterService struct {

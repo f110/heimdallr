@@ -3,11 +3,11 @@ package metrics
 import (
 	"context"
 
+	"github.com/prometheus/client_golang/prometheus"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
-	"github.com/prometheus/client_golang/prometheus"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const namespace = "lag_operator"

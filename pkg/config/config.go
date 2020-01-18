@@ -21,13 +21,14 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/namespace"
-	"github.com/f110/lagrangian-proxy/pkg/k8s"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
+
+	"github.com/f110/lagrangian-proxy/pkg/k8s"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
 )
 
 const (

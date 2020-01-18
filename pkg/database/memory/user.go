@@ -7,8 +7,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
 	"golang.org/x/xerrors"
+
+	"github.com/f110/lagrangian-proxy/pkg/database"
 )
 
 type UserDatabase struct {

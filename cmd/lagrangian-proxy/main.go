@@ -14,6 +14,13 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
+	"github.com/spf13/pflag"
+	"go.uber.org/zap"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
@@ -33,12 +40,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/server/token"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/f110/lagrangian-proxy/pkg/version"
-	"github.com/spf13/pflag"
-	"go.uber.org/zap"
-	"golang.org/x/xerrors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/keepalive"
 )
 
 type state int

@@ -11,16 +11,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/template"
 	"github.com/f110/lagrangian-proxy/tmpl/dashboard"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
 )
 
 type Server struct {

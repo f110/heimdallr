@@ -3,11 +3,12 @@ package internalapi
 import (
 	"net/http"
 
-	"github.com/f110/lagrangian-proxy/pkg/server"
-	"github.com/f110/lagrangian-proxy/pkg/stat"
 	"github.com/julienschmidt/httprouter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/f110/lagrangian-proxy/pkg/server"
+	"github.com/f110/lagrangian-proxy/pkg/stat"
 )
 
 const namespace = "lagrangian"

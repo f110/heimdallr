@@ -8,13 +8,14 @@ import (
 	"math/big"
 	"time"
 
+	"go.uber.org/zap"
+	"golang.org/x/xerrors"
+
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 )
 
 type CertificateAuthorityService struct {

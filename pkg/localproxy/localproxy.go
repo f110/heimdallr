@@ -11,8 +11,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"golang.org/x/xerrors"
+
+	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 )
 
 type ErrorTokenAuthorization struct {

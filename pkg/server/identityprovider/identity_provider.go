@@ -6,15 +6,16 @@ import (
 	"net/http"
 
 	"github.com/coreos/go-oidc"
+	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
+	"golang.org/x/oauth2"
+	"golang.org/x/xerrors"
+
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/f110/lagrangian-proxy/pkg/session"
-	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
-	"golang.org/x/oauth2"
-	"golang.org/x/xerrors"
 )
 
 type claims struct {

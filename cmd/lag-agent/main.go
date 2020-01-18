@@ -11,14 +11,15 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/spf13/pflag"
+	"golang.org/x/xerrors"
+	"software.sslmate.com/src/go-pkcs12"
+
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/version"
-	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
-	"software.sslmate.com/src/go-pkcs12"
 )
 
 func printVersion() {

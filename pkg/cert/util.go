@@ -14,9 +14,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
 	"golang.org/x/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
+
+	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
 const (

@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
@@ -13,8 +16,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/session"
 	"github.com/f110/lagrangian-proxy/pkg/template"
 	"github.com/f110/lagrangian-proxy/tmpl/ui"
-	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
 )
 
 type Server struct {

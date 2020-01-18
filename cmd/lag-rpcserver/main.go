@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/spf13/pflag"
+	"golang.org/x/xerrors"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
@@ -19,8 +22,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcserver"
 	"github.com/f110/lagrangian-proxy/pkg/version"
-	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
 )
 
 type mainProcess struct {

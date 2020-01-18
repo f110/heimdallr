@@ -1,9 +1,10 @@
 package logger
 
 import (
-	"github.com/f110/lagrangian-proxy/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
 var (

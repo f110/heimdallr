@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
+
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/server"
 )
 
 type Server struct{}

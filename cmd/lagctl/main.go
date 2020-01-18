@@ -22,12 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/version"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/pflag"
@@ -36,6 +30,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	"sigs.k8s.io/yaml"
+
+	"github.com/f110/lagrangian-proxy/pkg/cert"
+	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"github.com/f110/lagrangian-proxy/pkg/version"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

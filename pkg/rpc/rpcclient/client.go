@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth/token"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -16,6 +13,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/f110/lagrangian-proxy/pkg/auth/token"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
 )
 
 const (

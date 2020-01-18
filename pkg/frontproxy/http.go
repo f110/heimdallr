@@ -10,6 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/v28/github"
+	"github.com/gorilla/mux"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
@@ -17,12 +24,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/session"
-	"github.com/google/go-github/v28/github"
-	"github.com/gorilla/mux"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/xerrors"
-	"google.golang.org/grpc"
 )
 
 const (

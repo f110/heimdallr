@@ -22,16 +22,16 @@ import (
 	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	prometheus "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
-	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
-	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
+	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
 	// +kubebuilder:scaffold:imports
 )
 

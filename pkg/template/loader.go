@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+
+	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
 const (

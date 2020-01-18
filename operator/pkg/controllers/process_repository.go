@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
 )
 
 var processRepository = &ProcessRepository{data: make(map[string]*LagrangianProxy)}

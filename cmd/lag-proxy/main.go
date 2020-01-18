@@ -6,11 +6,12 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/spf13/pflag"
+	"golang.org/x/xerrors"
+
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
 	"github.com/f110/lagrangian-proxy/pkg/localproxy"
 	"github.com/f110/lagrangian-proxy/pkg/version"
-	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
 )
 
 func printVersion() {

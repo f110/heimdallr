@@ -3,11 +3,12 @@ package internalapi
 import (
 	"net/http"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/server"
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
+
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"github.com/f110/lagrangian-proxy/pkg/server"
 )
 
 type ResourceServer struct {

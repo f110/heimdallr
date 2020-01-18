@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
+
+	"github.com/f110/lagrangian-proxy/pkg/database"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
 type UserDatabase struct {
