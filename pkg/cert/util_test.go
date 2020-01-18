@@ -5,25 +5,17 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
-func TestSigningCertificateRequest(t *testing.T) {
-	cases := []struct {
-		File       string
-		CommonName string
-	}{
-		{
-			File:       "testdata/csr_1.pem",
-			CommonName: "fmhrit@gmail.com",
-		},
-	}
-
+func createCAForTest(t *testing.T) *config.CertificateAuthority {
 	caCertByte, caPrivateKey, err := CreateCertificateAuthority("test", "test", "test", "test")
 	if err != nil {
 		t.Fatal(err)
@@ -36,6 +28,58 @@ func TestSigningCertificateRequest(t *testing.T) {
 		Certificate: caCert,
 		PrivateKey:  caPrivateKey,
 	}
+
+	return ca
+}
+
+func TestCreateNewCertificateForClient(t *testing.T) {
+	ca := createCAForTest(t)
+	serial, err := NewSerialNumber()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "test", ca)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, cert, _, err := pkcs12.DecodeChain(p12, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.Subject.CommonName != "test@f110.dev" {
+		t.Errorf("CommonName is test@f110.dev: %s", cert.Subject.CommonName)
+	}
+}
+
+func TestCreateCertificateAuthorityForConfig(t *testing.T) {
+	_, _, err := CreateCertificateAuthorityForConfig(&config.Config{
+		General: &config.General{
+			CertificateAuthority: &config.CertificateAuthority{
+				Organization:     "test",
+				OrganizationUnit: "test",
+				Country:          "jp",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSigningCertificateRequest(t *testing.T) {
+	cases := []struct {
+		File       string
+		CommonName string
+	}{
+		{
+			File:       "testdata/csr_1.pem",
+			CommonName: "fmhrit@gmail.com",
+		},
+	}
+
+	ca := createCAForTest(t)
 
 	for _, c := range cases {
 		b, err := ioutil.ReadFile(c.File)
@@ -65,6 +109,51 @@ func TestSigningCertificateRequest(t *testing.T) {
 		if signedCert.Issuer.CommonName != "test" {
 			t.Errorf("CommonName of Issuer is not %s: %s", "test", signedCert.Issuer.CommonName)
 		}
+	}
+}
+
+func TestGenerateServerCertificate(t *testing.T) {
+	ca := createCAForTest(t)
+	certByte, privateKey, err := GenerateServerCertificate(ca.Certificate, ca.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := x509.ParseCertificate(certByte)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if privateKey == nil {
+		t.Error("was not generate a private key")
+	}
+	if cert.Subject.CommonName != "test-server.test.f110.dev" {
+		t.Errorf("CommonName is test-server.test.f110.dev: %s", cert.Subject.CommonName)
+	}
+}
+
+func TestCreateCertificateRequest(t *testing.T) {
+	csrByte, privateKey, err := CreateCertificateRequest(pkix.Name{CommonName: "test@f110.dev"}, []string{""})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if privateKey == nil {
+		t.Error("was not generate a private key")
+	}
+	block, _ := pem.Decode(csrByte)
+	if block == nil {
+		t.Fatal("CreateCertificateRequest was not returned pem encoded CSR")
+	}
+	if block.Type != "CERTIFICATE REQUEST" {
+		t.Fatalf("CreateCertificateRequest was returned pem bytes but not CERTIFICATE REQUEST: %s", block.Type)
+	}
+
+	csr, err := x509.ParseCertificateRequest(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if csr.Subject.CommonName != "test@f110.dev" {
+		t.Errorf("CommonName is test@f110.dev: %s", csr.Subject.CommonName)
 	}
 }
 
@@ -104,7 +193,7 @@ func TestPemEncode(t *testing.T) {
 		}
 	})
 
-	t.Run("illegal header", func(t *testing.T) {
+	t.Run("Illegal header", func(t *testing.T) {
 		f, err := ioutil.TempFile("", "")
 		if err != nil {
 			t.Fatal(err)
@@ -117,6 +206,13 @@ func TestPemEncode(t *testing.T) {
 
 		if _, err := os.Stat(f.Name()); !os.IsNotExist(err) {
 			t.Fatal("if can not encode to pem, should delete a temporary file but not deleted")
+		}
+	})
+
+	t.Run("Failed create file", func(t *testing.T) {
+		err := PemEncode("/unknown/notexist/file/path", "UNKNOWN PATH", []byte("illegal"), nil)
+		if err == nil {
+			t.Fatal("PemEncode is success but is not expect")
 		}
 	})
 }

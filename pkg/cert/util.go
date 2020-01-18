@@ -122,9 +122,9 @@ func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.Private
 	template := &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
-			Organization:       []string{"test"},
-			OrganizationalUnit: []string{"dev"},
-			Country:            []string{"jp"},
+			Organization:       ca.Subject.Organization,
+			OrganizationalUnit: ca.Subject.OrganizationalUnit,
+			Country:            ca.Subject.Country,
 			CommonName:         dnsNames[0],
 		},
 		NotBefore:             time.Now().UTC(),
