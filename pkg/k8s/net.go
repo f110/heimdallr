@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const (
+var (
 	resolvFile = "/etc/resolv.conf"
 )
 

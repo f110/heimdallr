@@ -198,6 +198,7 @@ func TestPemEncode(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer os.Remove(f.Name())
 
 		err = PemEncode(f.Name(), "ILLEGAL HEADER:", []byte("illegal"), map[string]string{"illegal: ": "value"})
 		if err == nil {

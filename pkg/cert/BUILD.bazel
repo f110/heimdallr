@@ -17,5 +17,8 @@ go_test(
     srcs = ["util_test.go"],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
-    deps = ["//pkg/config:go_default_library"],
+    deps = [
+        "//pkg/config:go_default_library",
+        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
+    ],
 )
