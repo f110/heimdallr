@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/gob"
@@ -42,6 +43,8 @@ var _ database.CertificateAuthority = &CA{}
 func init() {
 	gob.Register(ecdsa.PublicKey{})
 	gob.Register(elliptic.P256())
+	gob.Register(rsa.PrivateKey{})
+	gob.Register(rsa.PublicKey{})
 }
 
 func NewCA(ctx context.Context, config *config.CertificateAuthority, client *clientv3.Client) (*CA, error) {

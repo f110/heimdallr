@@ -301,11 +301,20 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 		return
 	}
 
-	err := client.NewCert(req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
-	if err != nil {
-		logger.Log.Info("Failed create new client certificate", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if req.FormValue("csr") != "" {
+		err := client.NewCertByCSR(req.FormValue("csr"))
+		if err != nil {
+			logger.Log.Info("Failed sign CSR", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err := client.NewCert(req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
+		if err != nil {
+			logger.Log.Info("Failed create new client certificate", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, req, "/cert", http.StatusFound)

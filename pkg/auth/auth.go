@@ -178,6 +178,7 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 
 func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
+		logger.Log.Debug("Client Certificate authorization")
 		// Client Certificate Authorization
 		cert := req.TLS.PeerCertificates[0]
 		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {

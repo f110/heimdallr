@@ -45,33 +45,37 @@ func (s *CertificateAuthorityService) GetSignedList(ctx context.Context, _ *rpc.
 func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rpc.RequestNewClientCert) (*rpc.ResponseNewClientCert, error) {
 	var err error
 	commonName := req.CommonName
-	if req.Agent {
-		var csr *x509.CertificateRequest
-		if req.Csr != "" {
-			block, _ := pem.Decode([]byte(req.Csr))
-			if block.Type != "CERTIFICATE REQUEST" {
-				return nil, errors.New("rpcservice: invalid csr")
-			}
-			r, err := x509.ParseCertificateRequest(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			commonName = r.Subject.CommonName
-			csr = r
-		}
 
+	var csr *x509.CertificateRequest
+	if req.Csr != "" {
+		block, _ := pem.Decode([]byte(req.Csr))
+		if block.Type != "CERTIFICATE REQUEST" {
+			return nil, errors.New("rpcservice: invalid csr")
+		}
+		r, err := x509.ParseCertificateRequest(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		commonName = r.Subject.CommonName
+		csr = r
+		logger.Log.Debug("Parsed CSR", zap.String("subject", csr.Subject.String()))
+	}
+
+	if req.Agent {
 		if _, ok := s.Config.General.GetBackend(commonName); !ok {
 			logger.Log.Info("Could not find backend", zap.String("common_name", req.CommonName))
 			return nil, xerrors.New("rpc: unknown backend")
 		}
+	}
 
-		if req.Csr == "" {
-			_, err = s.ca.NewAgentCertificate(ctx, req.CommonName, req.Comment)
-		} else {
-			_, err = s.ca.SignCertificateRequest(ctx, csr, req.Comment, req.Agent)
-		}
-	} else {
+	if commonName == "" {
+		return nil, errors.New("rpcservice: common_name is required")
+	}
+
+	if csr == nil {
 		_, err = s.ca.NewClientCertificate(ctx, req.CommonName, req.Password, req.Comment)
+	} else {
+		_, err = s.ca.SignCertificateRequest(ctx, csr, req.Comment, req.Agent)
 	}
 	if err != nil {
 		return nil, err
