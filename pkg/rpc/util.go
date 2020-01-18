@@ -38,6 +38,7 @@ func DatabaseCertToRPCCert(in *database.SignedCertificate) *CertItem {
 		IssuedAt:     issuedAt,
 		Agent:        in.Agent,
 		Comment:      in.Comment,
+		HasP12:       in.P12 != nil && len(in.P12) > 0,
 	}
 }
 
@@ -45,6 +46,7 @@ func DatabaseCertToRPCCertWithByte(in *database.SignedCertificate) *CertItem {
 	c := DatabaseCertToRPCCert(in)
 	c.Certificate = in.Certificate.Raw
 	c.P12 = in.P12
+	c.HasP12 = in.P12 != nil && len(in.P12) > 0
 	return c
 }
 

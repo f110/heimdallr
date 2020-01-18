@@ -239,6 +239,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 			CommonName:   v.CommonName,
 			IssuedAt:     issuedAt,
 			Comment:      v.Comment,
+			P12:          v.HasP12,
 		})
 	}
 
@@ -357,16 +358,28 @@ func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ 
 		return
 	}
 
+	format := "p12"
+	switch req.URL.Query().Get("format") {
+	case "cert":
+		format = req.URL.Query().Get("format")
+	}
+
+	if format == "p12" && len(cert.P12) == 0 {
+		format = "cert"
+	}
+
 	ext := "crt"
-	if len(cert.P12) > 0 {
+	if format == "p12" {
 		ext = "p12"
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", i.Text(16), ext))
-	if len(cert.P12) > 0 {
+
+	switch format {
+	case "p12":
 		w.Write(cert.P12)
-	} else {
+	case "cert":
 		buf := new(bytes.Buffer)
 		if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Certificate}); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

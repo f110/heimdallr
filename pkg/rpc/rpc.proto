@@ -112,6 +112,7 @@ message CertItem {
     string comment = 6;
     bytes certificate = 7;
     bytes p12 = 8;
+    bool has_p12 = 9;
 }
 
 message RequestUserList {
