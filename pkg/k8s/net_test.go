@@ -13,10 +13,10 @@ func TestGetClusterDomain(t *testing.T) {
 	}
 	defer os.Remove(f.Name())
 
-	oldValue := resolvFile
-	resolvFile = f.Name()
+	oldValue := ResolvFile
+	ResolvFile = f.Name()
 	defer func() {
-		resolvFile = oldValue
+		ResolvFile = oldValue
 	}()
 
 	f.WriteString("nameserver 127.0.0.1\n")

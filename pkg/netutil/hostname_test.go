@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/f110/lagrangian-proxy/pkg/k8s"
 )
 
 func TestGetHostname(t *testing.T) {
@@ -35,11 +37,11 @@ options ndots:5`)
 		tempFile.Sync()
 		tempFile.Close()
 
-		orig := resolvFile
+		orig := k8s.ResolvFile
 		defer func() {
-			resolvFile = orig
+			k8s.ResolvFile = orig
 		}()
-		resolvFile = tempFile.Name()
+		k8s.ResolvFile = tempFile.Name()
 		os.Setenv(IPAddressEnvKey, "192.168.230.1")
 		os.Setenv(NamespaceEnvKey, "proxy")
 		defer func() {

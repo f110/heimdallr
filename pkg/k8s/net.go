@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	resolvFile = "/etc/resolv.conf"
+	ResolvFile = "/etc/resolv.conf"
 )
 
 func GetClusterDomain() (string, error) {
 	// Running on k8s
-	b, err := ioutil.ReadFile(resolvFile)
+	b, err := ioutil.ReadFile(ResolvFile)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
