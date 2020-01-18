@@ -93,10 +93,10 @@ logger:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", c); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", c, nil); err != nil {
 		t.Fatal(err)
 	}
 	ca, err := x509.ParseCertificate(c)
@@ -109,10 +109,10 @@ logger:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c, nil); err != nil {
 		t.Fatal(err)
 	}
 

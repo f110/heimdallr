@@ -114,7 +114,7 @@ func commandBootstrap(args []string) error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := cert.PemEncode(absPath(conf.General.SigningPrivateKeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+		if err := cert.PemEncode(absPath(conf.General.SigningPrivateKeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
@@ -177,11 +177,11 @@ func generateNewCertificateAuthority(conf *config.Config, dir string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", c); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", c, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil
@@ -194,10 +194,10 @@ func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certif
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := cert.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := cert.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", c); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", c, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil

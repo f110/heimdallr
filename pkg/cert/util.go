@@ -185,12 +185,12 @@ func CreateCertificateAuthority(commonName, org, orgUnit, country string) ([]byt
 	return cert, privateKey, nil
 }
 
-func PemEncode(path, typ string, b []byte) error {
+func PemEncode(path, typ string, b []byte, headers map[string]string) error {
 	pemFile, err := os.Create(path)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := pem.Encode(pemFile, &pem.Block{Type: typ, Bytes: b}); err != nil {
+	if err := pem.Encode(pemFile, &pem.Block{Type: typ, Bytes: b, Headers: headers}); err != nil {
 		_ = os.Remove(pemFile.Name())
 		return xerrors.Errorf(": %v", err)
 	}
