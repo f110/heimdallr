@@ -302,7 +302,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		err := client.NewCertByCSR(req.FormValue("csr"))
+		err := client.NewCertByCSR(req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
 			logger.Log.Info("Failed sign CSR", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -716,16 +716,16 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		err := client.NewAgentCertByCSR(req.FormValue("csr"))
+		err := client.NewAgentCertByCSR(req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
-			logger.Log.Info("Failed sign CSR", zap.Error(err))
+			logger.Log.Info("Failed sign a CSR", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	} else {
 		err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
 		if err != nil {
-			logger.Log.Info("Failed create new client certificate", zap.Error(err))
+			logger.Log.Info("Failed create a new client certificate", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

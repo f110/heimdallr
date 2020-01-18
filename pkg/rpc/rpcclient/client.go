@@ -258,8 +258,8 @@ func (c *Client) NewCert(commonName, password, comment string) error {
 	return nil
 }
 
-func (c *Client) NewCertByCSR(csr string) error {
-	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Csr: csr})
+func (c *Client) NewCertByCSR(csr string, commonName string) error {
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Csr: csr, CommonName: commonName})
 	if err != nil {
 		return err
 	}
@@ -276,8 +276,8 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 	return nil
 }
 
-func (c *Client) NewAgentCertByCSR(csr string) error {
-	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, Csr: csr})
+func (c *Client) NewAgentCertByCSR(csr string, commonName string) error {
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, Csr: csr, CommonName: commonName})
 	if err != nil {
 		return err
 	}

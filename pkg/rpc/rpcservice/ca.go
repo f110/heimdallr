@@ -58,18 +58,20 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		}
 		commonName = r.Subject.CommonName
 		csr = r
-		logger.Log.Debug("Parsed CSR", zap.String("subject", csr.Subject.String()))
 	}
 
 	if req.Agent {
 		if _, ok := s.Config.General.GetBackend(commonName); !ok {
 			logger.Log.Info("Could not find backend", zap.String("common_name", req.CommonName))
-			return nil, xerrors.New("rpc: unknown backend")
+			return nil, xerrors.New("rpcservice: unknown backend")
 		}
 	}
 
 	if commonName == "" {
-		return nil, errors.New("rpcservice: common_name is required")
+		return nil, errors.New("rpcservice: common name is required")
+	}
+	if req.Csr != "" && req.CommonName != commonName {
+		return nil, errors.New("rpcservice: Subject.CommonName and req.CommonName are not same value")
 	}
 
 	if csr == nil {
