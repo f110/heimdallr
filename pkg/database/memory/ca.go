@@ -43,14 +43,14 @@ func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
 	return nil
 }
 
-func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
+func (c *CA) GetSignedCertificates(_ context.Context) ([]*database.SignedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	return c.signedCertificates, nil
 }
 
-func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*database.SignedCertificate, error) {
+func (c *CA) GetSignedCertificate(_ context.Context, serial *big.Int) (*database.SignedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -84,7 +84,7 @@ func (c *CA) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRe
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	if err := c.SetSignedCertificate(ctx, &database.SignedCertificate{
+	if err := c.SetSignedCertificate(&database.SignedCertificate{
 		Certificate: signedCert,
 		IssuedAt:    time.Now(),
 		Comment:     comment,
@@ -97,7 +97,7 @@ func (c *CA) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRe
 }
 
 func (c *CA) generateClientCertificate(ctx context.Context, name, password, comment string, agent bool) ([]byte, error) {
-	serial, err := c.newSerialNumber(ctx)
+	serial, err := c.newSerialNumber()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -115,7 +115,7 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, password, comm
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
-	if err := c.SetSignedCertificate(ctx, &database.SignedCertificate{
+	if err := c.SetSignedCertificate(&database.SignedCertificate{
 		Certificate: clientCert,
 		P12:         data,
 		IssuedAt:    time.Now(),
@@ -162,7 +162,7 @@ func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.
 	return cert, privKey, nil
 }
 
-func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate) error {
+func (c *CA) Revoke(_ context.Context, certificate *database.SignedCertificate) error {
 	revokeCertificate := &database.RevokedCertificate{
 		CommonName:   certificate.Certificate.Subject.CommonName,
 		SerialNumber: certificate.Certificate.SerialNumber,
@@ -184,7 +184,7 @@ func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate
 	return nil
 }
 
-func (c *CA) SetSignedCertificate(ctx context.Context, certificate *database.SignedCertificate) error {
+func (c *CA) SetSignedCertificate(certificate *database.SignedCertificate) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -192,7 +192,7 @@ func (c *CA) SetSignedCertificate(ctx context.Context, certificate *database.Sig
 	return nil
 }
 
-func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
+func (c *CA) newSerialNumber() (*big.Int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

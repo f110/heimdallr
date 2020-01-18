@@ -73,7 +73,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	runtimemetrics.Registry.Register(metrics.NewCollector(mgr.GetClient()))
+	if err := runtimemetrics.Registry.Register(metrics.NewCollector(mgr.GetClient())); err != nil {
+		setupLog.Error(err, "unable to register a collector to Registry")
+		os.Exit(1)
+	}
 
 	repo := controllers.NewProcessRepository()
 	repo.SetClient(mgr.GetClient())

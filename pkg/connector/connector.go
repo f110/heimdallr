@@ -265,7 +265,7 @@ func (c *ConnThroughRelay) readUpstream() {
 
 			c.dialSuccessCh <- &dialSuccess{streamId: streamId, remoteAddr: addr}
 		case OpcodeHeartbeat:
-			c.conn.SetReadDeadline(time.Now().Add(heartbeatDuration * 2))
+			_ = c.conn.SetReadDeadline(time.Now().Add(heartbeatDuration * 2))
 			logger.Log.Debug("Got heartbeat of relay")
 		default:
 			logger.Log.Debug("unknown type", zap.Uint8("opcode", header[0]))

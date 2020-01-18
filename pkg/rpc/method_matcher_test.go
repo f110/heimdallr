@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"log"
 	"testing"
 )
 
@@ -24,8 +23,9 @@ func TestMethodMatcher_Add(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Add("/proxy.rpc.cluster")
-	log.Print(m.root)
+	if err := m.Add("/proxy.rpc.cluster"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMethodMatcher_Match(t *testing.T) {

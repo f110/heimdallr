@@ -408,7 +408,9 @@ func cli(args []string) error {
 	version := false
 	fs := pflag.NewFlagSet("lagctl", pflag.ContinueOnError)
 	fs.BoolVarP(&version, "version", "v", version, "Show version")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
 	if version {
 		printVersion()
