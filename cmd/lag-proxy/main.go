@@ -33,14 +33,14 @@ func proxy(args []string) error {
 	}
 
 	tokenClient := token.NewTokenClient("token")
-	t, err := tokenClient.GetToken()
+	to, err := tokenClient.GetToken()
 	if err != nil {
 		return err
 	}
 
 	client := localproxy.NewClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(args[0], t)
+	err = client.Dial(args[0], to)
 	if err != nil {
 		e, ok := err.(*localproxy.ErrorTokenAuthorization)
 		if ok {
@@ -48,7 +48,7 @@ Retry:
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
-			t = t
+			to = t
 			goto Retry
 		}
 		return err

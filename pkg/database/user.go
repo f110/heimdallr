@@ -70,7 +70,7 @@ func (u *User) Setup() {
 }
 
 func (u *User) ServiceAccount() bool {
-	return u.Type != "" && u.Type == UserTypeServiceAccount
+	return u.Type == UserTypeServiceAccount
 }
 
 func UnmarshalUser(kv *mvccpb.KeyValue) (*User, error) {
