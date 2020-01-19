@@ -6,13 +6,11 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
-	"math"
 	"math/big"
 	"sync"
 	"time"
@@ -182,37 +180,15 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, password, comm
 }
 
 func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	certBytes, privateKey, err := cert.GenerateServerCertificate(c.config.Certificate, c.config.PrivateKey, []string{commonName})
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
-	var serial *big.Int
-	serial, err = rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	certificate, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
-
-	template := &x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			Organization:       []string{c.config.Organization},
-			OrganizationalUnit: []string{c.config.OrganizationUnit},
-			Country:            []string{c.config.Country},
-			CommonName:         commonName,
-		},
-		NotBefore:             time.Now().UTC(),
-		NotAfter:              time.Now().AddDate(1, 0, 0).UTC(),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		SignatureAlgorithm:    x509.ECDSAWithSHA256,
-	}
-	b, err := x509.CreateCertificate(rand.Reader, template, c.config.Certificate, &privKey.PublicKey, c.config.PrivateKey)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
-	}
-	cert, _ := x509.ParseCertificate(b)
-	return cert, privKey, nil
+	return certificate, privateKey, nil
 }
 
 func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate) error {
@@ -270,7 +246,7 @@ func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
 			return nil, xerrors.New("etcd: can not generate new serial number")
 		}
 
-		s, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+		s, err := cert.NewSerialNumber()
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
