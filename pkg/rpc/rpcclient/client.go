@@ -196,6 +196,15 @@ func (c *Client) ClusterMemberList() ([]*rpc.ClusterMember, error) {
 	return res.Items, nil
 }
 
+func (c *Client) ListConnectedAgent() ([]*rpc.Agent, error) {
+	res, err := c.clusterClient.AgentList(c.md, &rpc.RequestAgentList{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Items, nil
+}
+
 func (c *Client) Defragment() (map[string]bool, error) {
 	res, err := c.clusterClient.DefragmentDatastore(c.md, &rpc.RequestDefragmentDatastore{})
 	if err != nil {

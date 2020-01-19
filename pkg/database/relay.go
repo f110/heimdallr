@@ -18,11 +18,14 @@ type RelayLocator interface {
 	Delete(ctx context.Context, name, addr string) error
 	Gone() chan *Relay
 	GetListenedAddrs() []string
+	ListAllConnectedAgents() []*Relay
 }
 
 type Relay struct {
-	Name      string    `json:"name"`
-	Addr      string    `json:"addr"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Version   int64     `json:"-"`
+	Name        string    `json:"name"`
+	Addr        string    `json:"addr"`
+	FromAddr    string    `json:"from_addr"`
+	ConnectedAt time.Time `json:"connected_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Version     int64     `json:"-"`
 }

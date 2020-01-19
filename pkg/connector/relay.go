@@ -69,9 +69,11 @@ func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.C
 	err = server.Locator.Set(
 		context.Background(),
 		&database.Relay{
-			Name:      name,
-			Addr:      address,
-			UpdatedAt: time.Now(),
+			Name:        name,
+			Addr:        address,
+			FromAddr:    conn.RemoteAddr().String(),
+			ConnectedAt: time.Now(),
+			UpdatedAt:   time.Now(),
 		},
 	)
 	if err != nil {

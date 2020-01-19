@@ -8,6 +8,8 @@ service Cluster {
     rpc MemberList (RequestMemberList) returns (ResponseMemberList);
     rpc MemberStat (RequestMemberStat) returns (ResponseMemberStat);
 
+    rpc AgentList (RequestAgentList) returns (ResponseAgentList);
+
     rpc DefragmentDatastore (RequestDefragmentDatastore) returns (ResponseDefragmentDatastore);
 }
 
@@ -58,6 +60,12 @@ message ResponseMemberStat {
     int32 user_count = 2;
     int32 token_count = 3;
     repeated string listened_relay_addrs = 4;
+}
+
+message RequestAgentList {}
+
+message ResponseAgentList {
+    repeated Agent items = 1;
 }
 
 message RequestDefragmentDatastore {}
@@ -113,6 +121,12 @@ message CertItem {
     bytes certificate = 7;
     bytes p12 = 8;
     bool has_p12 = 9;
+}
+
+message Agent {
+    string name = 1;
+    string from_addr = 2;
+    google.protobuf.Timestamp connected_at = 3;
 }
 
 message RequestUserList {

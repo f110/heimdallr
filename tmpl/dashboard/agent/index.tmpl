@@ -13,18 +13,18 @@
       <thead>
         <tr>
           <th>Name</th>
-          <th>Connect at</th>
           <th>Remote IP</th>
+          <th>Connect at</th>
         </tr>
       </thead>
       <tbody>
-      <!--
+      {{ range .ConnectedAgents }}
         <tr>
-          <td>prometheus</td>
-          <td>2019/09/12 00:00:00</td>
-          <td>127.0.0.1</td>
+          <td>{{ .Name }}</td>
+          <td>{{ .FromAddr }}</td>
+          <td>{{ .ConnectedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
         </tr>
-        -->
+      {{ end }}
       </tbody>
     </table>
 

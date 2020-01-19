@@ -3,6 +3,7 @@ package rpcservice
 import (
 	"context"
 
+	"github.com/golang/protobuf/ptypes"
 	"go.uber.org/zap"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"
@@ -59,6 +60,26 @@ func (s *ClusterService) MemberStat(ctx context.Context, _ *rpc.RequestMemberSta
 		TokenCount:         int32(len(tokens)),
 		ListenedRelayAddrs: s.relayDatabase.GetListenedAddrs(),
 	}, nil
+}
+
+func (s *ClusterService) AgentList(_ context.Context, _ *rpc.RequestAgentList) (*rpc.ResponseAgentList, error) {
+	connected := s.relayDatabase.ListAllConnectedAgents()
+
+	result := make([]*rpc.Agent, len(connected))
+	for i, v := range connected {
+		connectedAt, err := ptypes.TimestampProto(v.ConnectedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		result[i] = &rpc.Agent{
+			Name:        v.Name,
+			FromAddr:    v.FromAddr,
+			ConnectedAt: connectedAt,
+		}
+	}
+
+	return &rpc.ResponseAgentList{Items: result}, nil
 }
 
 func (s *ClusterService) DefragmentDatastore(ctx context.Context, _ *rpc.RequestDefragmentDatastore) (*rpc.ResponseDefragmentDatastore, error) {

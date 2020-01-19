@@ -214,6 +214,12 @@ type certificate struct {
 	P12          bool
 }
 
+type agent struct {
+	Name        string
+	FromAddr    string
+	ConnectedAt time.Time
+}
+
 func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
@@ -677,10 +683,33 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 		return revokedList[i].RevokedAt.After(revokedList[j].RevokedAt)
 	})
 
+	agents, err := client.ListConnectedAgent()
+	if err != nil {
+		logger.Log.Info("Can't get connected agents", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	connectedAgents := make([]*agent, len(agents))
+	for i, v := range agents {
+		connectedAt, err := ptypes.Timestamp(v.ConnectedAt)
+		if err != nil {
+			logger.Log.Info("Can't convert to time.Time from protobuf.Timestamp. skipping", zap.String("name", v.Name))
+			continue
+		}
+		connectedAgents[i] = &agent{
+			Name:        v.Name,
+			FromAddr:    v.FromAddr,
+			ConnectedAt: connectedAt,
+		}
+	}
+
 	s.RenderTemplate(w, "agent/index.tmpl", struct {
+		ConnectedAgents     []*agent
 		SignedCertificates  []*certificate
 		RevokedCertificates []*certificate
 	}{
+		ConnectedAgents:     connectedAgents,
 		SignedCertificates:  signedCertificates,
 		RevokedCertificates: revokedList,
 	})

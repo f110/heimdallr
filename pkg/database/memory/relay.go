@@ -80,3 +80,15 @@ func (r *RelayLocator) GetListenedAddrs() []string {
 
 	return res
 }
+
+func (r *RelayLocator) ListAllConnectedAgents() []*database.Relay {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	result := make([]*database.Relay, 0, len(r.data))
+	for _, v := range r.data {
+		result = append(result, v)
+	}
+
+	return result
+}

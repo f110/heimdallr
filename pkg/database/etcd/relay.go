@@ -132,6 +132,18 @@ func (l *RelayLocator) GetListenedAddrs() []string {
 	return l.myListenedAddr
 }
 
+func (l *RelayLocator) ListAllConnectedAgents() []*database.Relay {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	result := make([]*database.Relay, 0, len(l.cache))
+	for _, v := range l.cache {
+		result = append(result, v)
+	}
+
+	return result
+}
+
 func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
 	logger.Log.Debug("Start watch relay locator")
 	defer logger.Log.Debug("Stop watch relay locator")
