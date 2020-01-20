@@ -1,0 +1,11 @@
+[Unit]
+Description=lag-agent
+After=network.target auditd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/lag-agent -h local-proxy.f110.dev:443 -b 127.0.0.1:22 -c /etc/lag-agent/creds.p12
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
