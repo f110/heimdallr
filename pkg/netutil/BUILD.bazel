@@ -18,4 +18,5 @@ go_test(
     name = "go_default_test",
     srcs = ["hostname_test.go"],
     embed = [":go_default_library"],
+    deps = ["//pkg/k8s:go_default_library"],
 )

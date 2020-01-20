@@ -124,19 +124,21 @@ func agent(args []string) error {
 			}
 			myCert = c
 
-			b, err = ioutil.ReadFile(caCertPath)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
+			if caCertPath != "" {
+				b, err = ioutil.ReadFile(caCertPath)
+				if err != nil {
+					return xerrors.Errorf(": %v", err)
+				}
+				block, _ = pem.Decode(b)
+				if block.Type != "CERTIFICATE" {
+					return xerrors.Errorf(": %v", err)
+				}
+				c, err = x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %v", err)
+				}
+				caCerts = []*x509.Certificate{c}
 			}
-			block, _ = pem.Decode(b)
-			if block.Type != "CERTIFICATE" {
-				return xerrors.Errorf(": %v", err)
-			}
-			c, err = x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			caCerts = []*x509.Certificate{c}
 		}
 	} else if credential != "" {
 		b, err := ioutil.ReadFile(credential)
