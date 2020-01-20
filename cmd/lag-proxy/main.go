@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
@@ -38,9 +40,21 @@ func proxy(args []string) error {
 		return err
 	}
 
+	var host, port string
+	if strings.Contains(args[0], ":") {
+		h, p, err := net.SplitHostPort(args[0])
+		if err != nil {
+			return err
+		}
+		host = h
+		port = p
+	} else {
+		host = args[0]
+		port = "443"
+	}
 	client := localproxy.NewClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(args[0], to)
+	err = client.Dial(host, port, to)
 	if err != nil {
 		e, ok := err.(*localproxy.ErrorTokenAuthorization)
 		if ok {

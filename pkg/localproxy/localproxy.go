@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -64,11 +65,16 @@ func NewClient(in io.Reader, out io.Writer) *Client {
 	return &Client{inCh: inCh, outCh: outCh}
 }
 
-func (c *Client) Dial(addr string, token string) error {
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 3 * time.Second}, "tcp", addr, &tls.Config{
-		NextProtos:         []string{frontproxy.SocketProxyNextProto},
-		InsecureSkipVerify: true,
-	})
+func (c *Client) Dial(host, port, token string) error {
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{Timeout: 3 * time.Second},
+		"tcp",
+		fmt.Sprintf("%s:%s", host, port),
+		&tls.Config{
+			NextProtos:         []string{frontproxy.SocketProxyNextProto},
+			InsecureSkipVerify: true,
+		},
+	)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
