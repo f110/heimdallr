@@ -681,7 +681,7 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
-			Enable:            false,
+			Enable:            true,
 			ServerName:        r.Spec.Domain,
 			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
 			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
