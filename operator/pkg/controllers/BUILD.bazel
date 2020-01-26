@@ -13,7 +13,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/operator/pkg/controllers",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/api/v1:go_default_library",
+        "//operator/pkg/api/v1:go_default_library",
         "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/k8s:go_default_library",
@@ -45,7 +45,7 @@ go_test(
     srcs = ["suite_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//operator/api/v1:go_default_library",
+        "//operator/pkg/api/v1:go_default_library",
         "//operator/pkg/bazeltesting:go_default_library",
         "//vendor/github.com/onsi/ginkgo:go_default_library",
         "//vendor/github.com/onsi/gomega:go_default_library",

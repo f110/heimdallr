@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/f110/lagrangian-proxy/operator",
     visibility = ["//visibility:private"],
     deps = [
-        "//operator/api/v1:go_default_library",
+        "//operator/pkg/api/v1:go_default_library",
         "//operator/pkg/controllers:go_default_library",
         "//operator/pkg/metrics:go_default_library",
         "//vendor/github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2:go_default_library",

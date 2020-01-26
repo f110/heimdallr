@@ -10,7 +10,7 @@ go_library(
         "rpcpermission_types.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/api/v1",
+    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/api/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:go_default_library",

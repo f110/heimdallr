@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 )
 
 // RpcPermissionReconciler reconciles a RpcPermission object

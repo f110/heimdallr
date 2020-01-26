@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 	"github.com/f110/lagrangian-proxy/operator/pkg/bazeltesting"
 	// +kubebuilder:scaffold:imports
 )

@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	cconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 )
 
 // ProxyReconciler reconciles a Proxy object

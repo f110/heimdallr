@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
 	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
 	// +kubebuilder:scaffold:imports

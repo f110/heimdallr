@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/api/v1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 )
 
 const (
