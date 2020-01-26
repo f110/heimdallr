@@ -51,6 +51,12 @@ func TestClient_GetToken(t *testing.T) {
 
 func TestClient_RequestToken(t *testing.T) {
 	forTestMock = true
+	tmpHome, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpHome)
+	os.Setenv("HOME", tmpHome)
 
 	u, err := url.Parse(ClientRedirectUrl)
 	if err != nil {
