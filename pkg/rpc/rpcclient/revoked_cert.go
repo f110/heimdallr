@@ -21,12 +21,12 @@ type RevokedCertificateWatcher struct {
 	token  string
 
 	mu    sync.Mutex
-	items []*revokedCert
+	items []*RevokedCert
 	ready bool
 	err   error
 }
 
-type revokedCert struct {
+type RevokedCert struct {
 	SerialNumber *big.Int
 }
 
@@ -34,7 +34,7 @@ func NewRevokedCertificateWatcher(conn *grpc.ClientConn, token string) (*Revoked
 	w := &RevokedCertificateWatcher{
 		client: rpc.NewCertificateAuthorityClient(conn),
 		token:  token,
-		items:  make([]*revokedCert, 0),
+		items:  make([]*RevokedCert, 0),
 	}
 
 	go func() {
@@ -46,7 +46,7 @@ func NewRevokedCertificateWatcher(conn *grpc.ClientConn, token string) (*Revoked
 	return w, nil
 }
 
-func (w *RevokedCertificateWatcher) Get() []*revokedCert {
+func (w *RevokedCertificateWatcher) Get() []*RevokedCert {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -91,11 +91,11 @@ func (w *RevokedCertificateWatcher) watch() error {
 		}
 		logger.Log.Debug("Got event from rpcserver", zap.Int("length", len(res.Items)))
 
-		c := make([]*revokedCert, len(res.Items))
+		c := make([]*RevokedCert, len(res.Items))
 		for i, v := range res.Items {
 			s := big.NewInt(0)
 			s.SetBytes(v.SerialNumber)
-			c[i] = &revokedCert{SerialNumber: s}
+			c[i] = &RevokedCert{SerialNumber: s}
 			logger.Log.Debug("Revoke Cert", zap.Int64("serial_number", s.Int64()))
 		}
 

@@ -28,8 +28,9 @@ func NewUserDatabase(systemUsers ...*database.User) *UserDatabase {
 	}
 
 	return &UserDatabase{
-		data:  data,
-		state: make(map[string]string),
+		data:      data,
+		tokenData: make(map[string]*database.AccessToken),
+		state:     make(map[string]string),
 	}
 }
 

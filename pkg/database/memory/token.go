@@ -2,7 +2,11 @@ package memory
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"sync"
+
+	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"
 )
@@ -22,12 +26,39 @@ func NewTokenDatabase() *TokenDatabase {
 	}
 }
 
-func (t *TokenDatabase) NewCode(ctx context.Context, userId, challenge, challengeMethod string) (*database.Code, error) {
-	panic("implement me")
+func (t *TokenDatabase) NewCode(_ context.Context, userId, _, _ string) (*database.Code, error) {
+	s, err := newCode()
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	code := &database.Code{Code: s, UserId: userId}
+
+	t.mu.Lock()
+	t.codes[code.Code] = code
+	t.mu.Unlock()
+
+	return code, nil
 }
 
-func (t *TokenDatabase) IssueToken(ctx context.Context, code, codeVerifier string) (*database.Token, error) {
-	panic("implement me")
+func (t *TokenDatabase) IssueToken(_ context.Context, code, _ string) (*database.Token, error) {
+	t.mu.Lock()
+	v := t.codes[code]
+	t.mu.Unlock()
+
+	s, err := newCode()
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	token := &database.Token{Token: s}
+	if v != nil {
+		token.UserId = v.UserId
+	}
+
+	t.mu.Lock()
+	t.tokens[token.Token] = token
+	t.mu.Unlock()
+
+	return token, nil
 }
 
 func (t *TokenDatabase) AllCodes(_ context.Context) ([]*database.Code, error) {
@@ -79,4 +110,12 @@ func (t *TokenDatabase) DeleteToken(_ context.Context, token string) error {
 
 	delete(t.tokens, token)
 	return nil
+}
+
+func newCode() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
 }

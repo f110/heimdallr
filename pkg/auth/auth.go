@@ -39,11 +39,15 @@ var (
 	unauthorizedError = status.New(codes.Unauthenticated, "not provided valid token")
 )
 
+type revokedCertClient interface {
+	Get() []*rpcclient.RevokedCert
+}
+
 type authenticator struct {
 	Config        *config.General
 	sessionStore  session.Store
 	userDatabase  database.UserDatabase
-	revokedCert   *rpcclient.RevokedCertificateWatcher
+	revokedCert   revokedCertClient
 	tokenDatabase database.TokenDatabase
 }
 
@@ -190,6 +194,7 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {
+			logger.Log.Debug("Failure verify certificate", zap.Error(err))
 			return nil, ErrInvalidCertificate
 		}
 
