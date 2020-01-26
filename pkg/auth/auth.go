@@ -59,7 +59,7 @@ type authInterceptor struct {
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init(conf *config.Config, sessionStore session.Store, userDatabase database.UserDatabase, tokenDatabase database.TokenDatabase, revokedCert *rpcclient.RevokedCertificateWatcher) {
+func Init(conf *config.Config, sessionStore session.Store, userDatabase database.UserDatabase, tokenDatabase database.TokenDatabase, revokedCert revokedCertClient) {
 	defaultAuthenticator.Config = conf.General
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase

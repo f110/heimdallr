@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"context"
 	"os"
 	"testing"
+
+	"google.golang.org/grpc/metadata"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -25,4 +28,32 @@ func NewRevokedCertClient() *testRevokedCertClient {
 
 func (r *testRevokedCertClient) Get() []*rpcclient.RevokedCert {
 	return r.revokedCert
+}
+
+type testServerStream struct {
+	ctx context.Context
+}
+
+func (t *testServerStream) SetHeader(metadata.MD) error {
+	panic("implement me")
+}
+
+func (t *testServerStream) SendHeader(metadata.MD) error {
+	panic("implement me")
+}
+
+func (t *testServerStream) SetTrailer(metadata.MD) {
+	panic("implement me")
+}
+
+func (t *testServerStream) Context() context.Context {
+	return t.ctx
+}
+
+func (t *testServerStream) SendMsg(m interface{}) error {
+	panic("implement me")
+}
+
+func (t *testServerStream) RecvMsg(m interface{}) error {
+	panic("implement me")
 }

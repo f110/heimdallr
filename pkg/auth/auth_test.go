@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -9,7 +12,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -17,9 +22,28 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/memory"
+	"github.com/f110/lagrangian-proxy/pkg/rpc"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 )
+
+func TestInit(t *testing.T) {
+	Init(
+		&config.Config{General: &config.General{}},
+		session.NewSecureCookieStore([]byte(""), []byte(""), ""),
+		memory.NewUserDatabase(),
+		memory.NewTokenDatabase(),
+		&testRevokedCertClient{},
+	)
+}
+
+func TestInitInterceptor(t *testing.T) {
+	InitInterceptor(
+		&config.Config{General: &config.General{}},
+		memory.NewUserDatabase(),
+		memory.NewTokenDatabase(),
+	)
+}
 
 func TestAuthenticator_Authenticate(t *testing.T) {
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
@@ -70,6 +94,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		userDatabase: u,
 		revokedCert:  rc,
 	}
+	defaultAuthenticator = a
 	err = a.Config.Load(a.Config.Backends, a.Config.Roles, []*config.RpcPermission{})
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +113,16 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.AddCookie(c)
-			user, err := a.Authenticate(req)
+
+			user, err := Authenticate(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if user.Id != "foobar@example.com" {
+				t.Errorf("expect foobar@example.com: %s", user.Id)
+			}
+
+			user, err = a.Authenticate(req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -353,6 +387,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 		userDatabase:  u,
 		tokenDatabase: token,
 	}
+	defaultAuthenticator = a
 	err := a.Config.Load(a.Config.Backends, a.Config.Roles, []*config.RpcPermission{})
 	if err != nil {
 		t.Fatal(err)
@@ -455,7 +490,16 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		user, err := a.AuthenticateForSocket(context.Background(), newToken.Token, "test.proxy.example.com")
+
+		user, err := AuthenticateForSocket(context.Background(), newToken.Token, "test.proxy.example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if user.Id != "foobar@example.com" {
+			t.Fatalf("AuthenticateForSocket returns user but is not expected: %v", user.Id)
+		}
+
+		user, err = a.AuthenticateForSocket(context.Background(), newToken.Token, "test.proxy.example.com")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -466,15 +510,21 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 }
 
 func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
-	u := memory.NewUserDatabase()
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
 	a := &authInterceptor{
 		Config: &config.General{
-			ServerNameHost: "proxy.example.com",
+			ServerNameHost:    "proxy.example.com",
+			SigningPrivateKey: privateKey,
+			InternalToken:     "rpc-internal-token",
 			Backends: []*config.Backend{
 				{
-					Name:   "test",
-					Socket: true,
+					Name: "test",
 					Permissions: []*config.Permission{
 						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
 						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
@@ -485,16 +535,123 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 				{
 					Name: "test",
 					Bindings: []*config.Binding{
-						{Backend: "test"},
+						{Rpc: "test"},
 					},
+				},
+			},
+			RpcPermissions: []*config.RpcPermission{
+				{
+					Name:  "test",
+					Allow: []string{"test"},
 				},
 			},
 		},
 		userDatabase:  u,
 		tokenDatabase: token,
+		publicKey:     privateKey.PublicKey,
+	}
+	defaultAuthInterceptor = a
+	err = a.Config.Load(a.Config.Backends, a.Config.Roles, a.Config.RpcPermissions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = u.Set(nil, &database.User{Id: "foobar@example.com", Roles: []string{"test"}})
+
+	okHandler := func(_ context.Context, _ interface{}) (interface{}, error) {
+		return true, nil
 	}
 
+	t.Run("with access token", func(t *testing.T) {
+		t.Parallel()
+
+		newCode, err := token.NewCode(context.Background(), "foobar@example.com", "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		newToken, err := token.IssueToken(context.Background(), newCode.Code, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		md := metadata.New(map[string]string{rpc.TokenMetadataKey: newToken.Token})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, ok := v.(bool)
+		if !ok {
+			t.Fatal("response should be bool")
+		}
+		if !res {
+			t.Fatal("unexpected response")
+		}
+
+		v, err = a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, ok = v.(bool)
+		if !ok {
+			t.Fatal("response should be bool")
+		}
+		if !res {
+			t.Fatal("unexpected response")
+		}
+	})
+
+	t.Run("with jwt", func(t *testing.T) {
+		t.Parallel()
+
+		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
+			Id:        "foobar@example.com",
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
+		})
+		jwtToken, err := claim.SignedString(a.Config.SigningPrivateKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		md := metadata.New(map[string]string{rpc.JwtTokenMetadataKey: jwtToken})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		v, err := a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, ok := v.(bool)
+		if !ok {
+			t.Fatal("response should be bool")
+		}
+		if !res {
+			t.Fatal("unexpected response")
+		}
+	})
+
+	t.Run("with internal token", func(t *testing.T) {
+		t.Parallel()
+
+		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.InternalToken})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		v, err := a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/proxy.rpc.certificateauthority.watchrevokedcert"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, ok := v.(bool)
+		if !ok {
+			t.Fatal("response should be bool")
+		}
+		if !res {
+			t.Fatal("unexpected response")
+		}
+	})
+
 	t.Run("not provide metadata", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := a.UnaryInterceptor(context.Background(), nil, nil, nil)
 		if err == nil {
 			t.Fatal("expect to occurred error but not")
@@ -504,7 +661,24 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		}
 	})
 
+	t.Run("not provide token", func(t *testing.T) {
+		t.Parallel()
+
+		md := metadata.New(map[string]string{})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		_, err := a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, nil)
+		if err == nil {
+			t.Fatal("expect to occurred error but not")
+		}
+		if err != unauthorizedError.Err() {
+			t.Fatalf("expect unauthorizedError: %v", err)
+		}
+	})
+
 	t.Run("health check methods should not check a clearance", func(t *testing.T) {
+		t.Parallel()
+
 		methods := []string{"/grpc.health.v1.Health/Check", "/proxy.rpc.Admin/Ping"}
 
 		md := metadata.New(map[string]string{})
@@ -524,6 +698,102 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 			if !res {
 				t.Fatal("unexpected response")
 			}
+		}
+	})
+}
+
+func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u := memory.NewUserDatabase(database.SystemUser)
+	token := memory.NewTokenDatabase()
+	a := &authInterceptor{
+		Config: &config.General{
+			ServerNameHost:    "proxy.example.com",
+			SigningPrivateKey: privateKey,
+			InternalToken:     "rpc-internal-token",
+			Backends: []*config.Backend{
+				{
+					Name: "test",
+					Permissions: []*config.Permission{
+						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+					},
+				},
+			},
+			Roles: []*config.Role{
+				{
+					Name: "test",
+					Bindings: []*config.Binding{
+						{Rpc: "test"},
+					},
+				},
+			},
+			RpcPermissions: []*config.RpcPermission{
+				{
+					Name:  "test",
+					Allow: []string{"test"},
+				},
+			},
+		},
+		userDatabase:  u,
+		tokenDatabase: token,
+		publicKey:     privateKey.PublicKey,
+	}
+	defaultAuthInterceptor = a
+	err = a.Config.Load(a.Config.Backends, a.Config.Roles, a.Config.RpcPermissions)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	okHandler := func(srv interface{}, stream grpc.ServerStream) error {
+		return nil
+	}
+
+	t.Run("with internal token", func(t *testing.T) {
+		t.Parallel()
+
+		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.InternalToken})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		err := StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = a.StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, okHandler)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("not provide metadata", func(t *testing.T) {
+		t.Parallel()
+
+		err := a.StreamInterceptor(nil, &testServerStream{ctx: context.Background()}, nil, nil)
+		if err == nil {
+			t.Fatal("expect to occurred error but not")
+		}
+		if err != unauthorizedError.Err() {
+			t.Fatalf("expect unauthorizedError: %v", err)
+		}
+	})
+
+	t.Run("not provide token", func(t *testing.T) {
+		t.Parallel()
+
+		md := metadata.New(map[string]string{})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		err := a.StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, nil)
+		if err == nil {
+			t.Fatal("expect to occurred error but not")
+		}
+		if err != unauthorizedError.Err() {
+			t.Fatalf("expect unauthorizedError: %v", err)
 		}
 	})
 }
