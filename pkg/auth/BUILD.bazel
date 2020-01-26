@@ -27,12 +27,21 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["auth_test.go"],
+    srcs = [
+        "access_token_test.go",
+        "auth_test.go",
+        "util_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/memory:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/session:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+        "//vendor/google.golang.org/grpc/metadata:go_default_library",
     ],
 )

@@ -10,26 +10,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/memory"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 )
-
-type testRevokedCertClient struct {
-	revokedCert []*rpcclient.RevokedCert
-}
-
-func NewRevokedCertClient() *testRevokedCertClient {
-	return &testRevokedCertClient{revokedCert: make([]*rpcclient.RevokedCert, 0)}
-}
-
-func (r *testRevokedCertClient) Get() []*rpcclient.RevokedCert {
-	return r.revokedCert
-}
 
 func TestAuthenticator_Authenticate(t *testing.T) {
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
@@ -85,7 +75,6 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = u.Set(nil, &database.User{Id: "foobar@example.com", Roles: []string{"test", "unknown"}})
-	logger.Init(&config.Logger{Level: "debug"})
 
 	t.Run("Cookie", func(t *testing.T) {
 		t.Parallel()
@@ -472,6 +461,69 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 		}
 		if user.Id != "foobar@example.com" {
 			t.Fatalf("AuthenticateForSocket returns user but is not expected: %v", user.Id)
+		}
+	})
+}
+
+func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
+	u := memory.NewUserDatabase()
+	token := memory.NewTokenDatabase()
+	a := &authInterceptor{
+		Config: &config.General{
+			ServerNameHost: "proxy.example.com",
+			Backends: []*config.Backend{
+				{
+					Name:   "test",
+					Socket: true,
+					Permissions: []*config.Permission{
+						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+					},
+				},
+			},
+			Roles: []*config.Role{
+				{
+					Name: "test",
+					Bindings: []*config.Binding{
+						{Backend: "test"},
+					},
+				},
+			},
+		},
+		userDatabase:  u,
+		tokenDatabase: token,
+	}
+
+	t.Run("not provide metadata", func(t *testing.T) {
+		_, err := a.UnaryInterceptor(context.Background(), nil, nil, nil)
+		if err == nil {
+			t.Fatal("expect to occurred error but not")
+		}
+		if err != unauthorizedError.Err() {
+			t.Fatalf("expect unauthorizedError: %v", err)
+		}
+	})
+
+	t.Run("health check methods should not check a clearance", func(t *testing.T) {
+		methods := []string{"/grpc.health.v1.Health/Check", "/proxy.rpc.Admin/Ping"}
+
+		md := metadata.New(map[string]string{})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+		// ctx := metadata.NewOutgoingContext(context.Background(), md)
+		for _, m := range methods {
+			v, err := a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: m}, func(_ context.Context, _ interface{}) (interface{}, error) {
+				return true, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, ok := v.(bool)
+			if !ok {
+				t.Fatal("response should be bool")
+			}
+			if !res {
+				t.Fatal("unexpected response")
+			}
 		}
 	})
 }
