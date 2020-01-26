@@ -93,7 +93,7 @@ func (t *Server) handleExchange(w http.ResponseWriter, req *http.Request, _ http
 		return
 	}
 
-	res := &token.TokenExchangeResponse{
+	res := &token.ExchangeResponse{
 		AccessToken: tk.Token,
 		ExpiresIn:   int(database.TokenExpiration.Seconds()),
 	}

@@ -62,7 +62,7 @@ type Client struct {
 func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 	adminClient := rpc.NewAdminClient(conn)
 
-	tokenClient := token.NewTokenClient("token")
+	tokenClient := token.NewClient("token")
 	t, err := tokenClient.GetToken()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", nil)

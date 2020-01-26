@@ -34,7 +34,7 @@ func proxy(args []string) error {
 		return nil
 	}
 
-	tokenClient := token.NewTokenClient("token")
+	tokenClient := token.NewClient("token")
 	to, err := tokenClient.GetToken()
 	if err != nil {
 		return err

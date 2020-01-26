@@ -22,24 +22,24 @@ const (
 	ClientRedirectUrl = "http://localhost:6391/callback"
 )
 
-type TokenExchangeResponse struct {
+type ExchangeResponse struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-type TokenClient struct {
+type Client struct {
 	tokenFilename string
 }
 
-func NewTokenClient(tokenFilename string) *TokenClient {
-	return &TokenClient{tokenFilename: tokenFilename}
+func NewClient(tokenFilename string) *Client {
+	return &Client{tokenFilename: tokenFilename}
 }
 
-func (c *TokenClient) GetToken() (string, error) {
+func (c *Client) GetToken() (string, error) {
 	return c.readToken()
 }
 
-func (c *TokenClient) RequestToken(endpoint string) (string, error) {
+func (c *Client) RequestToken(endpoint string) (string, error) {
 	verifier := c.newVerifier()
 
 	u, err := url.Parse(endpoint)
@@ -71,7 +71,7 @@ func (c *TokenClient) RequestToken(endpoint string) (string, error) {
 	return token, nil
 }
 
-func (c *TokenClient) readToken() (string, error) {
+func (c *Client) readToken() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
@@ -88,7 +88,7 @@ func (c *TokenClient) readToken() (string, error) {
 	return string(b), nil
 }
 
-func (c *TokenClient) saveToken(token string) error {
+func (c *Client) saveToken(token string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
@@ -109,7 +109,7 @@ func (c *TokenClient) saveToken(token string) error {
 	return nil
 }
 
-func (c *TokenClient) exchangeToken(endpoint, code, codeVerifier string) (string, error) {
+func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, error) {
 	v := &url.Values{}
 	v.Set("code", code)
 	v.Set("code_verifier", codeVerifier)
@@ -132,7 +132,7 @@ func (c *TokenClient) exchangeToken(endpoint, code, codeVerifier string) (string
 		return "", xerrors.New("localproxy: failure exchange token")
 	}
 
-	exchange := &TokenExchangeResponse{}
+	exchange := &ExchangeResponse{}
 	if err := json.NewDecoder(res.Body).Decode(exchange); err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
@@ -140,7 +140,7 @@ func (c *TokenClient) exchangeToken(endpoint, code, codeVerifier string) (string
 	return exchange.AccessToken, nil
 }
 
-func (c *TokenClient) getCode() (string, error) {
+func (c *Client) getCode() (string, error) {
 	u, err := url.Parse(ClientRedirectUrl)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
@@ -164,7 +164,7 @@ func (c *TokenClient) getCode() (string, error) {
 	return code, nil
 }
 
-func (c *TokenClient) newVerifier() string {
+func (c *Client) newVerifier() string {
 	buf := make([]byte, 32)
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -173,7 +173,7 @@ func (c *TokenClient) newVerifier() string {
 	return hex.EncodeToString(buf)
 }
 
-func (c *TokenClient) challenge(verifier string) string {
+func (c *Client) challenge(verifier string) string {
 	s := sha256.New()
 	s.Write([]byte(verifier))
 	return base64.StdEncoding.EncodeToString(s.Sum(nil))
