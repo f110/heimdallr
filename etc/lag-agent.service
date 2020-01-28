@@ -1,6 +1,6 @@
 [Unit]
 Description=lag-agent
-After=network.target auditd.service
+After=network-online.target auditd.service
 
 [Service]
 Type=simple
