@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -24,5 +24,21 @@ go_library(
         "//vendor/go.uber.org/zap/zapcore:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
         "//vendor/google.golang.org/grpc:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["http_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/auth:go_default_library",
+        "//pkg/config:go_default_library",
+        "//pkg/database:go_default_library",
+        "//pkg/database/memory:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/rpc/rpcclient:go_default_library",
+        "//pkg/rpc/rpctestutil:go_default_library",
+        "//pkg/session:go_default_library",
     ],
 )

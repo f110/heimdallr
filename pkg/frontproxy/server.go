@@ -15,6 +15,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
+	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 )
 
 type FrontendProxy struct {
@@ -25,11 +26,12 @@ type FrontendProxy struct {
 }
 
 func NewFrontendProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientConn) (*FrontendProxy, error) {
-	s := NewSocketProxy(conf, ct)
-	h, err := NewHttpProxy(conf, ct, conn)
+	c, err := rpcclient.NewClientForInternal(conn, conf.General.InternalToken)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
+	s := NewSocketProxy(conf, ct)
+	h := NewHttpProxy(conf, ct, c)
 
 	p := &FrontendProxy{
 		Config:      conf,

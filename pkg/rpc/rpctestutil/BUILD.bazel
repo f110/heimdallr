@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["client.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpctestutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/rpc:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+    ],
+)

@@ -14,8 +14,6 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/xerrors"
-	"google.golang.org/grpc"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -147,24 +145,19 @@ type HttpProxy struct {
 	reverseProxy *httputil.ReverseProxy
 }
 
-func NewHttpProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientConn) (*HttpProxy, error) {
-	c, err := rpcclient.NewClientForInternal(conn, conf.General.InternalToken)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
+func NewHttpProxy(conf *config.Config, ct *connector.Server, rpcClient *rpcclient.Client) *HttpProxy {
 	p := &HttpProxy{
 		Config: conf,
 		reverseProxy: &httputil.ReverseProxy{
 			ErrorLog:  logger.CompatibleLogger,
 			Transport: NewTransport(conf, ct),
 		},
-		client:       c,
+		client:       rpcClient,
 		accessLogger: newAccessLogger(conf.Logger),
 	}
 	p.reverseProxy.Director = p.director
 
-	return p, nil
+	return p
 }
 
 // ServeHTTP has responsibility to serving content to client.
@@ -219,7 +212,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	p.reverseProxy.ServeHTTP(w, req)
 }
 
-func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
+func (p *HttpProxy) ServeGithubWebHook(_ context.Context, w http.ResponseWriter, req *http.Request) {
 	backend, ok := p.Config.General.GetBackendByHost(req.Host)
 	if !ok {
 		panic(http.ErrAbortHandler)

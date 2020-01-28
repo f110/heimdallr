@@ -93,6 +93,15 @@ func NewClientForInternal(conn *grpc.ClientConn, token string) (*Client, error) 
 	return c, nil
 }
 
+func NewClientWithClient(a rpc.AdminClient, c rpc.ClusterClient, auth rpc.AuthorityClient, ca rpc.CertificateAuthorityClient) *Client {
+	return &Client{
+		adminClient:     a,
+		clusterClient:   c,
+		authorityClient: auth,
+		caClient:        ca,
+	}
+}
+
 func (c *Client) setConn(conn *grpc.ClientConn) {
 	c.conn = conn
 	c.adminClient = rpc.NewAdminClient(conn)
