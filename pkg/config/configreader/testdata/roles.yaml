@@ -1,0 +1,23 @@
+- name: admin
+  title: Administrator
+  description: for administrator
+  bindings:
+    - rpc: dashboard-user
+    - backend: test
+      permission: all
+    - backend: dashboard
+      permission: all
+    - backend: ssh
+      permission: all
+    - backend: agent
+      permission: all
+    - backend: short
+      permission: all
+- name: user
+  title: User
+  bindings:
+    - rpc: dashboard-user
+    - backend: test
+      permission: all
+    - backend: dashboard
+      permission: all

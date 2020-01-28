@@ -1,0 +1,4 @@
+- name: dashboard-user
+  allow:
+    - proxy.rpc.admin.*
+    - proxy.rpc.certificateauthority.*

@@ -154,3 +154,10 @@ logger:
 		t.Errorf("failed read previous etcd url: %s", conf.Datastore.EtcdUrl.String())
 	}
 }
+
+func TestReadConfigFromFile(t *testing.T) {
+	_, err := ReadConfig("./testdata/config_debug.yaml")
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+}
