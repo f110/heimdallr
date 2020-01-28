@@ -16,7 +16,7 @@ require (
 	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/protobuf v1.3.2
-	github.com/google/go-github/v28 v28.1.1
+	github.com/google/go-github/v29 v29.0.2
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/websocket v1.4.1
