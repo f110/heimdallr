@@ -1,7 +1,13 @@
 package config
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
+	"time"
+
+	"github.com/coreos/etcd/embed"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestGeneral(t *testing.T) {
@@ -113,4 +119,50 @@ func TestGeneral(t *testing.T) {
 			t.Fatal("expect is not ok")
 		}
 	})
+}
+
+func TestLogger_ZapConfig(t *testing.T) {
+	l := &Logger{}
+
+	c := l.ZapConfig(zapcore.EncoderConfig{})
+	if c == nil {
+		t.Fatal("ZapConfig must return a value")
+	}
+}
+
+func TestDatastore_GetEtcdClient(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	c := embed.NewConfig()
+	c.Dir = tmpDir
+	c.LogPkgLevels = "*=C"
+	c.SetupLogging()
+	e, err := embed.StartEtcd(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+
+	select {
+	case <-e.Server.ReadyNotify():
+	case <-time.After(time.Second):
+		t.Fatal("Can not start etcd server within 1 second")
+	}
+
+	ds := &Datastore{
+		RawUrl: "etcd://localhost:2379",
+	}
+	if err := ds.Inflate(""); err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := ds.GetEtcdClient(&Logger{})
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+	_ = client
 }

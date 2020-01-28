@@ -426,7 +426,7 @@ func (g *General) Inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 
-		if k8s.CanWatchVolume(g.RoleFile) {
+		if k8s.CanWatchVolume(absPath(g.RoleFile, dir)) {
 			mountPath, err := k8s.FindMountPath(g.CertFile)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
