@@ -23,6 +23,7 @@ go_test(
     srcs = ["config_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//pkg/netutil:go_default_library",
         "//vendor/github.com/coreos/etcd/embed:go_default_library",
         "//vendor/go.uber.org/zap/zapcore:go_default_library",
     ],

@@ -1,13 +1,17 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/coreos/etcd/embed"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 )
 
 func TestGeneral(t *testing.T) {
@@ -137,9 +141,23 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	clientPort, err := netutil.FindUnusedPort()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Client port: %d", clientPort)
+	peerPort, err := netutil.FindUnusedPort()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Peer port: %d", peerPort)
+
+	u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", clientPort)}
 	c := embed.NewConfig()
 	c.Dir = tmpDir
 	c.LogPkgLevels = "*=C"
+	c.LPUrls[0].Host = fmt.Sprintf("localhost:%d", peerPort)
+	c.LCUrls[0] = *u
 	c.SetupLogging()
 	e, err := embed.StartEtcd(c)
 	if err != nil {
@@ -154,7 +172,7 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 	}
 
 	ds := &Datastore{
-		RawUrl: "etcd://localhost:2379",
+		RawUrl: fmt.Sprintf("etcd://localhost:%d", clientPort),
 	}
 	if err := ds.Inflate(""); err != nil {
 		t.Fatal(err)
@@ -164,5 +182,7 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
-	_ = client
+	if client == nil {
+		t.Fatal("GetEtcdClient should return a value")
+	}
 }

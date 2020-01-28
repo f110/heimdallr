@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "hostname.go",
+        "port.go",
         "socket.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/netutil",
