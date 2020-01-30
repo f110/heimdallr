@@ -268,8 +268,8 @@ func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
 	return res.Items, nil
 }
 
-func (c *Client) NewCert(commonName, password, comment string) error {
-	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{CommonName: commonName, Password: password, Comment: comment})
+func (c *Client) NewCert(commonName, keyType string, keyBits int, password, comment string) error {
+	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{CommonName: commonName, KeyType: keyType, KeyBits: int32(keyBits), Password: password, Comment: comment})
 	if err != nil {
 		return err
 	}

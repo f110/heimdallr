@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -24,7 +25,7 @@ const (
 	CertificateExpirationYear = 10 // year
 )
 
-func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, password string, ca *config.CertificateAuthority) ([]byte, *x509.Certificate, error) {
+func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType string, keyBits int, password string, ca *config.CertificateAuthority) ([]byte, *x509.Certificate, error) {
 	now := time.Now()
 	cert := &x509.Certificate{
 		SerialNumber: serial,
@@ -33,11 +34,40 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, password str
 		NotBefore:    now,
 		NotAfter:     now.AddDate(CertificateExpirationYear, 0, 0),
 	}
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
+	var privateKey crypto.PrivateKey
+	var publicKey crypto.PublicKey
+	switch keyType {
+	case "ecdsa":
+		var c elliptic.Curve
+		switch keyBits {
+		case 224:
+			c = elliptic.P224()
+		case 256:
+			c = elliptic.P256()
+		case 384:
+			c = elliptic.P384()
+		case 512:
+			c = elliptic.P521()
+		default:
+			return nil, nil, xerrors.New("cert: Unsupported key bits of ECDSA")
+		}
+
+		key, err := ecdsa.GenerateKey(c, rand.Reader)
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %v", err)
+		}
+		privateKey = key
+		publicKey = key.Public()
+	case "rsa":
+		key, err := rsa.GenerateKey(rand.Reader, keyBits)
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %v", err)
+		}
+		privateKey = key
+		publicKey = key.Public()
 	}
-	b, err := x509.CreateCertificate(rand.Reader, cert, ca.Certificate, &privateKey.PublicKey, ca.PrivateKey)
+
+	b, err := x509.CreateCertificate(rand.Reader, cert, ca.Certificate, publicKey, ca.PrivateKey)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}

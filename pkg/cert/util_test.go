@@ -14,6 +14,7 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/database"
 )
 
 func createCAForTest(t *testing.T) *config.CertificateAuthority {
@@ -40,9 +41,9 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "test", ca)
+	p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
 
 	_, cert, _, err := pkcs12.DecodeChain(p12, "test")

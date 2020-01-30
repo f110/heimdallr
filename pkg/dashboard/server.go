@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -296,7 +297,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 	})
 }
 
-func (s *Server) handleNewCert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleNewCert(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	s.RenderTemplate(w, "cert/new.tmpl", nil)
 }
 
@@ -316,7 +317,22 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 			return
 		}
 	} else {
-		err := client.NewCert(req.FormValue("id"), req.FormValue("password"), req.FormValue("comment"))
+		switch req.FormValue("key_type") {
+		case "ecdsa", "rsa":
+		default:
+			logger.Log.Info("Unknown key type", zap.String("key_type", req.FormValue("key_type")))
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		bit, err := strconv.ParseInt(req.FormValue("key_bits"), 10, 32)
+		if err != nil {
+			logger.Log.Info("Could not convert key_bit to integer")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		err = client.NewCert(req.FormValue("id"), req.FormValue("key_type"), int(bit), req.FormValue("password"), req.FormValue("comment"))
 		if err != nil {
 			logger.Log.Info("Failed create new client certificate", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -405,7 +421,7 @@ func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ 
 	}
 }
 
-func (s *Server) handleDownloadCACert(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleDownloadCACert(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename=ca.crt")
 	buf := new(bytes.Buffer)

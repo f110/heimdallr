@@ -220,6 +220,8 @@ message RequestNewClientCert {
     string comment = 3;
     bool agent = 4;
     string csr = 5;
+    string key_type = 6;
+    int32 key_bits = 7;
 }
 
 message ResponseNewClientCert {

@@ -119,12 +119,12 @@ func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 	return c.revokedList
 }
 
-func (c *CA) NewClientCertificate(ctx context.Context, name, password, comment string) ([]byte, error) {
-	return c.generateClientCertificate(ctx, name, password, comment, false)
+func (c *CA) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) ([]byte, error) {
+	return c.generateClientCertificate(ctx, name, keyType, keyBits, password, comment, false)
 }
 
 func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error) {
-	return c.generateClientCertificate(ctx, name, connector.DefaultCertificatePassword, comment, true)
+	return c.generateClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, connector.DefaultCertificatePassword, comment, true)
 }
 
 func (c *CA) SignCertificateRequest(ctx context.Context, r *x509.CertificateRequest, comment string, agent bool) ([]byte, error) {
@@ -146,7 +146,7 @@ func (c *CA) SignCertificateRequest(ctx context.Context, r *x509.CertificateRequ
 	return signedCert.Raw, nil
 }
 
-func (c *CA) generateClientCertificate(ctx context.Context, name, password, comment string, agent bool) ([]byte, error) {
+func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent bool) ([]byte, error) {
 	serial, err := c.newSerialNumber(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -159,6 +159,8 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, password, comm
 			CommonName:         name,
 		},
 		serial,
+		keyType,
+		keyBits,
 		password,
 		c.config,
 	)

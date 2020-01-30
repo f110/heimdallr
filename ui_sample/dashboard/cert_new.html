@@ -32,6 +32,20 @@
       <label>CSR (Optional. If you specify a CSR, then password is not used.)</label>
       <textarea rows="6"></textarea>
     </div>
+    <div class="inline fields">
+      <div class="field">
+        <label>Type of key</label>
+        <select name="key_type">
+          <option>ECDSA</option>
+          <option>RSA</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>bits</label>
+        <input type="text" name="key_bits">
+      </div>
+    </div>
     <div class="field">
       <label>Password</label>
       <input type="text" name="password" placeholder="Password">

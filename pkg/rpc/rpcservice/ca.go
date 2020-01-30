@@ -79,7 +79,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		if req.Agent {
 			_, err = s.ca.NewAgentCertificate(ctx, req.CommonName, req.Comment)
 		} else {
-			_, err = s.ca.NewClientCertificate(ctx, req.CommonName, req.Password, req.Comment)
+			_, err = s.ca.NewClientCertificate(ctx, req.CommonName, req.KeyType, int(req.KeyBits), req.Password, req.Comment)
 		}
 	} else {
 		_, err = s.ca.SignCertificateRequest(ctx, csr, req.Comment, req.Agent)
