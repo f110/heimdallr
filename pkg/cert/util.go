@@ -46,7 +46,7 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType stri
 			c = elliptic.P256()
 		case 384:
 			c = elliptic.P384()
-		case 512:
+		case 521:
 			c = elliptic.P521()
 		default:
 			return nil, nil, xerrors.New("cert: Unsupported key bits of ECDSA")

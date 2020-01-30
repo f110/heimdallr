@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -36,23 +37,83 @@ func createCAForTest(t *testing.T) *config.CertificateAuthority {
 
 func TestCreateNewCertificateForClient(t *testing.T) {
 	ca := createCAForTest(t)
-	serial, err := NewSerialNumber()
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
+	t.Run("Default", func(t *testing.T) {
+		t.Parallel()
 
-	_, cert, _, err := pkcs12.DecodeChain(p12, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cert.Subject.CommonName != "test@f110.dev" {
-		t.Errorf("CommonName is test@f110.dev: %s", cert.Subject.CommonName)
-	}
+		serial, err := NewSerialNumber()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca)
+		if err != nil {
+			t.Fatalf("%+v", err)
+		}
+
+		_, cert, _, err := pkcs12.DecodeChain(p12, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cert.Subject.CommonName != "test@f110.dev" {
+			t.Errorf("CommonName is test@f110.dev: %s", cert.Subject.CommonName)
+		}
+	})
+
+	t.Run("RSA", func(t *testing.T) {
+		t.Parallel()
+
+		serial, err := NewSerialNumber()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "rsa", 4096, "test", ca)
+		if err != nil {
+			t.Fatalf("%+v", err)
+		}
+
+		privateKey, _, _, err := pkcs12.DecodeChain(p12, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		switch v := privateKey.(type) {
+		case *rsa.PrivateKey:
+		default:
+			t.Errorf("Unexpected private key type: %v", v)
+		}
+	})
+
+	t.Run("ECDSA", func(t *testing.T) {
+		bits := []int{224, 256, 384, 521}
+
+		serial, err := NewSerialNumber()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, b := range bits {
+			p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "ecdsa", b, "test", ca)
+			if err != nil {
+				t.Fatalf("%+v", err)
+			}
+
+			privateKey, _, _, err := pkcs12.DecodeChain(p12, "test")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			switch v := privateKey.(type) {
+			case *ecdsa.PrivateKey:
+				if v.Params().BitSize != b {
+					t.Errorf("private key type is expected but key bits is expected size: %d", v.Params().BitSize)
+				}
+			default:
+				t.Errorf("Unexpected private key type: %v", v)
+			}
+		}
+	})
 }
 
 func TestCreateCertificateAuthorityForConfig(t *testing.T) {
