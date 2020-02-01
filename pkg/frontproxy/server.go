@@ -10,26 +10,24 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/xerrors"
-	"google.golang.org/grpc"
-
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 )
 
+type httpProxy interface {
+	ServeHTTP(ctx context.Context, w http.ResponseWriter, req *http.Request)
+	ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request)
+}
+
 type FrontendProxy struct {
 	Config *config.Config
 
-	httpProxy   *HttpProxy
+	httpProxy   httpProxy
 	socketProxy *SocketProxy
 }
 
-func NewFrontendProxy(conf *config.Config, ct *connector.Server, conn *grpc.ClientConn) (*FrontendProxy, error) {
-	c, err := rpcclient.NewClientForInternal(conn, conf.General.InternalToken)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
+func NewFrontendProxy(conf *config.Config, ct *connector.Server, c *rpcclient.Client) *FrontendProxy {
 	s := NewSocketProxy(conf, ct)
 	h := NewHttpProxy(conf, ct, c)
 
@@ -39,7 +37,7 @@ func NewFrontendProxy(conf *config.Config, ct *connector.Server, conn *grpc.Clie
 		socketProxy: s,
 	}
 
-	return p, nil
+	return p
 }
 
 func (p *FrontendProxy) Accept(server *http.Server, conn *tls.Conn, handler http.Handler) {
