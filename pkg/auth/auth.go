@@ -104,6 +104,14 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 		return nil, ErrHostnameNotFound
 	}
 	if backend.DisableAuthn {
+		if len(backend.Permissions) == 0 {
+			return &database.User{}, nil
+		}
+
+		matched := backend.MatchList(req)
+		if len(matched) == 0 {
+			return nil, ErrNotAllowed
+		}
 		return &database.User{}, nil
 	}
 

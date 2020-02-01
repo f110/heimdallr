@@ -78,6 +78,17 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
 					},
 				},
+				{
+					Name:         "public",
+					DisableAuthn: true,
+				},
+				{
+					Name:         "public-path",
+					DisableAuthn: true,
+					Permissions: []*config.Permission{
+						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+					},
+				},
 			},
 			Roles: []*config.Role{
 				{Name: "test", Bindings: []*config.Binding{
@@ -100,6 +111,40 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = u.Set(nil, &database.User{Id: "foobar@example.com", Roles: []string{"test", "unknown"}})
+
+	t.Run("DisableAuthentication", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("any path", func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "http://public.proxy.example.com/ok", nil)
+			_, err := Authenticate(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+
+		t.Run("with restricted path", func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/ok", nil)
+			_, err := Authenticate(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+
+		t.Run("with not allowed path", func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/disallow", nil)
+			_, err := Authenticate(req)
+			if err != ErrNotAllowed {
+				t.Fatalf("expected ErrNotAllowed: %v", err)
+			}
+		})
+	})
 
 	t.Run("Cookie", func(t *testing.T) {
 		t.Parallel()
