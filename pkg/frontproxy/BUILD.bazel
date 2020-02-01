@@ -30,7 +30,9 @@ go_test(
     name = "go_default_test",
     srcs = [
         "http_test.go",
+        "main_test.go",
         "server_test.go",
+        "socket_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

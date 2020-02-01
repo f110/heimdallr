@@ -46,13 +46,15 @@ const (
 	SocketErrorCodeRequestAuth
 	SocketErrorCodeNotAccessible
 	SocketErrorCodeCloseConnection
+	SocketErrorCodeServerUnavailable
 )
 
 var (
-	SocketErrorInvalidProtocol = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
-	SocketErrorRequestAuth     = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
-	SocketErrorNotAccessible   = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
-	SocketErrorCloseConnection = NewMessageError(SocketErrorCodeCloseConnection, "Sorry, the server has to close connection")
+	SocketErrorInvalidProtocol   = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
+	SocketErrorRequestAuth       = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
+	SocketErrorNotAccessible     = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
+	SocketErrorCloseConnection   = NewMessageError(SocketErrorCodeCloseConnection, "Sorry, the server has to close connection")
+	SocketErrorServerUnavailable = NewMessageError(SocketErrorCodeServerUnavailable, "Temporary server unavailable")
 )
 
 var (
@@ -111,7 +113,7 @@ func ParseMessageError(v url.Values) (MessageError, error) {
 }
 
 type Stream struct {
-	conn   *tls.Conn
+	conn   tlsConn
 	parent *SocketProxy
 	token  string
 	host   string
@@ -130,11 +132,16 @@ type SocketProxy struct {
 	conns map[string]*Stream
 }
 
+type tlsConn interface {
+	net.Conn
+	ConnectionState() tls.ConnectionState
+}
+
 func NewSocketProxy(conf *config.Config, ct *connector.Server) *SocketProxy {
 	return &SocketProxy{Config: conf, connector: ct, conns: make(map[string]*Stream, 0)}
 }
 
-func (s *SocketProxy) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
+func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 	logger.Log.Debug("Accept new socket", zap.String("server_name", conn.ConnectionState().ServerName))
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -179,7 +186,7 @@ func (s *SocketProxy) Shutdown() {
 	}
 }
 
-func NewStream(parent *SocketProxy, conn *tls.Conn, host string) *Stream {
+func NewStream(parent *SocketProxy, conn tlsConn, host string) *Stream {
 	return &Stream{conn: conn, parent: parent, host: host}
 }
 
@@ -252,6 +259,7 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 		conn, err = (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", st.backend.Url.Host)
 	}
 	if err != nil {
+		st.sendMessage(SocketErrorServerUnavailable)
 		return xerrors.Errorf(": %v", err)
 	}
 

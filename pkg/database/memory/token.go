@@ -26,6 +26,15 @@ func NewTokenDatabase() *TokenDatabase {
 	}
 }
 
+func (t *TokenDatabase) SetUser(userId string) (*database.Token, error) {
+	code, err := t.NewCode(nil, userId, "", "")
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+
+	return t.IssueToken(nil, code.Code, "")
+}
+
 func (t *TokenDatabase) NewCode(_ context.Context, userId, _, _ string) (*database.Code, error) {
 	s, err := newCode()
 	if err != nil {
