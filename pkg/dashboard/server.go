@@ -160,7 +160,7 @@ func (s *Server) handleCreateServiceAccount(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	http.Redirect(w, req, "/service_account", http.StatusFound)
+	http.Redirect(w, req, "/sa", http.StatusFound)
 }
 
 func (s *Server) handleServiceAccountToken(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
