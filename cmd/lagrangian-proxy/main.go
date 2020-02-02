@@ -291,11 +291,12 @@ func (m *mainProcess) IsReady() bool {
 }
 
 func (m *mainProcess) startServer() {
-	front, err := frontproxy.NewFrontendProxy(m.config, m.connector, m.rpcServerConn)
+	rpcClient, err := rpcclient.NewClientForInternal(m.rpcServerConn, m.config.General.InternalToken)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
+	front := frontproxy.NewFrontendProxy(m.config, m.connector, rpcClient)
 
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {
