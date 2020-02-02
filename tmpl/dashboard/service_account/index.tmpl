@@ -15,7 +15,7 @@
       {{ range .Accounts }}
       <tr>
         <td><a href="/user/{{ .Id }}">{{ .Id }}</a></td>
-        <td>Sample</td>
+        <td>{{ .Comment }}</td>
         <td>
           <div class="ui right floated tiny buttons">
             <form method="POST">
