@@ -98,7 +98,7 @@ func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *fron
 func (s *Server) Start() error {
 	l, err := net.Listen("tcp", s.Config.General.Bind)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %v", err)
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:     tls.VersionTLS12,
@@ -110,13 +110,22 @@ func (s *Server) Start() error {
 	})
 
 	if err := http2.ConfigureServer(s.server, nil); err != nil {
-		return err
+		return xerrors.Errorf(": %v", err)
 	}
 
 	if err := s.clusterDatabase.Join(context.Background()); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	logger.Log.Info("Start Server", zap.String("listen", s.Config.General.Bind))
+
+	if s.Config.General.EnableHttp {
+		l, err := net.Listen("tcp", s.Config.General.BindHttp)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.General.BindHttp))
+		go s.server.Serve(l)
+	}
 	return s.server.Serve(listener)
 }
 

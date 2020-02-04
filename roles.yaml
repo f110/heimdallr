@@ -13,6 +13,8 @@
       permission: all
     - backend: short
       permission: all
+    - backend: http
+      permission: all
 - name: user
   title: User
   bindings:

@@ -1,5 +1,6 @@
 general:
   bind: :4000
+  enable_http: true
   debug: true
   server_name: local-proxy.f110.dev:4000
   signing_private_key_file: ./privatekey.pem
@@ -9,7 +10,7 @@ general:
   role_file: ./roles.yaml
   proxy_file: ./proxies.yaml
   rpc_permission_file: ./rpc_permissions.yaml
-  rpc_target: 127.0.0.1:4001
+  rpc_target: 127.0.0.1:4002
   certificate_authority:
     cert_file: ./ca.crt
     key_file: ./ca.key
@@ -19,7 +20,7 @@ general:
   root_users:
     - fmhrit@gmail.com
 rpc_server:
-  bind: :4001
+  bind: :4002
   metrics_bind: :4005
   enable: true
 identity_provider:

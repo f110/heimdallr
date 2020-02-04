@@ -172,9 +172,17 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	}
 	w = logged
 
-	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-	if p.Config.FrontendProxy.ExpectCT {
-		w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.General.ServerName+"/ct/report\"")
+	if req.TLS == nil {
+		// non secure access
+		backend, ok := p.Config.General.GetBackendByHost(req.Host)
+		if !ok {
+			logger.Log.Debug("Hostname not found", zap.String("host", req.Host))
+			panic(http.ErrAbortHandler)
+		}
+		if !backend.AllowHttp {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 	}
 
 	user, err := auth.Authenticate(req)
@@ -210,6 +218,13 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 
 	p.setHeader(req, user)
 	p.reverseProxy.ServeHTTP(w, req)
+
+	if logged.status >= 200 && logged.status <= 299 && req.TLS != nil {
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		if p.Config.FrontendProxy.ExpectCT {
+			w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.General.ServerName+"/ct/report\"")
+		}
+	}
 }
 
 func (p *HttpProxy) ServeGithubWebHook(_ context.Context, w http.ResponseWriter, req *http.Request) {

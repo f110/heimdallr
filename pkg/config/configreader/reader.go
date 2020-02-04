@@ -26,6 +26,7 @@ func ReadConfig(filename string) (*config.Config, error) {
 		General: &config.General{
 			Enable:          true,
 			Bind:            ":4000",
+			BindHttp:        ":4001",
 			BindInternalApi: ":4004",
 			ServerName:      "local-proxy.f110.dev:4000",
 		},

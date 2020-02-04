@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,10 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpctestutil"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 )
+
+func newTLSConnectionState() *tls.ConnectionState {
+	return &tls.ConnectionState{HandshakeComplete: true}
+}
 
 func TestNewHttpProxy(t *testing.T) {
 	conf := &config.Config{
@@ -51,12 +56,20 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			WebHook:     "github",
 			WebHookPath: []string{"/github"},
 		},
+		{
+			Name:      "http",
+			AllowHttp: true,
+			Permissions: []*config.Permission{
+				{Name: "all", Locations: []config.Location{{Any: "/"}}},
+			},
+		},
 	}
 	roles := []*config.Role{
 		{
 			Name: "test",
 			Bindings: []*config.Binding{
 				{Backend: "test", Permission: "all"},
+				{Backend: "http", Permission: "all"},
 			},
 		},
 	}
@@ -92,7 +105,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Parallel()
 
 		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com", nil)
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+		req.TLS = newTLSConnectionState()
 		p.ServeHTTP(context.Background(), recorder, req)
 
 		res := recorder.Result()
@@ -105,7 +119,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Parallel()
 
 		recoder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "http://test.example.com", nil)
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+		req.TLS = newTLSConnectionState()
 		cookie, err := s.Cookie(session.New("foobar@example.com"))
 		if err != nil {
 			t.Fatal(err)
@@ -133,11 +148,49 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		}()
 
 		recoder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "http://panic.example.com", nil)
+		req := httptest.NewRequest(http.MethodGet, "https://panic.example.com", nil)
+		req.TLS = newTLSConnectionState()
 		p.ServeHTTP(context.Background(), recoder, req)
 	})
 
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
+
+		recoder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+		req.TLS = newTLSConnectionState()
+		cookie, err := s.Cookie(session.New("foobarbaz@example.com"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.AddCookie(cookie)
+		p.ServeHTTP(context.Background(), recoder, req)
+
+		res := recoder.Result()
+		if res.StatusCode != http.StatusBadGateway {
+			t.Fatalf("expect StatusBadGateway: %s", res.Status)
+		}
+	})
+
+	t.Run("Success via http", func(t *testing.T) {
+		t.Parallel()
+
+		recoder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "http://http.example.com/", nil)
+		cookie, err := s.Cookie(session.New("foobarbaz@example.com"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.AddCookie(cookie)
+		p.ServeHTTP(context.Background(), recoder, req)
+
+		res := recoder.Result()
+		if res.StatusCode != http.StatusBadGateway {
+			t.Fatalf("expect StatusBadGateway: %s", res.Status)
+		}
+	})
+
+	t.Run("Backend is not allowed http access", func(t *testing.T) {
 		t.Parallel()
 
 		recoder := httptest.NewRecorder()
@@ -150,8 +203,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeHTTP(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusBadGateway {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
+		if res.StatusCode != http.StatusForbidden {
+			t.Fatalf("expect StatusUpgradeRequired: %s", res.Status)
 		}
 	})
 
@@ -173,7 +226,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		body := strings.NewReader("{}")
 		recoder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "http://webhook.example.com/github", body)
+		req := httptest.NewRequest(http.MethodGet, "https://webhook.example.com/github", body)
+		// req.TLS = newTLSConnectionState()
 		mac := hmac.New(sha1.New, conf.FrontendProxy.GithubWebhookSecret)
 		mac.Write([]byte("{}"))
 		sign := mac.Sum(nil)

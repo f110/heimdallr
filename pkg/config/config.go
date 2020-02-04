@@ -55,8 +55,10 @@ type Config struct {
 
 type General struct {
 	Enable                bool                  `json:"enable"`
+	EnableHttp            bool                  `json:"enable_http,omitempty"`
 	Debug                 bool                  `json:"debug,omitempty"`
 	Bind                  string                `json:"bind,omitempty"`
+	BindHttp              string                `json:"bind_http,omitempty"`
 	BindInternalApi       string                `json:"bind_internal_api,omitempty"`
 	ServerName            string                `json:"server_name,omitempty"`
 	CertFile              string                `json:"cert_file,omitempty"`
@@ -166,6 +168,7 @@ type Backend struct {
 	AllowAsRootUser bool          `json:"allow_as_root_user,omitempty"`
 	DisableAuthn    bool          `json:"disable_authn,omitempty"`
 	Insecure        bool          `json:"insecure,omitempty"`
+	AllowHttp       bool          `json:"allow_http,omitempty"`
 
 	Url           *url.URL        `json:"-"`
 	Socket        bool            `json:"-"`
