@@ -1280,8 +1280,9 @@ func (r *LagrangianProxy) Main() (*process, error) {
 	}
 	if r.Spec.HttpPort != 0 {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name: "http",
-			Port: r.Spec.HttpPort,
+			Name:       "http",
+			Port:       r.Spec.HttpPort,
+			TargetPort: intstr.FromInt(proxyHttpPort),
 		})
 	}
 
