@@ -51,6 +51,7 @@ const (
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
 	ctlCommand                 = "/usr/local/bin/lagctl"
 	proxyPort                  = 4000
+	proxyHttpPort              = 4002
 	internalApiPort            = 4004
 	dashboardPort              = 4100
 	rpcServerPort              = 4001
@@ -624,6 +625,10 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			Enable: false,
 		},
 	}
+	if r.Spec.HttpPort != 0 {
+		conf.General.Enable = true
+		conf.General.BindHttp = fmt.Sprintf(":%d", proxyHttpPort)
+	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
 		return nil, err
@@ -881,6 +886,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			AllowAsRootUser: v.Spec.AllowRootUser,
 			DisableAuthn:    v.Spec.DisableAuthn,
 			Insecure:        v.Spec.Insecure,
+			AllowHttp:       v.Spec.AllowHttp,
 		}
 	}
 	proxyBinary, err := yaml.Marshal(proxies)
@@ -1271,6 +1277,12 @@ func (r *LagrangianProxy) Main() (*process, error) {
 			},
 			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
 		},
+	}
+	if r.Spec.HttpPort != 0 {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name: "http",
+			Port: r.Spec.HttpPort,
+		})
 	}
 
 	internalApiSvc := &corev1.Service{

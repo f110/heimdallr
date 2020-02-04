@@ -89,6 +89,9 @@ spec:
               type: object
             domain:
               type: string
+            httpPort:
+              format: int32
+              type: integer
             identityProvider:
               properties:
                 clientId:

@@ -36,6 +36,8 @@ spec:
           properties:
             agent:
               type: boolean
+            allowHttp:
+              type: boolean
             allowRootUser:
               type: boolean
             disableAuthn:

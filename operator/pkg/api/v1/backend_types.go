@@ -38,6 +38,7 @@ type BackendSpec struct {
 	Agent           bool            `json:"agent,omitempty"`
 	DisableAuthn    bool            `json:"disableAuthn,omitempty"`
 	Insecure        bool            `json:"insecure,omitempty"`
+	AllowHttp       bool            `json:"allowHttp,omitempty"`
 	Permissions     []Permission    `json:"permissions,omitempty"`
 }
 
