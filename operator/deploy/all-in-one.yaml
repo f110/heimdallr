@@ -33,6 +33,8 @@ spec:
             properties:
               agent:
                 type: boolean
+              allowHttp:
+                type: boolean
               allowRootUser:
                 type: boolean
               disableAuthn:
@@ -229,6 +231,9 @@ spec:
                 type: object
               domain:
                 type: string
+              httpPort:
+                format: int32
+                type: integer
               identityProvider:
                 properties:
                   clientId:
