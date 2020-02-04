@@ -626,7 +626,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 		},
 	}
 	if r.Spec.HttpPort != 0 {
-		conf.General.Enable = true
+		conf.General.EnableHttp = true
 		conf.General.BindHttp = fmt.Sprintf(":%d", proxyHttpPort)
 	}
 	b, err := yaml.Marshal(conf)
