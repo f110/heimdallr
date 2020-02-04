@@ -1,4 +1,4 @@
-VERSION = v0.1.16
+VERSION = v0.1.17
 
 run:
 	bazel run //cmd/lagrangian-proxy -- -c $(CURDIR)/config_debug.yaml
