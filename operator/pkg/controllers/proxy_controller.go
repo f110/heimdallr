@@ -41,9 +41,8 @@ var (
 // ProxyReconciler reconciles a Proxy object
 type ProxyReconciler struct {
 	client.Client
-	Log               logr.Logger
-	Scheme            *runtime.Scheme
-	ProcessRepository *ProcessRepository
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 
 	enablePrometheusOperator bool
 }
@@ -111,10 +110,13 @@ func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Request reconcile")
 	def := &proxyv1.Proxy{}
 	if err := r.Get(context.Background(), req.NamespacedName, def); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
-	lp := r.ProcessRepository.Get(def)
+	lp := NewLagrangianProxy(def, r.Client, r.Log)
 	if requeue, err := r.preSetup(lp); err != nil {
 		return ctrl.Result{Requeue: requeue, RequeueAfter: 30 * time.Second}, nil
 	}

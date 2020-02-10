@@ -30,9 +30,8 @@ import (
 // BackendReconciler reconciles a Backend object
 type BackendReconciler struct {
 	client.Client
-	Log               logr.Logger
-	Scheme            *runtime.Scheme
-	ProcessRepository *ProcessRepository
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=proxy.f110.dev,resources=backends,verbs=get;list;watch;create;update;patch;delete
@@ -75,7 +74,7 @@ Item:
 	}
 
 	for _, v := range targets {
-		lp := r.ProcessRepository.Get(&v)
+		lp := NewLagrangianProxy(&v, r.Client, r.Log)
 		if err := r.reconcileConfig(lp); err != nil {
 			return ctrl.Result{}, err
 		}

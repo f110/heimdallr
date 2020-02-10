@@ -78,41 +78,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := controllers.NewProcessRepository(ctrl.Log.WithName("repository"))
-	repo.SetClient(mgr.GetClient())
-
 	if err = (&controllers.ProxyReconciler{
-		Client:            mgr.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("Proxy"),
-		Scheme:            mgr.GetScheme(),
-		ProcessRepository: repo,
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Proxy"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
 		os.Exit(1)
 	}
 	if err = (&controllers.BackendReconciler{
-		Client:            mgr.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("Backend"),
-		Scheme:            mgr.GetScheme(),
-		ProcessRepository: repo,
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Backend"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Backend")
 		os.Exit(1)
 	}
 	if err = (&controllers.RoleReconciler{
-		Client:            mgr.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("Role"),
-		Scheme:            mgr.GetScheme(),
-		ProcessRepository: repo,
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Role"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Role")
 		os.Exit(1)
 	}
 	if err = (&controllers.RpcPermissionReconciler{
-		Client:            mgr.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("RpcPermission"),
-		Scheme:            mgr.GetScheme(),
-		ProcessRepository: repo,
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("RpcPermission"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RpcPermission")
 		os.Exit(1)
