@@ -16,6 +16,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/go-logr/logr"
+
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/k8s"
@@ -102,17 +104,19 @@ type LagrangianProxy struct {
 	Object    *proxyv1.Proxy
 	Spec      proxyv1.ProxySpec
 	Client    client.Client
+	Log       logr.Logger
 
 	selfSignedIssuer bool
 	caSecretName     string
 	caFilename       string
 }
 
-func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client) *LagrangianProxy {
+func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client, log logr.Logger) *LagrangianProxy {
 	return &LagrangianProxy{
 		Name:      spec.Name,
 		Namespace: spec.Namespace,
 		Client:    client,
+		Log:       log,
 		Object:    spec,
 		Spec:      spec.Spec,
 	}
@@ -915,7 +919,8 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 						backendHost = bn.Name
 					}
 				} else {
-					return nil, fmt.Errorf("controller: %s not found", b.BackendName)
+					r.Log.Info(fmt.Sprintf("Ignore Backend/%s in Role/%s because backend not found", b.BackendName, v.Name))
+					continue
 				}
 
 				bindings[k] = &config.Binding{

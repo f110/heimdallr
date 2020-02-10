@@ -9,9 +9,11 @@ spec:
   organization: test
   administratorUnit: super
   backendSelector:
-    instance: proxy-sample
+    matchLabels:
+      instance: proxy-sample
   roleSelector:
-    instance: proxy-sample
+    matchLabels:
+      instance: proxy-sample
   issuerRef:
     name: ca-issuer
     kind: Issuer

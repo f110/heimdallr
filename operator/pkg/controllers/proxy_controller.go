@@ -34,12 +34,18 @@ import (
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 )
 
+var (
+	ErrRetryReconcile = errors.New("controller: retry reconcile")
+)
+
 // ProxyReconciler reconciles a Proxy object
 type ProxyReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	ProcessRepository *ProcessRepository
+
+	enablePrometheusOperator bool
 }
 
 // +kubebuilder:rbac:groups=proxy.f110.dev,resources=proxies,verbs=get;list;watch;create;update;patch;delete
@@ -73,6 +79,8 @@ func (r *ProxyReconciler) checkOperator() error {
 		return err
 	}
 
+	r.discoverPrometheusOperator(apiList)
+
 	return nil
 }
 
@@ -88,6 +96,15 @@ func (r *ProxyReconciler) existCustomResource(apiList []*metav1.APIResourceList,
 	}
 
 	return fmt.Errorf("controllers: %s/%s not found", groupVersion, kind)
+}
+
+func (r *ProxyReconciler) discoverPrometheusOperator(apiList []*metav1.APIResourceList) {
+	for _, v := range apiList {
+		if v.GroupVersion == "monitoring.coreos.com/v1" {
+			r.enablePrometheusOperator = true
+			return
+		}
+	}
 }
 
 func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -229,20 +246,22 @@ func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) e
 		}
 	}
 
-	for _, v := range objs.ServiceMonitors {
-		if v == nil {
-			continue
-		}
+	if r.enablePrometheusOperator {
+		for _, v := range objs.ServiceMonitors {
+			if v == nil {
+				continue
+			}
 
-		orig := v.DeepCopy()
-		_, err := ctrl.CreateOrUpdate(context.Background(), r, v, func() error {
-			v.Labels = orig.Labels
-			v.Spec = orig.Spec
+			orig := v.DeepCopy()
+			_, err := ctrl.CreateOrUpdate(context.Background(), r, v, func() error {
+				v.Labels = orig.Labels
+				v.Spec = orig.Spec
 
-			return ctrl.SetControllerReference(lp.Object, v, r.Scheme)
-		})
-		if err != nil {
-			return err
+				return ctrl.SetControllerReference(lp.Object, v, r.Scheme)
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -285,7 +304,9 @@ func (r *ProxyReconciler) ReconcileRPCServer(lp *LagrangianProxy) error {
 func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 	requeue := false
 	if err := r.ReconcileEtcdCluster(lp); err != nil {
-		r.Log.Info("etcd cluster is not ready yet. waiting 30 seconds")
+		if err != ErrRetryReconcile {
+			r.Log.Error(err, "Failed reconcile etcd cluster")
+		}
 		requeue = true
 	}
 
@@ -299,7 +320,7 @@ func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
 	cluster, serviceMonitor := lp.EtcdCluster()
 
-	if serviceMonitor != nil {
+	if serviceMonitor != nil && r.enablePrometheusOperator {
 		orig := serviceMonitor.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, serviceMonitor, func() error {
 			serviceMonitor.Labels = orig.Labels
@@ -336,5 +357,6 @@ func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
 		}
 	}
 
-	return errors.New("controllers: etcd cluster is not ready yet")
+	r.Log.Info("etcd cluster is not ready yet")
+	return ErrRetryReconcile
 }

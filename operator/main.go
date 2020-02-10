@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := controllers.NewProcessRepository()
+	repo := controllers.NewProcessRepository(ctrl.Log.WithName("repository"))
 	repo.SetClient(mgr.GetClient())
 
 	if err = (&controllers.ProxyReconciler{

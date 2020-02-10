@@ -15,3 +15,21 @@ spec:
       permission: all
     - backendName: backend-fqdn
       permission: all
+---
+apiVersion: proxy.f110.dev/v1
+kind: Role
+metadata:
+  name: role-sample-2
+  labels:
+    instance: proxy-sample
+spec:
+  title: administrator-2
+  description: Proxy administrator a.k.a GOD
+  bindings:
+    - rpcPermissionName: rpcpermission-sample
+    - backendName: backend-sample
+      permission: all
+    - backendName: dashboard
+      permission: all
+    - backendName: backend-fqdn
+      permission: all

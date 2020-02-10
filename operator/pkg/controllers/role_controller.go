@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +46,7 @@ func (r *RoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *RoleReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	role := &proxyv1.Role{}
-	if err := r.Get(context.Background(), req.NamespacedName, role); err != nil {
+	if err := r.Get(context.Background(), req.NamespacedName, role); err != nil && !errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 
@@ -57,10 +58,12 @@ func (r *RoleReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	targets := make([]proxyv1.Proxy, 0)
 Item:
 	for _, v := range defList.Items {
-		for k := range v.Spec.RoleSelector.MatchLabels {
-			value, ok := role.ObjectMeta.Labels[k]
-			if !ok || v.Spec.RoleSelector.MatchLabels[k] != value {
-				continue Item
+		if role.ObjectMeta.Labels != nil {
+			for k := range v.Spec.RoleSelector.MatchLabels {
+				value, ok := role.ObjectMeta.Labels[k]
+				if !ok || v.Spec.RoleSelector.MatchLabels[k] != value {
+					continue Item
+				}
 			}
 		}
 

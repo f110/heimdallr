@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +47,10 @@ func (r *BackendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *BackendReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	backend := &proxyv1.Backend{}
 	if err := r.Get(context.Background(), req.NamespacedName, backend); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+
 		return ctrl.Result{}, err
 	}
 
@@ -57,10 +62,12 @@ func (r *BackendReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	targets := make([]proxyv1.Proxy, 0)
 Item:
 	for _, v := range defList.Items {
-		for k := range v.Spec.BackendSelector.MatchLabels {
-			value, ok := backend.ObjectMeta.Labels[k]
-			if !ok || v.Spec.BackendSelector.MatchLabels[k] != value {
-				continue Item
+		if backend.ObjectMeta.Labels != nil {
+			for k := range v.Spec.BackendSelector.MatchLabels {
+				value, ok := backend.ObjectMeta.Labels[k]
+				if !ok || v.Spec.BackendSelector.MatchLabels[k] != value {
+					continue Item
+				}
 			}
 		}
 

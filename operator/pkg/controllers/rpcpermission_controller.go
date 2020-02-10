@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +40,7 @@ type RpcPermissionReconciler struct {
 
 func (r *RpcPermissionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	permission := &proxyv1.RpcPermission{}
-	if err := r.Get(context.Background(), req.NamespacedName, permission); err != nil {
+	if err := r.Get(context.Background(), req.NamespacedName, permission); err != nil && errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 
@@ -51,10 +52,14 @@ func (r *RpcPermissionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	targets := make([]proxyv1.Proxy, 0)
 Item:
 	for _, v := range defList.Items {
-		for k := range v.Spec.RpcPermissionSelector.MatchLabels {
-			value, ok := permission.ObjectMeta.Labels[k]
-			if !ok || v.Spec.RpcPermissionSelector.MatchLabels[k] != value {
-				continue Item
+		// When permission.Labels is nil, it was deleted.
+		// Re-generate config file to whole targets.
+		if permission.Labels != nil {
+			for k := range v.Spec.RpcPermissionSelector.MatchLabels {
+				value, ok := permission.ObjectMeta.Labels[k]
+				if !ok || v.Spec.RpcPermissionSelector.MatchLabels[k] != value {
+					continue Item
+				}
 			}
 		}
 
