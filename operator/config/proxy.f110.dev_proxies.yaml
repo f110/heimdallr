@@ -281,6 +281,12 @@ spec:
         status:
           description: ProxyStatus defines the observed state of Proxy
           properties:
+            numberOfBackends:
+              type: integer
+            numberOfRoles:
+              type: integer
+            numberOfRpcPermissions:
+              type: integer
             phase:
               type: string
             ready:

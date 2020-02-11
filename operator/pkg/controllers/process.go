@@ -970,6 +970,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	configMap.Data[proxyFilename] = string(proxyBinary)
 	configMap.Data[rpcPermissionFilename] = string(rpcPermissionBinary)
 
+	r.Object.Status.NumOfBackends = len(backends)
+	r.Object.Status.NumOfRoles = len(roles)
+	r.Object.Status.NumOfRpcPermissions = len(rpcPermissions)
 	return configMap, nil
 }
 

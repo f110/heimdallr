@@ -77,8 +77,11 @@ type MonitorSpec struct {
 
 // ProxyStatus defines the observed state of Proxy
 type ProxyStatus struct {
-	Ready bool   `json:"ready"`
-	Phase string `json:"phase,omitempty"`
+	Ready               bool   `json:"ready"`
+	Phase               string `json:"phase,omitempty"`
+	NumOfBackends       int    `json:"numberOfBackends,omitempty"`
+	NumOfRoles          int    `json:"numberOfRoles,omitempty"`
+	NumOfRpcPermissions int    `json:"numberOfRpcPermissions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
