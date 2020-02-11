@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -84,33 +85,32 @@ Item:
 }
 
 func (r *BackendReconciler) reconcileConfig(lp *LagrangianProxy) error {
-	lp.Lock()
-	defer lp.Unlock()
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		configMap, err := lp.ReverseProxyConfig()
+		if err != nil {
+			return err
+		}
+		orig := configMap.DeepCopy()
+		_, err = ctrl.CreateOrUpdate(context.Background(), r, configMap, func() error {
+			configMap.Data = orig.Data
 
-	configMap, err := lp.ReverseProxyConfig()
-	if err != nil {
-		return err
-	}
-	orig := configMap.DeepCopy()
-	_, err = ctrl.CreateOrUpdate(context.Background(), r, configMap, func() error {
-		configMap.Data = orig.Data
+			return ctrl.SetControllerReference(lp.Object, configMap, r.Scheme)
+		})
+		if err != nil {
+			return err
+		}
 
-		return ctrl.SetControllerReference(lp.Object, configMap, r.Scheme)
+		cert, err := lp.Certificate()
+		if err != nil {
+			return err
+		}
+		origC := cert.DeepCopy()
+		_, err = ctrl.CreateOrUpdate(context.Background(), r, cert, func() error {
+			cert.Spec = origC.Spec
+
+			return ctrl.SetControllerReference(lp.Object, cert, r.Scheme)
+		})
+
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	cert, err := lp.Certificate()
-	if err != nil {
-		return err
-	}
-	origC := cert.DeepCopy()
-	_, err = ctrl.CreateOrUpdate(context.Background(), r, cert, func() error {
-		cert.Spec = origC.Spec
-
-		return ctrl.SetControllerReference(lp.Object, cert, r.Scheme)
-	})
-
-	return nil
 }

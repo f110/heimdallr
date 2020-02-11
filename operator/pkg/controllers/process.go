@@ -14,7 +14,6 @@ import (
 	"fmt"
 	mrand "math/rand"
 	"sort"
-	"sync"
 
 	"github.com/go-logr/logr"
 
@@ -97,8 +96,6 @@ type process struct {
 }
 
 type LagrangianProxy struct {
-	sync.Mutex
-
 	Name      string
 	Namespace string
 	Object    *proxyv1.Proxy

@@ -77,10 +77,13 @@ type MonitorSpec struct {
 
 // ProxyStatus defines the observed state of Proxy
 type ProxyStatus struct {
-	Deployed bool `json:"deployed,omitempty"`
+	Ready bool   `json:"ready"`
+	Phase string `json:"phase,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase",description="Phase",format="byte",priority=0
+// +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp",description="age",format="date",priority=0
 
 // Proxy is the Schema for the proxies API
 type Proxy struct {

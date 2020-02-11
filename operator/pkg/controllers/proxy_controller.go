@@ -141,14 +141,12 @@ func (r *ProxyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *ProxyReconciler) FinishReconcile(lp *LagrangianProxy) error {
-	lp.Object.Status.Deployed = true
+	lp.Object.Status.Ready = true
+	lp.Object.Status.Phase = "Running"
 	return r.Update(context.Background(), lp.Object)
 }
 
 func (r *ProxyReconciler) reconcileProcess(lp *LagrangianProxy, objs *process) error {
-	lp.Lock()
-	defer lp.Unlock()
-
 	if objs.Deployment != nil {
 		orig := objs.Deployment.DeepCopy()
 		_, err := ctrl.CreateOrUpdate(context.Background(), r, objs.Deployment, func() error {
