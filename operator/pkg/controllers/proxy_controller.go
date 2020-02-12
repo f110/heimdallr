@@ -45,6 +45,7 @@ type ProxyReconciler struct {
 	Scheme *runtime.Scheme
 
 	enablePrometheusOperator bool
+	enableEtcdBackupOperator bool
 }
 
 // +kubebuilder:rbac:groups=proxy.f110.dev,resources=proxies,verbs=get;list;watch;create;update;patch;delete
@@ -79,6 +80,7 @@ func (r *ProxyReconciler) checkOperator() error {
 	}
 
 	r.discoverPrometheusOperator(apiList)
+	r.discoverEtcdBackupOperator(apiList)
 
 	return nil
 }
@@ -102,6 +104,19 @@ func (r *ProxyReconciler) discoverPrometheusOperator(apiList []*metav1.APIResour
 		if v.GroupVersion == "monitoring.coreos.com/v1" {
 			r.enablePrometheusOperator = true
 			return
+		}
+	}
+}
+
+func (r *ProxyReconciler) discoverEtcdBackupOperator(apiList []*metav1.APIResourceList) {
+	for _, v := range apiList {
+		if v.GroupVersion == "etcd.database.coreos.com/v1beta2" {
+			for _, v := range v.APIResources {
+				if v.Kind == "EtcdBackup" {
+					r.enableEtcdBackupOperator = true
+					return
+				}
+			}
 		}
 	}
 }
@@ -314,6 +329,12 @@ func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 		return requeue, errors.New("controllers: pre setup is not completed")
 	}
 
+	if r.enableEtcdBackupOperator {
+		if err := r.ReconcileEtcdBackup(lp); err != nil {
+			return false, err
+		}
+	}
+
 	return requeue, nil
 }
 
@@ -359,4 +380,17 @@ func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
 
 	r.Log.Info("etcd cluster is not ready yet")
 	return ErrRetryReconcile
+}
+
+func (r *ProxyReconciler) ReconcileEtcdBackup(lp *LagrangianProxy) error {
+	backup := lp.EtcdBackup()
+
+	orig := backup.DeepCopy()
+	_, err := ctrl.CreateOrUpdate(context.Background(), r, backup, func() error {
+		backup.Spec = orig.Spec
+
+		return ctrl.SetControllerReference(lp.Object, backup, r.Scheme)
+	})
+
+	return err
 }

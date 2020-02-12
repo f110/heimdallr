@@ -51,6 +51,7 @@ type ProxySpec struct {
 	RpcPermissionSelector LabelSelector          `json:"rpcPermissionSelector,omitempty"`
 	Defragment            DefragmentSpec         `json:"defragment,omitempty"`
 	Monitor               MonitorSpec            `json:"monitor,omitempty"`
+	Backup                BackupSpec             `json:"backup,omitempty"`
 }
 
 type IdentityProviderSpec struct {
@@ -73,6 +74,15 @@ type MonitorSpec struct {
 	// PrometheusMonitoring is set to true, then operator creates ServiceMonitor object.
 	PrometheusMonitoring bool              `json:"prometheusMonitoring,omitempty"`
 	Labels               map[string]string `json:"labels,omitempty"`
+}
+
+type BackupSpec struct {
+	IntervalInSecond int64          `json:"intervalInSecond"`
+	MaxBackups       int            `json:"maxBackups,omitempty"`
+	Bucket           string         `json:"bucket"`
+	Path             string         `json:"path"`
+	CredentialRef    SecretSelector `json:"credentialRef"`
+	Endpoint         string         `json:"endpoint,omitempty"`
 }
 
 // ProxyStatus defines the observed state of Proxy

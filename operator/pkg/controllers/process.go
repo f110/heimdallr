@@ -416,6 +416,34 @@ func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1
 	return cluster, sm
 }
 
+func (r *LagrangianProxy) EtcdBackup() *etcdcluster.EtcdBackup {
+	if r.Spec.Backup.IntervalInSecond == 0 {
+		return nil
+	}
+
+	backup := &etcdcluster.EtcdBackup{
+		ObjectMeta: metav1.ObjectMeta{Name: r.EtcdClusterName(), Namespace: r.Namespace},
+		Spec: etcdcluster.BackupSpec{
+			BackupPolicy: &etcdcluster.BackupPolicy{
+				BackupIntervalInSecond: r.Spec.Backup.IntervalInSecond,
+				MaxBackups:             r.Spec.Backup.MaxBackups,
+			},
+			EtcdEndpoints: []string{fmt.Sprintf("http://%s:2379", r.EtcdHost())},
+			StorageType:   etcdcluster.BackupStorageTypeS3,
+			BackupSource: etcdcluster.BackupSource{
+				S3: &etcdcluster.S3BackupSource{
+					Path:           fmt.Sprintf("%s/%s", r.Spec.Backup.Bucket, r.Spec.Backup.Path),
+					AWSSecret:      r.Spec.Backup.CredentialRef.Name,
+					Endpoint:       r.Spec.Backup.Endpoint,
+					ForcePathStyle: true,
+				},
+			},
+		},
+	}
+
+	return backup
+}
+
 func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -901,8 +929,8 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	}
 	roles := make([]*config.Role, len(roleList))
 	for i, v := range roleList {
-		bindings := make([]*config.Binding, len(v.Spec.Bindings))
-		for k, b := range v.Spec.Bindings {
+		bindings := make([]*config.Binding, 0, len(v.Spec.Bindings))
+		for _, b := range v.Spec.Bindings {
 			switch {
 			case b.BackendName != "":
 				namespace := v.Namespace
@@ -920,14 +948,14 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 					continue
 				}
 
-				bindings[k] = &config.Binding{
+				bindings = append(bindings, &config.Binding{
 					Permission: b.Permission,
 					Backend:    backendHost,
-				}
+				})
 			case b.RpcPermissionName != "":
-				bindings[k] = &config.Binding{
+				bindings = append(bindings, &config.Binding{
 					Rpc: b.RpcPermissionName,
-				}
+				})
 			}
 		}
 

@@ -94,6 +94,34 @@ spec:
                   namespace:
                     type: string
                 type: object
+              backup:
+                properties:
+                  bucket:
+                    type: string
+                  credentialRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  endpoint:
+                    type: string
+                  intervalInSecond:
+                    format: int64
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  path:
+                    type: string
+                required:
+                - bucket
+                - credentialRef
+                - intervalInSecond
+                - path
+                type: object
               country:
                 type: string
               defragment:

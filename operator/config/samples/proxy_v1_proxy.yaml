@@ -4,6 +4,7 @@ metadata:
   name: proxy-sample
 spec:
   replicas: 3
+  version: v0.2.0
   domain: local-proxy.f110.dev
   port: 443
   organization: test
@@ -15,8 +16,8 @@ spec:
     matchLabels:
       instance: proxy-sample
   issuerRef:
-    name: ca-issuer
-    kind: Issuer
+    name: lets-encrypt
+    kind: ClusterIssuer
   identityProvider:
     provider: google
     clientId: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
@@ -36,3 +37,11 @@ spec:
       k8s-app: etcd
   defragment:
     schedule: "18 13 * * *"
+  backup:
+    intervalInSecond: 60
+    maxBackups: 10
+    bucket: proxy
+    path: backup
+    credentialRef:
+      name: backup-credential
+    endpoint: http://object-storage-hl-svc.default.svc.cluster.local:9000
