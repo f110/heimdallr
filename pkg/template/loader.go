@@ -45,6 +45,7 @@ func New(data map[string]string, typ, dir string, funcMap template.FuncMap) *Loa
 		}
 		loader.tmpl = t
 	}
+
 	return loader
 }
 
