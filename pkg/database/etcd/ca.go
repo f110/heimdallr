@@ -186,10 +186,12 @@ func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
+
 	certificate, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
+
 	return certificate, privateKey, nil
 }
 
