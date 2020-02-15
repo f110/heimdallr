@@ -89,5 +89,6 @@ func MarshalUser(user *User) ([]byte, error) {
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
+
 	return b, nil
 }

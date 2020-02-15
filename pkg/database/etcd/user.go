@@ -19,6 +19,12 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
+type state struct {
+	State     string
+	Unique    string
+	CreatedAt time.Time
+}
+
 type UserDatabase struct {
 	client *clientv3.Client
 
@@ -149,6 +155,10 @@ func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, erro
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
+	if d.tokens == nil {
+		return nil, database.ErrClosed
+	}
+
 	if v, ok := d.tokens[value]; ok {
 		return v, nil
 	}
@@ -181,6 +191,10 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 		return xerrors.New("etcd: Failed update database")
 	}
 
+	d.mu.Lock()
+	d.users[user.Id] = user
+	d.mu.Unlock()
+
 	return nil
 }
 
@@ -191,7 +205,15 @@ func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.Acces
 	}
 
 	_, err = d.client.Put(ctx, fmt.Sprintf("user_token/%s", token.Value), string(b))
-	return err
+	if err != nil {
+		return err
+	}
+
+	d.mu.Lock()
+	d.tokens[token.Value] = token
+	d.mu.Unlock()
+
+	return nil
 }
 
 func (d *UserDatabase) Delete(ctx context.Context, id string) error {
@@ -199,13 +221,12 @@ func (d *UserDatabase) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return xerrors.Errorf(": $v", err)
 	}
-	return nil
-}
 
-type state struct {
-	State     string
-	Unique    string
-	CreatedAt time.Time
+	d.mu.Lock()
+	delete(d.users, id)
+	d.mu.Unlock()
+
+	return nil
 }
 
 func (d *UserDatabase) SetState(ctx context.Context, unique string) (string, error) {
@@ -268,7 +289,7 @@ func (d *UserDatabase) key(id string) string {
 
 func (d *UserDatabase) watchUser(ctx context.Context, revision int64) {
 	logger.Log.Debug("Start watching users")
-	defer d.close()
+	defer d.Close()
 
 	watchCh := d.client.Watch(ctx, "user/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 Watch:
@@ -278,45 +299,50 @@ Watch:
 			if !ok {
 				break Watch
 			}
-			for _, event := range res.Events {
-				switch event.Type {
-				case clientv3.EventTypePut:
-					user, err := database.UnmarshalUser(event.Kv)
-					if err != nil {
-						continue
-					}
-					if user.Id == "" {
-						logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
-						continue
-					}
-
-					d.mu.Lock()
-					d.users[user.Id] = user
-					d.mu.Unlock()
-					logger.Log.Debug("Add new user", zap.String("id", user.Id))
-				case clientv3.EventTypeDelete:
-					key := strings.Split(string(event.Kv.Key), "/")
-					id := key[len(key)-1]
-					d.mu.Lock()
-					if _, ok := d.users[id]; !ok {
-						logger.Log.Warn("User not found", zap.String("id", id))
-						d.mu.Unlock()
-						continue
-					}
-					delete(d.users, id)
-					d.mu.Unlock()
-					logger.Log.Debug("Remove user", zap.String("id", id))
-				}
-			}
+			d.watchUserEvent(res.Events)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
+func (d *UserDatabase) watchUserEvent(events []*clientv3.Event) {
+	for _, event := range events {
+		switch event.Type {
+		case clientv3.EventTypePut:
+			user, err := database.UnmarshalUser(event.Kv)
+			if err != nil {
+				logger.Log.Debug("Failed parse KVS", zap.Error(err))
+				continue
+			}
+			if user.Id == "" {
+				logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
+				continue
+			}
+
+			d.mu.Lock()
+			d.users[user.Id] = user
+			d.mu.Unlock()
+			logger.Log.Debug("Add new user", zap.String("id", user.Id))
+		case clientv3.EventTypeDelete:
+			key := strings.Split(string(event.Kv.Key), "/")
+			id := key[len(key)-1]
+			d.mu.Lock()
+			if _, ok := d.users[id]; !ok {
+				logger.Log.Debug("User not found", zap.String("id", id))
+				d.mu.Unlock()
+				continue
+			}
+			delete(d.users, id)
+			d.mu.Unlock()
+			logger.Log.Debug("Remove user", zap.String("id", id))
+		}
+	}
+}
+
 func (d *UserDatabase) watchToken(ctx context.Context, revision int64) {
 	logger.Log.Debug("Start watching tokens")
-	defer d.close()
+	defer d.Close()
 
 	watchCh := d.client.Watch(ctx, "user_token/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 Watch:
@@ -326,43 +352,47 @@ Watch:
 			if !ok {
 				break Watch
 			}
-			for _, event := range res.Events {
-				switch event.Type {
-				case clientv3.EventTypePut:
-					token := &database.AccessToken{}
-					if err := yaml.Unmarshal(event.Kv.Value, token); err != nil {
-						continue
-					}
-					if token.Value == "" {
-						logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
-						continue
-					}
-
-					d.mu.Lock()
-					d.tokens[token.Value] = token
-					d.mu.Unlock()
-					logger.Log.Debug("Add new token", zap.String("value", token.Value))
-				case clientv3.EventTypeDelete:
-					key := strings.Split(string(event.Kv.Key), "/")
-					value := key[len(key)-1]
-					d.mu.Lock()
-					if _, ok := d.tokens[value]; !ok {
-						logger.Log.Warn("Token not found", zap.String("value", value))
-						d.mu.Unlock()
-						continue
-					}
-					delete(d.tokens, value)
-					d.mu.Unlock()
-					logger.Log.Debug("Remove token", zap.String("value", value))
-				}
-			}
+			d.watchTokenEvent(res.Events)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (d *UserDatabase) close() {
+func (d *UserDatabase) watchTokenEvent(events []*clientv3.Event) {
+	for _, event := range events {
+		switch event.Type {
+		case clientv3.EventTypePut:
+			token := &database.AccessToken{}
+			if err := yaml.Unmarshal(event.Kv.Value, token); err != nil {
+				continue
+			}
+			if token.Value == "" {
+				logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
+				continue
+			}
+
+			d.mu.Lock()
+			d.tokens[token.Value] = token
+			d.mu.Unlock()
+			logger.Log.Debug("Add new token", zap.String("value", token.Value))
+		case clientv3.EventTypeDelete:
+			key := strings.Split(string(event.Kv.Key), "/")
+			value := key[len(key)-1]
+			d.mu.Lock()
+			if _, ok := d.tokens[value]; !ok {
+				logger.Log.Warn("Token not found", zap.String("value", value))
+				d.mu.Unlock()
+				continue
+			}
+			delete(d.tokens, value)
+			d.mu.Unlock()
+			logger.Log.Debug("Remove token", zap.String("value", value))
+		}
+	}
+}
+
+func (d *UserDatabase) Close() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 

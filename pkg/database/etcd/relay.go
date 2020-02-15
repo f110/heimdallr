@@ -72,14 +72,21 @@ func (l *RelayLocator) Set(ctx context.Context, r *database.Relay) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	_, err = l.client.Put(ctx, fmt.Sprintf("relay/%s/%s", r.Name, r.Addr), string(b))
+	putRes, err := l.client.Put(ctx, fmt.Sprintf("relay/%s/%s", r.Name, r.Addr), string(b))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
+	}
+	if putRes.PrevKv == nil {
+		r.Version = 1
+	} else {
+		r.Version = putRes.PrevKv.Version + 1
 	}
 
 	l.mu.Lock()
 	l.myListenedAddr = append(l.myListenedAddr, r.Addr)
+	l.cache[r.Name] = r
 	l.mu.Unlock()
+
 	return nil
 }
 
@@ -117,7 +124,9 @@ func (l *RelayLocator) Delete(ctx context.Context, name, addr string) error {
 			l.myListenedAddr = append(l.myListenedAddr[:i], l.myListenedAddr[i+1:]...)
 		}
 	}
+	delete(l.cache, name)
 	l.mu.Unlock()
+
 	return nil
 }
 
@@ -158,39 +167,43 @@ func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
 				continue
 			}
 
-			for _, e := range events.Events {
-				switch e.Type {
-				case clientv3.EventTypePut:
-					r := &database.Relay{}
-					if err := yaml.Unmarshal(e.Kv.Value, r); err != nil {
-						continue
-					}
-					r.Version = e.Kv.Version
+			l.watchEvents(events.Events)
+		}
+	}
+}
 
-					logger.Log.Debug("Add relay to cache", zap.String("name", r.Name))
-					l.mu.Lock()
-					l.cache[r.Name] = r
-					l.mu.Unlock()
-				case clientv3.EventTypeDelete:
-					key := strings.Split(string(e.Kv.Key), "/")
-					name := key[len(key)-2]
-					if name == "" {
-						continue
-					}
+func (l *RelayLocator) watchEvents(events []*clientv3.Event) {
+	for _, e := range events {
+		switch e.Type {
+		case clientv3.EventTypePut:
+			r := &database.Relay{}
+			if err := yaml.Unmarshal(e.Kv.Value, r); err != nil {
+				continue
+			}
+			r.Version = e.Kv.Version
 
-					if _, ok := l.cache[name]; !ok {
-						continue
-					}
-					logger.Log.Debug("Remove relay from cache", zap.String("name", name))
-					l.mu.Lock()
-					delete(l.cache, name)
-					l.mu.Unlock()
+			logger.Log.Debug("Add a relay to cache", zap.String("name", r.Name))
+			l.mu.Lock()
+			l.cache[r.Name] = r
+			l.mu.Unlock()
+		case clientv3.EventTypeDelete:
+			key := strings.Split(string(e.Kv.Key), "/")
+			name := key[len(key)-2]
+			if name == "" {
+				continue
+			}
 
-					select {
-					case l.gone <- &database.Relay{Name: key[len(key)-2], Addr: key[len(key)-1]}:
-					default:
-					}
-				}
+			if _, ok := l.cache[name]; !ok {
+				continue
+			}
+			logger.Log.Debug("Remove relay from cache", zap.String("name", name))
+			l.mu.Lock()
+			delete(l.cache, name)
+			l.mu.Unlock()
+
+			select {
+			case l.gone <- &database.Relay{Name: key[len(key)-2], Addr: key[len(key)-1]}:
+			default:
 			}
 		}
 	}

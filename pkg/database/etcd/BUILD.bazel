@@ -31,6 +31,10 @@ go_test(
     name = "go_default_test",
     srcs = [
         "ca_test.go",
+        "cluster_test.go",
+        "relay_test.go",
+        "token_test.go",
+        "user_test.go",
         "util_test.go",
     ],
     embed = [":go_default_library"],
@@ -43,6 +47,8 @@ go_test(
         "//pkg/netutil:go_default_library",
         "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
         "//vendor/github.com/coreos/etcd/embed:go_default_library",
+        "//vendor/github.com/coreos/etcd/mvcc/mvccpb:go_default_library",
+        "//vendor/sigs.k8s.io/yaml:go_default_library",
         "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
     ],
 )
