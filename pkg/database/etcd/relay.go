@@ -58,8 +58,8 @@ func NewRelayLocator(ctx context.Context, client *clientv3.Client) (*RelayLocato
 	return rl, nil
 }
 
-// TODO: Support multiple relay
 func (l *RelayLocator) Get(name string) (*database.Relay, bool) {
+	// TODO: Support multiple relay
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 

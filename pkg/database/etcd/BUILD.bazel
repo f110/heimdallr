@@ -32,6 +32,8 @@ go_test(
     srcs = [
         "ca_test.go",
         "cluster_test.go",
+        "compactor_test.go",
+        "readiness_test.go",
         "relay_test.go",
         "token_test.go",
         "user_test.go",

@@ -19,6 +19,9 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
+// For testing hack
+var now = time.Now
+
 type state struct {
 	State     string
 	Unique    string
@@ -47,6 +50,7 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers .
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
+
 		allUser = append(allUser, user)
 	}
 	users := make(map[string]*database.User)
@@ -236,7 +240,7 @@ func (d *UserDatabase) SetState(ctx context.Context, unique string) (string, err
 	}
 	stateString := base64.StdEncoding.EncodeToString(buf)
 
-	s := &state{State: stateString[:len(stateString)-2], Unique: unique, CreatedAt: time.Now()}
+	s := &state{State: stateString[:len(stateString)-2], Unique: unique, CreatedAt: now()}
 	b, err := yaml.Marshal(s)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
@@ -262,7 +266,7 @@ func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string
 	if err := yaml.Unmarshal(res.Kvs[0].Value, s); err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
-	if s.CreatedAt.Add(1 * time.Hour).Before(time.Now()) {
+	if s.CreatedAt.Add(1 * time.Hour).Before(now()) {
 		_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", stateString))
 		if err != nil {
 			logger.Log.Warn("failure delete state", zap.String("state", stateString))

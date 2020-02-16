@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestNewUserDatabase(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client)
+	u, err := NewUserDatabase(context.Background(), client, database.SystemUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,6 +156,43 @@ func TestUserDatabase_GetAndSetState(t *testing.T) {
 	}
 	if unique != "unique-value" {
 		t.Fatal("Unexpected unique value")
+	}
+
+	now = func() time.Time { return time.Now().Add(24 * time.Hour) }
+	defer func() { now = time.Now }()
+
+	_, err = u.GetState(context.Background(), state)
+	if err == nil {
+		t.Error("Expect occurred an error")
+	}
+
+	if err := u.DeleteState(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUserDatabase_Delete(t *testing.T) {
+	u, err := NewUserDatabase(context.Background(), client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clearDatabase(t)
+
+	err = u.Set(context.Background(), &database.User{
+		Id:    "test@example.com",
+		Roles: []string{"test"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = u.Set(context.Background(), &database.User{Id: "test@example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = u.Get("test@example")
+	if err != database.ErrUserNotFound {
+		t.Fatal("Expect occurred ErrUserNotFound")
 	}
 }
 
