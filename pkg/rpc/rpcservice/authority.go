@@ -43,7 +43,7 @@ func (a *AuthorityService) SignRequest(_ context.Context, req *rpc.RequestSignRe
 }
 
 func (a *AuthorityService) GetPublicKey(_ context.Context, _ *rpc.RequestGetPublicKey) (*rpc.ResponseGetPublicKey, error) {
-	b, err := x509.MarshalPKIXPublicKey(a.Config.General.SigningPublicKey)
+	b, err := x509.MarshalPKIXPublicKey(&a.Config.General.SigningPublicKey)
 	if err != nil {
 		logger.Log.Error("Failed marshal public key", zap.Error(err))
 	}

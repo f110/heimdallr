@@ -2,8 +2,13 @@ package rpcserver
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"testing"
 	"time"
@@ -123,6 +128,11 @@ func TestServicesViaServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signReqPubKey := signReqKey.PublicKey
 
 	conf := &config.Config{
 		General: &config.General{
@@ -131,10 +141,12 @@ func TestServicesViaServer(t *testing.T) {
 				Certificate: crt,
 				PrivateKey:  caPrivateKey,
 			},
-			InternalToken: "internal-token",
-			RootUsers:     []string{database.SystemUser.Id},
+			InternalToken:     "internal-token",
+			RootUsers:         []string{database.SystemUser.Id},
+			SigningPrivateKey: signReqKey,
+			SigningPublicKey:  signReqPubKey,
 			Backends: []*config.Backend{
-				{Name: "test"},
+				{Name: "test", Agent: true},
 			},
 			Roles: []*config.Role{
 				{
@@ -341,5 +353,132 @@ func TestServicesViaServer(t *testing.T) {
 				t.Errorf("Expect 1 token: %d tokens", len(getRes.User.Tokens))
 			}
 		})
+	})
+
+	t.Run("Authority", func(t *testing.T) {
+		t.Parallel()
+
+		authorityClient := rpc.NewAuthorityClient(conn)
+
+		pubKeyRes, err := authorityClient.GetPublicKey(systemUserCtx, &rpc.RequestGetPublicKey{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(pubKeyRes.PublicKey) == 0 {
+			t.Error("Expect return a public key")
+		}
+		b, rest := pem.Decode(pubKeyRes.PublicKey)
+		if len(rest) != 0 {
+			t.Fatal("responsed value decoded as a pem block but have rest bytes")
+		}
+		if b.Type != "PUBLIC KEY" {
+			t.Errorf("Expect Public Key: %s", b.Type)
+		}
+		pub, err := x509.ParsePKIXPublicKey(b.Bytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch pub.(type) {
+		case *ecdsa.PublicKey:
+		default:
+			t.Fatal("Unexpected public key type")
+		}
+
+		signRes, err := authorityClient.SignRequest(systemUserCtx, &rpc.RequestSignRequest{UserId: testUser.Id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(signRes.Token) == 0 {
+			t.Fatal("Expect return token")
+		}
+	})
+
+	t.Run("CertificateAuthority", func(t *testing.T) {
+		t.Parallel()
+
+		caClient := rpc.NewCertificateAuthorityClient(conn)
+
+		newRes, err := caClient.NewClientCert(systemUserCtx, &rpc.RequestNewClientCert{
+			CommonName: "test@example.com",
+			Comment:    "for test",
+			KeyType:    "rsa",
+			KeyBits:    2048,
+			Password:   "test",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !newRes.Ok {
+			t.Fatal("Expect return ok")
+		}
+
+		csr, _, err := cert.CreateCertificateRequest(pkix.Name{CommonName: "csr@example.com"}, []string{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		newRes, err = caClient.NewClientCert(systemUserCtx, &rpc.RequestNewClientCert{
+			Csr:        string(csr),
+			CommonName: "csr@example.com",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !newRes.Ok {
+			t.Fatal("Expect return ok")
+		}
+
+		newRes, err = caClient.NewClientCert(systemUserCtx, &rpc.RequestNewClientCert{
+			Agent:      true,
+			CommonName: "test",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !newRes.Ok {
+			t.Fatal("Expect return ok")
+		}
+
+		signedListRes, err := caClient.GetSignedList(systemUserCtx, &rpc.RequestGetSignedList{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(signedListRes.Items) != 3 {
+			t.Errorf("Expect return 3 signed certificates: %d signed certificates", len(signedListRes.Items))
+		}
+
+		revokedCert, err := caClient.Get(systemUserCtx, &rpc.CARequestGet{SerialNumber: signedListRes.Items[0].SerialNumber})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if revokedCert.Item == nil {
+			t.Error("Get should return certificate item")
+		}
+
+		revokeRes, err := caClient.Revoke(systemUserCtx, &rpc.CARequestRevoke{SerialNumber: revokedCert.Item.SerialNumber})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !revokeRes.Ok {
+			t.Error("Expect return ok")
+		}
+		revokedListRes, err := caClient.GetRevokedList(systemUserCtx, &rpc.RequestGetRevokedList{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(revokedListRes.Items) != 1 {
+			t.Errorf("Expect 1 revoked certificate: %d revoked certificates", len(revokedListRes.Items))
+		}
+
+		csr, _, err = cert.CreateCertificateRequest(pkix.Name{CommonName: "test.example.com"}, []string{"test.example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		newServerCertRes, err := caClient.NewServerCert(systemUserCtx, &rpc.RequestNewServerCert{SigningRequest: csr})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(newServerCertRes.Certificate) == 0 {
+			t.Error("NewServerCert should return a certificate")
+		}
 	})
 }
