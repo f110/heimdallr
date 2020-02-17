@@ -7,6 +7,7 @@ go_library(
         "authority.go",
         "ca.go",
         "cluster.go",
+        "doc.go",
         "health.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice",

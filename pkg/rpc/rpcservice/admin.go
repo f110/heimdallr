@@ -229,22 +229,16 @@ func (s *AdminService) ToggleAdmin(ctx context.Context, req *rpc.RequestToggleAd
 
 func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (*rpc.ResponseTokenNew, error) {
 	issuer := ""
-	user := ctx.Value("user")
-	if user != nil {
-		if v, ok := user.(*database.User); ok {
-			issuer = v.Id
-		} else {
-			return nil, xerrors.New("rpcservice: unauthorized")
-		}
+	if user, err := extractUser(ctx); err != nil {
+		return nil, err
 	} else {
-		return nil, xerrors.New("rpcservice: unauthorized")
+		issuer = user.Id
 	}
-	_, err := s.userDatabase.Get(issuer)
-	if err != nil {
+
+	if _, err := s.userDatabase.Get(issuer); err != nil {
 		return nil, err
 	}
-	_, err = s.userDatabase.Get(req.UserId)
-	if err != nil {
+	if _, err := s.userDatabase.Get(req.UserId); err != nil {
 		return nil, err
 	}
 

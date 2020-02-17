@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"net"
 	"net/http"
+	"sync"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -31,7 +32,8 @@ import (
 )
 
 var (
-	registry = prometheus.NewRegistry()
+	registry     = prometheus.NewRegistry()
+	registerOnce sync.Once
 )
 
 type Server struct {
@@ -73,8 +75,10 @@ func NewServer(conf *config.Config, user database.UserDatabase, token database.T
 	rpc.RegisterAuthorityServer(s, rpcservice.NewAuthorityService(conf))
 	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService())
 	r.InitializeMetrics(s)
-	registry.MustRegister(r)
-	registry.MustRegister(prometheus.NewGoCollector())
+	registerOnce.Do(func() {
+		registry.MustRegister(r)
+		registry.MustRegister(prometheus.NewGoCollector())
+	})
 
 	return &Server{
 		Config:        conf,

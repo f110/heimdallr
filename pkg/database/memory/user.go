@@ -51,9 +51,6 @@ func (u *UserDatabase) GetAll() ([]*database.User, error) {
 
 	users := make([]*database.User, 0, len(u.data))
 	for _, v := range u.data {
-		if v.Type != database.UserTypeNormal {
-			continue
-		}
 		users = append(users, v)
 	}
 
