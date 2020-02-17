@@ -37,7 +37,7 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	c, err := rpcclient.NewClientWithStaticToken(conn)
+	c, err := rpcclient.NewWithStaticToken(conn)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

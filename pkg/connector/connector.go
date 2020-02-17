@@ -305,7 +305,7 @@ type Server struct {
 }
 
 func NewServer(conf *config.Config, rpcConn *grpc.ClientConn, locator database.RelayLocator) *Server {
-	c, _ := rpcclient.NewClientForInternal(rpcConn, conf.General.InternalToken)
+	c, _ := rpcclient.NewWithInternalToken(rpcConn, conf.General.InternalToken)
 
 	return &Server{
 		Config:        conf,

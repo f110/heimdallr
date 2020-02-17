@@ -33,11 +33,8 @@ func (d *dummyHttpProxy) ServeGithubWebHook(_ context.Context, _ http.ResponseWr
 }
 
 func TestNewFrontendProxy(t *testing.T) {
-	a := rpctestutil.NewAdminClient()
-	cluster := rpctestutil.NewClusterClient()
 	authority := rpctestutil.NewAuthorityClient()
-	ca := rpctestutil.NewCertificateAuthorityClient()
-	c := rpcclient.NewClientWithClient(a, cluster, authority, ca)
+	c := rpcclient.NewWithClient(nil, nil, authority, nil)
 
 	v := NewFrontendProxy(&config.Config{Logger: &config.Logger{}}, nil, c)
 	if v == nil {

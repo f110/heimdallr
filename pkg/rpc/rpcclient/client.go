@@ -59,7 +59,7 @@ type Client struct {
 	ka              keepalive.ClientParameters
 }
 
-func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
+func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 	adminClient := rpc.NewAdminClient(conn)
 
 	tokenClient := token.NewClient("token")
@@ -84,7 +84,7 @@ func NewClientWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 	return c, nil
 }
 
-func NewClientForInternal(conn *grpc.ClientConn, token string) (*Client, error) {
+func NewWithInternalToken(conn *grpc.ClientConn, token string) (*Client, error) {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.InternalTokenMetadataKey, token)
 
 	c := &Client{md: ctx}
@@ -93,7 +93,7 @@ func NewClientForInternal(conn *grpc.ClientConn, token string) (*Client, error) 
 	return c, nil
 }
 
-func NewClientWithClient(a rpc.AdminClient, c rpc.ClusterClient, auth rpc.AuthorityClient, ca rpc.CertificateAuthorityClient) *Client {
+func NewWithClient(a rpc.AdminClient, c rpc.ClusterClient, auth rpc.AuthorityClient, ca rpc.CertificateAuthorityClient) *Client {
 	return &Client{
 		adminClient:     a,
 		clusterClient:   c,

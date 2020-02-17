@@ -291,7 +291,7 @@ func (m *mainProcess) IsReady() bool {
 }
 
 func (m *mainProcess) startServer() {
-	rpcClient, err := rpcclient.NewClientForInternal(m.rpcServerConn, m.config.General.InternalToken)
+	rpcClient, err := rpcclient.NewWithInternalToken(m.rpcServerConn, m.config.General.InternalToken)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return

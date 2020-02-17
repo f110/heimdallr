@@ -58,7 +58,7 @@ func main() {
 		panic(err)
 	}
 
-	c, err := rpcclient.NewClientWithStaticToken(conn)
+	c, err := rpcclient.NewWithStaticToken(conn)
 	if err != nil {
 		panic(err)
 	}

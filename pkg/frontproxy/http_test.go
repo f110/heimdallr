@@ -29,11 +29,8 @@ func TestNewHttpProxy(t *testing.T) {
 	conf := &config.Config{
 		Logger: &config.Logger{},
 	}
-	a := rpctestutil.NewAdminClient()
-	cluster := rpctestutil.NewClusterClient()
 	authority := rpctestutil.NewAuthorityClient()
-	ca := rpctestutil.NewCertificateAuthorityClient()
-	c := rpcclient.NewClientWithClient(a, cluster, authority, ca)
+	c := rpcclient.NewWithClient(nil, nil, authority, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	if p == nil {
@@ -94,11 +91,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a := rpctestutil.NewAdminClient()
-	cluster := rpctestutil.NewClusterClient()
 	authority := rpctestutil.NewAuthorityClient()
-	ca := rpctestutil.NewCertificateAuthorityClient()
-	c := rpcclient.NewClientWithClient(a, cluster, authority, ca)
+	c := rpcclient.NewWithClient(nil, nil, authority, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	t.Run("Session not found", func(t *testing.T) {

@@ -18,7 +18,7 @@ type ResourceServer struct {
 var _ server.ChildServer = &ResourceServer{}
 
 func NewResourceServer(conn *grpc.ClientConn, token string) (*ResourceServer, error) {
-	c, err := rpcclient.NewClientForInternal(conn, token)
+	c, err := rpcclient.NewWithInternalToken(conn, token)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
