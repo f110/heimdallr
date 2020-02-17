@@ -45,11 +45,11 @@ func (s *CertificateAuthorityService) GetSignedList(ctx context.Context, _ *rpc.
 
 func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rpc.RequestNewClientCert) (*rpc.ResponseNewClientCert, error) {
 	var err error
-	commonName := req.CommonName
+	commonName := req.GetCommonName()
 
 	var csr *x509.CertificateRequest
-	if req.Csr != "" {
-		block, _ := pem.Decode([]byte(req.Csr))
+	if req.GetCsr() != "" {
+		block, _ := pem.Decode([]byte(req.GetCsr()))
 		if block.Type != "CERTIFICATE REQUEST" {
 			return nil, errors.New("rpcservice: invalid csr")
 		}
@@ -61,9 +61,9 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		csr = r
 	}
 
-	if req.Agent {
+	if req.GetAgent() {
 		if _, ok := s.Config.General.GetBackend(commonName); !ok {
-			logger.Log.Info("Could not find backend", zap.String("common_name", req.CommonName))
+			logger.Log.Info("Could not find backend", zap.String("common_name", req.GetCommonName()))
 			return nil, xerrors.New("rpcservice: unknown backend")
 		}
 	}
@@ -71,18 +71,18 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 	if commonName == "" {
 		return nil, errors.New("rpcservice: common name is required")
 	}
-	if req.Csr != "" && req.CommonName != commonName {
+	if req.GetCsr() != "" && req.GetCommonName() != commonName {
 		return nil, errors.New("rpcservice: Subject.CommonName and req.CommonName are not same value")
 	}
 
 	if csr == nil {
-		if req.Agent {
-			_, err = s.ca.NewAgentCertificate(ctx, req.CommonName, req.Comment)
+		if req.GetAgent() {
+			_, err = s.ca.NewAgentCertificate(ctx, req.GetCommonName(), req.GetComment())
 		} else {
-			_, err = s.ca.NewClientCertificate(ctx, req.CommonName, req.KeyType, int(req.KeyBits), req.Password, req.Comment)
+			_, err = s.ca.NewClientCertificate(ctx, req.GetCommonName(), req.GetKeyType(), int(req.GetKeyBits()), req.GetPassword(), req.GetComment())
 		}
 	} else {
-		_, err = s.ca.SignCertificateRequest(ctx, csr, req.Comment, req.Agent)
+		_, err = s.ca.SignCertificateRequest(ctx, csr, req.GetComment(), req.GetAgent())
 	}
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 
 func (s *CertificateAuthorityService) Revoke(ctx context.Context, req *rpc.CARequestRevoke) (*rpc.CAResponseRevoke, error) {
 	serialNumber := big.NewInt(0)
-	serialNumber.SetBytes(req.SerialNumber)
+	serialNumber.SetBytes(req.GetSerialNumber())
 
 	signed, err := s.ca.GetSignedCertificate(ctx, serialNumber)
 	if err != nil {
@@ -112,7 +112,7 @@ func (s *CertificateAuthorityService) Revoke(ctx context.Context, req *rpc.CAReq
 
 func (s *CertificateAuthorityService) Get(ctx context.Context, req *rpc.CARequestGet) (*rpc.CAResponseGet, error) {
 	serialNumber := big.NewInt(0)
-	serialNumber.SetBytes(req.SerialNumber)
+	serialNumber.SetBytes(req.GetSerialNumber())
 
 	c, err := s.ca.GetSignedCertificate(ctx, serialNumber)
 	if err != nil {
@@ -123,7 +123,7 @@ func (s *CertificateAuthorityService) Get(ctx context.Context, req *rpc.CAReques
 }
 
 func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rpc.RequestNewServerCert) (*rpc.ResponseNewServerCert, error) {
-	b, _ := pem.Decode(req.SigningRequest)
+	b, _ := pem.Decode(req.GetSigningRequest())
 	if b.Type != "CERTIFICATE REQUEST" {
 		return nil, xerrors.New("rpcservice: invalid certificate signing request")
 	}

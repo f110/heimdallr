@@ -849,6 +849,10 @@ func (l *Logger) ZapConfig(encoder zapcore.EncoderConfig) *zap.Config {
 	switch l.Level {
 	case "debug":
 		level = zap.DebugLevel
+	case "warn":
+		level = zap.WarnLevel
+	case "error":
+		level = zap.ErrorLevel
 	}
 	encoding := "json"
 	if l.Encoding != "" {

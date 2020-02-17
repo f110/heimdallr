@@ -47,10 +47,10 @@ func (s *AdminService) UserList(ctx context.Context, req *rpc.RequestUserList) (
 	res := make([]*rpc.UserItem, 0, len(users))
 	for _, v := range users {
 		// filtered by request parameter
-		if req.Role != "" {
+		if req.GetRole() != "" {
 			ok := false
 			for _, r := range v.Roles {
-				if r == req.Role {
+				if r == req.GetRole() {
 					ok = true
 					break
 				}
@@ -59,7 +59,7 @@ func (s *AdminService) UserList(ctx context.Context, req *rpc.RequestUserList) (
 				continue
 			}
 		}
-		if req.ServiceAccount {
+		if req.GetServiceAccount() {
 			if !v.ServiceAccount() {
 				continue
 			}
@@ -86,14 +86,14 @@ func (s *AdminService) UserList(ctx context.Context, req *rpc.RequestUserList) (
 }
 
 func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc.ResponseUserGet, error) {
-	u, err := s.userDatabase.Get(req.Id)
+	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
 		return &rpc.ResponseUserGet{}, err
 	}
 
 	res := rpc.DatabaseUserToRPCUser(u)
-	if req.WithTokens {
-		t, err := s.userDatabase.GetAccessTokens(req.Id)
+	if req.GetWithTokens() {
+		t, err := s.userDatabase.GetAccessTokens(req.GetId())
 		if err != nil {
 			return nil, err
 		}
@@ -117,21 +117,21 @@ func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc
 }
 
 func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*rpc.ResponseUserAdd, error) {
-	u, err := s.userDatabase.Get(req.Id)
+	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil && err != database.ErrUserNotFound {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		return nil, err
 	}
 
 	t := database.UserTypeNormal
-	switch req.Type {
+	switch req.GetType() {
 	case rpc.UserType_SERVICE_ACCOUNT:
 		t = database.UserTypeServiceAccount
 	}
 	if u != nil {
-		u.Roles = append(u.Roles, req.Role)
+		u.Roles = append(u.Roles, req.GetRole())
 	} else {
-		u = &database.User{Id: req.Id, Roles: []string{req.Role}, Type: t, Comment: req.Comment}
+		u = &database.User{Id: req.GetId(), Roles: []string{req.GetRole()}, Type: t, Comment: req.GetComment()}
 	}
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
@@ -144,7 +144,7 @@ func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*r
 }
 
 func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*rpc.ResponseUserDel, error) {
-	u, err := s.userDatabase.Get(req.Id)
+	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		return nil, err
@@ -160,13 +160,13 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 	}
 
 	for i := range u.Roles {
-		if u.Roles[i] == req.Role {
+		if u.Roles[i] == req.GetRole() {
 			u.Roles = append(u.Roles[:i], u.Roles[i+1:]...)
 			break
 		}
 	}
-	if _, ok := u.MaintainRoles[req.Role]; ok {
-		delete(u.MaintainRoles, req.Role)
+	if _, ok := u.MaintainRoles[req.GetRole()]; ok {
+		delete(u.MaintainRoles, req.GetRole())
 	}
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
@@ -174,25 +174,25 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 		return nil, err
 	}
 
-	logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("role", req.Role), auditBy(ctx))
+	logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("role", req.GetRole()), auditBy(ctx))
 	return &rpc.ResponseUserDel{Ok: true}, nil
 }
 
 func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBecomeMaintainer) (*rpc.ResponseBecomeMaintainer, error) {
-	u, err := s.userDatabase.Get(req.Id)
+	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		return nil, err
 	}
 
-	if _, err := s.Config.General.GetRole(req.Role); err != nil {
+	if _, err := s.Config.General.GetRole(req.GetRole()); err != nil {
 		logger.Log.Info("Role not found", zap.String("role", req.Role))
 		return nil, err
 	}
 
 	ok := false
 	for _, v := range u.Roles {
-		if v == req.Role {
+		if v == req.GetRole() {
 			ok = true
 		}
 	}
@@ -200,18 +200,18 @@ func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBec
 		return nil, xerrors.New("rpc: user doesn't belong role")
 	}
 
-	u.MaintainRoles[req.Role] = true
+	u.MaintainRoles[req.GetRole()] = true
 	if err := s.userDatabase.Set(ctx, u); err != nil {
 		logger.Log.Warn("Failure update user", zap.Error(err))
 		return nil, err
 	}
 
-	logger.Audit.Info("Become maintainer", zap.String("user", u.Id), zap.String("role", req.Role), auditBy(ctx))
+	logger.Audit.Info("Become maintainer", zap.String("user", u.Id), zap.String("role", req.GetRole()), auditBy(ctx))
 	return &rpc.ResponseBecomeMaintainer{Ok: true}, nil
 }
 
 func (s *AdminService) ToggleAdmin(ctx context.Context, req *rpc.RequestToggleAdmin) (*rpc.ResponseToggleAdmin, error) {
-	u, err := s.userDatabase.Get(req.Id)
+	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		return nil, err
@@ -238,11 +238,11 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 	if _, err := s.userDatabase.Get(issuer); err != nil {
 		return nil, err
 	}
-	if _, err := s.userDatabase.Get(req.UserId); err != nil {
+	if _, err := s.userDatabase.Get(req.GetUserId()); err != nil {
 		return nil, err
 	}
 
-	newToken, err := auth.NewAccessToken(req.Name, req.UserId, issuer)
+	newToken, err := auth.NewAccessToken(req.GetName(), req.GetUserId(), issuer)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 		return nil, err
 	}
 
-	logger.Audit.Info("Issue token", zap.String("user", req.UserId), auditBy(ctx))
+	logger.Audit.Info("Issue token", zap.String("user", req.GetUserId()), auditBy(ctx))
 	return &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{
 		Name:     newToken.Name,
 		Value:    newToken.Value,
@@ -298,7 +298,7 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 
 	res := make([]*rpc.BackendItem, 0, len(backends))
 	for _, v := range backends {
-		if req.Agent && !v.Agent {
+		if req.GetAgent() && !v.Agent {
 			continue
 		}
 

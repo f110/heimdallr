@@ -29,7 +29,7 @@ func NewAuthorityService(conf *config.Config) *AuthorityService {
 
 func (a *AuthorityService) SignRequest(_ context.Context, req *rpc.RequestSignRequest) (*rpc.ResponseSignResponse, error) {
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        req.UserId,
+		Id:        req.GetUserId(),
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
 	})

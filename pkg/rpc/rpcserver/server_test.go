@@ -36,7 +36,9 @@ func TestNewServer(t *testing.T) {
 		RPCServer: &config.RPCServer{
 			Bind: ":0",
 		},
-		Logger: &config.Logger{},
+		Logger: &config.Logger{
+			Level: "error",
+		},
 	}
 	if err := logger.Init(conf.Logger); err != nil {
 		t.Fatal(err)
@@ -84,7 +86,9 @@ func TestServer_Start(t *testing.T) {
 			Bind:        fmt.Sprintf(":%d", port),
 			MetricsBind: fmt.Sprintf(":%d", metricPort),
 		},
-		Logger: &config.Logger{},
+		Logger: &config.Logger{
+			Level: "error",
+		},
 	}
 	if err := logger.Init(conf.Logger); err != nil {
 		t.Fatal(err)
@@ -165,7 +169,9 @@ func TestServicesViaServer(t *testing.T) {
 		RPCServer: &config.RPCServer{
 			Bind: fmt.Sprintf(":%d", port),
 		},
-		Logger: &config.Logger{},
+		Logger: &config.Logger{
+			Level: "error",
+		},
 	}
 	if err := conf.General.Load(conf.General.Backends, conf.General.Roles, conf.General.RpcPermissions); err != nil {
 		t.Fatal(err)
@@ -283,14 +289,14 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if getRes.User.Id != "test@example.com" {
-				t.Errorf("Unexpected Id: %s", getRes.User.Id)
+			if getRes.GetUser().GetId() != "test@example.com" {
+				t.Errorf("Unexpected Id: %s", getRes.GetUser().GetId())
 			}
-			if getRes.User.Roles[0] != "test-admin" || getRes.User.Roles[1] != "test-admin2" {
-				t.Errorf("Unexpected role: %v", getRes.User.Roles)
+			if getRes.GetUser().GetRoles()[0] != "test-admin" || getRes.GetUser().GetRoles()[1] != "test-admin2" {
+				t.Errorf("Unexpected role: %v", getRes.GetUser().GetRoles())
 			}
-			if getRes.User.Type != rpc.UserType_NORMAL {
-				t.Errorf("Unexpected user type: %v", getRes.User.Type)
+			if getRes.GetUser().GetType() != rpc.UserType_NORMAL {
+				t.Errorf("Unexpected user type: %v", getRes.GetUser().GetType())
 			}
 
 			becomeRes, err := adminClient.BecomeMaintainer(systemUserCtx, &rpc.RequestBecomeMaintainer{Id: testUser.Id, Role: "test-admin"})
@@ -305,7 +311,7 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(getRes.User.MaintainRoles) != 1 {
+			if len(getRes.GetUser().GetMaintainRoles()) != 1 {
 				t.Error("test user should have a privilege to maintain 1 role")
 			}
 
@@ -313,22 +319,22 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(userListRes.Items) != 2 {
-				t.Errorf("Expect 2 users: %d users", len(userListRes.Items))
+			if len(userListRes.GetItems()) != 2 {
+				t.Errorf("Expect 2 users: %d users", len(userListRes.GetItems()))
 			}
 			userListRes, err = adminClient.UserList(systemUserCtx, &rpc.RequestUserList{Role: "test-admin"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(userListRes.Items) != 1 {
-				t.Errorf("Expect 1 user: %d users", len(userListRes.Items))
+			if len(userListRes.GetItems()) != 1 {
+				t.Errorf("Expect 1 user: %d users", len(userListRes.GetItems()))
 			}
 			userListRes, err = adminClient.UserList(systemUserCtx, &rpc.RequestUserList{ServiceAccount: true})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(userListRes.Items) != 1 {
-				t.Errorf("Expect 1 user: %d users", len(userListRes.Items))
+			if len(userListRes.GetItems()) != 1 {
+				t.Errorf("Expect 1 user: %d users", len(userListRes.GetItems()))
 			}
 
 			toggleRes, err := adminClient.ToggleAdmin(systemUserCtx, &rpc.RequestToggleAdmin{Id: testUser.Id})
@@ -342,23 +348,29 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(userListRes.Items) != 2 {
-				t.Errorf("Expect 2 users: %d users", len(userListRes.Items))
+			if len(userListRes.GetItems()) != 2 {
+				t.Errorf("Expect 2 users: %d users", len(userListRes.GetItems()))
 			}
 
 			tokenRes, err := adminClient.TokenNew(systemUserCtx, &rpc.RequestTokenNew{Name: "test", UserId: testUser.Id})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if tokenRes.Item.Value == "" {
+			if tokenRes.GetItem().GetValue() == "" {
 				t.Error("Expect return a value")
 			}
 			getRes, err = adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id, WithTokens: true})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(getRes.User.Tokens) != 1 {
-				t.Errorf("Expect 1 token: %d tokens", len(getRes.User.Tokens))
+			if len(getRes.GetUser().GetTokens()) != 1 {
+				t.Errorf("Expect 1 token: %d tokens", len(getRes.GetUser().GetTokens()))
+			}
+			if getRes.GetUser().GetTokens()[0].GetName() != "test" {
+				t.Errorf("Unexpected name: %s", getRes.GetUser().GetTokens()[0].GetName())
+			}
+			if getRes.GetUser().GetTokens()[0].GetIssuer() != database.SystemUser.Id {
+				t.Errorf("Unexpected issuer: %s", getRes.GetUser().GetTokens()[0].GetIssuer())
 			}
 		})
 	})
@@ -517,6 +529,9 @@ func TestServicesViaServer(t *testing.T) {
 		}
 		if len(agentListRes.GetItems()) != 1 {
 			t.Fatalf("Expect 1 agent: %d agents", len(agentListRes.GetItems()))
+		}
+		if agentListRes.GetItems()[0].GetName() != "test" {
+			t.Errorf("Expect agent name is test: %s", agentListRes.GetItems()[0].GetName())
 		}
 
 		defragmentRes, err := clusterClient.DefragmentDatastore(systemUserCtx, &rpc.RequestDefragmentDatastore{})
