@@ -15,6 +15,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
@@ -174,6 +175,8 @@ func TestServicesViaServer(t *testing.T) {
 	}
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
+	cluster := memory.NewClusterDatabase()
+	relay := memory.NewRelayLocator()
 	auth.InitInterceptor(conf, u, token)
 
 	testUser := &database.User{
@@ -194,12 +197,15 @@ func TestServicesViaServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_ = cluster.Join(nil)
+	_ = relay.Set(context.Background(), &database.Relay{Name: "test", Addr: "127.0.0.1:10000"})
+
 	s := NewServer(
 		conf,
 		u,
 		token,
-		memory.NewClusterDatabase(),
-		memory.NewRelayLocator(),
+		cluster,
+		relay,
 		memory.NewCA(conf.General.CertificateAuthority),
 	)
 	go func() {
@@ -245,20 +251,22 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(backendListRes.Items) != 1 {
-				t.Errorf("BackendList should return an array that have 1 element: %d", len(backendListRes.Items))
+			if len(backendListRes.GetItems()) != 1 {
+				t.Errorf("BackendList should return an array that have 1 element: %d", len(backendListRes.GetItems()))
 			}
 
 			roleListRes, err := adminClient.RoleList(systemUserCtx, &rpc.RequestRoleList{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(roleListRes.Items) != 3 {
-				t.Errorf("RoleList should return an array that have 3 elements: %d", len(roleListRes.Items))
+			if len(roleListRes.GetItems()) != 3 {
+				t.Errorf("RoleList should return an array that have 3 elements: %d", len(roleListRes.GetItems()))
 			}
 		})
 
 		t.Run("Management User", func(t *testing.T) {
+			t.Parallel()
+
 			addRes, err := adminClient.UserAdd(systemUserCtx, &rpc.RequestUserAdd{
 				Id:   testUser.Id,
 				Type: rpc.UserType_NORMAL,
@@ -267,7 +275,7 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !addRes.Ok {
+			if !addRes.GetOk() {
 				t.Error("Expect return ok")
 			}
 
@@ -289,7 +297,7 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !becomeRes.Ok {
+			if !becomeRes.GetOk() {
 				t.Error("Expect return ok")
 			}
 
@@ -327,7 +335,7 @@ func TestServicesViaServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !toggleRes.Ok {
+			if !toggleRes.GetOk() {
 				t.Error("Expect return ok")
 			}
 			userListRes, err = adminClient.UserList(testUserCtx, &rpc.RequestUserList{})
@@ -408,7 +416,7 @@ func TestServicesViaServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !newRes.Ok {
+		if !newRes.GetOk() {
 			t.Fatal("Expect return ok")
 		}
 
@@ -423,7 +431,7 @@ func TestServicesViaServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !newRes.Ok {
+		if !newRes.GetOk() {
 			t.Fatal("Expect return ok")
 		}
 
@@ -434,7 +442,7 @@ func TestServicesViaServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !newRes.Ok {
+		if !newRes.GetOk() {
 			t.Fatal("Expect return ok")
 		}
 
@@ -458,15 +466,15 @@ func TestServicesViaServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !revokeRes.Ok {
+		if !revokeRes.GetOk() {
 			t.Error("Expect return ok")
 		}
 		revokedListRes, err := caClient.GetRevokedList(systemUserCtx, &rpc.RequestGetRevokedList{})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(revokedListRes.Items) != 1 {
-			t.Errorf("Expect 1 revoked certificate: %d revoked certificates", len(revokedListRes.Items))
+		if len(revokedListRes.GetItems()) != 1 {
+			t.Errorf("Expect 1 revoked certificate: %d revoked certificates", len(revokedListRes.GetItems()))
 		}
 
 		csr, _, err = cert.CreateCertificateRequest(pkix.Name{CommonName: "test.example.com"}, []string{"test.example.com"})
@@ -479,6 +487,60 @@ func TestServicesViaServer(t *testing.T) {
 		}
 		if len(newServerCertRes.Certificate) == 0 {
 			t.Error("NewServerCert should return a certificate")
+		}
+	})
+
+	t.Run("Cluster", func(t *testing.T) {
+		t.Parallel()
+
+		clusterClient := rpc.NewClusterClient(conn)
+
+		memberListRes, err := clusterClient.MemberList(systemUserCtx, &rpc.RequestMemberList{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(memberListRes.GetItems()) != 1 {
+			t.Errorf("Expect return 1 member: %d members", len(memberListRes.GetItems()))
+		}
+
+		memberStatRes, err := clusterClient.MemberStat(systemUserCtx, &rpc.RequestMemberStat{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if memberStatRes.GetId() != cluster.Id() {
+			t.Fatal("Unexpected id")
+		}
+
+		agentListRes, err := clusterClient.AgentList(systemUserCtx, &rpc.RequestAgentList{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(agentListRes.GetItems()) != 1 {
+			t.Fatalf("Expect 1 agent: %d agents", len(agentListRes.GetItems()))
+		}
+
+		defragmentRes, err := clusterClient.DefragmentDatastore(systemUserCtx, &rpc.RequestDefragmentDatastore{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range defragmentRes.GetOk() {
+			if !v {
+				t.Error("Expect return ok")
+			}
+		}
+	})
+
+	t.Run("Health", func(t *testing.T) {
+		t.Parallel()
+
+		healthClient := healthpb.NewHealthClient(conn)
+
+		checkRes, err := healthClient.Check(systemUserCtx, &healthpb.HealthCheckRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if checkRes.Status != healthpb.HealthCheckResponse_SERVING {
+			t.Errorf("Expect Serving: %v", checkRes.Status)
 		}
 	})
 }
