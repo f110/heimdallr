@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["rpcserver.go"],
+    importpath = "github.com/f110/lagrangian-proxy/pkg/cmd/rpcserver",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/auth:go_default_library",
+        "//pkg/config:go_default_library",
+        "//pkg/config/configreader:go_default_library",
+        "//pkg/database:go_default_library",
+        "//pkg/database/etcd:go_default_library",
+        "//pkg/logger:go_default_library",
+        "//pkg/rpc/rpcserver:go_default_library",
+        "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+    ],
+)
