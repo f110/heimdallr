@@ -38,7 +38,7 @@ Generate some secret keys and certificates for development.
 
     $ bazel run //cmd/lagctl -- bootstrap -c $(pwd)/config_debug.yaml
 
-`config_debug.yaml` is configuration for development. *8DO NOT USE THIS FILE IN PRODUCTION WITHOUT CHANGES.**
+`config_debug.yaml` is configuration for development. **DO NOT USE THIS FILE IN PRODUCTION WITHOUT CHANGES.**
 
 And you need to create a credential file that is Client Secret.
 How to get a client secret is depend on an IdP.
