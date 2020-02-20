@@ -140,7 +140,7 @@ func NewSerialNumber() (*big.Int, error) {
 	}
 }
 
-func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, dnsNames []string) ([]byte, crypto.PrivateKey, error) {
+func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, dnsNames []string) (*x509.Certificate, crypto.PrivateKey, error) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
@@ -166,7 +166,11 @@ func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.Private
 		BasicConstraintsValid: true,
 		SignatureAlgorithm:    x509.ECDSAWithSHA256,
 	}
-	cert, err := x509.CreateCertificate(rand.Reader, template, ca, &privKey.PublicKey, caPrivateKey)
+	certByte, err := x509.CreateCertificate(rand.Reader, template, ca, &privKey.PublicKey, caPrivateKey)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	cert, err := x509.ParseCertificate(certByte)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
@@ -174,7 +178,7 @@ func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.Private
 	return cert, privKey, nil
 }
 
-func CreateCertificateAuthorityForConfig(conf *config.Config) ([]byte, crypto.PrivateKey, error) {
+func CreateCertificateAuthorityForConfig(conf *config.Config) (*x509.Certificate, crypto.PrivateKey, error) {
 	return CreateCertificateAuthority(
 		"Lagrangian Proxy CA",
 		conf.General.CertificateAuthority.Organization,
@@ -183,7 +187,7 @@ func CreateCertificateAuthorityForConfig(conf *config.Config) ([]byte, crypto.Pr
 	)
 }
 
-func CreateCertificateAuthority(commonName, org, orgUnit, country string) ([]byte, crypto.PrivateKey, error) {
+func CreateCertificateAuthority(commonName, org, orgUnit, country string) (*x509.Certificate, crypto.PrivateKey, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
@@ -212,8 +216,12 @@ func CreateCertificateAuthority(commonName, org, orgUnit, country string) ([]byt
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
+	caCert, err := x509.ParseCertificate(cert)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
 
-	return cert, privateKey, nil
+	return caCert, privateKey, nil
 }
 
 func PemEncode(path, typ string, b []byte, headers map[string]string) error {

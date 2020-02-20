@@ -19,11 +19,7 @@ import (
 )
 
 func createCAForTest(t *testing.T) *config.CertificateAuthority {
-	caCertByte, caPrivateKey, err := CreateCertificateAuthority("test", "test", "test", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCert, err := x509.ParseCertificate(caCertByte)
+	caCert, caPrivateKey, err := CreateCertificateAuthority("test", "test", "test", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,11 +173,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 
 func TestGenerateServerCertificate(t *testing.T) {
 	ca := createCAForTest(t)
-	certByte, privateKey, err := GenerateServerCertificate(ca.Certificate, ca.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	cert, err := x509.ParseCertificate(certByte)
+	serverCert, privateKey, err := GenerateServerCertificate(ca.Certificate, ca.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,8 +181,8 @@ func TestGenerateServerCertificate(t *testing.T) {
 	if privateKey == nil {
 		t.Error("was not generate a private key")
 	}
-	if cert.Subject.CommonName != "test-server.test.f110.dev" {
-		t.Errorf("CommonName is test-server.test.f110.dev: %s", cert.Subject.CommonName)
+	if serverCert.Subject.CommonName != "test-server.test.f110.dev" {
+		t.Errorf("CommonName is test-server.test.f110.dev: %s", serverCert.Subject.CommonName)
 	}
 }
 

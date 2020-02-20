@@ -20,11 +20,7 @@ import (
 )
 
 func newCertificateAuthorityConfig(t *testing.T) *config.CertificateAuthority {
-	caCertBytes, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCert, err := x509.ParseCertificate(caCertBytes)
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -65,6 +66,8 @@ logger:
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(tmpDir)
+
 	f, err := ioutil.TempFile(tmpDir, "")
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +80,7 @@ logger:
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
 		t.Fatal(err)
 	}
-	c, privateKey, err := cert.CreateCertificateAuthorityForConfig(
+	caCert, privateKey, err := cert.CreateCertificateAuthorityForConfig(
 		&config.Config{General: &config.General{
 			CertificateAuthority: &config.CertificateAuthority{
 				Organization:     "Test",
@@ -96,15 +99,14 @@ logger:
 	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", c, nil); err != nil {
-		t.Fatal(err)
-	}
-	ca, err := x509.ParseCertificate(c)
-	if err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", caCert.Raw, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	c, privateKey, err = cert.GenerateServerCertificate(ca, privateKey, []string{"test.example.com"})
+	c, privateKey, err := cert.GenerateServerCertificate(caCert, privateKey, []string{"test.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	privKey, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +114,7 @@ logger:
 	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c, nil); err != nil {
+	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c.Raw, nil); err != nil {
 		t.Fatal(err)
 	}
 

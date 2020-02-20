@@ -109,7 +109,7 @@ func (s *Server) Start() error {
 	s.privKey = privKey
 
 	cb := new(bytes.Buffer)
-	if err := pem.Encode(cb, &pem.Block{Type: "CERTIFICATE", Bytes: c}); err != nil {
+	if err := pem.Encode(cb, &pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 

@@ -467,7 +467,7 @@ func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 		if r.Spec.Country != "" {
 			country = r.Spec.Country
 		}
-		cert, privateKey, err := cert.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
+		caCert, privateKey, err := cert.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
 		if err != nil {
 			return nil, err
 		}
@@ -484,7 +484,7 @@ func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 		secret.Data[caPrivateKeyFilename] = buf.Bytes()
 
 		buf = new(bytes.Buffer)
-		if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert}); err != nil {
+		if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}); err != nil {
 			return nil, err
 		}
 		secret.Data[caCertificateFilename] = buf.Bytes()

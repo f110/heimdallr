@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -58,11 +59,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServer_Start(t *testing.T) {
-	certBytes, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	crt, err := x509.ParseCertificate(certBytes)
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +75,7 @@ func TestServer_Start(t *testing.T) {
 	conf := &config.Config{
 		General: &config.General{
 			CertificateAuthority: &config.CertificateAuthority{
-				Certificate: crt,
+				Certificate: caCert,
 				PrivateKey:  caPrivateKey,
 			},
 		},
@@ -121,11 +118,11 @@ func TestServer_Start(t *testing.T) {
 }
 
 func TestServicesViaServer(t *testing.T) {
-	certBytes, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
+	hostname, err := os.Hostname()
 	if err != nil {
 		t.Fatal(err)
 	}
-	crt, err := x509.ParseCertificate(certBytes)
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +140,7 @@ func TestServicesViaServer(t *testing.T) {
 		General: &config.General{
 			ServerNameHost: "test.example.com",
 			CertificateAuthority: &config.CertificateAuthority{
-				Certificate: crt,
+				Certificate: caCert,
 				PrivateKey:  caPrivateKey,
 			},
 			InternalToken:     "internal-token",
@@ -224,7 +221,7 @@ func TestServicesViaServer(t *testing.T) {
 	}
 
 	caPool := x509.NewCertPool()
-	caPool.AddCert(crt)
+	caPool.AddCert(caCert)
 	transCreds := credentials.NewTLS(&tls.Config{
 		ServerName: conf.General.ServerNameHost,
 		RootCAs:    caPool,
@@ -514,6 +511,9 @@ func TestServicesViaServer(t *testing.T) {
 		if len(memberListRes.GetItems()) != 1 {
 			t.Errorf("Expect return 1 member: %d members", len(memberListRes.GetItems()))
 		}
+		if memberListRes.GetItems()[0].GetId() != hostname {
+			t.Errorf("Expect %v", memberListRes.GetItems()[0].GetId())
+		}
 
 		memberStatRes, err := clusterClient.MemberStat(systemUserCtx, &rpc.RequestMemberStat{})
 		if err != nil {
@@ -521,6 +521,15 @@ func TestServicesViaServer(t *testing.T) {
 		}
 		if memberStatRes.GetId() != cluster.Id() {
 			t.Fatal("Unexpected id")
+		}
+		if memberStatRes.GetUserCount() != 2 {
+			t.Errorf("Expect 2 users: %d users", memberStatRes.GetUserCount())
+		}
+		if memberStatRes.GetTokenCount() != 1 {
+			t.Errorf("Expect 1 token: %d tokens", memberStatRes.GetTokenCount())
+		}
+		if len(memberStatRes.GetListenedRelayAddrs()) != 1 {
+			t.Errorf("Expect 1 relay addr: %d addrs", len(memberStatRes.GetListenedRelayAddrs()))
 		}
 
 		agentListRes, err := clusterClient.AgentList(systemUserCtx, &rpc.RequestAgentList{})

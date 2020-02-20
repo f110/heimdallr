@@ -182,12 +182,7 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string
 }
 
 func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
-	certBytes, privateKey, err := cert.GenerateServerCertificate(c.config.Certificate, c.config.PrivateKey, []string{commonName})
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
-	}
-
-	certificate, err := x509.ParseCertificate(certBytes)
+	certificate, privateKey, err := cert.GenerateServerCertificate(c.config.Certificate, c.config.PrivateKey, []string{commonName})
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}

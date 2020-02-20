@@ -49,11 +49,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	u := memory.NewUserDatabase()
 	rc := &testRevokedCertClient{}
-	caCertBytes, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCert, err := x509.ParseCertificate(caCertBytes)
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
 	if err != nil {
 		t.Fatal(err)
 	}

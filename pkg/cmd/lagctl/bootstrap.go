@@ -173,7 +173,7 @@ func generateNewCertificateAuthority(conf *config.Config, dir string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", c, nil); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertificateAuthority.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil
@@ -189,7 +189,7 @@ func createNewServerCertificate(conf *config.Config, dir string, ca *x509.Certif
 	if err := cert.PemEncode(absPath(conf.General.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := cert.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", c, nil); err != nil {
+	if err := cert.PemEncode(absPath(conf.General.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil
