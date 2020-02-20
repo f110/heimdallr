@@ -2,7 +2,7 @@
 lagrangian-proxy
 ===================
 
-*Currently under development*
+**Currently under development**
 
 Zero trust proxy for using in corporate.
 
@@ -10,7 +10,7 @@ Deployment
 =============
 
 lagrangian-proxy is deployed to a kubernetes by the operator.
-You can deploying by yourself. but we highly recommended to using the operator.
+You can deploying by yourself. but we highly recommend to using the operator.
 
 Depend on
 ---------------------
@@ -19,11 +19,13 @@ Depend on
 * `cert-manager <https://github.com/jetstack/cert-manager>`_
 
 When start up the operator, check to exist some CRDs.
+If not found all CRDs then the operator not start.
 
 Optional
 ++++++++++
 
 * `prometheus-operator <https://github.com/coreos/prometheus-operator>`_
+* `etcd-backup-operator <https://github.com/coreos/etcd-operator/blob/master/doc/design/backup_operator.md>`_
 
 Build & Run
 =============
@@ -36,9 +38,12 @@ Generate some secret keys and certificates for development.
 
     $ bazel run //cmd/lagctl -- bootstrap -c $(pwd)/config_debug.yaml
 
-`config_debug.yaml` is configuration for development. DO NOT USE IN PRODUCTION WITHOUT CHANGES.
+`config_debug.yaml` is configuration for development. *8DO NOT USE THIS FILE IN PRODUCTION WITHOUT CHANGES.**
 
-After generate some secrets and certificates, build and run.
+And you need to create a credential file that is Client Secret.
+How to get a client secret is depend on an IdP.
+
+After running bootstrap command, build and run.
 
 .. code:: console
 
