@@ -52,9 +52,9 @@ const (
 var (
 	SocketErrorInvalidProtocol   = NewMessageError(SocketErrorCodeInvalidProtocol, "invalid protocol")
 	SocketErrorRequestAuth       = NewMessageError(SocketErrorCodeRequestAuth, "need authenticate")
-	SocketErrorNotAccessible     = NewMessageError(SocketErrorCodeNotAccessible, "You don't have capability")
-	SocketErrorCloseConnection   = NewMessageError(SocketErrorCodeCloseConnection, "Sorry, the server has to close connection")
-	SocketErrorServerUnavailable = NewMessageError(SocketErrorCodeServerUnavailable, "Temporary server unavailable")
+	SocketErrorNotAccessible     = NewMessageError(SocketErrorCodeNotAccessible, "You don't have privilege")
+	SocketErrorCloseConnection   = NewMessageError(SocketErrorCodeCloseConnection, "Sorry, the server has close connection")
+	SocketErrorServerUnavailable = NewMessageError(SocketErrorCodeServerUnavailable, "Temporary the server unavailable")
 )
 
 var (
@@ -141,6 +141,8 @@ func NewSocketProxy(conf *config.Config, ct *connector.Server) *SocketProxy {
 	return &SocketProxy{Config: conf, connector: ct, conns: make(map[string]*Stream, 0)}
 }
 
+// Accept handles incoming connection.
+// conn is an established connection that is finished handshake.
 func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 	logger.Log.Debug("Accept new socket", zap.String("server_name", conn.ConnectionState().ServerName))
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -240,8 +242,8 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 	}
 	st.user = user
 
-	// host parameter is already checked by AuthenticateForSocket.
-	// so skip error check here.
+	// AuthenticateForSocket is already check the host parameter.
+	// Thus skip error check here.
 	b, _ := st.parent.Config.General.GetBackendByHostname(st.host)
 	st.backend = b
 
@@ -383,6 +385,194 @@ func (st *Stream) sendMessage(errMsg MessageError) {
 	msg.WriteString(v.Encode())
 
 	st.conn.Write(msg.Bytes())
+}
+
+type ErrorTokenAuthorization struct {
+	Endpoint string
+}
+
+func (e *ErrorTokenAuthorization) Error() string {
+	return "frontproxy: token is not available"
+}
+
+type Client struct {
+	conn  *tls.Conn
+	inCh  <-chan []byte
+	outCh chan<- []byte
+}
+
+func NewSocketProxyClient(in io.Reader, out io.Writer) *Client {
+	inCh := make(chan []byte)
+	outCh := make(chan []byte)
+
+	go func() {
+		packet := new(bytes.Buffer)
+		buf := make([]byte, 4*1024)
+		for {
+			n, err := in.Read(buf)
+			if err != nil {
+				return
+			}
+			packet.Write(buf[:n])
+			if n == 4*1024 {
+				continue
+			}
+			b := make([]byte, packet.Len())
+			copy(b, packet.Bytes())
+			packet.Reset()
+			inCh <- b
+		}
+	}()
+
+	go func() {
+		for {
+			if _, err := out.Write(<-outCh); err != nil {
+				return
+			}
+		}
+	}()
+
+	return &Client{inCh: inCh, outCh: outCh}
+}
+
+func (c *Client) Dial(host, port, token string) error {
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{Timeout: 3 * time.Second},
+		"tcp",
+		fmt.Sprintf("%s:%s", host, port),
+		&tls.Config{
+			NextProtos:         []string{SocketProxyNextProto},
+			InsecureSkipVerify: true,
+		},
+	)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	if err := conn.Handshake(); err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	c.conn = conn
+	v := &url.Values{}
+	v.Set("token", token)
+	buf := new(bytes.Buffer)
+	buf.WriteByte(TypeOpen)
+	l := make([]byte, 4)
+	binary.BigEndian.PutUint32(l, uint32(len(v.Encode())))
+	buf.Write(l)
+	buf.WriteString(v.Encode())
+	buf.WriteTo(conn)
+
+	header := make([]byte, 5)
+	n, err := c.conn.Read(header)
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	if n != 5 {
+		return xerrors.New("localproxy: invalid header")
+	}
+	switch header[0] {
+	case TypeOpenSuccess:
+		return nil
+	case TypeMessage:
+		bodySize := binary.BigEndian.Uint32(header[1:5])
+		buf := make([]byte, bodySize)
+		n, err := c.conn.Read(buf)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		if n != int(bodySize) {
+			return xerrors.New("localproxy: invalid bodysize")
+		}
+		e, err := parseMessage(buf)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		switch e.Code() {
+		case SocketErrorCodeRequestAuth:
+			endpoint := e.Params().Get("endpoint")
+			return &ErrorTokenAuthorization{Endpoint: endpoint}
+		default:
+			return e
+		}
+	}
+
+	return xerrors.New("localproxy: unhandled error")
+}
+
+func (c *Client) Pipe(ctx context.Context) error {
+	defer c.conn.Close()
+
+	go func() {
+		header := make([]byte, 5)
+		header[0] = TypePacket
+		for {
+			select {
+			case buf := <-c.inCh:
+				binary.BigEndian.PutUint32(header[1:5], uint32(len(buf)))
+				c.conn.Write(append(header, buf...))
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	header := make([]byte, 5)
+	buf := make([]byte, 1024)
+	r := bufio.NewReader(c.conn)
+	for {
+		n, err := r.Read(header)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if n != 5 {
+			return xerrors.New("localproxy: invalid header")
+		}
+		switch header[0] {
+		case TypeMessage, TypePacket, TypePing:
+		default:
+			return xerrors.New("localproxy: unknown packet type")
+		}
+		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
+		if cap(buf) < bodySize {
+			buf = make([]byte, bodySize)
+		}
+		n, err = io.ReadAtLeast(r, buf, bodySize)
+		if n != bodySize {
+			return xerrors.Errorf("localproxy: invalid body size")
+		}
+
+		switch header[0] {
+		case TypePacket:
+			b := make([]byte, bodySize)
+			copy(b, buf[:bodySize])
+			c.outCh <- b
+		case TypeMessage:
+			e, err := parseMessage(buf[:bodySize])
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			return e
+		case TypePing:
+			h := make([]byte, 5)
+			h[0] = TypePong
+			c.conn.SetWriteDeadline(time.Now().Add(2 * HeartbeatInterval))
+			if _, err := c.conn.Write(h); err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			c.conn.SetReadDeadline(time.Now().Add(2 * HeartbeatInterval))
+		}
+	}
+}
+
+func parseMessage(buf []byte) (MessageError, error) {
+	v, err := url.ParseQuery(string(buf))
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	return ParseMessageError(v)
 }
 
 func isClosedNetwork(err error) bool {

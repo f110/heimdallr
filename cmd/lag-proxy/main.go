@@ -12,7 +12,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth/token"
-	"github.com/f110/lagrangian-proxy/pkg/localproxy"
+	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
 	"github.com/f110/lagrangian-proxy/pkg/version"
 )
 
@@ -52,11 +52,11 @@ func proxy(args []string) error {
 		host = args[0]
 		port = "443"
 	}
-	client := localproxy.NewClient(os.Stdin, os.Stdout)
+	client := frontproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
 Retry:
 	err = client.Dial(host, port, to)
 	if err != nil {
-		e, ok := err.(*localproxy.ErrorTokenAuthorization)
+		e, ok := err.(*frontproxy.ErrorTokenAuthorization)
 		if ok {
 			t, err := tokenClient.RequestToken(e.Endpoint)
 			if err != nil {

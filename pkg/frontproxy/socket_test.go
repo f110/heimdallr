@@ -5,15 +5,19 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/memory"
+	"github.com/f110/lagrangian-proxy/pkg/netutil"
 )
 
 type dummyTLSConn struct {
@@ -218,6 +222,154 @@ func TestSocketProxy_Accept(t *testing.T) {
 
 		if backendConn == nil {
 			t.Fatal("did not connect to backend")
+		}
+	})
+}
+
+func TestNewClient(t *testing.T) {
+	r, w := io.Pipe()
+	v := NewSocketProxyClient(r, w)
+	if v == nil {
+		t.Error("NewSocketProxyClient should return a value")
+	}
+}
+
+func TestClient_Dial(t *testing.T) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverCert, serverPrivKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{hostname})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
+
+		port, err := netutil.FindUnusedPort()
+		if err != nil {
+			t.Fatal(err)
+		}
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err != nil {
+			t.Fatal(err)
+		}
+		tlsListener := tls.NewListener(l, &tls.Config{
+			ServerName: hostname,
+			Certificates: []tls.Certificate{
+				{
+					Certificate: [][]byte{serverCert.Raw},
+					PrivateKey:  serverPrivKey,
+				},
+			},
+		})
+		go func() {
+			c, err := tlsListener.Accept()
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn := c.(*tls.Conn)
+			if err := conn.Handshake(); err != nil {
+				t.Fatal(err)
+			}
+
+			buf := make([]byte, 5)
+			if _, err := conn.Read(buf); err != nil {
+				t.Fatal(err)
+			}
+			if buf[0] != TypeOpen {
+				t.Errorf("Expect TypeOpen: %v", buf[0])
+			}
+			l := binary.BigEndian.Uint32(buf[1:5])
+			buf = make([]byte, l)
+			if _, err := conn.Read(buf); err != nil {
+				t.Fatal(err)
+			}
+			conn.Write([]byte{TypeOpenSuccess, 0, 0, 0, 0})
+		}()
+
+		r, w := io.Pipe()
+		v := NewSocketProxyClient(r, w)
+		err = v.Dial("", fmt.Sprintf("%d", port), "test-token")
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Not has privilege", func(t *testing.T) {
+		t.Parallel()
+
+		port, err := netutil.FindUnusedPort()
+		if err != nil {
+			t.Fatal(err)
+		}
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err != nil {
+			t.Fatal(err)
+		}
+		tlsListener := tls.NewListener(l, &tls.Config{
+			ServerName: hostname,
+			Certificates: []tls.Certificate{
+				{
+					Certificate: [][]byte{serverCert.Raw},
+					PrivateKey:  serverPrivKey,
+				},
+			},
+		})
+
+		go func() {
+			c, err := tlsListener.Accept()
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn := c.(*tls.Conn)
+			if err := conn.Handshake(); err != nil {
+				t.Fatal(err)
+			}
+
+			buf := make([]byte, 5)
+			if _, err := conn.Read(buf); err != nil {
+				t.Fatal(err)
+			}
+			if buf[0] != TypeOpen {
+				t.Errorf("Expect TypeOpen: %v", buf[0])
+			}
+			l := binary.BigEndian.Uint32(buf[1:5])
+			buf = make([]byte, l)
+			if _, err := conn.Read(buf); err != nil {
+				t.Fatal(err)
+			}
+
+			v := &url.Values{}
+			v.Set("code", "3")
+			v.Set("msg", "You don't have privilege")
+			lenBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(lenBuf, uint32(len(v.Encode())))
+			res := new(bytes.Buffer)
+			res.WriteByte(TypeMessage)
+			res.Write(lenBuf)
+			res.WriteString(v.Encode())
+			res.WriteTo(conn)
+		}()
+
+		r, w := io.Pipe()
+		v := NewSocketProxyClient(r, w)
+		err = v.Dial("", fmt.Sprintf("%d", port), "test-token")
+		if err == nil {
+			t.Fatal("Expect occurred na error")
+		}
+		msgErr, ok := err.(MessageError)
+		if !ok {
+			t.Fatal("Expect return MessageError")
+		}
+		if msgErr.Code() != 3 {
+			t.Errorf("Expect error code 3: %v", msgErr.Code())
 		}
 	})
 }

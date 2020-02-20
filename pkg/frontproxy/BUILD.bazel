@@ -37,10 +37,12 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//pkg/auth:go_default_library",
+        "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
         "//pkg/database:go_default_library",
         "//pkg/database/memory:go_default_library",
         "//pkg/logger:go_default_library",
+        "//pkg/netutil:go_default_library",
         "//pkg/rpc/rpcclient:go_default_library",
         "//pkg/rpc/rpctestutil:go_default_library",
         "//pkg/session:go_default_library",
