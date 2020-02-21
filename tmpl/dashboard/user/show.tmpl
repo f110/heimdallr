@@ -6,19 +6,19 @@
     <tbody>
       <tr>
         <td>Id</td>
-        <td>{{ .Id }}</td>
+        <td>{{ .UserInfo.Id }}</td>
       </tr>
       <tr>
         <td>Type</td>
-        <td>{{ .Type }}</td>
+        <td>{{ .UserInfo.Type }}</td>
       </tr>
       <tr>
         <td>Role</td>
         <td>
           <ol class="ui list">
-            {{ range .Roles -}}
+            {{ range .UserInfo.Roles -}}
             <li>
-            {{ if includes $.MaintainRoles . }}
+            {{ if includes $.UserInfo.MaintainRoles . }}
             <i class="edit icon"></i>
             {{ end -}}
             {{ . }}
@@ -35,7 +35,9 @@
         <td>Allowed URLs</td>
         <td>
           <div class="ui list">
-            <a href="" class="item">### TODO ###</a>
+            {{ range .Backends }}
+            <a href="https://{{ .FQDN }}" class="item">{{ .FQDN }}</a>
+            {{ end }}
           </div>
         </td>
       </tr>

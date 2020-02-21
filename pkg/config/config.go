@@ -77,6 +77,7 @@ type General struct {
 	Backends            []*Backend                `json:"-"`
 	RpcPermissions      []*RpcPermission          `json:"-"`
 	hostnameToBackend   map[string]*Backend       `json:"-"`
+	nameToBackend       map[string]*Backend       `json:"-"`
 	roleNameToRole      map[string]*Role          `json:"-"`
 	nameToRpcPermission map[string]*RpcPermission `json:"-"`
 	watcher             *k8s.VolumeWatcher        `json:"-"`
@@ -374,13 +375,37 @@ func (g *General) GetBackend(name string) (*Backend, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	for _, v := range g.Backends {
-		if v.Name == name {
-			return v, true
-		}
+	return g.getBackend(name)
+}
+
+func (g *General) getBackend(name string) (*Backend, bool) {
+	v, ok := g.nameToBackend[name]
+	return v, ok
+}
+
+func (g *General) GetBackendsByRole(roleName string) ([]*Backend, error) {
+	role, err := g.GetRole(roleName)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, false
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	result := make([]*Backend, 0)
+	for _, v := range role.Bindings {
+		if v.Backend == "" {
+			continue
+		}
+
+		b, ok := g.getBackend(v.Backend)
+		if !ok {
+			continue
+		}
+		result = append(result, b)
+	}
+
+	return result, nil
 }
 
 func (g *General) GetAllBackends() []*Backend {
@@ -587,6 +612,7 @@ func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*Rpc
 	g.Roles = roles
 	g.RpcPermissions = rpcPermissions
 	g.hostnameToBackend = hostnameToBackend
+	g.nameToBackend = nameToBackend
 	g.roleNameToRole = roleNameToRole
 	g.nameToRpcPermission = nameToRpcPermission
 	g.mu.Unlock()

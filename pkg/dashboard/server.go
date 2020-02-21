@@ -559,7 +559,32 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 		return
 	}
 
-	s.RenderTemplate(w, "user/show.tmpl", u)
+	backendsMap := make(map[string]*config.Backend)
+	for _, v := range u.Roles {
+		backends, err := s.Config.General.GetBackendsByRole(v)
+		if err != nil {
+			continue
+		}
+
+		for _, b := range backends {
+			backendsMap[b.Name] = b
+		}
+	}
+	backends := make([]*config.Backend, 0, len(backendsMap))
+	for _, v := range backendsMap {
+		backends = append(backends, v)
+	}
+	sort.Slice(backends, func(i, j int) bool {
+		return backends[i].Name < backends[j].Name
+	})
+
+	s.RenderTemplate(w, "user/show.tmpl", struct {
+		UserInfo *rpc.UserItem
+		Backends []*config.Backend
+	}{
+		UserInfo: u,
+		Backends: backends,
+	})
 }
 
 func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
