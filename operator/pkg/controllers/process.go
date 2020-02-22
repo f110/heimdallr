@@ -366,7 +366,7 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 	}
 	sort.Strings(domains)
 
-	cert := &certmanager.Certificate{
+	return &certmanager.Certificate{
 		ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
 		Spec: certmanager.CertificateSpec{
 			SecretName: r.CertificateSecretName(),
@@ -374,12 +374,10 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 			CommonName: r.Spec.Domain,
 			DNSNames:   domains,
 		},
-	}
-
-	return cert, nil
+	}, nil
 }
 
-func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1.ServiceMonitor) {
+func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1.PodMonitor) {
 	cluster := &etcdcluster.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: r.EtcdClusterName(), Namespace: r.Namespace},
 		Spec: etcdcluster.ClusterSpec{
@@ -387,15 +385,15 @@ func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1
 			Version: EtcdVersion,
 		},
 	}
-	var sm *monitoringv1.ServiceMonitor
+	var pm *monitoringv1.PodMonitor
 	if r.Spec.Monitor.PrometheusMonitoring {
-		sm = &monitoringv1.ServiceMonitor{
+		pm = &monitoringv1.PodMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      r.EtcdClusterName(),
 				Namespace: r.Namespace,
 				Labels:    r.Spec.Monitor.Labels,
 			},
-			Spec: monitoringv1.ServiceMonitorSpec{
+			Spec: monitoringv1.PodMonitorSpec{
 				JobLabel: "proxy.f110.dev/name",
 				Selector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -406,14 +404,20 @@ func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1
 				NamespaceSelector: monitoringv1.NamespaceSelector{
 					MatchNames: []string{r.Namespace},
 				},
-				Endpoints: []monitoringv1.Endpoint{
-					{Port: "client", Interval: "30s", HonorLabels: true},
+				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+					{
+						TargetPort:  intOrStringFromInt(2379),
+						Path:        "/metrics",
+						Scheme:      "http",
+						HonorLabels: true,
+						Interval:    "30s",
+					},
 				},
 			},
 		}
 	}
 
-	return cluster, sm
+	return cluster, pm
 }
 
 func (r *LagrangianProxy) EtcdBackup() *etcdcluster.EtcdBackup {
@@ -1814,4 +1818,9 @@ func (r *LagrangianProxy) checkSelfSignedIssuer() error {
 	}
 
 	return nil
+}
+
+func intOrStringFromInt(val int) *intstr.IntOrString {
+	v := intstr.FromInt(val)
+	return &v
 }

@@ -25,9 +25,10 @@ go_library(
     importpath = "github.com/grpc-ecosystem/grpc-gateway/runtime",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/github.com/golang/protobuf/descriptor:go_default_library",
         "//vendor/github.com/golang/protobuf/jsonpb:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/github.com/golang/protobuf/protoc-gen-go/generator:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/descriptor:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/any:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/duration:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",

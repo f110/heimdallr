@@ -339,15 +339,15 @@ func (r *ProxyReconciler) preSetup(lp *LagrangianProxy) (bool, error) {
 }
 
 func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
-	cluster, serviceMonitor := lp.EtcdCluster()
+	cluster, porMonitor := lp.EtcdCluster()
 
-	if serviceMonitor != nil && r.enablePrometheusOperator {
-		orig := serviceMonitor.DeepCopy()
-		_, err := ctrl.CreateOrUpdate(context.Background(), r, serviceMonitor, func() error {
-			serviceMonitor.Labels = orig.Labels
-			serviceMonitor.Spec = orig.Spec
+	if porMonitor != nil && r.enablePrometheusOperator {
+		orig := porMonitor.DeepCopy()
+		_, err := ctrl.CreateOrUpdate(context.Background(), r, porMonitor, func() error {
+			porMonitor.Labels = orig.Labels
+			porMonitor.Spec = orig.Spec
 
-			return ctrl.SetControllerReference(lp.Object, serviceMonitor, r.Scheme)
+			return ctrl.SetControllerReference(lp.Object, porMonitor, r.Scheme)
 		})
 		if err != nil {
 			return err
