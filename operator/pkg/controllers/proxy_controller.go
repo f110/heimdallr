@@ -384,6 +384,10 @@ func (r *ProxyReconciler) ReconcileEtcdCluster(lp *LagrangianProxy) error {
 
 func (r *ProxyReconciler) ReconcileEtcdBackup(lp *LagrangianProxy) error {
 	backup := lp.EtcdBackup()
+	// Skip creating EtcdBackup
+	if backup == nil {
+		return nil
+	}
 
 	orig := backup.DeepCopy()
 	_, err := ctrl.CreateOrUpdate(context.Background(), r, backup, func() error {
