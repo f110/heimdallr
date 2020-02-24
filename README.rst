@@ -51,6 +51,43 @@ After running bootstrap command, build and run.
 
 All dependent libraries are included in the repository.
 
+How to run the agent
+=======================
+
+The agent is a client program that beside a backend like a sidecar.
+the agent will connect to the proxy and relay ingress traffic of proxy.
+Thus it can be proxying to the backend that likes behind NAT.
+
+#. Decide the backend's name with your proxy admin
+#. Generate CSR(Certificate Signing Request) and private key by lag-agent
+#. Send CSR to the proxy admin
+#. You got signed certificate from the proxy admin
+#. Run lag-agent with signed certificate
+
+Generate CSR
+-----------------
+
+Generating CSR by lag-agent.
+CSR includes the backend's name. so you have to pass it by an argument.
+
+.. code:: console
+
+    $ lag-agent --name test --privatekey $HOME/.lagrangian/privatekey.pem
+
+lag-agent will create a CSR in temporary directory.
+
+Start lag-agent with signed certificate
+------------------------------------------
+
+.. code:: console
+
+    $ lag-agent --host your.proxy.f110.dev \
+        --name test \
+        --privatekey $HOME/.lagrangian/privatekey.pem \
+        --backend 127.0.0.1:22 \
+        --credential $HOME/.lagrangian/cert.pem \
+        --ca-cert $HOME/.lagrangian/cacert.pem
+
 Reference
 ============
 
