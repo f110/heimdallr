@@ -53,3 +53,12 @@
     - name: all
       locations:
         - any: /
+- name: webhook
+  agent: true
+  webhook: github
+  upstream: http://127.0.0.1:5000
+  webhook_path: ["/github"]
+  permissions:
+    - name: all
+      locations:
+        - any: /

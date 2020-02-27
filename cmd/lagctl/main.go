@@ -18,6 +18,7 @@ func cli(args []string) error {
 	lagctl.Cluster(rootCmd)
 	lagctl.Internal(rootCmd)
 	lagctl.TestServer(rootCmd)
+	lagctl.Util(rootCmd)
 
 	rootCmd.SetArgs(args)
 	return rootCmd.Execute()
