@@ -281,12 +281,21 @@ func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*r
 				continue
 			}
 		}
+		backends, err := s.Config.General.GetBackendsByRole(v.Name)
+		if err != nil {
+			continue
+		}
+		backendNames := make([]string, len(backends))
+		for i := range backends {
+			backendNames[i] = backends[i].Name
+		}
 
 		res = append(res, &rpc.RoleItem{
 			Name:        v.Name,
 			Title:       v.Title,
 			Description: v.Description,
 			System:      v.System,
+			Backends:    backendNames,
 		})
 	}
 
@@ -302,7 +311,10 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 			continue
 		}
 
-		res = append(res, &rpc.BackendItem{Name: v.Name})
+		res = append(res, &rpc.BackendItem{
+			Name: v.Name,
+			Fqdn: v.FQDN,
+		})
 	}
 
 	return &rpc.ResponseBackendList{Items: res}, nil

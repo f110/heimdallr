@@ -105,10 +105,12 @@ message RoleItem {
     string title = 2;
     string description = 3;
     bool system = 4;
+    repeated string backends = 5;
 }
 
 message BackendItem {
     string name = 1;
+    string fqdn = 2;
 }
 
 message CertItem {

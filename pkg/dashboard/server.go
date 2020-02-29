@@ -559,18 +559,43 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 		return
 	}
 
-	backendsMap := make(map[string]*config.Backend)
+	allRoles, err := client.ListRole()
+	if err != nil {
+		logger.Log.Info("Failure fetch roles", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	roleMap := make(map[string][]string)
+	for _, v := range allRoles {
+		roleMap[v.Name] = v.Backends
+	}
+	allBackends, err := client.ListAllBackend()
+	if err != nil {
+		logger.Log.Info("Failure fetch backends", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	allBackendMap := make(map[string]*rpc.BackendItem)
+	for _, v := range allBackends {
+		allBackendMap[v.Name] = v
+	}
+
+	backendsMap := make(map[string]*rpc.BackendItem)
 	for _, v := range u.Roles {
-		backends, err := s.Config.General.GetBackendsByRole(v)
-		if err != nil {
+		backends, ok := roleMap[v]
+		if !ok {
 			continue
 		}
 
 		for _, b := range backends {
-			backendsMap[b.Name] = b
+			backend, ok := allBackendMap[b]
+			if !ok {
+				continue
+			}
+			backendsMap[b] = backend
 		}
 	}
-	backends := make([]*config.Backend, 0, len(backendsMap))
+	backends := make([]*rpc.BackendItem, 0, len(backendsMap))
 	for _, v := range backendsMap {
 		backends = append(backends, v)
 	}
@@ -580,7 +605,7 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 
 	s.RenderTemplate(w, "user/show.tmpl", struct {
 		UserInfo *rpc.UserItem
-		Backends []*config.Backend
+		Backends []*rpc.BackendItem
 	}{
 		UserInfo: u,
 		Backends: backends,
