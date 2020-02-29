@@ -794,16 +794,20 @@ func (b *Backend) inflate() error {
 	}
 	b.Url = u
 
+	if b.Agent && b.Upstream == "" {
+		b.Url = &url.URL{Scheme: "http", Host: "via-agent"}
+	}
+
 	if u.Scheme == "tcp" {
 		b.Socket = true
 	}
 
 	if len(b.WebHookPath) > 0 {
-		mux := mux.NewRouter()
+		m := mux.NewRouter()
 		for _, v := range b.WebHookPath {
-			mux.PathPrefix(v)
+			m.PathPrefix(v)
 		}
-		b.WebHookRouter = mux
+		b.WebHookRouter = m
 	}
 
 	var tlsConfig *tls.Config
