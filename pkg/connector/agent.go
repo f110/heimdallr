@@ -98,7 +98,7 @@ func (a *Agent) Serve() error {
 			conn, err := net.Dial("tcp", a.backend)
 			if err != nil {
 				logger.Log.Debug("Failed dial backend", zap.Error(err))
-				return err
+				continue
 			}
 			streamId := atomic.AddUint32(&a.id, 1)
 			a.mu.Lock()
