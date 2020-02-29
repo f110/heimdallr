@@ -461,7 +461,7 @@ func (m *mainProcess) StartRPCServer() error {
 				m.rpcServerDoneCh <- struct{}{}
 			}()
 
-			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
+			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase, m.readiness.IsReady)
 			if err := m.rpcServer.Start(); err != nil {
 				errCh <- err
 			}

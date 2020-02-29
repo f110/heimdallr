@@ -96,7 +96,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.New("lag-rpcserver: required external datastore")
 	}
 
-	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase)
+	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase, m.readiness.IsReady)
 
 	auth.InitInterceptor(m.Config, m.userDatabase, m.tokenDatabase)
 	return nil

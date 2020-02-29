@@ -6,16 +6,22 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-type HealthService struct{}
-
-func NewHealthService() *HealthService {
-	return &HealthService{}
+type HealthService struct {
+	isReady func() bool
 }
 
-func (h *HealthService) Check(ctx context.Context, req *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
-	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+func NewHealthService(isReady func() bool) *HealthService {
+	return &HealthService{isReady: isReady}
 }
 
-func (h *HealthService) Watch(ctx *healthpb.HealthCheckRequest, stream healthpb.Health_WatchServer) error {
+func (h *HealthService) Check(_ context.Context, _ *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	if h.isReady() {
+		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+	} else {
+		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_NOT_SERVING}, nil
+	}
+}
+
+func (h *HealthService) Watch(_ *healthpb.HealthCheckRequest, _ healthpb.Health_WatchServer) error {
 	panic("implement me")
 }

@@ -52,6 +52,7 @@ func TestNewServer(t *testing.T) {
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		memory.NewCA(conf.General.CertificateAuthority),
+		nil,
 	)
 	if v == nil {
 		t.Fatal("NewServer should return a value")
@@ -98,6 +99,7 @@ func TestServer_Start(t *testing.T) {
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		memory.NewCA(conf.General.CertificateAuthority),
+		nil,
 	)
 	go func() {
 		if err := v.Start(); err != nil {
@@ -210,6 +212,7 @@ func TestServicesViaServer(t *testing.T) {
 		cluster,
 		relay,
 		memory.NewCA(conf.General.CertificateAuthority),
+		nil,
 	)
 	go func() {
 		if err := s.Start(); err != nil {
