@@ -75,6 +75,7 @@ func (a *Agent) Connect(host string) error {
 }
 
 func (a *Agent) Serve() error {
+	logger.Log.Info("Start serving packet")
 	header := make([]byte, 5)
 	buf := make([]byte, 1024)
 	for {
