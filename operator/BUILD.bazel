@@ -66,11 +66,13 @@ container_image(
     tars = [":bin"],
 )
 
+load("//:VERSION.bzl", "VERSION")
+
 container_push(
     name = "push",
     format = "Docker",
     image = ":image",
-    registry = "docker.pkg.github.com",
-    repository = "f110/lagrangian-proxy/operator",
-    tag = "latest",
+    registry = "quay.io",
+    repository = "f110/lagrangian-proxy-operator",
+    tag = VERSION,
 )
