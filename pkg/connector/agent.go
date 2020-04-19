@@ -45,16 +45,12 @@ func NewAgent(cert *x509.Certificate, privateKey crypto.PrivateKey, caCert []*x5
 }
 
 func (a *Agent) Connect(host string) error {
-	var ca *x509.CertPool
-	if len(a.caCerts) > 0 {
-		ca = x509.NewCertPool()
-		ca.AddCert(a.caCerts[0])
-	} else {
-		pool, err := x509.SystemCertPool()
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		ca = pool
+	caPool, err := x509.SystemCertPool()
+	if err != nil {
+		return xerrors.Errorf(": %v", err)
+	}
+	for _, v := range a.caCerts {
+		caPool.AddCert(v)
 	}
 	conn, err := tls.Dial("tcp", host, &tls.Config{
 		Certificates: []tls.Certificate{
@@ -63,7 +59,7 @@ func (a *Agent) Connect(host string) error {
 				PrivateKey:  a.privateKey,
 			},
 		},
-		RootCAs:    ca,
+		RootCAs:    caPool,
 		NextProtos: []string{ProtocolName},
 	})
 	if err != nil {
