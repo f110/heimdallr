@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"context"
-	"net/url"
 	"testing"
 )
 
@@ -72,26 +71,5 @@ func TestClusterDatabase_Alive(t *testing.T) {
 
 	if !c.Alive() {
 		t.Fatal("should alive because already joined")
-	}
-}
-
-func TestClusterDatabase_Defragment(t *testing.T) {
-	c, err := NewClusterDatabase(nil, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer clearDatabase(t)
-
-	for u, e := range c.Defragment(context.Background()) {
-		addr, err := url.Parse(u)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if addr.Hostname() != "localhost" {
-			continue
-		}
-		if e != nil {
-			t.Fatal(err)
-		}
 	}
 }

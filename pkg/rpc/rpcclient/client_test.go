@@ -78,10 +78,6 @@ func TestNewWithClient(t *testing.T) {
 	if cl.AgentListCall != 1 {
 		t.Error("Expect call AgentList")
 	}
-	_, _ = c.Defragment()
-	if cl.DefragmentDatastoreCall != 1 {
-		t.Error("Expect call DefragmentDatastore")
-	}
 
 	_, _ = c.ListCert()
 	if ca.GetSignedListCall != 1 {

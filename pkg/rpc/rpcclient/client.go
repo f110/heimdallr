@@ -214,15 +214,6 @@ func (c *Client) ListConnectedAgent() ([]*rpc.Agent, error) {
 	return res.Items, nil
 }
 
-func (c *Client) Defragment() (map[string]bool, error) {
-	res, err := c.clusterClient.DefragmentDatastore(c.md, &rpc.RequestDefragmentDatastore{})
-	if err != nil {
-		return nil, err
-	}
-
-	return res.Ok, nil
-}
-
 func (c *Client) ListRole() ([]*rpc.RoleItem, error) {
 	res, err := c.adminClient.RoleList(c.md, &rpc.RequestRoleList{})
 	if err != nil {

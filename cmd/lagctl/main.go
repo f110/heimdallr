@@ -16,7 +16,6 @@ func cli(args []string) error {
 	lagctl.Bootstrap(rootCmd)
 	lagctl.Admin(rootCmd)
 	lagctl.Cluster(rootCmd)
-	lagctl.Internal(rootCmd)
 	lagctl.TestServer(rootCmd)
 	lagctl.Util(rootCmd)
 

@@ -121,13 +121,3 @@ func (d *ClusterDatabase) Alive() bool {
 
 	return true
 }
-
-func (d *ClusterDatabase) Defragment(ctx context.Context) map[string]error {
-	res := make(map[string]error)
-	for _, v := range d.client.Endpoints() {
-		_, err := d.client.Defragment(ctx, v)
-		res[v] = err
-	}
-
-	return res
-}

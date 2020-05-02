@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes"
-	"go.uber.org/zap"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 )
 
@@ -80,18 +78,4 @@ func (s *ClusterService) AgentList(_ context.Context, _ *rpc.RequestAgentList) (
 	}
 
 	return &rpc.ResponseAgentList{Items: result}, nil
-}
-
-func (s *ClusterService) DefragmentDatastore(ctx context.Context, _ *rpc.RequestDefragmentDatastore) (*rpc.ResponseDefragmentDatastore, error) {
-	res := make(map[string]bool)
-	for k, v := range s.clusterDatabase.Defragment(ctx) {
-		if v == nil {
-			res[k] = true
-		} else {
-			logger.Log.Info("Failed Defragment", zap.String("endpoint", k), zap.Error(v))
-			res[k] = false
-		}
-	}
-
-	return &rpc.ResponseDefragmentDatastore{Ok: res}, nil
 }

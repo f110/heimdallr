@@ -138,10 +138,9 @@ func (a *AdminClient) BackendList(ctx context.Context, in *rpc.RequestBackendLis
 type ClusterClient struct {
 	sync.Mutex
 
-	MemberListCall          int
-	MemberStatCall          int
-	AgentListCall           int
-	DefragmentDatastoreCall int
+	MemberListCall int
+	MemberStatCall int
+	AgentListCall  int
 }
 
 func NewClusterClient() *ClusterClient {
@@ -170,14 +169,6 @@ func (c *ClusterClient) AgentList(ctx context.Context, in *rpc.RequestAgentList,
 	c.AgentListCall++
 
 	return &rpc.ResponseAgentList{}, nil
-}
-
-func (c *ClusterClient) DefragmentDatastore(ctx context.Context, in *rpc.RequestDefragmentDatastore, opts ...grpc.CallOption) (*rpc.ResponseDefragmentDatastore, error) {
-	c.Lock()
-	defer c.Unlock()
-	c.DefragmentDatastoreCall++
-
-	return &rpc.ResponseDefragmentDatastore{}, nil
 }
 
 type CertificateAuthorityClient struct {

@@ -545,16 +545,6 @@ func TestServicesViaServer(t *testing.T) {
 		if agentListRes.GetItems()[0].GetName() != "test" {
 			t.Errorf("Expect agent name is test: %s", agentListRes.GetItems()[0].GetName())
 		}
-
-		defragmentRes, err := clusterClient.DefragmentDatastore(systemUserCtx, &rpc.RequestDefragmentDatastore{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, v := range defragmentRes.GetOk() {
-			if !v {
-				t.Error("Expect return ok")
-			}
-		}
 	})
 
 	t.Run("Health", func(t *testing.T) {

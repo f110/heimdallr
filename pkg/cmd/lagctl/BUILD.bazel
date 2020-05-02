@@ -6,7 +6,6 @@ go_library(
         "admin.go",
         "bootstrap.go",
         "cluster.go",
-        "internal.go",
         "testserver.go",
         "util.go",
         "version.go",

@@ -9,8 +9,6 @@ service Cluster {
     rpc MemberStat (RequestMemberStat) returns (ResponseMemberStat);
 
     rpc AgentList (RequestAgentList) returns (ResponseAgentList);
-
-    rpc DefragmentDatastore (RequestDefragmentDatastore) returns (ResponseDefragmentDatastore);
 }
 
 service Admin {
@@ -66,12 +64,6 @@ message RequestAgentList {}
 
 message ResponseAgentList {
     repeated Agent items = 1;
-}
-
-message RequestDefragmentDatastore {}
-
-message ResponseDefragmentDatastore {
-    map<string, bool> ok = 1;
 }
 
 message ClusterMember {
