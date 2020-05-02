@@ -384,8 +384,9 @@ func (r *LagrangianProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 			},
 		},
 		Spec: etcdv1alpha1.EtcdClusterSpec{
-			Members: 3,
-			Version: EtcdVersion,
+			Members:            3,
+			Version:            EtcdVersion,
+			DefragmentSchedule: r.Spec.Defragment.Schedule,
 		},
 	}
 }
