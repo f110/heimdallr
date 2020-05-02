@@ -212,7 +212,7 @@ func TestServicesViaServer(t *testing.T) {
 		cluster,
 		relay,
 		memory.NewCA(conf.General.CertificateAuthority),
-		nil,
+		func() bool { return true },
 	)
 	go func() {
 		if err := s.Start(); err != nil {
