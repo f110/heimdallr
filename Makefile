@@ -1,16 +1,3 @@
-API_FILE_DIR   = github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1,github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1
-GO_HEADER_FILE = ./operator/hack/boilerplate.go.txt
-
-GOHOSTOS = $(shell go env GOHOSTOS)
-GOARCH   = $(shell go env GOARCH)
-GOROOT   = $(shell go env GOROOT)
-
-CODE_GEN_CMD_DIR = ./bazel-bin/third_party/code-generator/cmd
-DEEPCOPY_GEN     = $(CODE_GEN_CMD_DIR)/deepcopy-gen/$(GOHOSTOS)_$(GOARCH)_stripped/deepcopy-gen
-CLIENT_GEN       = $(CODE_GEN_CMD_DIR)/client-gen/$(GOHOSTOS)_$(GOARCH)_stripped/client-gen
-LISTER_GEN       = $(CODE_GEN_CMD_DIR)/lister-gen/$(GOHOSTOS)_$(GOARCH)_stripped/lister-gen
-INFORMER_GEN     = $(CODE_GEN_CMD_DIR)/informer-gen/$(GOHOSTOS)_$(GOARCH)_stripped/informer-gen
-
 run:
 	bazel run //cmd/lagrangian-proxy -- -c $(CURDIR)/config_debug.yaml
 
