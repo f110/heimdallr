@@ -74,7 +74,7 @@ func main() {
 			Identity: id,
 		},
 	}
-	leaderelection.RunOrDie(context.Background(), leaderelection.LeaderElectionConfig{
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:            lock,
 		ReleaseOnCancel: true,
 		LeaseDuration:   30 * time.Second,
