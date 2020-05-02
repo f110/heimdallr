@@ -1,0 +1,16 @@
+load("//build/rules/go:gen.bzl", "k8s_code_generator")
+
+k8s_code_generator(
+    name = "gen",
+    srcs = [
+        "//operator/pkg/api/etcd/v1alpha1:go_default_library",
+        "//operator/pkg/api/proxy/v1:go_default_library",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
+    ],
+    clientpackage = "github.com/f110/lagrangian-proxy/operator/pkg/client",
+    crd = "operator/config/crd/bases",
+    header = "//operator/hack:boilerplate.go.txt",
+    informerpackage = "github.com/f110/lagrangian-proxy/operator/pkg/informers",
+    listerpackage = "github.com/f110/lagrangian-proxy/operator/pkg/listers",
+    no_gazelle = True,
+)

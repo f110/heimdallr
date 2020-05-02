@@ -4,7 +4,7 @@ metadata:
   name: proxy-sample
 spec:
   replicas: 3
-  version: v0.2.0
+  version: experimental
   domain: local-proxy.f110.dev
   port: 443
   organization: test
@@ -16,7 +16,7 @@ spec:
     matchLabels:
       instance: proxy-sample
   issuerRef:
-    name: lets-encrypt
+    name: self-signed
     kind: ClusterIssuer
   identityProvider:
     provider: google

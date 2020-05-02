@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "alertmanager.go",
+        "interface.go",
+        "podmonitor.go",
+        "prometheus.go",
+        "prometheusrule.go",
+        "servicemonitor.go",
+        "thanosruler.go",
+    ],
+    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/monitoring/v1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//operator/pkg/client/versioned:go_default_library",
+        "//operator/pkg/informers/externalversions/internalinterfaces:go_default_library",
+        "//operator/pkg/listers/monitoring/v1:go_default_library",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/watch:go_default_library",
+        "//vendor/k8s.io/client-go/tools/cache:go_default_library",
+    ],
+)

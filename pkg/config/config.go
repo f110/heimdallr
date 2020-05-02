@@ -125,13 +125,19 @@ type IdentityProvider struct {
 }
 
 type Datastore struct {
-	RawUrl    string `json:"url"`
-	DataDir   string `json:"data_dir,omitempty"`  // use only embed etcd
-	Namespace string `json:"namespace,omitempty"` // use only etcd
+	RawUrl     string `json:"url"`
+	DataDir    string `json:"data_dir,omitempty"`  // use only embed etcd
+	Namespace  string `json:"namespace,omitempty"` // use only etcd
+	CACertFile string `json:"ca_cert_file,omitempty"`
+	CertFile   string `json:"cert_file,omitempty"`
+	KeyFile    string `json:"key_file,omitempty"`
 
-	Url        *url.URL         `json:"-"`
-	Embed      bool             `json:"-"`
-	EtcdUrl    *url.URL         `json:"-"`
+	Url         *url.URL        `json:"-"`
+	Embed       bool            `json:"-"`
+	EtcdUrl     *url.URL        `json:"-"`
+	Certificate tls.Certificate `json:"-"`
+	CertPool    *x509.CertPool  `json:"-"`
+
 	etcdClient *clientv3.Client `json:"-"`
 }
 
@@ -705,6 +711,32 @@ func (d *Datastore) Inflate(dir string) error {
 		d.Namespace = "/"
 	}
 
+	if d.CACertFile != "" {
+		b, err := ioutil.ReadFile(absPath(d.CACertFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		block, _ := pem.Decode(b)
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		d.CertPool = x509.NewCertPool()
+		d.CertPool.AddCert(cert)
+	}
+	if d.CertFile != "" && d.KeyFile != "" {
+		b, err := ioutil.ReadFile(absPath(d.CertFile, dir))
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		k, err := ioutil.ReadFile(absPath(d.KeyFile, dir))
+		c, err := tls.X509KeyPair(b, k)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		d.Certificate = c
+	}
+
 	switch d.Url.Scheme {
 	case "etcd":
 		if d.Embed {
@@ -745,6 +777,15 @@ func (d *Datastore) Inflate(dir string) error {
 			u.Scheme = "http"
 			d.EtcdUrl = u
 		}
+	case "etcds":
+		if d.CertPool == nil {
+			return xerrors.New("ca_cert_file, cert_file and key_file are a mandatory value")
+		}
+
+		u := new(url.URL)
+		*u = *d.Url
+		u.Scheme = "https"
+		d.EtcdUrl = u
 	}
 
 	return nil
@@ -768,10 +809,18 @@ func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) 
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
+	var tlsConfig *tls.Config
+	if d.CertPool != nil {
+		tlsConfig = &tls.Config{
+			Certificates: []tls.Certificate{d.Certificate},
+			RootCAs:      d.CertPool,
+		}
+	}
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{d.EtcdUrl.String()},
 		DialTimeout: 1 * time.Second,
 		LogConfig:   loggerConf.ZapConfig(encoder),
+		TLS:         tlsConfig,
 	})
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)

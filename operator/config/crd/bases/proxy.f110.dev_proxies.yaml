@@ -16,18 +16,7 @@ spec:
     singular: proxy
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: Phase
-      format: byte
-      jsonPath: .status.phase
-      name: phase
-      type: string
-    - description: age
-      format: date
-      jsonPath: .metadata.creationTimestamp
-      name: age
-      type: date
-    name: v1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: Proxy is the Schema for the proxies API
@@ -330,7 +319,6 @@ spec:
         type: object
     served: true
     storage: true
-    subresources: {}
 status:
   acceptedNames:
     kind: ""

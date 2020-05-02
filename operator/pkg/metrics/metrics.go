@@ -1,24 +1,22 @@
 package metrics
 
 import (
-	"context"
-
 	"github.com/prometheus/client_golang/prometheus"
-	controllerruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
+	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 )
 
 const namespace = "lag_operator"
 
 type Collector struct {
-	client client.Client
+	client clientset.Interface
 
 	descProxyCreated *prometheus.Desc
 }
 
-func NewCollector(client client.Client) *Collector {
+func NewCollector(client clientset.Interface) *Collector {
 	return &Collector{
 		client: client,
 
@@ -36,10 +34,10 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
-	proxies := &proxyv1.ProxyList{}
-	err := c.client.List(context.Background(), proxies)
+	proxies, err := c.client.ProxyV1().Proxies("").List(metav1.ListOptions{LabelSelector: labels.Everything().String()})
 	if err != nil {
-		controllerruntime.Log.Error(err, "Could not fetch proxy list")
+		// controllerruntime.Log.Error(err, "Could not fetch proxy list")
+		return
 	}
 
 	for _, v := range proxies.Items {

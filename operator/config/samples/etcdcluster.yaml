@@ -1,0 +1,8 @@
+apiVersion: etcd.f110.dev/v1alpha1
+kind: EtcdCluster
+metadata:
+  name: sample
+spec:
+  members: 3
+  version: v3.4.4
+  defragmentSchedule: "*/10 * * * *"

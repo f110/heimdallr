@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/coreos/etcd v3.3.17+incompatible
-	github.com/coreos/etcd-operator v0.9.4
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
@@ -17,6 +16,7 @@ require (
 	github.com/golang/protobuf v1.3.3
 	github.com/google/go-github/v29 v29.0.2
 	github.com/google/gofuzz v1.1.0 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/securecookie v1.1.1
@@ -27,11 +27,13 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jetstack/cert-manager v0.12.0
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/onsi/ginkgo v1.11.0
-	github.com/onsi/gomega v1.8.1
+	github.com/onsi/ginkgo v1.11.0 // indirect
+	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/prometheus/client_golang v1.4.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.9.1
 	github.com/prometheus/procfs v0.0.10 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
@@ -50,9 +52,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.17.3 // indirect
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // indirect
 	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
-	sigs.k8s.io/controller-runtime v0.5.0
 	sigs.k8s.io/yaml v1.2.0
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
 )

@@ -2,10 +2,11 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/proxy.f110.dev_proxies.yaml
-- bases/proxy.f110.dev_backends.yaml
-- bases/proxy.f110.dev_roles.yaml
-- bases/proxy.f110.dev_rpcpermissions.yaml
+  - bases/etcd.f110.dev_etcdclusters.yaml
+  - bases/proxy.f110.dev_proxies.yaml
+  - bases/proxy.f110.dev_backends.yaml
+  - bases/proxy.f110.dev_roles.yaml
+  - bases/proxy.f110.dev_rpcpermissions.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

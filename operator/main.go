@@ -16,105 +16,116 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"sync"
+	"time"
 
-	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
-	prometheus "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/klog"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
-	"github.com/f110/lagrangian-proxy/operator/pkg/metrics"
-	// +kubebuilder:scaffold:imports
+	"github.com/f110/lagrangian-proxy/operator/pkg/signals"
 )
-
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
-)
-
-func init() {
-	_ = clientgoscheme.AddToScheme(scheme)
-	_ = etcdcluster.AddToScheme(scheme)
-	_ = certmanager.AddToScheme(scheme)
-	_ = prometheus.AddToScheme(scheme)
-
-	_ = proxyv1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
-}
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	id := ""
+	metricsAddr := ""
+	enableLeaderElection := false
+	leaseLockName := ""
+	leaseLockNamespace := ""
+	clusterDomain := ""
+	dev := false
+	fs := flag.NewFlagSet("operator", flag.ExitOnError)
+	fs.StringVar(&id, "id", uuid.New().String(), "the holder identity name")
+	fs.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	fs.BoolVar(&enableLeaderElection, "enable-leader-election", enableLeaderElection,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
-	flag.Parse()
+	fs.StringVar(&leaseLockName, "lease-lock-name", "", "the lease lock resource name")
+	fs.StringVar(&leaseLockNamespace, "lease-lock-namespace", "", "the lease lock resource namespace")
+	fs.StringVar(&clusterDomain, "cluster-domain", clusterDomain, "Cluster domain")
+	fs.BoolVar(&dev, "dev", dev, "development mode")
+	klog.InitFlags(fs)
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		panic(err)
+	}
 
-	ctrl.SetLogger(zap.New(func(o *zap.Options) {
-		o.Development = true
-	}))
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	signals.SetupSignalHandler(cancelFunc)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		LeaderElection:     enableLeaderElection,
-		Port:               9443,
-	})
+	cfg, err := clientcmd.BuildConfigFromFlags("", "/home/dexter/.kube/config")
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err := runtimemetrics.Registry.Register(metrics.NewCollector(mgr.GetClient())); err != nil {
-		setupLog.Error(err, "unable to register a collector to Registry")
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ProxyReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Proxy"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
-		os.Exit(1)
+	lock := &resourcelock.LeaseLock{
+		LeaseMeta: metav1.ObjectMeta{
+			Name:      leaseLockName,
+			Namespace: leaseLockNamespace,
+		},
+		Client: kubeClient.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity: id,
+		},
 	}
-	if err = (&controllers.BackendReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Backend"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Backend")
-		os.Exit(1)
-	}
-	if err = (&controllers.RoleReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Role"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Role")
-		os.Exit(1)
-	}
-	if err = (&controllers.RpcPermissionReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("RpcPermission"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "RpcPermission")
-		os.Exit(1)
-	}
-	// +kubebuilder:scaffold:builder
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		Lock:            lock,
+		ReleaseOnCancel: true,
+		LeaseDuration:   30 * time.Second,
+		RenewDeadline:   15 * time.Second,
+		RetryPeriod:     5 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				c, err := controllers.New(ctx, kubeClient, cfg)
+				if err != nil {
+					klog.Error(err)
+					os.Exit(1)
+				}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
+				e, err := controllers.NewEtcdController(ctx, kubeClient, cfg, clusterDomain, dev)
+				if err != nil {
+					klog.Error(err)
+					os.Exit(1)
+				}
+
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					e.Run(ctx, 1)
+				}()
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					c.Run(ctx, 1)
+				}()
+
+				wg.Wait()
+			},
+			OnStoppedLeading: func() {
+				klog.Infof("leader lost: %s", id)
+				os.Exit(0)
+			},
+			OnNewLeader: func(identity string) {
+				if identity == id {
+					return
+				}
+				klog.Infof("new leader elected: %s", identity)
+			},
+		},
+	})
 }

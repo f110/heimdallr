@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"time"
 
@@ -140,6 +141,9 @@ func NewSerialNumber() (*big.Int, error) {
 	}
 }
 
+// GenerateServerCertificate will generate a certificate and a private key for server auth.
+// Generated private key is ecdsa 256-bit.
+// The expiration of the certificate is 1 year.
 func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, dnsNames []string) (*x509.Certificate, crypto.PrivateKey, error) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -163,6 +167,53 @@ func GenerateServerCertificate(ca *x509.Certificate, caPrivateKey crypto.Private
 		DNSNames:              dnsNames,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		SignatureAlgorithm:    x509.ECDSAWithSHA256,
+	}
+	certByte, err := x509.CreateCertificate(rand.Reader, template, ca, &privKey.PublicKey, caPrivateKey)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	cert, err := x509.ParseCertificate(certByte)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	return cert, privKey, nil
+}
+
+// GenerateMutualTLSCertificate will generate a certificate and a private key for server and client auth.
+func GenerateMutualTLSCertificate(ca *x509.Certificate, caPrivateKey crypto.PrivateKey, dnsNames []string, ips []string) (*x509.Certificate, crypto.PrivateKey, error) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	ipAddresses := make([]net.IP, 0)
+	if len(ips) > 0 {
+		for _, v := range ips {
+			ipAddresses = append(ipAddresses, net.ParseIP(v))
+		}
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			Organization:       ca.Subject.Organization,
+			OrganizationalUnit: ca.Subject.OrganizationalUnit,
+			Country:            ca.Subject.Country,
+			CommonName:         dnsNames[0],
+		},
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().AddDate(1, 0, 0).UTC(),
+		DNSNames:              dnsNames,
+		IPAddresses:           ipAddresses,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		SignatureAlgorithm:    x509.ECDSAWithSHA256,
 	}

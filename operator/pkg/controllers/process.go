@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -13,20 +12,23 @@ import (
 	"errors"
 	"fmt"
 	mrand "math/rand"
+	"net/url"
 	"sort"
 
 	"github.com/go-logr/logr"
+	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
+	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/k8s"
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
 
-	etcdcluster "github.com/coreos/etcd-operator/pkg/apis/etcd/v1beta2"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -35,18 +37,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/v1"
+	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 )
 
 const (
-	EtcdVersion = "3.3.18"
+	EtcdVersion = "v3.4.5"
 
-	imageRepository            = "quay.io/f110/lagrangian-proxy"
+	imageRepository            = "quay.io/f110/lagrangian-proxy-proxy"
 	defaultImageTag            = "latest"
-	rpcServerImageRepositry    = "quay.io/f110/lagrangian-proxy-rpcserver"
+	rpcServerImageRepository   = "quay.io/f110/lagrangian-proxy-rpcserver"
 	ctlImageRepository         = "quay.io/f110/lagrangian-proxy-ctl"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
@@ -67,6 +69,7 @@ const (
 	signPrivateKeyPath         = configVolumePath + "/privkey"
 	githubSecretPath           = configVolumePath + "/github_secret"
 	internalTokenMountPath     = configVolumePath + "/internal_token"
+	datastoreCertMountPath     = configVolumePath + "/datastore"
 
 	configFilename              = "config.yaml"
 	privateKeyFilename          = "privkey.pem"
@@ -80,6 +83,9 @@ const (
 	proxyFilename               = "proxies.yaml"
 	roleFilename                = "roles.yaml"
 	rpcPermissionFilename       = "rpc_permissions.yaml"
+	datastoreCAFilename         = "ca.crt"
+	datastoreCertFilename       = "client.crt"
+	datastoreKeyFilename        = "client.key"
 
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
@@ -96,26 +102,118 @@ type process struct {
 }
 
 type LagrangianProxy struct {
-	Name      string
-	Namespace string
-	Object    *proxyv1.Proxy
-	Spec      proxyv1.ProxySpec
-	Client    client.Client
-	Log       logr.Logger
+	Name       string
+	Namespace  string
+	Object     *proxyv1.Proxy
+	Spec       proxyv1.ProxySpec
+	CoreClient *kubernetes.Clientset
+	Log        logr.Logger
+	cmClient   cmClientset.Interface
+	clientset  clientset.Interface
 
+	backends         []proxyv1.Backend
+	roles            []proxyv1.Role
+	rpcPermissions   []proxyv1.RpcPermission
 	selfSignedIssuer bool
 	caSecretName     string
 	caFilename       string
 }
 
-func NewLagrangianProxy(spec *proxyv1.Proxy, client client.Client, log logr.Logger) *LagrangianProxy {
-	return &LagrangianProxy{
-		Name:      spec.Name,
-		Namespace: spec.Namespace,
-		Client:    client,
-		Log:       log,
-		Object:    spec,
-		Spec:      spec.Spec,
+func NewLagrangianProxy(
+	spec *proxyv1.Proxy,
+	client *kubernetes.Clientset, clientset clientset.Interface, cmClient cmClientset.Interface,
+	backends []proxyv1.Backend, roles []proxyv1.Role, rpcPermissions []proxyv1.RpcPermission) *LagrangianProxy {
+	r := &LagrangianProxy{
+		Name:           spec.Name,
+		Namespace:      spec.Namespace,
+		Object:         spec,
+		Spec:           spec.Spec,
+		CoreClient:     client,
+		cmClient:       cmClient,
+		clientset:      clientset,
+		backends:       backends,
+		roles:          roles,
+		rpcPermissions: rpcPermissions,
+	}
+
+	found := false
+	for _, v := range backends {
+		if v.Name == "dashboard" && v.Namespace == spec.Namespace && v.Spec.Layer == "" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		r.backends = append(r.backends, proxyv1.Backend{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dashboard",
+				Namespace: spec.Namespace,
+			},
+			Spec: proxyv1.BackendSpec{
+				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
+				AllowRootUser: true,
+				Permissions: []proxyv1.Permission{
+					{
+						Name: "all",
+						Locations: []proxyv1.Location{
+							{Any: "/"},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	found = false
+	for _, v := range roles {
+		if v.Name == "admin" && v.Namespace == r.Namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		r.roles = append(r.roles, proxyv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "admin",
+				Namespace: r.Namespace,
+			},
+			Spec: proxyv1.RoleSpec{
+				Title:       "administrator",
+				Description: fmt.Sprintf("%s administrators", r.Name),
+				Bindings: []proxyv1.Binding{
+					{BackendName: "dashboard", Namespace: r.Namespace, Permission: "all"},
+					{RpcPermissionName: "admin"},
+				},
+			},
+		})
+	}
+
+	found = false
+	for _, v := range rpcPermissions {
+		if v.Name == "admin" && v.Namespace == r.Namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		r.rpcPermissions = append(r.rpcPermissions, proxyv1.RpcPermission{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "admin",
+				Namespace: r.Namespace,
+			},
+			Spec: proxyv1.RpcPermissionSpec{
+				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
+			},
+		})
+	}
+
+	return r
+}
+
+func (r *LagrangianProxy) ControlObject(obj metav1.Object) {
+	if !metav1.IsControlledBy(obj, r.Object) {
+		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy"))})
 	}
 }
 
@@ -224,126 +322,20 @@ func (r *LagrangianProxy) DefragmentCronJobName() string {
 	return r.Name + "-defragment"
 }
 
-func (r *LagrangianProxy) Backends() ([]proxyv1.Backend, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.BackendSelector.LabelSelector)
-	if err != nil {
-		return nil, err
-	}
-	backends := &proxyv1.BackendList{}
-	if err := r.Client.List(context.Background(), backends, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.BackendSelector.Namespace}); err != nil {
-		return nil, err
-	}
-
-	res := backends.Items
-
-	found := false
-	for _, v := range backends.Items {
-		if v.Name == "dashboard" && v.Namespace == r.Namespace && v.Spec.Layer == "" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		res = append(res, proxyv1.Backend{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dashboard",
-				Namespace: r.Namespace,
-			},
-			Spec: proxyv1.BackendSpec{
-				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
-				AllowRootUser: true,
-				Permissions: []proxyv1.Permission{
-					{
-						Name: "all",
-						Locations: []proxyv1.Location{
-							{Any: "/"},
-						},
-					},
-				},
-			},
-		})
-	}
-
-	return res, nil
+func (r *LagrangianProxy) Backends() []proxyv1.Backend {
+	return r.backends
 }
 
-func (r *LagrangianProxy) Roles() ([]proxyv1.Role, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.RoleSelector.LabelSelector)
-	if err != nil {
-		return nil, err
-	}
-	roleList := &proxyv1.RoleList{}
-	if err := r.Client.List(context.Background(), roleList, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.RoleSelector.Namespace}); err != nil {
-		return nil, err
-	}
-
-	res := roleList.Items
-	found := false
-	for _, v := range roleList.Items {
-		if v.Name == "admin" && v.Namespace == r.Namespace {
-			found = true
-			break
-		}
-	}
-	if !found {
-		res = append(res, proxyv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin",
-				Namespace: r.Namespace,
-			},
-			Spec: proxyv1.RoleSpec{
-				Title:       "administrator",
-				Description: fmt.Sprintf("%s administrators", r.Name),
-				Bindings: []proxyv1.Binding{
-					{BackendName: "dashboard", Namespace: r.Namespace, Permission: "all"},
-					{RpcPermissionName: "admin"},
-				},
-			},
-		})
-	}
-
-	return res, nil
+func (r *LagrangianProxy) Roles() []proxyv1.Role {
+	return r.roles
 }
 
-func (r *LagrangianProxy) RpcPermissions() ([]proxyv1.RpcPermission, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.RpcPermissionSelector.LabelSelector)
-	if err != nil {
-		return nil, err
-	}
-	rpcPermissionList := &proxyv1.RpcPermissionList{}
-	if err := r.Client.List(context.Background(), rpcPermissionList, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.RpcPermissionSelector.Namespace}); err != nil {
-		return nil, err
-	}
-
-	res := rpcPermissionList.Items
-	found := false
-	for _, v := range rpcPermissionList.Items {
-		if v.Name == "admin" && v.Namespace == r.Namespace {
-			found = true
-			break
-		}
-	}
-	if !found {
-		res = append(res, proxyv1.RpcPermission{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin",
-				Namespace: r.Namespace,
-			},
-			Spec: proxyv1.RpcPermissionSpec{
-				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
-			},
-		})
-	}
-
-	return res, nil
+func (r *LagrangianProxy) RpcPermissions() []proxyv1.RpcPermission {
+	return r.rpcPermissions
 }
 
 func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
-	backends, err := r.Backends()
-	if err != nil {
-		return nil, err
-	}
+	backends := r.Backends()
 	layers := make(map[string]struct{})
 	fqdn := make([]string, 0)
 	for _, v := range backends {
@@ -377,78 +369,62 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) EtcdCluster() (*etcdcluster.EtcdCluster, *monitoringv1.PodMonitor) {
-	cluster := &etcdcluster.EtcdCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: r.EtcdClusterName(), Namespace: r.Namespace},
-		Spec: etcdcluster.ClusterSpec{
-			Size:    3,
+func (r *LagrangianProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
+	cluster := r.newEtcdCluster()
+	return cluster, r.newPodMonitorForEtcdCluster(cluster)
+}
+
+func (r *LagrangianProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
+	return &etcdv1alpha1.EtcdCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Name:      r.EtcdClusterName(),
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
+			},
+		},
+		Spec: etcdv1alpha1.EtcdClusterSpec{
+			Members: 3,
 			Version: EtcdVersion,
 		},
 	}
-	var pm *monitoringv1.PodMonitor
-	if r.Spec.Monitor.PrometheusMonitoring {
-		pm = &monitoringv1.PodMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      r.EtcdClusterName(),
-				Namespace: r.Namespace,
-				Labels:    r.Spec.Monitor.Labels,
-			},
-			Spec: monitoringv1.PodMonitorSpec{
-				JobLabel: "proxy.f110.dev/name",
-				Selector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app":          "etcd",
-						"etcd_cluster": r.EtcdClusterName(),
-					},
-				},
-				NamespaceSelector: monitoringv1.NamespaceSelector{
-					MatchNames: []string{r.Namespace},
-				},
-				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
-					{
-						TargetPort:  intOrStringFromInt(2379),
-						Path:        "/metrics",
-						Scheme:      "http",
-						HonorLabels: true,
-						Interval:    "30s",
-					},
-				},
-			},
-		}
-	}
-
-	return cluster, pm
 }
 
-func (r *LagrangianProxy) EtcdBackup() *etcdcluster.EtcdBackup {
-	if r.Spec.Backup.IntervalInSecond == 0 {
-		return nil
-	}
-
-	backup := &etcdcluster.EtcdBackup{
-		ObjectMeta: metav1.ObjectMeta{Name: r.EtcdClusterName(), Namespace: r.Namespace},
-		Spec: etcdcluster.BackupSpec{
-			BackupPolicy: &etcdcluster.BackupPolicy{
-				BackupIntervalInSecond: r.Spec.Backup.IntervalInSecond,
-				MaxBackups:             r.Spec.Backup.MaxBackups,
+func (r *LagrangianProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdCluster) *monitoringv1.PodMonitor {
+	return &monitoringv1.PodMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cluster.Name,
+			Namespace: r.Namespace,
+			Labels:    r.Spec.Monitor.Labels,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
 			},
-			EtcdEndpoints: []string{fmt.Sprintf("http://%s:2379", r.EtcdHost())},
-			StorageType:   etcdcluster.BackupStorageTypeS3,
-			BackupSource: etcdcluster.BackupSource{
-				S3: &etcdcluster.S3BackupSource{
-					Path:           fmt.Sprintf("%s/%s", r.Spec.Backup.Bucket, r.Spec.Backup.Path),
-					AWSSecret:      r.Spec.Backup.CredentialRef.Name,
-					Endpoint:       r.Spec.Backup.Endpoint,
-					ForcePathStyle: true,
+		},
+		Spec: monitoringv1.PodMonitorSpec{
+			JobLabel: "proxy.f110.dev/name",
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					etcd.LabelNameClusterName: cluster.Name,
+					etcd.LabelNameRole:        "etcd",
+				},
+			},
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{r.Namespace},
+			},
+			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+				{
+					TargetPort:  intOrStringFromInt(2379),
+					Path:        "/metrics",
+					Scheme:      "http",
+					HonorLabels: true,
+					Interval:    "30s",
 				},
 			},
 		},
 	}
-
-	return backup
 }
 
-func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
+func (r *LagrangianProxy) SetupCA() (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.CASecretName(),
@@ -456,13 +432,51 @@ func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 		},
 		Data: make(map[string][]byte),
 	}
-	key, err := client.ObjectKeyFromObject(secret)
+
+	caName := "Lagrangian Proxy CA"
+	if r.Spec.Name != "" {
+		caName = r.Spec.Name
+	}
+	country := "jp"
+	if r.Spec.Country != "" {
+		country = r.Spec.Country
+	}
+	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.Client.Get(context.Background(), key, secret)
-	if apierrors.IsNotFound(err) {
+	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
+	if err != nil {
+		return nil, err
+	}
+
+	buf := new(bytes.Buffer)
+	if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
+		return nil, err
+	}
+	secret.Data[caPrivateKeyFilename] = buf.Bytes()
+
+	buf = new(bytes.Buffer)
+	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}); err != nil {
+		return nil, err
+	}
+	secret.Data[caCertificateFilename] = buf.Bytes()
+
+	return secret, nil
+}
+
+func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
+	s, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.CASecretName(), metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.CASecretName(),
+				Namespace: r.Namespace,
+			},
+			Data: make(map[string][]byte),
+		}
+
 		caName := "Lagrangian Proxy CA"
 		if r.Spec.Name != "" {
 			caName = r.Spec.Name
@@ -492,26 +506,25 @@ func (r *LagrangianProxy) CASecret() (*corev1.Secret, error) {
 			return nil, err
 		}
 		secret.Data[caCertificateFilename] = buf.Bytes()
-	}
-
-	return secret, nil
-}
-
-func (r *LagrangianProxy) PrivateKeyForSign() (*corev1.Secret, error) {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.PrivateKeySecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string][]byte),
-	}
-	key, err := client.ObjectKeyFromObject(secret)
-	if err != nil {
+		s = secret
+	} else if err != nil {
 		return nil, err
 	}
 
-	err = r.Client.Get(context.Background(), key, secret)
-	if apierrors.IsNotFound(err) {
+	return s, nil
+}
+
+func (r *LagrangianProxy) PrivateKeyForSign() (*corev1.Secret, error) {
+	s, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.PrivateKeySecretName(), metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.PrivateKeySecretName(),
+				Namespace: r.Namespace,
+			},
+			Data: make(map[string][]byte),
+		}
+
 		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
@@ -525,51 +538,49 @@ func (r *LagrangianProxy) PrivateKeyForSign() (*corev1.Secret, error) {
 			return nil, err
 		}
 		secret.Data[privateKeyFilename] = buf.Bytes()
-	}
-
-	return secret, nil
-}
-
-func (r *LagrangianProxy) GithubSecret() (*corev1.Secret, error) {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.GithubSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string][]byte),
-	}
-	key, err := client.ObjectKeyFromObject(secret)
-	if err != nil {
+		s = secret
+	} else if err != nil {
 		return nil, err
 	}
 
-	err = r.Client.Get(context.Background(), key, secret)
-	if apierrors.IsNotFound(err) {
+	return s, nil
+}
+
+func (r *LagrangianProxy) GithubSecret() (*corev1.Secret, error) {
+	s, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.GithubSecretName(), metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.GithubSecretName(),
+				Namespace: r.Namespace,
+			},
+			Data: make(map[string][]byte),
+		}
+
 		b := make([]byte, 32)
 		for i := range b {
 			b[i] = letters[mrand.Intn(len(letters))]
 		}
 		secret.Data[githubWebhookSecretFilename] = b
-	}
 
-	return secret, nil
-}
-
-func (r *LagrangianProxy) CookieSecret() (*corev1.Secret, error) {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.CookieSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string][]byte),
-	}
-	key, err := client.ObjectKeyFromObject(secret)
-	if err != nil {
+		s = secret
+	} else if err != nil {
 		return nil, err
 	}
 
-	err = r.Client.Get(context.Background(), key, secret)
-	if apierrors.IsNotFound(err) {
+	return s, nil
+}
+
+func (r *LagrangianProxy) CookieSecret() (*corev1.Secret, error) {
+	s, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.CookieSecretName(), metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.CookieSecretName(),
+				Namespace: r.Namespace,
+			},
+			Data: make(map[string][]byte),
+		}
 		hashKey := make([]byte, 32)
 		for i := range hashKey {
 			hashKey[i] = letters[mrand.Intn(len(letters))]
@@ -583,37 +594,50 @@ func (r *LagrangianProxy) CookieSecret() (*corev1.Secret, error) {
 		buf.WriteRune('\n')
 		buf.Write(blockKey)
 		secret.Data[cookieSecretFilename] = buf.Bytes()
-	}
 
-	return secret, nil
-}
-
-func (r *LagrangianProxy) InternalTokenSecret() (*corev1.Secret, error) {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.InternalTokenSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string][]byte),
-	}
-	key, err := client.ObjectKeyFromObject(secret)
-	if err != nil {
+		s = secret
+	} else if err != nil {
 		return nil, err
 	}
 
-	err = r.Client.Get(context.Background(), key, secret)
-	if apierrors.IsNotFound(err) {
+	return s, nil
+}
+
+func (r *LagrangianProxy) InternalTokenSecret() (*corev1.Secret, error) {
+	s, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.InternalTokenSecretName(), metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.InternalTokenSecretName(),
+				Namespace: r.Namespace,
+			},
+			Data: make(map[string][]byte),
+		}
 		b := make([]byte, 32)
 		for i := range b {
 			b[i] = letters[mrand.Intn(len(letters))]
 		}
 		secret.Data[internalTokenFilename] = b
+
+		s = secret
+	} else if err != nil {
+		return nil, err
 	}
 
-	return secret, nil
+	return s, nil
 }
 
 func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
+	etcdCluster, err := r.clientset.EtcdV1alpha1().EtcdClusters(r.Namespace).Get(r.EtcdClusterName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	etcdUrl, err := url.Parse(etcdCluster.Status.ClientEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	etcdUrl.Scheme = "etcds"
+
 	conf := &config.Config{
 		General: &config.General{
 			Enable:            true,
@@ -639,8 +663,11 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			RedirectUrl:      r.Spec.IdentityProvider.RedirectUrl,
 		},
 		Datastore: &config.Datastore{
-			RawUrl:    fmt.Sprintf("etcd://%s:2379", r.EtcdHost()),
-			Namespace: "/lagrangian-proxy/",
+			RawUrl:     etcdUrl.String(),
+			Namespace:  "/lagrangian-proxy/",
+			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
+			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
+			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
 		},
 		FrontendProxy: &config.FrontendProxy{
 			GithubWebHookSecretFile: fmt.Sprintf("%s/%s", githubSecretPath, githubWebhookSecretFilename),
@@ -717,6 +744,16 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 }
 
 func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
+	etcdCluster, err := r.clientset.EtcdV1alpha1().EtcdClusters(r.Namespace).Get(r.EtcdClusterName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	etcdUrl, err := url.Parse(etcdCluster.Status.ClientEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	etcdUrl.Scheme = "etcds"
+
 	conf := &config.Config{
 		General: &config.General{
 			Enable:            true,
@@ -740,8 +777,11 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			Encoding: "console",
 		},
 		Datastore: &config.Datastore{
-			RawUrl:    fmt.Sprintf("etcd://%s:2379", r.EtcdHost()),
-			Namespace: "/lagrangian-proxy/",
+			RawUrl:     etcdUrl.String(),
+			Namespace:  "/lagrangian-proxy/",
+			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
+			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
+			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
 		},
 		RPCServer: &config.RPCServer{
 			Bind:   fmt.Sprintf(":%d", rpcServerPort),
@@ -833,10 +873,7 @@ func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
 }
 
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
-	backends, err := r.Backends()
-	if err != nil {
-		return nil, err
-	}
+	backends := r.Backends()
 
 	clusterDomain, err := k8s.GetClusterDomain()
 	if err != nil {
@@ -854,8 +891,8 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				return nil, err
 			}
 
-			svc := &corev1.ServiceList{}
-			if err := r.Client.List(context.Background(), svc, &client.ListOptions{LabelSelector: selector, Namespace: r.Spec.BackendSelector.Namespace}); err != nil {
+			svc, err := r.CoreClient.CoreV1().Services(r.Spec.BackendSelector.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+			if err != nil {
 				return nil, err
 			}
 			if len(svc.Items) == 0 {
@@ -927,10 +964,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 
-	roleList, err := r.Roles()
-	if err != nil {
-		return nil, err
-	}
+	roleList := r.Roles()
 	roles := make([]*config.Role, len(roleList))
 	for i, v := range roleList {
 		bindings := make([]*config.Binding, 0, len(v.Spec.Bindings))
@@ -975,10 +1009,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 
-	rpcPermissionList, err := r.RpcPermissions()
-	if err != nil {
-		return nil, err
-	}
+	rpcPermissionList := r.RpcPermissions()
 	rpcPermissions := make([]*config.RpcPermission, len(rpcPermissionList))
 	for i, v := range rpcPermissionList {
 		rpcPermissions[i] = &config.RpcPermission{
@@ -1009,108 +1040,13 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 }
 
 func (r *LagrangianProxy) Main() (*process, error) {
-	secret := &corev1.Secret{}
-	err := r.Client.Get(context.Background(), client.ObjectKey{Name: r.Spec.IdentityProvider.ClientSecretRef.Name, Namespace: r.Namespace}, secret)
+	_, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		return nil, err
 	}
-
-	var cronJob *batchv1beta1.CronJob
-	var defragmentConf *corev1.ConfigMap
-	if r.Spec.Defragment.Schedule != "" {
-		cronJob = &batchv1beta1.CronJob{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      r.DefragmentCronJobName(),
-				Namespace: r.Namespace,
-			},
-			Spec: batchv1beta1.CronJobSpec{
-				Schedule: r.Spec.Defragment.Schedule,
-				JobTemplate: batchv1beta1.JobTemplateSpec{
-					Spec: batchv1.JobSpec{
-						Template: corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: r.LabelsForDefragmentJob(),
-							},
-							Spec: corev1.PodSpec{
-								RestartPolicy: corev1.RestartPolicyNever,
-								Containers: []corev1.Container{
-									{
-										Name:    "ctl",
-										Image:   fmt.Sprintf("%s:%s", ctlImageRepository, r.Version()),
-										Command: []string{ctlCommand},
-										Args: []string{
-											"internal",
-											"defragment",
-											"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename),
-										},
-										Resources: corev1.ResourceRequirements{
-											Requests: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("100m"),
-												corev1.ResourceMemory: resource.MustParse("128Mi"),
-											},
-											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("1"),
-												corev1.ResourceMemory: resource.MustParse("256Mi"),
-											},
-										},
-										VolumeMounts: []corev1.VolumeMount{
-											{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
-											{Name: "config", MountPath: configMountPath, ReadOnly: true},
-											{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
-											{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
-										},
-									},
-								},
-								Volumes: []corev1.Volume{
-									{
-										Name: "ca-cert",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName: r.CASecretName(),
-												Items: []corev1.KeyToPath{
-													{Key: caCertificateFilename, Path: caCertificateFilename},
-												},
-											},
-										},
-									},
-									{
-										Name: "privatekey",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName: r.PrivateKeySecretName(),
-											},
-										},
-									},
-									{
-										Name: "config",
-										VolumeSource: corev1.VolumeSource{
-											ConfigMap: &corev1.ConfigMapVolumeSource{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: r.ConfigNameForDefragmentCronJob(),
-												},
-											},
-										},
-									},
-									{
-										Name: "internal-token",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName: r.InternalTokenSecretName(),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		defragmentConf, err = r.ConfigForDefragmentCronJob()
-		if err != nil {
-			return nil, err
-		}
+	etcdCluster, err := r.clientset.EtcdV1alpha1().EtcdClusters(r.Namespace).Get(r.EtcdClusterName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
 	}
 
 	conf, err := r.ConfigForMain()
@@ -1139,10 +1075,11 @@ func (r *LagrangianProxy) Main() (*process, error) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "proxy",
-							Image:   fmt.Sprintf("%s:%s", imageRepository, r.Version()),
-							Command: []string{defaultCommand},
-							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
+							Name:            "proxy",
+							Image:           fmt.Sprintf("%s:%s", imageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullAlways,
+							Command:         []string{defaultCommand},
+							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -1198,6 +1135,7 @@ func (r *LagrangianProxy) Main() (*process, error) {
 								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
 								{Name: "idp-secret", MountPath: identityProviderSecretPath, ReadOnly: true},
 								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
+								{Name: "datastore-client-cert", MountPath: datastoreCertMountPath, ReadOnly: true},
 							},
 						},
 					},
@@ -1270,6 +1208,14 @@ func (r *LagrangianProxy) Main() (*process, error) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: r.InternalTokenSecretName(),
+								},
+							},
+						},
+						{
+							Name: "datastore-client-cert",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: etcdCluster.Status.ClientCertSecretName,
 								},
 							},
 						},
@@ -1372,12 +1318,11 @@ func (r *LagrangianProxy) Main() (*process, error) {
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
 		Service:             []*corev1.Service{svc, internalApiSvc},
-		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf, defragmentConf},
+		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
 		Secrets: []*corev1.Secret{
 			caSecert, githubSecret,
 			cookieSecret, internalTokenSecret,
 		},
-		CronJob:     cronJob,
 		Certificate: cert,
 	}, nil
 }
@@ -1425,18 +1370,10 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 	}
 
 	if r.selfSignedIssuer {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      r.CertificateSecretName(),
-				Namespace: r.Namespace,
-			},
-		}
-		key, err := client.ObjectKeyFromObject(secret)
-		if err != nil {
+		_, err := r.CoreClient.CoreV1().Secrets(r.Namespace).Get(r.CertificateSecretName(), metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
 			return nil, err
-		}
-		err = r.Client.Get(context.Background(), key, secret)
-		if apierrors.IsNotFound(err) {
+		} else if err != nil {
 			return nil, err
 		}
 
@@ -1480,10 +1417,11 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "proxy",
-							Image:   fmt.Sprintf("%s:%s", imageRepository, r.Version()),
-							Command: []string{defaultCommand},
-							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
+							Name:            "proxy",
+							Image:           fmt.Sprintf("%s:%s", imageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullAlways,
+							Command:         []string{defaultCommand},
+							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -1574,6 +1512,10 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 	if err != nil {
 		return nil, err
 	}
+	etcdCluster, err := r.clientset.EtcdV1alpha1().EtcdClusters(r.Namespace).Get(r.EtcdClusterName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
 
 	conf, err := r.ConfigForRPCServer()
 	if err != nil {
@@ -1586,6 +1528,9 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.DeploymentNameForRPCServer(),
 			Namespace: r.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -1602,10 +1547,11 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "rpcserver",
-							Image:   fmt.Sprintf("%s:%s", rpcServerImageRepositry, r.Version()),
-							Command: []string{rpcServerCommand},
-							Args:    []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
+							Name:            "rpcserver",
+							Image:           fmt.Sprintf("%s:%s", rpcServerImageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullAlways,
+							Command:         []string{rpcServerCommand},
+							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									Exec: &corev1.ExecAction{
@@ -1650,6 +1596,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 								{Name: "config", MountPath: configMountPath, ReadOnly: true},
 								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
 								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
+								{Name: "datastore-client-cert", MountPath: datastoreCertMountPath, ReadOnly: true},
 							},
 						},
 					},
@@ -1695,6 +1642,14 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: r.InternalTokenSecretName(),
+								},
+							},
+						},
+						{
+							Name: "datastore-client-cert",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: etcdCluster.Status.ClientCertSecretName,
 								},
 							},
 						},
@@ -1774,26 +1729,19 @@ func (r *LagrangianProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
 	case certmanager.ClusterIssuerKind:
-		issuerObj = &certmanager.ClusterIssuer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: r.Spec.IssuerRef.Name,
-			},
+		ci, err := r.cmClient.CertmanagerV1alpha2().ClusterIssuers().Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
+		issuerObj = ci
 	case certmanager.IssuerKind:
-		issuerObj = &certmanager.Issuer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      r.Spec.IssuerRef.Name,
-				Namespace: r.Namespace,
-			},
+		ci, err := r.cmClient.CertmanagerV1alpha2().Issuers(r.Namespace).Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
+		issuerObj = ci
 	}
-	issuerKey, err := client.ObjectKeyFromObject(issuerObj)
-	if err != nil {
-		return err
-	}
-	if err := r.Client.Get(context.Background(), issuerKey, issuerObj); err != nil {
-		return err
-	}
+
 	switch v := issuerObj.(type) {
 	case *certmanager.ClusterIssuer:
 		if v.Spec.SelfSigned != nil {

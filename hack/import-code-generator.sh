@@ -12,7 +12,9 @@ fi
 
 TMPDIR=$(mktemp -d)
 cd "${TMPDIR}"
-git clone --depth 1 "https://github.com/kubernetes/${NAME}.git" -b "$VERSION"
+echo "Clone: https://github.com/kubernetes/${NAME}.git"
+git clone --quiet --depth 1 "https://github.com/kubernetes/${NAME}.git" -b "$VERSION"
+
 find "${NAME}" -name "*_test.go" -delete
 find "${NAME}" -name "testdata" -type d | xargs rm -rf
 find "${NAME}" -name "_examples" -type d | xargs rm -rf

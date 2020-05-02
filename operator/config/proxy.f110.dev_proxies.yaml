@@ -8,17 +8,6 @@ metadata:
   creationTimestamp: null
   name: proxies.proxy.f110.dev
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.phase
-    description: Phase
-    format: byte
-    name: phase
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    description: age
-    format: date
-    name: age
-    type: date
   group: proxy.f110.dev
   names:
     kind: Proxy
@@ -26,7 +15,6 @@ spec:
     plural: proxies
     singular: proxy
   scope: Namespaced
-  subresources: {}
   validation:
     openAPIV3Schema:
       description: Proxy is the Schema for the proxies API
