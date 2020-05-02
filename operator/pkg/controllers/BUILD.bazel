@@ -65,11 +65,11 @@ go_library(
     ],
 )
 
-load("//build/rules/go:gen.bzl", "rbac_gen")
+load("@dev_f110_rules_extras//go:gen.bzl", "rbac_gen")
 
 rbac_gen(
     name = "rbac",
-    rolename = "lag-proxy",
     srcs = [":go_default_library"],
     dir = "operator/config/rbac",
+    rolename = "lag-proxy",
 )

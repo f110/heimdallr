@@ -1,5 +1,0 @@
-load("//build/rules/go:vendor.bzl", "go_vendor")
-
-# gazelle:prefix k8s.io/code-generator
-
-go_vendor(name = "vendor")

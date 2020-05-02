@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["string_utils.go"],
-    importpath = "sigs.k8s.io/kubebuilder/pkg/scaffold/v2/internal",
-    visibility = ["//third_party/kubebuilder/pkg/scaffold/v2:__subpackages__"],
-    deps = ["//third_party/kubebuilder/vendor/golang.org/x/tools/imports:go_default_library"],
-)

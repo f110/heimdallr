@@ -24,28 +24,6 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-load("//build/rules/go:controller-tools.bzl", "controller_gen")
-
-controller_gen(
-    name = "generate",
-    extra_args = [
-        "object:headerFile=./hack/boilerplate.go.txt",
-        "paths=\"./...\"",
-    ],
-)
-
-controller_gen(
-    name = "manifests",
-    extra_args = [
-        "crd:trivialVersions=true",
-        "crd:crdVersions=v1",
-        "rbac:roleName=manager-role",
-        "webhook",
-        "paths=\"./...\"",
-        "output:crd:artifacts:config=config/crd/bases",
-    ],
-)
-
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 

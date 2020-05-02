@@ -1,5 +1,0 @@
-load("//build/rules/go:vendor.bzl", "go_vendor")
-
-# gazelle:prefix sigs.k8s.io/controller-tools
-
-go_vendor(name = "vendor")

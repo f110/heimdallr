@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "io_bazel_rules_go",
@@ -29,6 +30,12 @@ http_archive(
     name = "rules_pkg",
     sha256 = "4ba8f4ab0ff85f2484287ab06c0d871dcb31cc54d439457d28fd4ae14b18450a",
     url = "https://github.com/bazelbuild/rules_pkg/releases/download/0.2.4/rules_pkg-0.2.4.tar.gz",
+)
+
+git_repository(
+    name = "dev_f110_rules_extras",
+    commit = "7707fd5a50b277e60ef86d4bc258415d76274d4b",
+    remote = "https://github.com/f110/rules_extras",
 )
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
@@ -67,17 +74,9 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
 
-load("//build/rules/k8s_testing:deps.bzl", "etcd", "kube_apiserver")
+load("@dev_f110_rules_extras//go:deps.bzl", "go_extras_dependencies")
 
-etcd(
-    name = "io_etcd",
-    version = "3.4.3",
-)
-
-kube_apiserver(
-    name = "io_k8s_kube_apiserver",
-    version = "1.16.4",
-)
+go_extras_dependencies()
 
 http_file(
     name = "grpc_health_probe",
