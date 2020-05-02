@@ -1,1 +1,1 @@
-VERSION = "v0.3.3"
+build/root/VERSION.bzl
