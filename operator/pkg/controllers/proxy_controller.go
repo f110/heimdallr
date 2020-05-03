@@ -214,10 +214,13 @@ func (c *Controller) worker() {
 }
 
 func (c *Controller) processNextItem() bool {
+	defer klog.V(4).Info("Finish processNextItem")
+
 	obj, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
+	klog.V(4).Infof("Get next queue: %s", obj)
 
 	err := func(obj interface{}) error {
 		defer c.queue.Done(obj)
@@ -245,6 +248,8 @@ func (c *Controller) processNextItem() bool {
 }
 
 func (c *Controller) syncProxy(key string) error {
+	klog.V(4).Info("syncProxy")
+
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -334,7 +339,7 @@ func (c *Controller) reconcileEtcdCluster(lp *LagrangianProxy) error {
 				return xerrors.Errorf(": %w", err)
 			}
 
-			return errors.New("EtcdCluster is not ready yet")
+			return WrapRetryError(errors.New("EtcdCluster is not ready yet"))
 		}
 
 		return xerrors.Errorf(": %w", err)
@@ -648,7 +653,6 @@ func (c *Controller) createOrUpdateCronJob(lp *LagrangianProxy, cronJob *batchv1
 }
 
 func (c *Controller) createOrUpdateCertificate(lp *LagrangianProxy, certificate *certmanager.Certificate) error {
-	klog.V(4).Infof("createOrUpdateCertificate: %+v", certificate)
 	crt, err := c.cmClientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(certificate.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(certificate)

@@ -28,3 +28,8 @@ func (e *RetryError) Error() string {
 func (e *RetryError) Unwrap() error {
 	return e.err
 }
+
+func (e *RetryError) Is(err error) bool {
+	_, ok := err.(*RetryError)
+	return ok
+}
