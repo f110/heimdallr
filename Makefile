@@ -14,7 +14,7 @@ gen:
 	@bazel query 'attr(generator_function, vendor_grpc_source, //...)' | xargs -n1 bazel run
 
 generate-deploy-manifests:
-	kustomize operator/deploy | bazel run //operator/hack/manifest-finalizer > operator/deploy/all-in-one.yaml
+	kustomize build operator/deploy | bazel run //operator/hack/manifest-finalizer > operator/deploy/all-in-one.yaml
 
 gen-operator:
 	bazel run //operator/pkg/api:gen.deepcopy

@@ -49,7 +49,7 @@ import (
 // +kubebuilder:rbac:groups=etcd.f110.dev,resources=etcdclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=*,resources=secrets;configmaps;services;cronjob;deployments;poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,servicemonitors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 
 type Controller struct {
 	schema.GroupVersionKind

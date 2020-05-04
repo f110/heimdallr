@@ -142,6 +142,109 @@ spec:
     served: true
     storage: true
 ---
+1apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: etcdclusters.etcd.f110.dev
+spec:
+  group: etcd.f110.dev
+  names:
+    kind: EtcdCluster
+    listKind: EtcdClusterList
+    plural: etcdclusters
+    singular: etcdcluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Ready
+      format: byte
+      jsonPath: .status.ready
+      name: ready
+      type: string
+    - description: Phase
+      format: byte
+      jsonPath: .status.phase
+      name: phase
+      type: string
+    - description: Members
+      format: byte
+      jsonPath: .spec.members
+      name: members
+      type: string
+    - description: Age
+      format: date
+      jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              defragmentSchedule:
+                type: string
+              members:
+                type: integer
+              version:
+                type: string
+            required:
+            - defragmentSchedule
+            - members
+            - version
+            type: object
+          status:
+            properties:
+              clientCertSecretName:
+                type: string
+              clientEndpoint:
+                type: string
+              lastDefragmentTime:
+                format: date-time
+                type: string
+              lastReadyTransitionTime:
+                format: date-time
+                type: string
+              members:
+                items:
+                  properties:
+                    id:
+                      format: int64
+                      type: integer
+                    leader:
+                      type: boolean
+                    name:
+                      type: string
+                    podName:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
+              phase:
+                type: string
+              ready:
+                type: boolean
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -221,6 +324,34 @@ spec:
                     type: object
                   namespace:
                     type: string
+                type: object
+              backup:
+                properties:
+                  bucket:
+                    type: string
+                  credentialRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  endpoint:
+                    type: string
+                  intervalInSecond:
+                    format: int64
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  path:
+                    type: string
+                required:
+                - bucket
+                - credentialRef
+                - intervalInSecond
+                - path
                 type: object
               country:
                 type: string
@@ -414,8 +545,18 @@ spec:
           status:
             description: ProxyStatus defines the observed state of Proxy
             properties:
-              deployed:
+              numberOfBackends:
+                type: integer
+              numberOfRoles:
+                type: integer
+              numberOfRpcPermissions:
+                type: integer
+              phase:
+                type: string
+              ready:
                 type: boolean
+            required:
+            - ready
             type: object
         type: object
     served: true
@@ -574,6 +715,7 @@ rules:
   - monitoring.coreos.com
   resources:
   - servicemonitors
+  - podmonitors
   verbs:
   - list
   - get
@@ -623,8 +765,105 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: manager-role
+  name: lag-proxy
 rules:
+- apiGroups:
+  - '*'
+  resources:
+  - configmaps
+  - cronjob
+  - deployments
+  - poddisruptionbudgets
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - cronjob
+  - pods
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - pods/portforward
+  verbs:
+  - create
+  - get
+  - list
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdcluster
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdcluster/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - podmonitors
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - proxy.f110.dev
   resources:
