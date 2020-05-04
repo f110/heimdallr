@@ -7,6 +7,49 @@ metadata:
   name: lag-proxy
 rules:
 - apiGroups:
+  - '*'
+  resources:
+  - cronjob
+  - pods
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - pods/portforward
+  verbs:
+  - create
+  - get
+  - list
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdcluster
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdcluster/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - proxy.f110.dev
   resources:
   - backends

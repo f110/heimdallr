@@ -43,6 +43,11 @@ const (
 	defaultEtcdVersion = "v3.4.0"
 )
 
+// +kubebuilder:rbac:groups=etcd.f110.dev,resources=etcdcluster,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=etcd.f110.dev,resources=etcdcluster/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=*,resources=pods;secrets;services;cronjob,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=*,resources=pods/portforward,verbs=get;list;create
+
 type EtcdController struct {
 	schema.GroupVersionKind
 
