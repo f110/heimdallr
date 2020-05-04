@@ -17,11 +17,7 @@ generate-deploy-manifests:
 	kustomize build operator/deploy | bazel run //operator/hack/manifest-finalizer > operator/deploy/all-in-one.yaml
 
 gen-operator:
-	bazel run //operator/pkg/api:gen.deepcopy
-	bazel run //operator/pkg/api:gen.client
-	bazel run //operator/pkg/api:gen.lister
-	bazel run //operator/pkg/api:gen.informer
-	bazel run //operator/pkg/api:gen.crd
+	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
 	bazel run //operator/pkg/controllers:rbac
 
 push:

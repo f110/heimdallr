@@ -11,7 +11,6 @@ require (
 	github.com/coreos/prometheus-operator v0.36.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-logr/logr v0.1.0
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.3.3
 	github.com/google/go-github/v29 v29.0.2

@@ -15,7 +15,6 @@ import (
 	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,19 +22,21 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
+	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 	etcdListers "github.com/f110/lagrangian-proxy/operator/pkg/listers/etcd/v1alpha1"
 	proxyListers "github.com/f110/lagrangian-proxy/operator/pkg/listers/proxy/v1"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
 )
 
 // +kubebuilder:rbac:groups=proxy.f110.dev,resources=proxies,verbs=get;list;watch;create;update;patch;delete
@@ -51,10 +52,12 @@ import (
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 
-type Controller struct {
+type ProxyController struct {
 	schema.GroupVersionKind
 
-	client                    *kubernetes.Clientset
+	client        *kubernetes.Clientset
+	serviceLister listers.ServiceLister
+
 	proxyLister               proxyListers.ProxyLister
 	proxyListerSynced         cache.InformerSynced
 	backendLister             proxyListers.BackendLister
@@ -79,7 +82,7 @@ type Controller struct {
 	cmClientset         cmClientset.Interface
 }
 
-func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*Controller, error) {
+func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*ProxyController, error) {
 	proxyClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -91,16 +94,20 @@ func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*
 	rpcPermissionInformer := sharedInformer.Proxy().V1().RpcPermissions()
 	ecInformer := sharedInformer.Etcd().V1alpha1().EtcdClusters()
 
+	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
+	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
+
 	cmClient, err := cmClientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	c := &Controller{
-		client:      client,
-		clientset:   proxyClient,
-		cmClientset: cmClient,
-		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
+	c := &ProxyController{
+		client:        client,
+		serviceLister: serviceInformer.Lister(),
+		clientset:     proxyClient,
+		cmClientset:   cmClient,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 	}
 
 	_, apiList, err := client.ServerGroupsAndResources()
@@ -166,7 +173,7 @@ func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*
 	return c, nil
 }
 
-func (c *Controller) Run(ctx context.Context, workers int) {
+func (c *ProxyController) Run(ctx context.Context, workers int) {
 	defer c.queue.ShutDown()
 
 	if !cache.WaitForNamedCacheSync(c.Kind, ctx.Done(),
@@ -189,7 +196,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (c *Controller) checkCustomResource(apiList []*metav1.APIResourceList, groupVersion, kind string) error {
+func (c *ProxyController) checkCustomResource(apiList []*metav1.APIResourceList, groupVersion, kind string) error {
 	for _, v := range apiList {
 		if v.GroupVersion == groupVersion {
 			for _, v := range v.APIResources {
@@ -203,7 +210,7 @@ func (c *Controller) checkCustomResource(apiList []*metav1.APIResourceList, grou
 	return fmt.Errorf("controllers: %s/%s not found", groupVersion, kind)
 }
 
-func (c *Controller) discoverPrometheusOperator(apiList []*metav1.APIResourceList) {
+func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResourceList) {
 	for _, v := range apiList {
 		if v.GroupVersion == "monitoring.coreos.com/v1" {
 			c.enablePrometheusOperator = true
@@ -212,12 +219,12 @@ func (c *Controller) discoverPrometheusOperator(apiList []*metav1.APIResourceLis
 	}
 }
 
-func (c *Controller) worker() {
+func (c *ProxyController) worker() {
 	for c.processNextItem() {
 	}
 }
 
-func (c *Controller) processNextItem() bool {
+func (c *ProxyController) processNextItem() bool {
 	defer klog.V(4).Info("Finish processNextItem")
 
 	obj, shutdown := c.queue.Get()
@@ -251,7 +258,7 @@ func (c *Controller) processNextItem() bool {
 	return true
 }
 
-func (c *Controller) syncProxy(key string) error {
+func (c *ProxyController) syncProxy(key string) error {
 	klog.V(4).Info("syncProxy")
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -287,7 +294,16 @@ func (c *Controller) syncProxy(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	lp := NewLagrangianProxy(proxy, c.client, c.clientset, c.cmClientset, backends.Items, roles.Items, rpcPermissions.Items)
+	lp := NewLagrangianProxy(proxy, c.cmClientset, c.serviceLister, backends.Items, roles.Items, rpcPermissions.Items)
+	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
+		return xerrors.Errorf(": %w", err)
+	} else if ec != nil {
+		lp.Datastore = ec
+	}
+
+	if err := c.precheck(lp); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
 	if err := c.prepare(lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -310,29 +326,66 @@ func (c *Controller) syncProxy(key string) error {
 	return nil
 }
 
-func (c *Controller) prepare(lp *LagrangianProxy) error {
-	if err := c.reconcileEtcdCluster(lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+func (c *ProxyController) ownedServices(proxy *proxyv1.Proxy) ([]*corev1.Service, error) {
+	services, err := c.serviceLister.List(labels.Everything())
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	// Setup CA if not set up.
-	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.CASecretName(), metav1.GetOptions{})
+	ownedServices := make([]*corev1.Service, 0)
+	for _, v := range services {
+		if metav1.IsControlledBy(v, proxy) {
+			ownedServices = append(ownedServices, v)
+		}
+	}
+
+	return ownedServices, nil
+}
+
+func (c *ProxyController) ownedEtcdCluster(lp *LagrangianProxy) (*etcdv1alpha1.EtcdCluster, error) {
+	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
+}
+
+func (c *ProxyController) precheck(lp *LagrangianProxy) error {
+	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
-		newS, err := lp.SetupCA()
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		lp.ControlObject(newS)
-		_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(newS)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func (c *Controller) reconcileEtcdCluster(lp *LagrangianProxy) error {
+func (c *ProxyController) prepare(lp *LagrangianProxy) error {
+	secrets := lp.Secrets()
+	for _, secret := range secrets {
+		s, err := c.client.CoreV1().Secrets(lp.Namespace).Get(secret.Name, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			secret, err := secret.Create()
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(secret)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			return nil
+		} else if err != nil {
+			return xerrors.Errorf(": %w", err)
+		} else {
+			secret.Set(s)
+		}
+	}
+
+	if err := c.reconcileEtcdCluster(lp); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
 	newC, newPM := lp.EtcdCluster()
 
 	cluster, err := c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
@@ -387,7 +440,7 @@ func (c *Controller) reconcileEtcdCluster(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *Controller) reconcileRPCServer(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) error {
 	objs, err := lp.RPCServer()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -399,7 +452,7 @@ func (c *Controller) reconcileRPCServer(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *Controller) reconcileDashboard(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
 	objs, err := lp.Dashboard()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -413,7 +466,7 @@ func (c *Controller) reconcileDashboard(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *Controller) reconcileMainProcess(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileMainProcess(lp *LagrangianProxy) error {
 	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -432,7 +485,7 @@ func (c *Controller) reconcileMainProcess(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *Controller) finishReconcile(lp *LagrangianProxy) error {
+func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = true
 	newP.Status.Phase = "Running"
@@ -446,7 +499,7 @@ func (c *Controller) finishReconcile(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *Controller) reconcileProcess(lp *LagrangianProxy, p *process) error {
+func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) error {
 	if p.Deployment != nil {
 		if err := c.createOrUpdateDeployment(lp, p.Deployment); err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -479,24 +532,8 @@ func (c *Controller) reconcileProcess(lp *LagrangianProxy, p *process) error {
 		}
 	}
 
-	if p.CronJob != nil {
-		if err := c.createOrUpdateCronJob(lp, p.CronJob); err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
 	if p.Certificate != nil {
 		if err := c.createOrUpdateCertificate(lp, p.Certificate); err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
-	for _, v := range p.Secrets {
-		if v == nil {
-			continue
-		}
-
-		if err := c.createOrUpdateSecret(lp, v); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -516,7 +553,7 @@ func (c *Controller) reconcileProcess(lp *LagrangianProxy, p *process) error {
 	return nil
 }
 
-func (c *Controller) createOrUpdateDeployment(lp *LagrangianProxy, deployment *appsv1.Deployment) error {
+func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployment *appsv1.Deployment) error {
 	d, err := c.client.AppsV1().Deployments(deployment.Namespace).Get(deployment.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
@@ -543,7 +580,7 @@ func (c *Controller) createOrUpdateDeployment(lp *LagrangianProxy, deployment *a
 	return nil
 }
 
-func (c *Controller) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
+func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
 	p, err := c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Get(pdb.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(pdb)
@@ -570,7 +607,7 @@ func (c *Controller) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy, pdb 
 	return nil
 }
 
-func (c *Controller) createOrUpdateService(lp *LagrangianProxy, svc *corev1.Service) error {
+func (c *ProxyController) createOrUpdateService(lp *LagrangianProxy, svc *corev1.Service) error {
 	s, err := c.client.CoreV1().Services(svc.Namespace).Get(svc.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(svc)
@@ -600,7 +637,7 @@ func (c *Controller) createOrUpdateService(lp *LagrangianProxy, svc *corev1.Serv
 	return nil
 }
 
-func (c *Controller) createOrUpdateConfigMap(lp *LagrangianProxy, configMap *corev1.ConfigMap) error {
+func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap *corev1.ConfigMap) error {
 	cm, err := c.client.CoreV1().ConfigMaps(configMap.Namespace).Get(configMap.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(configMap)
@@ -628,35 +665,7 @@ func (c *Controller) createOrUpdateConfigMap(lp *LagrangianProxy, configMap *cor
 	return nil
 }
 
-func (c *Controller) createOrUpdateCronJob(lp *LagrangianProxy, cronJob *batchv1beta1.CronJob) error {
-	cj, err := c.client.BatchV1beta1().CronJobs(cronJob.Namespace).Get(cronJob.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(cronJob)
-
-		_, err = c.client.BatchV1beta1().CronJobs(cronJob.Namespace).Create(cronJob)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		return nil
-	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	newCJ := cj.DeepCopy()
-	newCJ.Spec = cronJob.Spec
-
-	if !reflect.DeepEqual(newCJ.Spec, cj.Spec) {
-		_, err = c.client.BatchV1beta1().CronJobs(newCJ.Namespace).Update(newCJ)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (c *Controller) createOrUpdateCertificate(lp *LagrangianProxy, certificate *certmanager.Certificate) error {
+func (c *ProxyController) createOrUpdateCertificate(lp *LagrangianProxy, certificate *certmanager.Certificate) error {
 	crt, err := c.cmClientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(certificate.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(certificate)
@@ -684,35 +693,7 @@ func (c *Controller) createOrUpdateCertificate(lp *LagrangianProxy, certificate 
 	return nil
 }
 
-func (c *Controller) createOrUpdateSecret(lp *LagrangianProxy, secret *corev1.Secret) error {
-	s, err := c.client.CoreV1().Secrets(secret.Namespace).Get(secret.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(secret)
-
-		_, err = c.client.CoreV1().Secrets(secret.Namespace).Create(secret)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		return nil
-	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	newS := s.DeepCopy()
-	newS.Data = secret.Data
-
-	if !reflect.DeepEqual(newS.Data, s.Data) {
-		_, err = c.client.CoreV1().Secrets(newS.Namespace).Update(newS)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (c *Controller) createOrUpdateServiceMonitor(lp *LagrangianProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
+func (c *ProxyController) createOrUpdateServiceMonitor(lp *LagrangianProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
 	sm, err := c.monitoringClientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Get(serviceMonitor.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)
@@ -741,7 +722,7 @@ func (c *Controller) createOrUpdateServiceMonitor(lp *LagrangianProxy, serviceMo
 	return nil
 }
 
-func (c *Controller) searchParentProxy(m *metav1.ObjectMeta) ([]*proxyv1.Proxy, error) {
+func (c *ProxyController) searchParentProxy(m *metav1.ObjectMeta) ([]*proxyv1.Proxy, error) {
 	ret, err := c.proxyLister.List(labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -765,7 +746,7 @@ Item:
 	return targets, nil
 }
 
-func (c *Controller) enqueue(proxy *proxyv1.Proxy) {
+func (c *ProxyController) enqueue(proxy *proxyv1.Proxy) {
 	if key, err := cache.MetaNamespaceKeyFunc(proxy); err != nil {
 		return
 	} else {
@@ -773,7 +754,7 @@ func (c *Controller) enqueue(proxy *proxyv1.Proxy) {
 	}
 }
 
-func (c *Controller) enqueueSubordinateResource(m *metav1.ObjectMeta) error {
+func (c *ProxyController) enqueueSubordinateResource(m *metav1.ObjectMeta) error {
 	ret, err := c.searchParentProxy(m)
 	if err != nil {
 		return err
@@ -786,13 +767,13 @@ func (c *Controller) enqueueSubordinateResource(m *metav1.ObjectMeta) error {
 	return nil
 }
 
-func (c *Controller) addProxy(obj interface{}) {
+func (c *ProxyController) addProxy(obj interface{}) {
 	proxy := obj.(*proxyv1.Proxy)
 
 	c.enqueue(proxy)
 }
 
-func (c *Controller) updateProxy(before, after interface{}) {
+func (c *ProxyController) updateProxy(before, after interface{}) {
 	beforeProxy := before.(*proxyv1.Proxy)
 	afterProxy := after.(*proxyv1.Proxy)
 
@@ -807,7 +788,7 @@ func (c *Controller) updateProxy(before, after interface{}) {
 	c.enqueue(afterProxy)
 }
 
-func (c *Controller) deleteProxy(obj interface{}) {
+func (c *ProxyController) deleteProxy(obj interface{}) {
 	proxy, ok := obj.(*proxyv1.Proxy)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -823,7 +804,7 @@ func (c *Controller) deleteProxy(obj interface{}) {
 	c.enqueue(proxy)
 }
 
-func (c *Controller) addBackend(obj interface{}) {
+func (c *ProxyController) addBackend(obj interface{}) {
 	backend := obj.(*proxyv1.Backend)
 
 	if err := c.enqueueSubordinateResource(&backend.ObjectMeta); err != nil {
@@ -831,7 +812,7 @@ func (c *Controller) addBackend(obj interface{}) {
 	}
 }
 
-func (c *Controller) updateBackend(before, after interface{}) {
+func (c *ProxyController) updateBackend(before, after interface{}) {
 	beforeBackend := before.(*proxyv1.Backend)
 	afterBackend := after.(*proxyv1.Backend)
 
@@ -848,7 +829,7 @@ func (c *Controller) updateBackend(before, after interface{}) {
 	}
 }
 
-func (c *Controller) deleteBackend(obj interface{}) {
+func (c *ProxyController) deleteBackend(obj interface{}) {
 	backend, ok := obj.(*proxyv1.Backend)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -866,7 +847,7 @@ func (c *Controller) deleteBackend(obj interface{}) {
 	}
 }
 
-func (c *Controller) addRole(obj interface{}) {
+func (c *ProxyController) addRole(obj interface{}) {
 	role := obj.(*proxyv1.Role)
 
 	if err := c.enqueueSubordinateResource(&role.ObjectMeta); err != nil {
@@ -874,7 +855,7 @@ func (c *Controller) addRole(obj interface{}) {
 	}
 }
 
-func (c *Controller) updateRole(before, after interface{}) {
+func (c *ProxyController) updateRole(before, after interface{}) {
 	beforeRole := before.(*proxyv1.Role)
 	afterRole := after.(*proxyv1.Role)
 
@@ -891,7 +872,7 @@ func (c *Controller) updateRole(before, after interface{}) {
 	}
 }
 
-func (c *Controller) deleteRole(obj interface{}) {
+func (c *ProxyController) deleteRole(obj interface{}) {
 	role, ok := obj.(*proxyv1.Role)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -909,7 +890,7 @@ func (c *Controller) deleteRole(obj interface{}) {
 	}
 }
 
-func (c *Controller) addRpcPermission(obj interface{}) {
+func (c *ProxyController) addRpcPermission(obj interface{}) {
 	rpcPermission := obj.(*proxyv1.RpcPermission)
 
 	if err := c.enqueueSubordinateResource(&rpcPermission.ObjectMeta); err != nil {
@@ -917,7 +898,7 @@ func (c *Controller) addRpcPermission(obj interface{}) {
 	}
 }
 
-func (c *Controller) updateRpcPermission(before, after interface{}) {
+func (c *ProxyController) updateRpcPermission(before, after interface{}) {
 	beforeRpcPermission := before.(*proxyv1.RpcPermission)
 	afterRpcPermission := after.(*proxyv1.RpcPermission)
 
@@ -934,7 +915,7 @@ func (c *Controller) updateRpcPermission(before, after interface{}) {
 	}
 }
 
-func (c *Controller) deleteRpcPermission(obj interface{}) {
+func (c *ProxyController) deleteRpcPermission(obj interface{}) {
 	rpcPermission, ok := obj.(*proxyv1.RpcPermission)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
