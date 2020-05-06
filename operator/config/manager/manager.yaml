@@ -17,8 +17,18 @@ spec:
       serviceAccountName: lag-proxy
       containers:
         - name: operator
-          image: quay.io/f110/lagrangian-proxy-operator:v0.1.4
-          args: []
+          image: quay.io/f110/lagrangian-proxy-operator:v0.5.0
+          imagePullPolicy: Always
+          args:
+            - -lease-lock-name=operator
+            - -lease-lock-namespace=$(MY_NAMESPACE)
+            - -cluster-domain=cluster.local
+            - -v=4
+          env:
+            - name: MY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
             limits:
               cpu: 100m

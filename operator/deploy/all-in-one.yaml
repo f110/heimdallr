@@ -142,7 +142,7 @@ spec:
     served: true
     storage: true
 ---
-1apiVersion: apiextensions.k8s.io/v1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: etcdclusters.etcd.f110.dev
@@ -398,6 +398,8 @@ spec:
                 required:
                 - name
                 type: object
+              loadBalancerIP:
+                type: string
               monitor:
                 properties:
                   labels:
@@ -545,6 +547,14 @@ spec:
           status:
             description: ProxyStatus defines the observed state of Proxy
             properties:
+              caSecretName:
+                type: string
+              cookieSecretName:
+                type: string
+              githubWebhookSecretName:
+                type: string
+              internalTokenSecretName:
+                type: string
               numberOfBackends:
                 type: integer
               numberOfRoles:
@@ -555,6 +565,8 @@ spec:
                 type: string
               ready:
                 type: boolean
+              signingPrivateKeySecretName:
+                type: string
             required:
             - ready
             type: object
@@ -680,9 +692,9 @@ metadata:
   namespace: lag-proxy
 rules:
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - configmaps
+  - leases
   verbs:
   - get
   - list
@@ -691,75 +703,6 @@ rules:
   - update
   - patch
   - delete
-- apiGroups:
-  - ""
-  resources:
-  - configmaps/status
-  verbs:
-  - get
-  - update
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: basic-manager-role
-rules:
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  - podmonitors
-  verbs:
-  - list
-  - get
-  - create
-  - delete
-  - update
-  - patch
-  - watch
-- apiGroups:
-  - etcd.database.coreos.com
-  resources:
-  - etcdclusters
-  verbs:
-  - list
-  - get
-  - create
-  - delete
-  - update
-  - patch
-  - watch
-- apiGroups:
-  - cert-manager.io
-  resources:
-  - certificates
-  - clusterissuers
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - delete
-  - update
-  - patch
-- apiGroups:
-  - '*'
-  resources:
-  - secrets
-  - configmaps
-  - deployments
-  - services
-  - poddisruptionbudgets
-  - cronjobs
-  verbs:
-  - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -771,23 +714,9 @@ rules:
   - '*'
   resources:
   - configmaps
-  - cronjob
+  - cronjobs
   - deployments
   - poddisruptionbudgets
-  - secrets
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - '*'
-  resources:
-  - cronjob
   - pods
   - secrets
   - services
@@ -808,9 +737,22 @@ rules:
   - get
   - list
 - apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - cert-manager.io
   resources:
   - certificates
+  - clusterissuers
   verbs:
   - create
   - delete
@@ -819,26 +761,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - etcd.f110.dev
-  resources:
-  - etcdcluster
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - etcd.f110.dev
-  resources:
-  - etcdcluster/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - etcd.f110.dev
   resources:
@@ -851,6 +773,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdclusters/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -962,24 +892,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: basic-manager-role-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: basic-manager-role
-subjects:
-- kind: ServiceAccount
-  name: lag-proxy
-  namespace: lag-proxy
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
   name: manager-role-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: lag-proxy
 subjects:
 - kind: ServiceAccount
   name: lag-proxy
@@ -1003,8 +920,18 @@ spec:
         control-plane: controller-manager
     spec:
       containers:
-      - args: []
-        image: quay.io/f110/lagrangian-proxy-operator:v0.1.4
+      - args:
+        - -lease-lock-name=operator
+        - -lease-lock-namespace=$(MY_NAMESPACE)
+        - -cluster-domain=cluster.local
+        - -v=4
+        env:
+        - name: MY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: quay.io/f110/lagrangian-proxy-operator:v0.5.0
+        imagePullPolicy: Always
         name: operator
         resources:
           limits:

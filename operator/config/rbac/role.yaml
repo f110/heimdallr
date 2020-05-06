@@ -10,23 +10,9 @@ rules:
   - '*'
   resources:
   - configmaps
-  - cronjob
+  - cronjobs
   - deployments
   - poddisruptionbudgets
-  - secrets
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - '*'
-  resources:
-  - cronjob
   - pods
   - secrets
   - services
@@ -47,9 +33,22 @@ rules:
   - get
   - list
 - apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - cert-manager.io
   resources:
   - certificates
+  - clusterissuers
   verbs:
   - create
   - delete
@@ -58,26 +57,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - etcd.f110.dev
-  resources:
-  - etcdcluster
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - etcd.f110.dev
-  resources:
-  - etcdcluster/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - etcd.f110.dev
   resources:
@@ -90,6 +69,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - etcd.f110.dev
+  resources:
+  - etcdclusters/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - monitoring.coreos.com
   resources:

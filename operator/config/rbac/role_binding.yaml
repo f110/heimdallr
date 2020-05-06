@@ -5,7 +5,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: lag-proxy
 subjects:
   - kind: ServiceAccount
     name: lag-proxy
