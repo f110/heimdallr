@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	EtcdVersion = "v3.4.5"
+	EtcdVersion = "v3.4.7"
 
 	imageRepository            = "quay.io/f110/lagrangian-proxy-proxy"
 	defaultImageTag            = "latest"
