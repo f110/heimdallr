@@ -283,8 +283,13 @@ func (c *ProxyController) syncProxy(key string) error {
 		}
 	}
 
-	if err := c.reconcileRPCServer(lp); err != nil {
+	rpcReady, err := c.reconcileRPCServer(lp)
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
+	}
+
+	if !rpcReady {
+		return WrapRetryError(errors.New("rpc server is not ready"))
 	}
 
 	if err := c.reconcileMainProcess(lp); err != nil {
@@ -416,16 +421,21 @@ func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) {
 	objs, err := lp.RPCServer()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return false, xerrors.Errorf(": %w", err)
 	}
 
 	if err := c.reconcileProcess(lp, objs); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return false, xerrors.Errorf(": %w", err)
 	}
-	return nil
+
+	if objs.Deployment.Status.ReadyReplicas != *objs.Deployment.Spec.Replicas {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
@@ -539,11 +549,12 @@ func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployme
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
 
-		_, err = c.client.AppsV1().Deployments(deployment.Namespace).Create(deployment)
+		newD, err := c.client.AppsV1().Deployments(deployment.Namespace).Create(deployment)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 
+		deployment.Status = newD.Status
 		return nil
 	} else if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -557,6 +568,7 @@ func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployme
 			return xerrors.Errorf(": %w", err)
 		}
 	}
+	deployment.Status = d.Status
 
 	return nil
 }

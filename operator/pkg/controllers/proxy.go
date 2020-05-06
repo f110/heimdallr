@@ -1551,6 +1551,11 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 		},
 	}
 
+	reverseProxyConf, err := r.ReverseProxyConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	var rpcMetrics *monitoringv1.ServiceMonitor
 	if r.Spec.Monitor.PrometheusMonitoring {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
@@ -1584,7 +1589,7 @@ func (r *LagrangianProxy) RPCServer() (*process, error) {
 	return &process{
 		Deployment:      deployment,
 		Service:         []*corev1.Service{svc},
-		ConfigMaps:      []*corev1.ConfigMap{conf},
+		ConfigMaps:      []*corev1.ConfigMap{conf, reverseProxyConf},
 		ServiceMonitors: []*monitoringv1.ServiceMonitor{rpcMetrics},
 	}, nil
 }
