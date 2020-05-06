@@ -633,7 +633,7 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 	certPool.AddCert(caCertPair.Cert)
 
 	if endpoints == nil {
-		endpoints = []string{fmt.Sprintf("https://%s:2379", c.ClientServiceName())}
+		endpoints = []string{fmt.Sprintf("https://%s.%s.svc.%s:2379", c.ClientServiceName(), c.Namespace, c.ClusterDomain)}
 	}
 
 	cfg := clientv3.Config{
