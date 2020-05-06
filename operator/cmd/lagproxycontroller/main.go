@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -44,13 +46,24 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	signals.SetupSignalHandler(cancelFunc)
 
-	cfg, err := clientcmd.BuildConfigFromFlags("", "/home/dexter/.kube/config")
+	kubeconfigPath := ""
+	if dev {
+		h, err := os.UserHomeDir()
+		if err != nil {
+			klog.Error(err)
+			os.Exit(1)
+		}
+		kubeconfigPath = filepath.Join(h, ".kube", "config")
+	}
+	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
+		log.Print(err)
 		os.Exit(1)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
+		log.Print(err)
 		os.Exit(1)
 	}
 
