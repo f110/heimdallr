@@ -8,6 +8,7 @@ go_library(
         "helper.go",
         "proxy.go",
         "proxy_controller.go",
+        "rbac.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/operator/pkg/controllers",
     visibility = ["//visibility:public"],

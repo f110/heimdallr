@@ -43,11 +43,6 @@ const (
 	defaultEtcdVersion = "v3.4.0"
 )
 
-// +kubebuilder:rbac:groups=etcd.f110.dev,resources=etcdcluster,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=etcd.f110.dev,resources=etcdcluster/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=*,resources=pods;secrets;services;cronjob,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=*,resources=pods/portforward,verbs=get;list;create
-
 type EtcdController struct {
 	schema.GroupVersionKind
 
@@ -733,9 +728,6 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 			cluster.Status.LastDefragmentTime = v.Status.CompletionTime
 		}
 	}
-
-	cluster.Status.ClientCertSecretName = cluster.ClientCertSecretName()
-	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:2379", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain)
 }
 
 func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
