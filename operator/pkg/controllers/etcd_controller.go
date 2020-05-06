@@ -371,14 +371,17 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 		}
 	}
 
+	klog.V(4).Infof("Create etcd client: %v", endpoints)
 	eClient, err := cluster.Client(endpoints)
 	if err != nil {
 		return err
 	}
-	mList, err := eClient.MemberList(context.TODO())
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	mList, err := eClient.MemberList(ctx)
 	if err != nil {
 		return err
 	}
+	cancelFunc()
 
 	isExistAsMember := false
 	for _, v := range mList.Members {
