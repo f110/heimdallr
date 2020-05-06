@@ -2,7 +2,7 @@ run:
 	bazel run //cmd/lagrangian-proxy -- -c $(CURDIR)/config_debug.yaml
 
 run-operator:
-	bazel run //operator -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4
+	bazel run //operator/cmd/lagproxycontroller -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4
 
 install-operator:
 	kustomize build operator/config/crd | kubectl apply -f -

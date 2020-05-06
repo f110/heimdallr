@@ -1,35 +1,9 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["main.go"],
-    importpath = "github.com/f110/lagrangian-proxy/operator",
-    visibility = ["//visibility:private"],
-    deps = [
-        "//operator/pkg/controllers:go_default_library",
-        "//operator/pkg/signals:go_default_library",
-        "//vendor/github.com/google/uuid:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
-        "//vendor/k8s.io/client-go/kubernetes:go_default_library",
-        "//vendor/k8s.io/client-go/tools/clientcmd:go_default_library",
-        "//vendor/k8s.io/client-go/tools/leaderelection:go_default_library",
-        "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock:go_default_library",
-        "//vendor/k8s.io/klog:go_default_library",
-    ],
-)
-
-go_binary(
-    name = "operator",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 
 pkg_tar(
     name = "bin",
-    srcs = ["//operator"],
+    srcs = ["//operator/cmd/lagproxycontroller"],
     mode = "0755",
     package_dir = "/usr/local/bin",
 )
@@ -37,7 +11,7 @@ pkg_tar(
 container_image(
     name = "image",
     base = "@com_google_distroless_base//image",
-    entrypoint = ["/usr/local/bin/operator"],
+    entrypoint = ["/usr/local/bin/lagproxycontroller"],
     tars = [":bin"],
 )
 
@@ -50,17 +24,4 @@ container_push(
     registry = "quay.io",
     repository = "f110/lagrangian-proxy-operator",
     tag = VERSION,
-)
-
-pkg_tar(
-    name = "controllers-bin",
-    srcs = ["//operator/cmd/etcdcontroller"],
-    mode = "0755",
-    package_dir = "/usr/local/bin",
-)
-
-container_image(
-    name = "controllers",
-    base = "@com_google_distroless_base//image",
-    tars = [":controllers-bin"],
 )
