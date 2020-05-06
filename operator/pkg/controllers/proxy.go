@@ -1164,8 +1164,9 @@ func (r *LagrangianProxy) Main() (*process, error) {
 			Namespace: r.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeLoadBalancer,
-			Selector: r.LabelsForMain(),
+			Type:           corev1.ServiceTypeLoadBalancer,
+			Selector:       r.LabelsForMain(),
+			LoadBalancerIP: r.Spec.LoadBalancerIP,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "https",

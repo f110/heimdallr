@@ -17,10 +17,11 @@ type LabelSelector struct {
 
 // ProxySpec defines the desired state of Proxy
 type ProxySpec struct {
-	Domain   string `json:"domain"`
-	Port     int32  `json:"port,omitempty"`
-	HttpPort int32  `json:"httpPort,omitempty"`
-	Version  string `json:"version,omitempty"`
+	Domain         string `json:"domain"`
+	Port           int32  `json:"port,omitempty"`
+	HttpPort       int32  `json:"httpPort,omitempty"`
+	Version        string `json:"version,omitempty"`
+	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
 	// Name of proxy. if not present, uses "Lagrangian Proxy CA"
 	Name                  string                 `json:"name,omitempty"`
 	Organization          string                 `json:"organization"`

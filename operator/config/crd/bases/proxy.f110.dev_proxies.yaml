@@ -156,6 +156,8 @@ spec:
                 required:
                 - name
                 type: object
+              loadBalancerIP:
+                type: string
               monitor:
                 properties:
                   labels:
