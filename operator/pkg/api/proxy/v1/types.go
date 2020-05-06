@@ -72,11 +72,16 @@ type BackupSpec struct {
 
 // ProxyStatus defines the observed state of Proxy
 type ProxyStatus struct {
-	Ready               bool   `json:"ready"`
-	Phase               string `json:"phase,omitempty"`
-	NumOfBackends       int    `json:"numberOfBackends,omitempty"`
-	NumOfRoles          int    `json:"numberOfRoles,omitempty"`
-	NumOfRpcPermissions int    `json:"numberOfRpcPermissions,omitempty"`
+	Ready                       bool   `json:"ready"`
+	Phase                       string `json:"phase,omitempty"`
+	NumOfBackends               int    `json:"numberOfBackends,omitempty"`
+	NumOfRoles                  int    `json:"numberOfRoles,omitempty"`
+	NumOfRpcPermissions         int    `json:"numberOfRpcPermissions,omitempty"`
+	CASecretName                string `json:"caSecretName,omitempty"`
+	SigningPrivateKeySecretName string `json:"signingPrivateKeySecretName,omitempty"`
+	GithubWebhookSecretName     string `json:"githubWebhookSecretName,omitempty"`
+	CookieSecretName            string `json:"cookieSecretName,omitempty"`
+	InternalTokenSecretName     string `json:"internalTokenSecretName,omitempty"`
 }
 
 // +genclient

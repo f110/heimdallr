@@ -219,45 +219,6 @@ func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResour
 	}
 }
 
-func (c *ProxyController) worker() {
-	for c.processNextItem() {
-	}
-}
-
-func (c *ProxyController) processNextItem() bool {
-	defer klog.V(4).Info("Finish processNextItem")
-
-	obj, shutdown := c.queue.Get()
-	if shutdown {
-		return false
-	}
-	klog.V(4).Infof("Get next queue: %s", obj)
-
-	err := func(obj interface{}) error {
-		defer c.queue.Done(obj)
-
-		err := c.syncProxy(obj.(string))
-		if err != nil {
-			if errors.Is(err, &RetryError{}) {
-				klog.V(4).Infof("Retrying %v", err)
-				c.queue.AddRateLimited(obj)
-				return nil
-			}
-
-			return err
-		}
-
-		c.queue.Forget(obj)
-		return nil
-	}(obj)
-	if err != nil {
-		klog.Infof("%+v", err)
-		return true
-	}
-
-	return true
-}
-
 func (c *ProxyController) syncProxy(key string) error {
 	klog.V(4).Info("syncProxy")
 
@@ -307,6 +268,21 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err := c.prepare(lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+
+	newP := lp.Object.DeepCopy()
+	newP.Status.CASecretName = lp.CASecretName()
+	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
+	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()
+	newP.Status.CookieSecretName = lp.CookieSecretName()
+	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
+
+	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
+		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
 	if err := c.reconcileRPCServer(lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -358,7 +334,11 @@ func (c *ProxyController) precheck(lp *LagrangianProxy) error {
 func (c *ProxyController) prepare(lp *LagrangianProxy) error {
 	secrets := lp.Secrets()
 	for _, secret := range secrets {
-		s, err := c.client.CoreV1().Secrets(lp.Namespace).Get(secret.Name, metav1.GetOptions{})
+		if secret.Known() {
+			continue
+		}
+
+		_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(secret.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			secret, err := secret.Create()
 			if err != nil {
@@ -369,12 +349,8 @@ func (c *ProxyController) prepare(lp *LagrangianProxy) error {
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-
-			return nil
 		} else if err != nil {
 			return xerrors.Errorf(": %w", err)
-		} else {
-			secret.Set(s)
 		}
 	}
 
@@ -489,6 +465,11 @@ func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = true
 	newP.Status.Phase = "Running"
+	newP.Status.CASecretName = lp.CASecretName()
+	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
+	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()
+	newP.Status.CookieSecretName = lp.CookieSecretName()
+	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
 		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
@@ -744,6 +725,45 @@ Item:
 	}
 
 	return targets, nil
+}
+
+func (c *ProxyController) worker() {
+	for c.processNextItem() {
+	}
+}
+
+func (c *ProxyController) processNextItem() bool {
+	defer klog.V(4).Info("Finish processNextItem")
+
+	obj, shutdown := c.queue.Get()
+	if shutdown {
+		return false
+	}
+	klog.V(4).Infof("Get next queue: %s", obj)
+
+	err := func(obj interface{}) error {
+		defer c.queue.Done(obj)
+
+		err := c.syncProxy(obj.(string))
+		if err != nil {
+			if errors.Is(err, &RetryError{}) {
+				klog.V(4).Infof("Retrying %v", err)
+				c.queue.AddRateLimited(obj)
+				return nil
+			}
+
+			return err
+		}
+
+		c.queue.Forget(obj)
+		return nil
+	}(obj)
+	if err != nil {
+		klog.Infof("%+v", err)
+		return true
+	}
+
+	return true
 }
 
 func (c *ProxyController) enqueue(proxy *proxyv1.Proxy) {

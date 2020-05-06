@@ -412,38 +412,38 @@ func (r *LagrangianProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.Etcd
 	}
 }
 
-type CreateOrSetSecret struct {
+type CreateSecret struct {
 	Name   string
+	Known  func() bool
 	Create func() (*corev1.Secret, error)
-	Set    func(*corev1.Secret)
 }
 
-func (r *LagrangianProxy) Secrets() []CreateOrSetSecret {
-	return []CreateOrSetSecret{
+func (r *LagrangianProxy) Secrets() []CreateSecret {
+	return []CreateSecret{
 		{
 			Name:   r.CASecretName(),
+			Known:  func() bool { return r.Object.Status.CASecretName != "" },
 			Create: r.NewCA,
-			Set:    func(s *corev1.Secret) { r.CASecret = s },
 		},
 		{
 			Name:   r.PrivateKeySecretName(),
+			Known:  func() bool { return r.Object.Status.SigningPrivateKeySecretName != "" },
 			Create: r.NewSigningPrivateKey,
-			Set:    func(s *corev1.Secret) { r.SigningPrivateKey = s },
 		},
 		{
 			Name:   r.GithubSecretName(),
+			Known:  func() bool { return r.Object.Status.GithubWebhookSecretName != "" },
 			Create: r.NewGithubSecret,
-			Set:    func(s *corev1.Secret) { r.GithubWebhookSecret = s },
 		},
 		{
 			Name:   r.CookieSecretName(),
+			Known:  func() bool { return r.Object.Status.CookieSecretName != "" },
 			Create: r.NewCookieSecret,
-			Set:    func(s *corev1.Secret) { r.CookieSecret = s },
 		},
 		{
 			Name:   r.InternalTokenSecretName(),
+			Known:  func() bool { return r.Object.Status.InternalTokenSecretName != "" },
 			Create: r.NewInternalTokenSecret,
-			Set:    func(s *corev1.Secret) { r.InternalTokenSecret = s },
 		},
 	}
 }
