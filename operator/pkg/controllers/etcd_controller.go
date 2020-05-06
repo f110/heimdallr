@@ -710,6 +710,9 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	}
 	klog.V(4).Infof("Phase: %v", cluster.Status.Phase)
 
+	cluster.Status.ClientCertSecretName = cluster.ClientCertSecretName()
+	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:2379", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain)
+
 	s := labels.SelectorFromSet(map[string]string{
 		etcd.LabelNameClusterName: cluster.Name,
 		etcd.LabelNameRole:        "defragment",
