@@ -15,7 +15,6 @@ You can deploying by yourself. but we highly recommend to using the operator.
 Depend on
 ---------------------
 
-* `etcd-operator <https://github.com/coreos/etcd-operator>`_
 * `cert-manager <https://github.com/jetstack/cert-manager>`_
 
 When start up the operator, check to exist some CRDs.
@@ -25,7 +24,6 @@ Optional
 ++++++++++
 
 * `prometheus-operator <https://github.com/coreos/prometheus-operator>`_
-* `etcd-backup-operator <https://github.com/coreos/etcd-operator/blob/master/doc/design/backup_operator.md>`_
 
 Build & Run
 =============
