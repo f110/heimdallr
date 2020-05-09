@@ -209,7 +209,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 
 		var temporaryMember *corev1.Pod
 		for _, v := range members {
-			if v.CreationTimestamp.IsZero() {
+			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
 				temporaryMember = v
 				break
 			}
@@ -699,13 +699,14 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 
 func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	cluster.Status.Phase = cluster.CurrentPhase()
-	if cluster.Status.Phase == etcdv1alpha1.ClusterPhaseRunning {
+	switch cluster.Status.Phase {
+	case etcdv1alpha1.ClusterPhaseRunning, etcdv1alpha1.ClusterPhaseUpdating:
 		if !cluster.Status.Ready {
 			now := metav1.Now()
 			cluster.Status.LastReadyTransitionTime = &now
 		}
 		cluster.Status.Ready = true
-	} else {
+	default:
 		cluster.Status.Ready = false
 	}
 	klog.V(4).Infof("Phase: %v", cluster.Status.Phase)

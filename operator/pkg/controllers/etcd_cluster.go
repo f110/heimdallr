@@ -357,14 +357,18 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		switch c.CurrentInternalState() {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
 			name := fmt.Sprintf("%s-%d", c.Name, c.Spec.Members+1)
-			pod := c.newEtcdPod(
-				c.Spec.Members+1,
-				etcdVersion,
-				"existing",
-				append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
-			)
-			metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
-			result = append(result, pod)
+			if _, ok := pods[name]; !ok {
+				pod := c.newEtcdPod(
+					c.Spec.Members+1,
+					etcdVersion,
+					"existing",
+					append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
+				)
+				metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
+				pods[name] = pod
+			}
+
+			result = append(result, pods[name])
 		}
 
 		c.expectedPods = result
@@ -534,6 +538,10 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 	}
 
 	for _, pod := range c.ownedPods {
+		if metav1.HasAnnotation(pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+			return etcdv1alpha1.ClusterPhaseUpdating
+		}
+
 		if !c.IsPodReady(pod) {
 			if c.Status.LastReadyTransitionTime.IsZero() {
 				return etcdv1alpha1.ClusterPhaseCreating
