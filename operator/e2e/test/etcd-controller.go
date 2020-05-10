@@ -115,6 +115,7 @@ var _ = ginkgo.Describe("etcd-controller", func() {
 			if err != nil {
 				Fail(err)
 			}
+
 			if len(pods.Items) != 3 {
 				Failf("Pods is not enough or too much: %v", len(pods.Items))
 			}

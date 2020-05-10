@@ -5,8 +5,18 @@ go_library(
     srcs = [
         "etcd-controller.go",
         "proxy-controller.go",
+        "util.go",
     ],
     importpath = "github.com/f110/lagrangian-proxy/operator/e2e/test",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/onsi/ginkgo:go_default_library"],
+    deps = [
+        "//operator/e2e/e2eutil:go_default_library",
+        "//operator/pkg/api/etcd:go_default_library",
+        "//operator/pkg/api/etcd/v1alpha1:go_default_library",
+        "//operator/pkg/client/versioned:go_default_library",
+        "//vendor/github.com/onsi/ginkgo:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/client-go/kubernetes:go_default_library",
+        "//vendor/k8s.io/client-go/rest:go_default_library",
+    ],
 )

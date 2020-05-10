@@ -9,11 +9,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	"github.com/spf13/pflag"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsClientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,12 +27,13 @@ import (
 	"github.com/f110/lagrangian-proxy/operator/e2e/e2eutil"
 	"github.com/f110/lagrangian-proxy/operator/e2e/test"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
-
-	// Load e2e scenarios. Do not remove this line.
-	_ "github.com/f110/lagrangian-proxy/operator/e2e/test"
 )
 
-func RunE2E(crdDir string) int {
+var (
+	CRDDir = flag.String("crd", "", "CRD files")
+)
+
+func TestE2E(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 
 	rand.Seed(ginkgo.GinkgoRandomSeed())
@@ -40,9 +41,9 @@ func RunE2E(crdDir string) int {
 	kubeConfig := ""
 
 	crdFiles := make([][]byte, 0)
-	filepath.Walk(crdDir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(*CRDDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.Print(err)
+			log.Printf("%s: %v", path, err)
 			return err
 		}
 		if info.IsDir() {
@@ -166,17 +167,8 @@ func RunE2E(crdDir string) int {
 	}
 	klog.SetOutput(new(bytes.Buffer))
 	ginkgo.RunSpecs(ginkgo.GinkgoT(), "Operator e2e Suite")
-	return 0
 }
 
-func main() {
-	crdDir := ""
-	fs := pflag.NewFlagSet("e2e", pflag.ContinueOnError)
-	fs.StringVar(&crdDir, "crd", crdDir, "CustomResourceDefinition files")
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-
-	os.Exit(RunE2E(crdDir))
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
 }
