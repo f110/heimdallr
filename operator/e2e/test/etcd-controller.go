@@ -17,7 +17,7 @@ import (
 
 var Config *rest.Config
 
-var _ = ginkgo.Describe("etcd-controller", func() {
+var _ = ginkgo.Describe("[EtcdController] etcd-controller", func() {
 	ginkgo.It("should start some pods", func() {
 		client, err := clientset.NewForConfig(Config)
 		if err != nil {

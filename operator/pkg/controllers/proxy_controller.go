@@ -461,7 +461,7 @@ func (c *ProxyController) reconcileMainProcess(lp *LagrangianProxy) error {
 func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = true
-	newP.Status.Phase = "Running"
+	newP.Status.Phase = proxyv1.ProxyPhaseRunning
 	newP.Status.CASecretName = lp.CASecretName()
 	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
 	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()

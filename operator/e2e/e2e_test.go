@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -130,12 +131,33 @@ func TestE2E(t *testing.T) {
 				RetryPeriod:     5 * time.Second,
 				Callbacks: leaderelection.LeaderCallbacks{
 					OnStartedLeading: func(ctx context.Context) {
-						c, err := controllers.NewEtcdController(ctx, kubeClient, cfg, "cluster.local", true)
+						e, err := controllers.NewEtcdController(ctx, kubeClient, cfg, "cluster.local", true)
 						if err != nil {
 							os.Exit(1)
 						}
 
-						c.Run(ctx, 1)
+						c, err := controllers.New(ctx, kubeClient, cfg)
+						if err != nil {
+							klog.Error(err)
+							os.Exit(1)
+						}
+
+						var wg sync.WaitGroup
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+
+							e.Run(ctx, 1)
+						}()
+
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+
+							c.Run(ctx, 1)
+						}()
+
+						wg.Wait()
 					},
 					OnStoppedLeading: func() {},
 					OnNewLeader: func(identity string) {
