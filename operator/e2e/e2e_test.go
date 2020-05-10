@@ -4,21 +4,15 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsClientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
@@ -41,41 +35,12 @@ func TestE2E(t *testing.T) {
 	id := e2eutil.MakeId()
 	kubeConfig := ""
 
-	crdFiles := make([][]byte, 0)
-	filepath.Walk(*CRDDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Printf("%s: %v", path, err)
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		f, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		crdFiles = append(crdFiles, f)
-
-		return nil
-	})
-
-	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
-	sch := runtime.NewScheme()
-	_ = apiextensionsv1.AddToScheme(sch)
-	codecs := serializer.NewCodecFactory(sch)
-	for _, v := range crdFiles {
-		obj, _, err := codecs.UniversalDeserializer().Decode(v, nil, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
-		if !ok {
-			log.Printf("%v is not CustomResourceDefinition", obj)
-			continue
-		}
-		crd = append(crd, c)
+	crd, err := e2eutil.ReadCRDFiles(*CRDDir)
+	if err != nil {
+		t.Fatal(err)
 	}
+	crdv1, crdbeta1 := e2eutil.FakeDependsOnOperators()
+	crd = append(crd, crdv1...)
 
 	ginkgo.BeforeSuite(func() {
 		k, err := e2eutil.CreateCluster(id)
@@ -98,15 +63,8 @@ func TestE2E(t *testing.T) {
 		}
 
 		// Create CustomResourceDefinition
-		apiextensionsClient, err := apiextensionsClientset.NewForConfig(cfg)
-		if err != nil {
+		if err := e2eutil.EnsureCRD(cfg, crd, crdbeta1, 3*time.Minute); err != nil {
 			log.Fatal(err)
-		}
-		for _, v := range crd {
-			_, err = apiextensionsClient.CustomResourceDefinitions().Create(v)
-			if err != nil {
-				log.Fatal(err)
-			}
 		}
 		test.Config = cfg
 
@@ -133,13 +91,12 @@ func TestE2E(t *testing.T) {
 					OnStartedLeading: func(ctx context.Context) {
 						e, err := controllers.NewEtcdController(ctx, kubeClient, cfg, "cluster.local", true)
 						if err != nil {
-							os.Exit(1)
+							log.Fatal(err)
 						}
 
 						c, err := controllers.New(ctx, kubeClient, cfg)
 						if err != nil {
-							klog.Error(err)
-							os.Exit(1)
+							log.Fatal(err)
 						}
 
 						var wg sync.WaitGroup

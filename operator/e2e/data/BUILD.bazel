@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
+
+filegroup(
+    name = "crd",
+    srcs = glob(["*.yaml"]),
+    visibility = ["//visibility:public"],
+)
+
+go_embed_data(
+    name = "embed",
+    srcs = [
+        ":crd",
+    ],
+    string = True,
+    visibility = ["//visibility:private"],
+)
+
+go_library(
+    name = "embed_crd",
+    srcs = [":embed"],
+    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/data",
+    visibility = ["//visibility:private"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [],  # keep
+    embed = [":embed_crd"],  # keep
+    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/data",
+    visibility = ["//visibility:public"],
+)

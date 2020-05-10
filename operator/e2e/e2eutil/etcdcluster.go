@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 )
 
@@ -25,6 +26,31 @@ Wait:
 			}
 
 			if ec.Status.Phase == phase {
+				break Wait
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	return nil
+}
+
+func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1.Proxy, phase proxyv1.ProxyPhase, timeout time.Duration) error {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
+	defer cancelFunc()
+
+	t := time.Tick(5 * time.Second)
+Wait:
+	for {
+		select {
+		case <-t:
+			pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+			if err != nil {
+				continue
+			}
+
+			if pr.Status.Phase == phase {
 				break Wait
 			}
 		case <-ctx.Done():
