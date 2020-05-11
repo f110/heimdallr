@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -25,7 +26,8 @@ import (
 )
 
 var (
-	CRDDir = flag.String("crd", "", "CRD files")
+	CRDDir  = flag.String("crd", "", "CRD files")
+	Verbose = flag.Bool("verbose", false, "View controller's log")
 )
 
 func TestE2E(t *testing.T) {
@@ -141,7 +143,7 @@ func TestE2E(t *testing.T) {
 
 	fs := flag.NewFlagSet("e2e", flag.ContinueOnError)
 	klog.InitFlags(fs)
-	if err := fs.Parse([]string{"-stderrthreshold=FATAL", "-logtostderr=false"}); err != nil {
+	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", *Verbose)}); err != nil {
 		log.Fatal(err)
 	}
 	klog.SetOutput(new(bytes.Buffer))
