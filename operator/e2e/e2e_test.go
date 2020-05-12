@@ -41,8 +41,6 @@ func TestE2E(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	crdv1, crdbeta1 := e2eutil.FakeDependsOnOperators()
-	crd = append(crd, crdv1...)
 
 	ginkgo.BeforeSuite(func() {
 		k, err := e2eutil.CreateCluster(id)
@@ -64,8 +62,12 @@ func TestE2E(t *testing.T) {
 			log.Fatal(err)
 		}
 
+		if err := e2eutil.EnsureCertManager(cfg); err != nil {
+			log.Fatalf("%+v", err)
+		}
+
 		// Create CustomResourceDefinition
-		if err := e2eutil.EnsureCRD(cfg, crd, crdbeta1, 3*time.Minute); err != nil {
+		if err := e2eutil.EnsureCRD(cfg, crd, 3*time.Minute); err != nil {
 			log.Fatal(err)
 		}
 		test.Config = cfg

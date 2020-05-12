@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,6 +56,10 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 						Name: clientSecret.Name,
 						Key:  "client-secret",
 					},
+				},
+				IssuerRef: certmanagermetav1.ObjectReference{
+					Kind: "ClusterIssuer",
+					Name: "self-signed",
 				},
 				Session: proxyv1.SessionSpec{
 					Type: config.SessionTypeSecureCookie,
