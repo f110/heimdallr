@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
@@ -80,33 +80,25 @@ func DeleteCluster(id string) error {
 }
 
 func WaitForReady(ctx context.Context, client *kubernetes.Clientset) error {
-	t := time.Tick(1 * time.Second)
-	for {
-		select {
-		case <-t:
-			nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
-			if err != nil {
-				return err
-			}
+	return wait.PollImmediate(1*time.Second, 3*time.Minute, func() (done bool, err error) {
+		nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
 
-			ready := false
-		Nodes:
-			for _, v := range nodes.Items {
-				for _, c := range v.Status.Conditions {
-					if c.Type == corev1.NodeReady && c.Status == corev1.ConditionTrue {
-						ready = true
-						break Nodes
-					}
+		ready := false
+	Nodes:
+		for _, v := range nodes.Items {
+			for _, c := range v.Status.Conditions {
+				if c.Type == corev1.NodeReady && c.Status == corev1.ConditionTrue {
+					ready = true
+					break Nodes
 				}
 			}
-
-			if ready {
-				return nil
-			}
-		case <-ctx.Done():
-			return ctx.Err()
 		}
-	}
+
+		return ready, nil
+	})
 }
 
 func ReadCRDFiles(dir string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
@@ -169,30 +161,27 @@ func EnsureCertManager(cfg *rest.Config) error {
 	}
 
 	var apiResource *metav1.APIResource
-	t := time.Tick(3 * time.Second)
-	timeout := time.After(10 * time.Second)
-Wait:
-	for {
-		select {
-		case <-t:
-			_, apiResourcesList, err := disClient.ServerGroupsAndResources()
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
+	err = wait.PollImmediate(3*time.Second, 10*time.Second, func() (bool, error) {
+		_, apiResourcesList, err := disClient.ServerGroupsAndResources()
+		if err != nil {
+			return false, xerrors.Errorf(": %w", err)
+		}
 
-			for _, v := range apiResourcesList {
-				if v.GroupVersion == gv.String() {
-					for _, v := range v.APIResources {
-						if v.Kind == gvk.Kind && !strings.HasSuffix(v.Name, "/status") {
-							apiResource = &v
-							break Wait
-						}
+		for _, v := range apiResourcesList {
+			if v.GroupVersion == gv.String() {
+				for _, v := range v.APIResources {
+					if v.Kind == gvk.Kind && !strings.HasSuffix(v.Name, "/status") {
+						apiResource = &v
+						return true, nil
 					}
 				}
 			}
-		case <-timeout:
-			return errors.New("")
 		}
+
+		return false, nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	conf := *cfg
@@ -204,23 +193,20 @@ Wait:
 		return xerrors.Errorf(": %w", err)
 	}
 
-	t = time.Tick(10 * time.Second)
-	timeout = time.After(3 * time.Minute)
-Create:
-	for {
-		select {
-		case <-t:
-			res := client.Post().
-				Resource(apiResource.Name).
-				Body(obj).
-				Do()
+	err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
+		res := client.Post().
+			Resource(apiResource.Name).
+			Body(obj).
+			Do()
 
-			if res.Error() == nil {
-				break Create
-			}
-		case <-timeout:
-			return errors.New("failed create ClusterIssuer")
+		if res.Error() == nil {
+			return true, nil
 		}
+
+		return false, nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -331,27 +317,22 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 		createdCRD[v.Name] = struct{}{}
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-
-	t := time.Tick(10 * time.Second)
-Check:
-	for {
-		select {
-		case <-t:
-			for name := range createdCRD {
-				_, err := apiextensionsClient.CustomResourceDefinitions().Get(name, metav1.GetOptions{})
-				if err == nil {
-					delete(createdCRD, name)
-				}
+	err = wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {
+		for name := range createdCRD {
+			_, err := apiextensionsClient.CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+			if err == nil {
+				delete(createdCRD, name)
 			}
-
-			if len(createdCRD) == 0 {
-				break Check
-			}
-		case <-ctx.Done():
-			return ctx.Err()
 		}
+
+		if len(createdCRD) == 0 {
+			return true, nil
+		}
+
+		return false, nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
