@@ -156,6 +156,7 @@ func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*
 	c.ecListerSynced = ecInformer.Informer().HasSynced
 
 	sharedInformer.Start(ctx.Done())
+	coreSharedInformerFactory.Start(ctx.Done())
 
 	return c, nil
 }
@@ -633,7 +634,7 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap
 	}
 
 	newCM := cm.DeepCopy()
-	newCM.Data = cm.Data
+	newCM.Data = configMap.Data
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
 		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(newCM)
