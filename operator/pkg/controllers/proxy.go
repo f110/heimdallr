@@ -812,7 +812,6 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			}
 
 			services, err := r.serviceLister.Services(r.Spec.BackendSelector.Namespace).List(selector)
-			// svc, err := r.CoreClient.CoreV1().Services(r.Spec.BackendSelector.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 			if err != nil {
 				return nil, err
 			}
