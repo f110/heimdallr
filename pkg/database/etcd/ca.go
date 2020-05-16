@@ -119,34 +119,35 @@ func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
 	return c.revokedList
 }
 
-func (c *CA) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) ([]byte, error) {
+func (c *CA) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*database.SignedCertificate, error) {
 	return c.generateClientCertificate(ctx, name, keyType, keyBits, password, comment, false)
 }
 
-func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) ([]byte, error) {
+func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) (*database.SignedCertificate, error) {
 	return c.generateClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, connector.DefaultCertificatePassword, comment, true)
 }
 
-func (c *CA) SignCertificateRequest(ctx context.Context, r *x509.CertificateRequest, comment string, agent bool) ([]byte, error) {
+func (c *CA) SignCertificateRequest(ctx context.Context, r *x509.CertificateRequest, comment string, agent bool) (*database.SignedCertificate, error) {
 	signedCert, err := cert.SigningCertificateRequest(r, c.config)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	err = c.SetSignedCertificate(ctx, &database.SignedCertificate{
+	obj := &database.SignedCertificate{
 		Certificate: signedCert,
 		IssuedAt:    time.Now(),
 		Comment:     comment,
 		Agent:       agent,
-	})
+	}
+	err = c.SetSignedCertificate(ctx, obj)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	return signedCert.Raw, nil
+	return obj, nil
 }
 
-func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent bool) ([]byte, error) {
+func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent bool) (*database.SignedCertificate, error) {
 	serial, err := c.newSerialNumber(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -168,17 +169,18 @@ func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	if err := c.SetSignedCertificate(ctx, &database.SignedCertificate{
+	signed := &database.SignedCertificate{
 		Certificate: clientCert,
 		P12:         data,
 		IssuedAt:    time.Now(),
 		Comment:     comment,
 		Agent:       agent,
-	}); err != nil {
+	}
+	if err := c.SetSignedCertificate(ctx, signed); err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	return data, nil
+	return signed, nil
 }
 
 func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {

@@ -310,7 +310,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		err := client.NewCertByCSR(req.FormValue("csr"), req.FormValue("id"))
+		_, err := client.NewCertByCSR(req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
 			logger.Log.Info("Failed sign CSR", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)

@@ -7,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"net/http"
 	"time"
 
@@ -154,25 +153,11 @@ func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) 
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	err = rpcClient.NewCertByCSR(string(csr), id)
+	signedCert, err := rpcClient.NewCertByCSR(string(csr), id)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	certs, err := rpcClient.ListCert()
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	var number []byte
-	for _, v := range certs {
-		number = v.SerialNumber
-	}
-	serialNumber := big.NewInt(0)
-	serialNumber.SetBytes(number)
-	certItem, err := rpcClient.GetCert(serialNumber)
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	clientCert := tls.Certificate{Certificate: [][]byte{certItem.Certificate}, PrivateKey: privKey}
+	clientCert := tls.Certificate{Certificate: [][]byte{signedCert.Certificate}, PrivateKey: privKey}
 
 	return &clientCert, nil
 }

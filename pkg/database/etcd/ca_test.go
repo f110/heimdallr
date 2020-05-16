@@ -75,7 +75,7 @@ func TestCA_NewAgentCertificate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	privateKey, clientCert, _, err := pkcs12.DecodeChain(data, connector.DefaultCertificatePassword)
+	privateKey, clientCert, _, err := pkcs12.DecodeChain(data.P12, connector.DefaultCertificatePassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestCA_NewClientCertificate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	privateKey, clientCert, _, err := pkcs12.DecodeChain(data, "test")
+	privateKey, clientCert, _, err := pkcs12.DecodeChain(data.P12, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,12 +220,8 @@ func TestCA_SignCertificateRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ce, err := x509.ParseCertificate(c)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ce.Subject.CommonName != "test@example.com" {
-		t.Fatalf("Unexpected common name: %s", ce.Subject.CommonName)
+	if c.Certificate.Subject.CommonName != "test@example.com" {
+		t.Fatalf("Unexpected common name: %s", c.Certificate.Subject.CommonName)
 	}
 
 	clearDatabase(t)

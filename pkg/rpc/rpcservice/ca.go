@@ -69,27 +69,28 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 	}
 
 	if commonName == "" {
-		return nil, errors.New("rpcservice: common name is required")
+		return nil, errors.New("rpcservice: the common name is mandatory")
 	}
 	if req.GetCsr() != "" && req.GetCommonName() != commonName {
 		return nil, errors.New("rpcservice: Subject.CommonName and req.CommonName are not same value")
 	}
 
+	var signed *database.SignedCertificate
 	if csr == nil {
 		if req.GetAgent() {
-			_, err = s.ca.NewAgentCertificate(ctx, req.GetCommonName(), req.GetComment())
+			signed, err = s.ca.NewAgentCertificate(ctx, req.GetCommonName(), req.GetComment())
 		} else {
-			_, err = s.ca.NewClientCertificate(ctx, req.GetCommonName(), req.GetKeyType(), int(req.GetKeyBits()), req.GetPassword(), req.GetComment())
+			signed, err = s.ca.NewClientCertificate(ctx, req.GetCommonName(), req.GetKeyType(), int(req.GetKeyBits()), req.GetPassword(), req.GetComment())
 		}
 	} else {
-		_, err = s.ca.SignCertificateRequest(ctx, csr, req.GetComment(), req.GetAgent())
+		signed, err = s.ca.SignCertificateRequest(ctx, csr, req.GetComment(), req.GetAgent())
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	logger.Audit.Info("Generate certificate", zap.String("common_name", commonName), auditBy(ctx))
-	return &rpc.ResponseNewClientCert{Ok: true}, nil
+	return &rpc.ResponseNewClientCert{Ok: true, Certificate: rpc.DatabaseCertToRPCCertWithByte(signed)}, nil
 }
 
 func (s *CertificateAuthorityService) Revoke(ctx context.Context, req *rpc.CARequestRevoke) (*rpc.CAResponseRevoke, error) {

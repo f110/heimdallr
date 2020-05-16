@@ -220,7 +220,7 @@ message RequestNewClientCert {
 
 message ResponseNewClientCert {
     bool ok = 1;
-    bytes certificate = 2;
+    CertItem certificate = 2;
 }
 
 message CARequestRevoke {
