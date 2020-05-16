@@ -34,7 +34,6 @@ import (
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/k8s"
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
 )
 
@@ -799,10 +798,6 @@ func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	backends := r.Backends()
 
-	clusterDomain, err := k8s.GetClusterDomain()
-	if err != nil {
-		clusterDomain = "cluster.local"
-	}
 	proxies := make([]*config.Backend, len(backends))
 	backendMap := make(map[string]proxyv1.Backend)
 	for i, v := range backends {
@@ -864,7 +859,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 						}
 					}
 
-					upstream = fmt.Sprintf("%s://%s.%s.svc.%s:%d", scheme, service.Name, service.Namespace, clusterDomain, p.Port)
+					upstream = fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, p.Port)
 					break
 				}
 			}

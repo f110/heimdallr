@@ -23,7 +23,6 @@ go_library(
         "//operator/pkg/listers/proxy/v1:go_default_library",
         "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
-        "//pkg/k8s:go_default_library",
         "//pkg/netutil:go_default_library",
         "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
         "//vendor/github.com/coreos/etcd/etcdserver/etcdserverpb:go_default_library",
