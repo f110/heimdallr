@@ -1,10 +1,10 @@
 package e2eutil
 
 import (
-	"context"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
@@ -12,51 +12,42 @@ import (
 )
 
 func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alpha1.EtcdCluster, phase etcdv1alpha1.EtcdClusterPhase, timeout time.Duration) error {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-
-	t := time.Tick(5 * time.Second)
-Wait:
-	for {
-		select {
-		case <-t:
-			ec, err := client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(ec.Name, metav1.GetOptions{})
-			if err != nil {
-				continue
-			}
-
-			if ec.Status.Phase == phase {
-				break Wait
-			}
-		case <-ctx.Done():
-			return ctx.Err()
+	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
+		ec, err := client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(ec.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-	}
 
-	return nil
+		if ec.Status.Phase == phase {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }
 
 func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1.Proxy, phase proxyv1.ProxyPhase, timeout time.Duration) error {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
-	defer cancelFunc()
-
-	t := time.Tick(5 * time.Second)
-Wait:
-	for {
-		select {
-		case <-t:
-			pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
-			if err != nil {
-				continue
-			}
-
-			if pr.Status.Phase == phase {
-				break Wait
-			}
-		case <-ctx.Done():
-			return ctx.Err()
+	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
+		pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-	}
 
-	return nil
+		if pr.Status.Phase == phase {
+			return true, nil
+		}
+
+		return false, nil
+	})
+}
+
+func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1.Proxy, timeout time.Duration) error {
+	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
+		pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		return pr.Status.Ready, nil
+	})
 }

@@ -34,7 +34,11 @@ func (u *ClientWithUserToken) WithRequest(req *http.Request) *ClientWithUserToke
 		return u
 	}
 
-	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, req.Header.Get(TokenHeaderName))
+	return u.WithToken(req.Header.Get(TokenHeaderName))
+}
+
+func (u *ClientWithUserToken) WithToken(token string) *ClientWithUserToken {
+	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.JwtTokenMetadataKey, token)
 	c := &Client{md: ctx}
 	c.setConn(u.Client.conn)
 

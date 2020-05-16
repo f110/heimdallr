@@ -418,10 +418,9 @@ func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) 
 	if err := c.reconcileProcess(lp, objs); err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
-
 	lp.RPCServer = objs
 
-	if objs.Deployment.Status.ReadyReplicas != *objs.Deployment.Spec.Replicas {
+	if !c.isReadyDeployment(objs.Deployment) {
 		return false, nil
 	}
 

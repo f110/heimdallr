@@ -27,6 +27,7 @@ spec:
     redirectUrl: https://local-proxy.f110.dev:4000/auth/callback
   rootUsers:
     - fmhrit@gmail.com
+    - root@f110.dev
   session:
     type: secure_cookie
     keySecretRef:

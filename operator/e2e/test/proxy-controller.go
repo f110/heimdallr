@@ -1,13 +1,17 @@
 package test
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"log"
+	"net/http"
+	"net/http/httputil"
 	"time"
 
 	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -18,7 +22,8 @@ import (
 )
 
 var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
-	ginkgo.It("creates EtcdCluster", func() {
+	ginkgo.It("serves HTTPS", func() {
+		testUserId := "e2e@f110.dev"
 		client, err := clientset.NewForConfig(Config)
 		if err != nil {
 			Fail(err)
@@ -48,9 +53,14 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 				Namespace: "default",
 			},
 			Spec: proxyv1.ProxySpec{
-				Version: "v0.5.0",
-				Domain:  "e2e.f110.dev",
+				Version:  "v0.5.0",
+				Domain:   "e2e.f110.dev",
+				Replicas: 3,
+				BackendSelector: proxyv1.LabelSelector{
+					LabelSelector: metav1.LabelSelector{},
+				},
 				IdentityProvider: proxyv1.IdentityProviderSpec{
+					Provider: "google",
 					ClientId: "e2e",
 					ClientSecretRef: proxyv1.SecretSelector{
 						Name: clientSecret.Name,
@@ -64,7 +74,12 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 				Session: proxyv1.SessionSpec{
 					Type: config.SessionTypeSecureCookie,
 				},
+				RootUsers: []string{testUserId},
 			},
+		}
+
+		if err := e2eutil.DeployTestService(coreClient, client, proxy); err != nil {
+			Fail(err)
 		}
 
 		_, err = client.ProxyV1().Proxies(proxy.Namespace).Create(proxy)
@@ -75,19 +90,66 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 		if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1.ProxyPhaseRunning, 10*time.Minute); err != nil {
 			Fail(err)
 		}
-
-		_, err = client.EtcdV1alpha1().EtcdClusters(proxy.Namespace).Get(fmt.Sprintf("%s-datastore", proxy.Name), metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			Fail("EtcdCluster is not found")
+		if err := e2eutil.WaitForReadyOfProxy(client, proxy, 1*time.Minute); err != nil {
+			Fail(err)
 		}
 
-		_, err = coreClient.AppsV1().Deployments(proxy.Namespace).Get(fmt.Sprintf("%s-rpcserver", proxy.Name), metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			Fail("Deployment of rpcserver is not found")
+		proxy, err = client.ProxyV1().Proxies(proxy.Namespace).Get(proxy.Name, metav1.GetOptions{})
+		if err != nil {
+			Fail(err)
 		}
-		_, err = coreClient.AppsV1().Deployments(proxy.Namespace).Get(proxy.Name, metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			Fail("Deployment of proxy is not found")
+
+		rpcClient, err := e2eutil.DialRPCServer(Config, coreClient, proxy, testUserId)
+		if err != nil {
+			Failf("%+v", err)
+		}
+		if err := e2eutil.EnsureExistingTestUser(rpcClient, testUserId, "admin"); err != nil {
+			Failf("%+v", err)
+		}
+		clientCert, err := e2eutil.SetupClientCert(rpcClient, testUserId)
+		if err != nil {
+			Failf("%+v", err)
+		}
+		proxyCertPool, err := e2eutil.ProxyCertPool(coreClient, proxy)
+		if err != nil {
+			Failf("%+v", err)
+		}
+
+		proxyService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(fmt.Sprintf("%s", proxy.Name), metav1.GetOptions{})
+		if err != nil {
+			Fail(err)
+		}
+		forwarder, err := e2eutil.PortForward(context.Background(), Config, coreClient, proxyService, "https")
+		if err != nil {
+			Failf("%+v", err)
+		}
+		ports, err := forwarder.GetPorts()
+		if err != nil {
+			Fail(err)
+		}
+		port := ports[0].Local
+
+		testReq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), nil)
+		if err != nil {
+			Fail(err)
+		}
+		testReq.Host = fmt.Sprintf("hello.test.%s", proxy.Spec.Domain)
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
+			RootCAs:      proxyCertPool,
+			ServerName:   fmt.Sprintf("hello.test.%s", proxy.Spec.Domain),
+			Certificates: []tls.Certificate{*clientCert},
+		}
+		res, err := http.DefaultClient.Do(testReq)
+		if err != nil {
+			b, _ := httputil.DumpRequest(testReq, true)
+			log.Print(string(b))
+			Failf("%+v", err)
+		}
+
+		if res.StatusCode != http.StatusOK {
+			b, _ := httputil.DumpResponse(res, true)
+			log.Print(string(b))
+			Fail("expect return a status code is 200")
 		}
 	})
 })

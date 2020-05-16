@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.17.10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+  labels:
+    app: hello
+spec:
+  selector:
+    app: nginx
+  ports:
+    - name: "http"
+      port: 80
+---
+apiVersion: proxy.f110.dev/v1
+kind: Backend
+metadata:
+  name: hello
+  labels:
+    instance: proxy-sample
+spec:
+  layer: example
+  serviceSelector:
+    matchLabels:
+      app: hello
+    port: "http"
+  permissions:
+    - name: all
+      locations:
+        - get: /
+---
+apiVersion: proxy.f110.dev/v1
+kind: Role
+metadata:
+  name: admin
+  labels:
+    instance: proxy-sample
+spec:
+  title: administrator
+  description: Proxy administrator a.k.a GOD
+  bindings:
+    - backendName: dashboard
+      permission: all
+    - backendName: hello
+      permission: all
