@@ -15,11 +15,14 @@ import (
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 )
 
-var Config *rest.Config
+var (
+	Config     *e2eutil.Config
+	RESTConfig *rest.Config
+)
 
 var _ = ginkgo.Describe("[EtcdController] etcd-controller", func() {
 	ginkgo.It("should start some pods", func() {
-		client, err := clientset.NewForConfig(Config)
+		client, err := clientset.NewForConfig(RESTConfig)
 		if err != nil {
 			Fail(err)
 		}
@@ -43,7 +46,7 @@ var _ = ginkgo.Describe("[EtcdController] etcd-controller", func() {
 			Fail(err)
 		}
 
-		kubeClient, err := kubernetes.NewForConfig(Config)
+		kubeClient, err := kubernetes.NewForConfig(RESTConfig)
 		if err != nil {
 			Fail(err)
 		}
@@ -66,7 +69,7 @@ var _ = ginkgo.Describe("[EtcdController] etcd-controller", func() {
 
 	ginkgo.Context("when change version", func() {
 		ginkgo.It("should update all pods", func() {
-			client, err := clientset.NewForConfig(Config)
+			client, err := clientset.NewForConfig(RESTConfig)
 			if err != nil {
 				Fail(err)
 			}
@@ -107,7 +110,7 @@ var _ = ginkgo.Describe("[EtcdController] etcd-controller", func() {
 				Fail(err)
 			}
 
-			kubeClient, err := kubernetes.NewForConfig(Config)
+			kubeClient, err := kubernetes.NewForConfig(RESTConfig)
 			if err != nil {
 				Fail(err)
 			}

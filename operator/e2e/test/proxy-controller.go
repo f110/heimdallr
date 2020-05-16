@@ -24,11 +24,11 @@ import (
 var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 	ginkgo.It("serves HTTPS", func() {
 		testUserId := "e2e@f110.dev"
-		client, err := clientset.NewForConfig(Config)
+		client, err := clientset.NewForConfig(RESTConfig)
 		if err != nil {
 			Fail(err)
 		}
-		coreClient, err := kubernetes.NewForConfig(Config)
+		coreClient, err := kubernetes.NewForConfig(RESTConfig)
 		if err != nil {
 			Fail(err)
 		}
@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 				Namespace: "default",
 			},
 			Spec: proxyv1.ProxySpec{
-				Version:  "v0.5.0",
+				Version:  Config.ProxyVersion,
 				Domain:   "e2e.f110.dev",
 				Replicas: 3,
 				BackendSelector: proxyv1.LabelSelector{
@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 			Fail(err)
 		}
 
-		rpcClient, err := e2eutil.DialRPCServer(Config, coreClient, proxy, testUserId)
+		rpcClient, err := e2eutil.DialRPCServer(RESTConfig, coreClient, proxy, testUserId)
 		if err != nil {
 			Failf("%+v", err)
 		}
@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 		if err != nil {
 			Fail(err)
 		}
-		forwarder, err := e2eutil.PortForward(context.Background(), Config, coreClient, proxyService, "https")
+		forwarder, err := e2eutil.PortForward(context.Background(), RESTConfig, coreClient, proxyService, "https")
 		if err != nil {
 			Failf("%+v", err)
 		}

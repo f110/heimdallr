@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cluster.go",
+        "config.go",
         "etcdcluster.go",
         "id.go",
         "proxy.go",

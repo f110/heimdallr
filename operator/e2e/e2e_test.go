@@ -30,8 +30,15 @@ var (
 	Verbose = flag.Bool("verbose", false, "View controller's log")
 )
 
+var conf = &e2eutil.Config{}
+
+func init() {
+	e2eutil.Flags(flag.CommandLine, conf)
+}
+
 func TestE2E(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
+	test.Config = conf
 
 	rand.Seed(ginkgo.GinkgoRandomSeed())
 	id := e2eutil.MakeId()
@@ -70,7 +77,7 @@ func TestE2E(t *testing.T) {
 		if err := e2eutil.EnsureCRD(cfg, crd, 3*time.Minute); err != nil {
 			log.Fatal(err)
 		}
-		test.Config = cfg
+		test.RESTConfig = cfg
 
 		lock, err := resourcelock.New(
 			resourcelock.LeasesResourceLock,
