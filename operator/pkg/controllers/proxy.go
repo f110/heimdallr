@@ -106,6 +106,10 @@ type LagrangianProxy struct {
 	CookieSecret        *corev1.Secret
 	InternalTokenSecret *corev1.Secret
 
+	RPCServer       *process
+	ProxyServer     *process
+	DashboardServer *process
+
 	cmClient      cmClientset.Interface
 	serviceLister listers.ServiceLister
 
@@ -958,7 +962,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) Main() (*process, error) {
+func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
@@ -1221,7 +1225,7 @@ func (r *LagrangianProxy) Main() (*process, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) Dashboard() (*process, error) {
+func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 	if err := r.checkSelfSignedIssuer(); err != nil {
 		return nil, err
 	}
@@ -1384,7 +1388,7 @@ func (r *LagrangianProxy) Dashboard() (*process, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) RPCServer() (*process, error) {
+func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}

@@ -250,7 +250,7 @@ func (c *ProxyController) syncProxy(key string) error {
 		lp.Datastore = ec
 	}
 
-	if err := c.precheck(lp); err != nil {
+	if err := c.preCheck(lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := c.prepare(lp); err != nil {
@@ -280,7 +280,7 @@ func (c *ProxyController) syncProxy(key string) error {
 		return WrapRetryError(errors.New("rpc server is not ready"))
 	}
 
-	if err := c.reconcileMainProcess(lp); err != nil {
+	if err := c.reconcileProxyProcess(lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -315,7 +315,7 @@ func (c *ProxyController) ownedEtcdCluster(lp *LagrangianProxy) (*etcdv1alpha1.E
 	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 }
 
-func (c *ProxyController) precheck(lp *LagrangianProxy) error {
+func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
 	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -410,7 +410,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
 }
 
 func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) {
-	objs, err := lp.RPCServer()
+	objs, err := lp.IdealRPCServer()
 	if err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
@@ -418,6 +418,8 @@ func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) 
 	if err := c.reconcileProcess(lp, objs); err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
+
+	lp.RPCServer = objs
 
 	if objs.Deployment.Status.ReadyReplicas != *objs.Deployment.Spec.Replicas {
 		return false, nil
@@ -427,7 +429,7 @@ func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) 
 }
 
 func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
-	objs, err := lp.Dashboard()
+	objs, err := lp.IdealDashboard()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -436,17 +438,18 @@ func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	lp.DashboardServer = objs
 
 	return nil
 }
 
-func (c *ProxyController) reconcileMainProcess(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileProxyProcess(lp *LagrangianProxy) error {
 	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	objs, err := lp.Main()
+	objs, err := lp.IdealProxyProcess()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -455,13 +458,14 @@ func (c *ProxyController) reconcileMainProcess(lp *LagrangianProxy) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	lp.ProxyServer = objs
 
 	return nil
 }
 
 func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP := lp.Object.DeepCopy()
-	newP.Status.Ready = true
+	newP.Status.Ready = c.isReady(lp)
 	newP.Status.Phase = proxyv1.ProxyPhaseRunning
 	newP.Status.CASecretName = lp.CASecretName()
 	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
@@ -476,6 +480,28 @@ func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 		}
 	}
 	return nil
+}
+
+func (c *ProxyController) isReady(lp *LagrangianProxy) bool {
+	if !c.isReadyDeployment(lp.RPCServer.Deployment) {
+		return false
+	}
+	if !c.isReadyDeployment(lp.ProxyServer.Deployment) {
+		return false
+	}
+	if !c.isReadyDeployment(lp.DashboardServer.Deployment) {
+		return false
+	}
+
+	return true
+}
+
+func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
+	if d.Status.ReadyReplicas < *d.Spec.Replicas {
+		return false
+	}
+
+	return true
 }
 
 func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) error {
