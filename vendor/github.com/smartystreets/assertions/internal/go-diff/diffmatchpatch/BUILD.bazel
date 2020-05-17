@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "diff.go",
+        "diffmatchpatch.go",
+        "match.go",
+        "mathutil.go",
+        "operation_string.go",
+        "patch.go",
+        "stringutil.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
+    importpath = "github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
+    visibility = ["//vendor/github.com/smartystreets/assertions:__subpackages__"],
+)

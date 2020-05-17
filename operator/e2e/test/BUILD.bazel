@@ -1,26 +1,31 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-go_library(
-    name = "go_default_library",
+go_test(
+    name = "go_default_test",
     srcs = [
-        "etcd-controller.go",
-        "proxy-controller.go",
-        "util.go",
+        "etcd-controller_test.go",
+        "main_test.go",
+        "proxy-controller_test.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/test",
-    visibility = ["//visibility:public"],
+    tags = ["e2e"],
     deps = [
         "//operator/e2e/e2eutil:go_default_library",
+        "//operator/e2e/framework:go_default_library",
         "//operator/pkg/api/etcd:go_default_library",
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
         "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/client/versioned:go_default_library",
+        "//operator/pkg/controllers:go_default_library",
         "//pkg/config:go_default_library",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:go_default_library",
-        "//vendor/github.com/onsi/ginkgo:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//vendor/k8s.io/client-go/kubernetes:go_default_library",
         "//vendor/k8s.io/client-go/rest:go_default_library",
+        "//vendor/k8s.io/client-go/tools/clientcmd:go_default_library",
+        "//vendor/k8s.io/client-go/tools/leaderelection:go_default_library",
+        "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock:go_default_library",
+        "//vendor/k8s.io/klog:go_default_library",
     ],
 )
