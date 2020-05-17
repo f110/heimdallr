@@ -79,7 +79,8 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 			},
 		}
 
-		if err := e2eutil.DeployTestService(coreClient, client, proxy); err != nil {
+		testServiceBackend, testServiceRole, err := e2eutil.DeployTestService(coreClient, client, proxy)
+		if err != nil {
 			Fail(err)
 		}
 
@@ -104,7 +105,7 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 		if err != nil {
 			Failf("%+v", err)
 		}
-		if err := e2eutil.EnsureExistingTestUser(rpcClient, testUserId, "admin"); err != nil {
+		if err := e2eutil.EnsureExistingTestUser(rpcClient, testUserId, testServiceRole.Name); err != nil {
 			Failf("%+v", err)
 		}
 		clientCert, err := e2eutil.SetupClientCert(rpcClient, testUserId)
@@ -134,10 +135,10 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 		if err != nil {
 			Fail(err)
 		}
-		testReq.Host = fmt.Sprintf("hello.test.%s", proxy.Spec.Domain)
+		testReq.Host = fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain)
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
 			RootCAs:      proxyCertPool,
-			ServerName:   fmt.Sprintf("hello.test.%s", proxy.Spec.Domain),
+			ServerName:   testReq.Host,
 			Certificates: []tls.Certificate{*clientCert},
 		}
 		res, err := http.DefaultClient.Do(testReq)

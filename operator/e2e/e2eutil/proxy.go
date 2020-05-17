@@ -33,7 +33,7 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
 )
 
-func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy) error {
+func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy) (*proxyv1.Backend, *proxyv1.Role, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "hello",
@@ -57,7 +57,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 	}
 	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.Errorf(": %w", err)
 	}
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -74,7 +74,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 	}
 	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.Errorf(": %w", err)
 	}
 	backend := &proxyv1.Backend{
 		ObjectMeta: metav1.ObjectMeta{
@@ -95,9 +95,9 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			},
 		},
 	}
-	_, err = client.ProxyV1().Backends(backend.Namespace).Create(backend)
+	backend, err = client.ProxyV1().Backends(backend.Namespace).Create(backend)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.Errorf(": %w", err)
 	}
 	role := &proxyv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
@@ -114,12 +114,12 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			},
 		},
 	}
-	_, err = client.ProxyV1().Roles(role.Namespace).Create(role)
+	role, err = client.ProxyV1().Roles(role.Namespace).Create(role)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.Errorf(": %w", err)
 	}
 
-	return nil
+	return backend, role, nil
 }
 
 type RPCClient struct {
