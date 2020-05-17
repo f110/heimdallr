@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	"time"
 
 	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
@@ -150,6 +151,9 @@ var _ = ginkgo.Describe("[ProxyController] proxy-controller", func() {
 			b, _ := httputil.DumpResponse(res, true)
 			log.Print(string(b))
 			Fail("expect return a status code is 200")
+		}
+		if !strings.Contains(res.Header.Get("Server"), "nginx") {
+			Fail("not return a response from nginx")
 		}
 	})
 })
