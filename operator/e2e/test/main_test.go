@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
+	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	_ "github.com/smartystreets/goconvey/convey"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/operator/e2e/e2eutil"
 	"github.com/f110/lagrangian-proxy/operator/e2e/framework"
+	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
 )
 
@@ -55,6 +58,21 @@ func TestMain(m *testing.M) {
 		kubeClient, err := kubernetes.NewForConfig(cfg)
 		if err != nil {
 			log.Fatalf("%v", err)
+		}
+		proxyClient, err := clientset.NewForConfig(cfg)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		cmClient, err := cmClientset.NewForConfig(cfg)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		mClient, err := mClientset.NewForConfig(cfg)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
 		}
 
 		if err := e2eutil.WaitForReady(context.TODO(), kubeClient); err != nil {
@@ -96,7 +114,7 @@ func TestMain(m *testing.M) {
 							log.Fatal(err)
 						}
 
-						c, err := controllers.New(ctx, kubeClient, cfg)
+						c, err := controllers.New(ctx, kubeClient, proxyClient, cmClient, mClient)
 						if err != nil {
 							log.Fatal(err)
 						}

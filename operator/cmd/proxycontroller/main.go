@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
+	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
 	"github.com/google/uuid"
+	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -16,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog"
 
+	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
 	"github.com/f110/lagrangian-proxy/operator/pkg/signals"
 )
@@ -63,6 +66,18 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+	proxyClient, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		os.Exit(1)
+	}
+	cmClient, err := cmClientset.NewForConfig(cfg)
+	if err != nil {
+		os.Exit(1)
+	}
+	mClient, err := mClientset.NewForConfig(cfg)
+	if err != nil {
+		os.Exit(1)
+	}
 
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
@@ -82,7 +97,7 @@ func main() {
 		RetryPeriod:     5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				c, err := controllers.New(ctx, kubeClient, cfg)
+				c, err := controllers.New(ctx, kubeClient, proxyClient, cmClient, mClient)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)

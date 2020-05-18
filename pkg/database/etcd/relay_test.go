@@ -136,7 +136,7 @@ func TestRelayLocator_Watch(t *testing.T) {
 		if got.Name != "test" {
 			t.Error("Expect Name is test")
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("Timeout")
 	}
 }

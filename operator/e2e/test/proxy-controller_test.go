@@ -24,6 +24,8 @@ import (
 )
 
 func TestProxyController(t *testing.T) {
+	t.Parallel()
+
 	Describe(t, "ProxyController", func() {
 		It("serves http request", func() {
 			testUserId := "e2e@f110.dev"

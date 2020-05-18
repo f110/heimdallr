@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -34,17 +34,25 @@ import (
 	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
+	"github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
 	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 	etcdListers "github.com/f110/lagrangian-proxy/operator/pkg/listers/etcd/v1alpha1"
 	proxyListers "github.com/f110/lagrangian-proxy/operator/pkg/listers/proxy/v1"
 )
 
+var (
+	ErrEtcdClusterIsNotReady = errors.New("EtcdCluster is not ready yet")
+)
+
 type ProxyController struct {
 	schema.GroupVersionKind
 
-	client        *kubernetes.Clientset
+	client        kubernetes.Interface
 	serviceLister listers.ServiceLister
+	secretLister  listers.SecretLister
 
+	sharedInformer            informers.SharedInformerFactory
+	coreSharedInformer        kubeinformers.SharedInformerFactory
 	proxyLister               proxyListers.ProxyLister
 	proxyListerSynced         cache.InformerSynced
 	backendLister             proxyListers.BackendLister
@@ -69,11 +77,7 @@ type ProxyController struct {
 	cmClientset         cmClientset.Interface
 }
 
-func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*ProxyController, error) {
-	proxyClient, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
+func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset.Interface, cmClient cmClientset.Interface, mClient mClientset.Interface) (*ProxyController, error) {
 	sharedInformer := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
 	proxyInformer := sharedInformer.Proxy().V1().Proxies()
 	backendInformer := sharedInformer.Proxy().V1().Backends()
@@ -83,21 +87,26 @@ func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*
 
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
+	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
-	cmClient, err := cmClientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: client.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "proxy-controller"})
 
 	c := &ProxyController{
-		client:        client,
-		serviceLister: serviceInformer.Lister(),
-		clientset:     proxyClient,
-		cmClientset:   cmClient,
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
+		client:             client,
+		serviceLister:      serviceInformer.Lister(),
+		secretLister:       secretInformer.Lister(),
+		clientset:          proxyClient,
+		cmClientset:        cmClient,
+		sharedInformer:     sharedInformer,
+		coreSharedInformer: coreSharedInformerFactory,
+		queue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
+		recorder:           recorder,
 	}
 
-	_, apiList, err := client.ServerGroupsAndResources()
+	_, apiList, err := client.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +116,6 @@ func New(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config) (*
 	c.discoverPrometheusOperator(apiList)
 
 	if c.enablePrometheusOperator {
-		mClient, err := mClientset.NewForConfig(cfg)
-		if err != nil {
-			return nil, err
-		}
 		mSharedInformer := mInformers.NewSharedInformerFactory(mClient, 30*time.Second)
 		c.monitoringClientset = mClient
 
@@ -251,6 +256,9 @@ func (c *ProxyController) syncProxy(key string) error {
 	}
 
 	if err := c.preCheck(lp); err != nil {
+		if apierrors.IsNotFound(errors.Unwrap(err)) {
+			c.recorder.Eventf(lp.Object, corev1.EventTypeWarning, "InvalidSpec", "Failure pre-check %v", err)
+		}
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := c.prepare(lp); err != nil {
@@ -316,7 +324,7 @@ func (c *ProxyController) ownedEtcdCluster(lp *LagrangianProxy) (*etcdv1alpha1.E
 }
 
 func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
-	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
+	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -326,12 +334,13 @@ func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
 
 func (c *ProxyController) prepare(lp *LagrangianProxy) error {
 	secrets := lp.Secrets()
+	lister := c.coreSharedInformer.Core().V1().Secrets().Lister()
 	for _, secret := range secrets {
 		if secret.Known() {
 			continue
 		}
 
-		_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(secret.Name, metav1.GetOptions{})
+		_, err := lister.Secrets(lp.Namespace).Get(secret.Name)
 		if err != nil && apierrors.IsNotFound(err) {
 			secret, err := secret.Create()
 			if err != nil {
@@ -365,14 +374,14 @@ func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
 				return xerrors.Errorf(": %w", err)
 			}
 
-			return WrapRetryError(errors.New("EtcdCluster is not ready yet"))
+			return WrapRetryError(ErrEtcdClusterIsNotReady)
 		}
 
 		return xerrors.Errorf(": %w", err)
 	}
 
 	if !cluster.Status.Ready {
-		return WrapRetryError(errors.New("EtcdCluster is not ready yet"))
+		return WrapRetryError(ErrEtcdClusterIsNotReady)
 	}
 
 	var podMonitor *monitoringv1.PodMonitor

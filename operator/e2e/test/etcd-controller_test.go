@@ -22,6 +22,8 @@ var (
 )
 
 func TestEtcdController(t *testing.T) {
+	t.Parallel()
+
 	Describe(t, "EtcdController", func() {
 		Context("creates a new cluster", func() {
 			It("should create some pods", func() {

@@ -48,7 +48,6 @@ func RunSpec(m *testing.M) int {
 	return m.Run()
 }
 
-// TODO: better handling parallel execution
 func Describe(t *testing.T, description string, action func()) {
 	convey.Convey(description, t, action)
 }

@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -71,4 +71,31 @@ rbac_gen(
     srcs = [":go_default_library"],
     dir = "operator/config/rbac",
     rolename = "lag-proxy",
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "proxy_controller_test.go",
+        "runner_test.go",
+        "util_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//operator/pkg/api/etcd/v1alpha1:go_default_library",
+        "//operator/pkg/api/proxy/v1:go_default_library",
+        "//operator/pkg/client/versioned/fake:go_default_library",
+        "//pkg/config:go_default_library",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/client/versioned/fake:go_default_library",
+        "//vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/fake:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/k8s.io/api/core/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/util/diff:go_default_library",
+        "//vendor/k8s.io/client-go/kubernetes/fake:go_default_library",
+        "//vendor/k8s.io/client-go/scale/scheme:go_default_library",
+        "//vendor/k8s.io/client-go/testing:go_default_library",
+        "//vendor/k8s.io/client-go/tools/cache:go_default_library",
+    ],
 )
