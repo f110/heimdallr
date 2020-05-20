@@ -4,10 +4,7 @@ go 1.13
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
-	github.com/coreos/etcd v3.3.17+incompatible
 	github.com/coreos/go-oidc v2.1.0+incompatible
-	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/coreos/prometheus-operator v0.36.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.7
@@ -38,7 +35,8 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	go.uber.org/zap v1.10.0
+	go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200518175753-732df43cf85b
+	go.uber.org/zap v1.14.1
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d // indirect
 	golang.org/x/net v0.0.0-20200222033325-078779b8f2d8
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "http.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/lease/leasehttp",
+    importpath = "go.etcd.io/etcd/v3/lease/leasehttp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/lease:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/lease/leasepb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/httputil:go_default_library",
+    ],
+)

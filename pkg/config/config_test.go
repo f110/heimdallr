@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/embed"
+	"go.etcd.io/etcd/v3/embed"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/f110/lagrangian-proxy/pkg/netutil"
@@ -155,10 +155,9 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 	u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", clientPort)}
 	c := embed.NewConfig()
 	c.Dir = tmpDir
-	c.LogPkgLevels = "*=C"
+	c.LogLevel = "fatal"
 	c.LPUrls[0].Host = fmt.Sprintf("localhost:%d", peerPort)
 	c.LCUrls[0] = *u
-	c.SetupLogging()
 	e, err := embed.StartEtcd(c)
 	if err != nil {
 		t.Fatal(err)

@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "flag.go",
+        "ignored.go",
+        "selective_string.go",
+        "strings.go",
+        "unique_strings.go",
+        "unique_urls.go",
+        "urls.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/flags",
+    importpath = "go.etcd.io/etcd/v3/pkg/flags",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/spf13/pflag:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

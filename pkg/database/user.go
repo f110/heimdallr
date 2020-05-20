@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/coreos/etcd/mvcc/mvccpb"
+	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 )

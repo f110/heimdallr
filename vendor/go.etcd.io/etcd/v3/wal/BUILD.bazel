@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "decoder.go",
+        "doc.go",
+        "encoder.go",
+        "file_pipeline.go",
+        "metrics.go",
+        "repair.go",
+        "util.go",
+        "wal.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/wal",
+    importpath = "go.etcd.io/etcd/v3/wal",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/crc:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/fileutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/ioutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/pbutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft/raftpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/wal/walpb:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

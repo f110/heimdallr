@@ -13,7 +13,7 @@ go_library(
         "//pkg/database/etcd:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/rpc/rpcserver:go_default_library",
-        "//vendor/github.com/coreos/etcd/clientv3:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
     ],
 )

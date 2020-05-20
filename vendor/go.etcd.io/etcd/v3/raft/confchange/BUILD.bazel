@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "confchange.go",
+        "restore.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/raft/confchange",
+    importpath = "go.etcd.io/etcd/v3/raft/confchange",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.etcd.io/etcd/v3/raft/quorum:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft/raftpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft/tracker:go_default_library",
+    ],
+)

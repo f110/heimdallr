@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "index.go",
+        "key_index.go",
+        "kv.go",
+        "kv_view.go",
+        "kvstore.go",
+        "kvstore_compaction.go",
+        "kvstore_txn.go",
+        "metrics.go",
+        "metrics_txn.go",
+        "revision.go",
+        "util.go",
+        "watchable_store.go",
+        "watchable_store_txn.go",
+        "watcher.go",
+        "watcher_group.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/mvcc",
+    importpath = "go.etcd.io/etcd/v3/mvcc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/btree:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/cindex:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/lease:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/adt:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/schedule:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/traceutil:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

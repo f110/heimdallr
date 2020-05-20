@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/mvcc/mvccpb"
+	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"sigs.k8s.io/yaml"
 
 	"github.com/f110/lagrangian-proxy/pkg/database"

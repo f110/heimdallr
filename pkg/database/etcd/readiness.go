@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/v3/clientv3"
 )
 
 type TapReadiness struct {

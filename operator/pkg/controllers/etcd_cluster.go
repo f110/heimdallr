@@ -16,9 +16,9 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/coreos/etcd/clientv3"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"go.etcd.io/etcd/v3/clientv3"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"

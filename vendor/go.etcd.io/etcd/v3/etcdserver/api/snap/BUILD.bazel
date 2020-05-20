@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "db.go",
+        "doc.go",
+        "message.go",
+        "metrics.go",
+        "snapshotter.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/snap",
+    importpath = "go.etcd.io/etcd/v3/etcdserver/api/snap",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/dustin/go-humanize:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/snap/snappb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/fileutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/ioutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/pbutil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft/raftpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/wal/walpb:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

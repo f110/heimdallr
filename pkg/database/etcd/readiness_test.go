@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/v3/clientv3"
 )
 
 func TestTapReadiness_IsReady(t *testing.T) {

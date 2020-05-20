@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/v3/clientv3"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 

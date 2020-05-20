@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/v3/clientv3"
 	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"

@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/embed"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/embed"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -337,10 +337,9 @@ func (m *mainProcess) startDashboard() {
 func (m *mainProcess) startEmbedEtcd() error {
 	c := embed.NewConfig()
 	c.Dir = m.config.Datastore.DataDir
-	c.LogPkgLevels = "*=C"
+	c.LogLevel = "fatal"
 	c.LPUrls[0].Host = "localhost:0"
 	c.LCUrls[0] = *m.config.Datastore.EtcdUrl
-	c.SetupLogging()
 
 	e, err := embed.StartEtcd(c)
 	if err != nil {

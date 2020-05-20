@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "capability.go",
+        "client.go",
+        "client_auth.go",
+        "doc.go",
+        "http.go",
+        "metrics.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/v2http",
+    importpath = "go.etcd.io/etcd/v3/etcdserver/api/v2http",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jonboulle/clockwork:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/etcdhttp:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/membership:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2auth:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2error:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2http/httptypes:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2stats:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2store:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
+        "//vendor/go.uber.org/zap:go_default_library",
+    ],
+)

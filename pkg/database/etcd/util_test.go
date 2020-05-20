@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/embed"
+	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/embed"
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
@@ -50,10 +50,9 @@ func TestMain(m *testing.M) {
 
 	c := embed.NewConfig()
 	c.Dir = dataDir
-	c.LogPkgLevels = "*=C"
+	c.LogLevel = "fatal"
 	c.LPUrls[0].Host = "localhost:0"
 	c.LCUrls[0] = *etcdUrl
-	c.SetupLogging()
 
 	e, err := embed.StartEtcd(c)
 	if err != nil {
