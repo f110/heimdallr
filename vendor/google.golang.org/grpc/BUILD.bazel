@@ -49,6 +49,7 @@ go_library(
         "//vendor/google.golang.org/grpc/internal/envconfig:go_default_library",
         "//vendor/google.golang.org/grpc/internal/grpcrand:go_default_library",
         "//vendor/google.golang.org/grpc/internal/grpcsync:go_default_library",
+        "//vendor/google.golang.org/grpc/internal/grpcutil:go_default_library",
         "//vendor/google.golang.org/grpc/internal/resolver/dns:go_default_library",
         "//vendor/google.golang.org/grpc/internal/resolver/passthrough:go_default_library",
         "//vendor/google.golang.org/grpc/internal/transport:go_default_library",

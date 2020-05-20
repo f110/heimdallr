@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -697,7 +698,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		if err == nil {
 			t.Fatal("expect to occurred error but not")
 		}
-		if err != unauthorizedError.Err() {
+		if !errors.Is(err, unauthorizedError.Err()) {
 			t.Fatalf("expect unauthorizedError: %v", err)
 		}
 	})
@@ -712,7 +713,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		if err == nil {
 			t.Fatal("expect to occurred error but not")
 		}
-		if err != unauthorizedError.Err() {
+		if !errors.Is(err, unauthorizedError.Err()) {
 			t.Fatalf("expect unauthorizedError: %v", err)
 		}
 	})
@@ -818,7 +819,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 		if err == nil {
 			t.Fatal("expect to occurred error but not")
 		}
-		if err != unauthorizedError.Err() {
+		if !errors.Is(err, unauthorizedError.Err()) {
 			t.Fatalf("expect unauthorizedError: %v", err)
 		}
 	})
@@ -833,7 +834,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 		if err == nil {
 			t.Fatal("expect to occurred error but not")
 		}
-		if err != unauthorizedError.Err() {
+		if !errors.Is(err, unauthorizedError.Err()) {
 			t.Fatalf("expect unauthorizedError: %v", err)
 		}
 	})
