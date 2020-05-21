@@ -304,22 +304,6 @@ func (c *ProxyController) syncProxy(key string) error {
 	return nil
 }
 
-func (c *ProxyController) ownedServices(proxy *proxyv1.Proxy) ([]*corev1.Service, error) {
-	services, err := c.serviceLister.List(labels.Everything())
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	ownedServices := make([]*corev1.Service, 0)
-	for _, v := range services {
-		if metav1.IsControlledBy(v, proxy) {
-			ownedServices = append(ownedServices, v)
-		}
-	}
-
-	return ownedServices, nil
-}
-
 func (c *ProxyController) ownedEtcdCluster(lp *LagrangianProxy) (*etcdv1alpha1.EtcdCluster, error) {
 	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 }
