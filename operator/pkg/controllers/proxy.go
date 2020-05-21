@@ -878,6 +878,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			AllowHttp:       v.Spec.AllowHttp,
 		}
 	}
+	sort.Slice(proxies, func(i, j int) bool {
+		return proxies[i].Name < proxies[j].Name
+	})
 	proxyBinary, err := yaml.Marshal(proxies)
 	if err != nil {
 		return nil, err
@@ -922,6 +925,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			Bindings:    bindings,
 		}
 	}
+	sort.Slice(roles, func(i, j int) bool {
+		return roles[i].Name < roles[j].Name
+	})
 	roleBinary, err := yaml.Marshal(roles)
 	if err != nil {
 		return nil, err
@@ -935,6 +941,9 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			Allow: v.Spec.Allow,
 		}
 	}
+	sort.Slice(rpcPermissions, func(i, j int) bool {
+		return rpcPermissions[i].Name < rpcPermissions[j].Name
+	})
 	rpcPermissionBinary, err := yaml.Marshal(rpcPermissions)
 	if err != nil {
 		return nil, err

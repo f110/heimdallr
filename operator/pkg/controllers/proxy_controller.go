@@ -42,6 +42,7 @@ import (
 
 var (
 	ErrEtcdClusterIsNotReady = errors.New("EtcdCluster is not ready yet")
+	ErrRPCServerIsNotReady   = errors.New("rpc server is not ready")
 )
 
 type ProxyController struct {
@@ -273,7 +274,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
+		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -285,7 +286,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	}
 
 	if !rpcReady {
-		return WrapRetryError(errors.New("rpc server is not ready"))
+		return xerrors.Errorf(": %w", WrapRetryError(ErrRPCServerIsNotReady))
 	}
 
 	if err := c.reconcileProxyProcess(lp); err != nil {
@@ -452,7 +453,7 @@ func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
 }
 
 func (c *ProxyController) reconcileProxyProcess(lp *LagrangianProxy) error {
-	_, err := c.client.CoreV1().Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name, metav1.GetOptions{})
+	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -482,7 +483,7 @@ func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
+		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
