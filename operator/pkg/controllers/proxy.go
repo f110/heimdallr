@@ -1215,7 +1215,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 		return nil, err
 	}
 
-	cert, err := r.Certificate()
+	serverCert, err := r.Certificate()
 	if err != nil {
 		return nil, err
 	}
@@ -1225,7 +1225,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 		PodDisruptionBudget: pdb,
 		Service:             []*corev1.Service{svc, internalApiSvc},
 		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
-		Certificate:         cert,
+		Certificate:         serverCert,
 	}, nil
 }
 

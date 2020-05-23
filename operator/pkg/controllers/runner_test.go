@@ -28,6 +28,7 @@ type proxyControllerTestRunner struct {
 	coreActions []core.Action
 
 	proxyFixtures      []*proxyv1.Proxy
+	backendFixtures    []*proxyv1.Backend
 	etcdClusterFixture []*etcdv1alpha1.EtcdCluster
 	secretFixtures     []*corev1.Secret
 	serviceFixtures    []*corev1.Service
@@ -72,6 +73,11 @@ func newFixture(t *testing.T) *proxyControllerTestRunner {
 func (f *proxyControllerTestRunner) RegisterProxyFixture(p *proxyv1.Proxy) {
 	f.client.Tracker().Add(p)
 	f.proxyFixtures = append(f.proxyFixtures, p)
+}
+
+func (f *proxyControllerTestRunner) RegisterBackendFixture(b *proxyv1.Backend) {
+	f.client.Tracker().Add(b)
+	f.backendFixtures = append(f.backendFixtures, b)
 }
 
 func (f *proxyControllerTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdCluster) {
@@ -214,10 +220,22 @@ func (f *proxyControllerTestRunner) ExpectUpdateProxyStatus() {
 	f.actions = append(f.actions, action)
 }
 
+func (f *proxyControllerTestRunner) ExpectUpdateBackendStatus() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+	action.Subresource = "status"
+
+	f.actions = append(f.actions, action)
+}
+
 func (f *proxyControllerTestRunner) prepareToRun() {
 	proxyInformer := f.c.sharedInformer.Proxy().V1().Proxies().Informer()
 	for _, p := range f.proxyFixtures {
 		proxyInformer.GetIndexer().Add(p)
+	}
+
+	backendInformer := f.c.sharedInformer.Proxy().V1().Backends().Informer()
+	for _, b := range f.backendFixtures {
+		backendInformer.GetIndexer().Add(b)
 	}
 
 	ecInformer := f.c.sharedInformer.Etcd().V1alpha1().EtcdClusters().Informer()

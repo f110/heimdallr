@@ -11,6 +11,7 @@ import (
 	mInformers "github.com/coreos/prometheus-operator/pkg/client/informers/externalversions"
 	mListers "github.com/coreos/prometheus-operator/pkg/client/listers/monitoring/v1"
 	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
+	"github.com/google/go-cmp/cmp"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	"golang.org/x/xerrors"
@@ -223,6 +224,14 @@ func (c *ProxyController) syncProxy(key string) error {
 	proxy, err := c.proxyLister.Proxies(namespace).Get(name)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
+	}
+
+	if proxy.Status.Phase == "" {
+		proxy.Status.Phase = proxyv1.ProxyPhaseCreating
+		proxy, err = c.clientset.ProxyV1().Proxies(proxy.Namespace).Update(proxy)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 	}
 
 	selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.BackendSelector.LabelSelector)
@@ -442,16 +451,39 @@ func (c *ProxyController) reconcileProxyProcess(lp *LagrangianProxy) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	objs, err := lp.IdealProxyProcess()
+	pcs, err := lp.IdealProxyProcess()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	err = c.reconcileProcess(lp, objs)
+	err = c.reconcileProcess(lp, pcs)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	lp.ProxyServer = objs
+	lp.ProxyServer = pcs
+
+	for _, backend := range lp.Backends() {
+		found := false
+		for _, v := range backend.Status.DeployedBy {
+			if v.Name == lp.Name && v.Namespace == lp.Namespace {
+				found = true
+				break
+			}
+		}
+
+		if !found && !backend.CreationTimestamp.IsZero() {
+			backend.Status.DeployedBy = append(backend.Status.DeployedBy, &proxyv1.ProxyReference{
+				Name:      lp.Name,
+				Namespace: lp.Namespace,
+				Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
+			})
+
+			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).Update(&backend)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	}
 
 	return nil
 }
@@ -656,6 +688,7 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap
 	newCM.Data = configMap.Data
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
+		klog.V(4).Infof("Will update ConfigMap: diff\n%s", cmp.Diff(cm.Data, newCM.Data))
 		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(newCM)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)

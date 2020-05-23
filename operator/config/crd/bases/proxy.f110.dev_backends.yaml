@@ -142,6 +142,18 @@ spec:
             type: object
           status:
             description: BackendStatus defines the observed state of Backend
+            properties:
+              deployedBy:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    url:
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true

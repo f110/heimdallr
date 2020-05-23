@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,13 +13,14 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/config"
 )
 
-func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, []proxyv1.Role, []proxyv1.RpcPermission) {
+func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, []proxyv1.Role, []proxyv1.RpcPermission, []corev1.Service) {
 	proxy := &proxyv1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: proxyv1.ProxySpec{
+			Domain: "test-proxy.f110.dev",
 			BackendSelector: proxyv1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
@@ -55,13 +57,48 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, [
 		Data: map[string][]byte{"client-secret": []byte("hidden")},
 	}
 
-	backends := []proxyv1.Backend{}
+	backends := []proxyv1.Backend{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test",
+				Namespace:         metav1.NamespaceDefault,
+				CreationTimestamp: metav1.Now(),
+				Labels:            map[string]string{"instance": "test"},
+			},
+			Spec: proxyv1.BackendSpec{
+				Layer: "test",
+				ServiceSelector: proxyv1.ServiceSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "test"},
+					},
+				},
+				Permissions: []proxyv1.Permission{
+					{Name: "all", Locations: []proxyv1.Location{{Any: "/"}}},
+				},
+			},
+		},
+	}
 
 	roles := []proxyv1.Role{}
 
 	rpcPermissions := []proxyv1.RpcPermission{}
 
-	return proxy, clientSecret, backends, roles, rpcPermissions
+	services := []corev1.Service{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-backend-svc",
+				Namespace: metav1.NamespaceDefault,
+				Labels:    map[string]string{"app": "test"},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{Name: "http", Port: 80},
+				},
+			},
+		},
+	}
+
+	return proxy, clientSecret, backends, roles, rpcPermissions, services
 }
 
 func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
@@ -88,7 +125,7 @@ func TestProxyController(t *testing.T) {
 
 		f := newFixture(t)
 
-		p, clientSecret, backends, roles, rpcPermissions := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
@@ -111,7 +148,7 @@ func TestProxyController(t *testing.T) {
 
 		f := newFixture(t)
 
-		p, clientSecret, backends, roles, rpcPermissions := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
@@ -134,7 +171,7 @@ func TestProxyController(t *testing.T) {
 
 		f := newFixture(t)
 
-		p, clientSecret, backends, roles, rpcPermissions := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
@@ -175,8 +212,14 @@ func TestProxyController(t *testing.T) {
 
 		f := newFixture(t)
 
-		p, clientSecret, backends, roles, rpcPermissions := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, services := newProxy("test")
 		f.RegisterProxyFixture(p)
+		for _, b := range backends {
+			f.RegisterBackendFixture(&b)
+		}
+		for _, s := range services {
+			f.RegisterServiceFixture(&s)
+		}
 		f.RegisterSecretFixture(clientSecret)
 
 		proxy := NewLagrangianProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
@@ -207,6 +250,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateService()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
+		f.ExpectUpdateBackendStatus()
 		// Expect to create the dashboard
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()
@@ -222,5 +266,17 @@ func TestProxyController(t *testing.T) {
 		}
 		assert.False(t, updatedP.Status.Ready)
 		assert.Equal(t, updatedP.Status.Phase, proxyv1.ProxyPhaseRunning)
+
+		for _, backend := range backends {
+			updatedB, err := f.client.ProxyV1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.NotEmpty(t, updatedB.Status.DeployedBy)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Name, p.Name)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Namespace, p.Namespace)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Url, fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, p.Spec.Domain))
+		}
 	})
 }
