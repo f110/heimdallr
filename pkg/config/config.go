@@ -566,6 +566,7 @@ func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*Rpc
 			"proxy.rpc.certificateauthority.newservercert",
 			"proxy.rpc.cluster.defragmentdatastore",
 			"proxy.rpc.authority.signrequest",
+			"proxy.rpc.authority.getpublickey",
 		},
 	})
 	roles = append(roles, &Role{
