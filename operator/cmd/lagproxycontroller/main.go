@@ -115,6 +115,12 @@ func main() {
 					os.Exit(1)
 				}
 
+				g, err := controllers.NewGitHubController(ctx, kubeClient, proxyClient)
+				if err != nil {
+					klog.Error(err)
+					os.Exit(1)
+				}
+
 				var wg sync.WaitGroup
 				wg.Add(1)
 				go func() {
@@ -128,6 +134,13 @@ func main() {
 					defer wg.Done()
 
 					c.Run(ctx, 1)
+				}()
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					g.Run(ctx, 1)
 				}()
 
 				wg.Wait()

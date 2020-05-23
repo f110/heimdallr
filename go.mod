@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
+	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/coreos/prometheus-operator v0.36.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -11,6 +12,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.4.0
 	github.com/google/go-cmp v0.4.0
+	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v29 v29.0.2
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.1

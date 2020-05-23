@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "appsTransport.go",
+        "transport.go",
+    ],
+    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/bradleyfalzon/ghinstallation",
+    importpath = "github.com/bradleyfalzon/ghinstallation",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
+        "//vendor/github.com/google/go-github/v29/github:go_default_library",
+    ],
+)

@@ -135,6 +135,31 @@ spec:
                 type: string
               webhook:
                 type: string
+              webhookConfiguration:
+                properties:
+                  appIdKey:
+                    type: string
+                  contentType:
+                    type: string
+                  credentialSecretName:
+                    type: string
+                  events:
+                    items:
+                      type: string
+                    type: array
+                  installationIdKey:
+                    type: string
+                  path:
+                    type: string
+                  privateKeyKey:
+                    type: string
+                  repositories:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - repositories
+                type: object
               webhookPath:
                 items:
                   type: string
@@ -151,6 +176,16 @@ spec:
                     namespace:
                       type: string
                     url:
+                      type: string
+                  type: object
+                type: array
+              webhookConfiguration:
+                items:
+                  properties:
+                    repository:
+                      type: string
+                    updateTime:
+                      format: date-time
                       type: string
                   type: object
                 type: array

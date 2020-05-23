@@ -125,18 +125,34 @@ type ServiceSelector struct {
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	FQDN            string          `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
-	Layer           string          `json:"layer,omitempty"`
-	Upstream        string          `json:"upstream,omitempty"`
-	ServiceSelector ServiceSelector `json:"serviceSelector,omitempty"`
-	Webhook         string          `json:"webhook,omitempty"`
-	WebhookPath     []string        `json:"webhookPath,omitempty"`
-	AllowRootUser   bool            `json:"allowRootUser,omitempty"`
-	Agent           bool            `json:"agent,omitempty"`
-	DisableAuthn    bool            `json:"disableAuthn,omitempty"`
-	Insecure        bool            `json:"insecure,omitempty"`
-	AllowHttp       bool            `json:"allowHttp,omitempty"`
-	Permissions     []Permission    `json:"permissions,omitempty"`
+	FQDN                 string                `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
+	Layer                string                `json:"layer,omitempty"`
+	Upstream             string                `json:"upstream,omitempty"`
+	ServiceSelector      ServiceSelector       `json:"serviceSelector,omitempty"`
+	Webhook              string                `json:"webhook,omitempty"`
+	WebhookPath          []string              `json:"webhookPath,omitempty"`
+	AllowRootUser        bool                  `json:"allowRootUser,omitempty"`
+	Agent                bool                  `json:"agent,omitempty"`
+	DisableAuthn         bool                  `json:"disableAuthn,omitempty"`
+	Insecure             bool                  `json:"insecure,omitempty"`
+	AllowHttp            bool                  `json:"allowHttp,omitempty"`
+	Permissions          []Permission          `json:"permissions,omitempty"`
+	WebhookConfiguration *WebhookConfiguration `json:"webhookConfiguration,omitempty"`
+}
+
+type WebhookConfiguration struct {
+	GitHubHookConfiguration `json:",inline"`
+}
+
+type GitHubHookConfiguration struct {
+	Repositories         []string `json:"repositories"` // Target repositories (e.g. f110/lagrangian-proxy)
+	Path                 string   `json:"path,omitempty"`
+	Events               []string `json:"events,omitempty"`
+	ContentType          string   `json:"contentType,omitempty"`
+	CredentialSecretName string   `json:"credentialSecretName,omitempty"`
+	AppIdKey             string   `json:"appIdKey,omitempty,omitempty"`
+	InstallationIdKey    string   `json:"installationIdKey,omitempty"`
+	PrivateKeyKey        string   `json:"privateKeyKey,omitempty"`
 }
 
 type Permission struct {
@@ -159,13 +175,19 @@ type Location struct {
 
 // BackendStatus defines the observed state of Backend
 type BackendStatus struct {
-	DeployedBy []*ProxyReference `json:"deployedBy,omitempty"`
+	DeployedBy            []*ProxyReference             `json:"deployedBy,omitempty"`
+	WebhookConfigurations []*WebhookConfigurationStatus `json:"webhookConfiguration,omitempty"`
 }
 
 type ProxyReference struct {
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
 	Url       string `json:"url,omitempty"`
+}
+
+type WebhookConfigurationStatus struct {
+	Repository string      `json:"repository,omitempty"`
+	UpdateTime metav1.Time `json:"updateTime,omitempty"`
 }
 
 // +genclient
