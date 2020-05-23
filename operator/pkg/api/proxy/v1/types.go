@@ -94,6 +94,7 @@ type ProxyStatus struct {
 }
 
 // +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Proxy is the Schema for the proxies API
@@ -163,6 +164,7 @@ type BackendStatus struct {
 }
 
 // +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Backend is the Schema for the backends API
@@ -204,6 +206,7 @@ type RoleStatus struct {
 }
 
 // +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Role is the Schema for the roles API
@@ -236,6 +239,7 @@ type RpcPermissionStatus struct {
 }
 
 // +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // RpcPermission is the Schema for the rpcpermissions API

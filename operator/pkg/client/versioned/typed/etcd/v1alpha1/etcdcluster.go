@@ -37,7 +37,6 @@ type EtcdClustersGetter interface {
 type EtcdClusterInterface interface {
 	Create(*v1alpha1.EtcdCluster) (*v1alpha1.EtcdCluster, error)
 	Update(*v1alpha1.EtcdCluster) (*v1alpha1.EtcdCluster, error)
-	UpdateStatus(*v1alpha1.EtcdCluster) (*v1alpha1.EtcdCluster, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.EtcdCluster, error)
@@ -125,22 +124,6 @@ func (c *etcdClusters) Update(etcdCluster *v1alpha1.EtcdCluster) (result *v1alph
 		Namespace(c.ns).
 		Resource("etcdclusters").
 		Name(etcdCluster.Name).
-		Body(etcdCluster).
-		Do().
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *etcdClusters) UpdateStatus(etcdCluster *v1alpha1.EtcdCluster) (result *v1alpha1.EtcdCluster, err error) {
-	result = &v1alpha1.EtcdCluster{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("etcdclusters").
-		Name(etcdCluster.Name).
-		SubResource("status").
 		Body(etcdCluster).
 		Do().
 		Into(result)

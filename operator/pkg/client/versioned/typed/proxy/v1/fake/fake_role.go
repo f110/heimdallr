@@ -98,18 +98,6 @@ func (c *FakeRoles) Update(role *proxyv1.Role) (result *proxyv1.Role, err error)
 	return obj.(*proxyv1.Role), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeRoles) UpdateStatus(role *proxyv1.Role) (*proxyv1.Role, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(rolesResource, "status", c.ns, role), &proxyv1.Role{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*proxyv1.Role), err
-}
-
 // Delete takes name of the role and deletes it. Returns an error if one occurs.
 func (c *FakeRoles) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

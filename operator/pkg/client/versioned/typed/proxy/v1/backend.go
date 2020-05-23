@@ -37,7 +37,6 @@ type BackendsGetter interface {
 type BackendInterface interface {
 	Create(*v1.Backend) (*v1.Backend, error)
 	Update(*v1.Backend) (*v1.Backend, error)
-	UpdateStatus(*v1.Backend) (*v1.Backend, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
 	Get(name string, options metav1.GetOptions) (*v1.Backend, error)
@@ -125,22 +124,6 @@ func (c *backends) Update(backend *v1.Backend) (result *v1.Backend, err error) {
 		Namespace(c.ns).
 		Resource("backends").
 		Name(backend.Name).
-		Body(backend).
-		Do().
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *backends) UpdateStatus(backend *v1.Backend) (result *v1.Backend, err error) {
-	result = &v1.Backend{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("backends").
-		Name(backend.Name).
-		SubResource("status").
 		Body(backend).
 		Do().
 		Into(result)
