@@ -56,6 +56,10 @@ type EtcdController struct {
 	clusterListerSynced cache.InformerSynced
 	podLister           listers.PodLister
 	podListerSynced     cache.InformerSynced
+	serviceLister       listers.ServiceLister
+	serviceListerSynced cache.InformerSynced
+	secretLister        listers.SecretLister
+	secretListerSynced  cache.InformerSynced
 
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
@@ -69,6 +73,8 @@ func NewEtcdController(ctx context.Context, client *kubernetes.Clientset, cfg *r
 
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
 	podInformer := coreSharedInformerFactory.Core().V1().Pods()
+	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
+	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
 	sharedInformerFactory := informers.NewSharedInformerFactory(etcdClient, 30*time.Second)
 	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
@@ -88,6 +94,10 @@ func NewEtcdController(ctx context.Context, client *kubernetes.Clientset, cfg *r
 		clusterListerSynced: etcdClusterInformer.Informer().HasSynced,
 		podLister:           podInformer.Lister(),
 		podListerSynced:     podInformer.Informer().HasSynced,
+		serviceLister:       serviceInformer.Lister(),
+		serviceListerSynced: serviceInformer.Informer().HasSynced,
+		secretLister:        secretInformer.Lister(),
+		secretListerSynced:  secretInformer.Informer().HasSynced,
 		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 		recorder:            recorder,
 	}
@@ -112,7 +122,12 @@ func (ec *EtcdController) Run(ctx context.Context, workers int) {
 	defer ec.queue.ShutDown()
 
 	klog.Info("Wait for informer caches to sync")
-	if !cache.WaitForCacheSync(ctx.Done(), ec.clusterListerSynced, ec.podListerSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(),
+		ec.clusterListerSynced,
+		ec.podListerSynced,
+		ec.serviceListerSynced,
+		ec.secretListerSynced,
+	) {
 		klog.Error("Failed to sync informer caches")
 		return
 	}
@@ -294,7 +309,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 }
 
 func (ec *EtcdController) setupCA(cluster *EtcdCluster) (*corev1.Secret, error) {
-	caSecret, err := ec.client.CoreV1().Secrets(cluster.Namespace).Get(cluster.CASecretName(), metav1.GetOptions{})
+	caSecret, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.CASecretName())
 	if err != nil && apierrors.IsNotFound(err) {
 		caSecret, err = cluster.CA(nil)
 		if err != nil {
@@ -310,7 +325,7 @@ func (ec *EtcdController) setupCA(cluster *EtcdCluster) (*corev1.Secret, error) 
 }
 
 func (ec *EtcdController) setupServerCert(cluster *EtcdCluster, ca *corev1.Secret) (*corev1.Secret, error) {
-	certS, err := ec.client.CoreV1().Secrets(cluster.Namespace).Get(cluster.ServerCertSecretName(), metav1.GetOptions{})
+	certS, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.ServerCertSecretName())
 	if err != nil && apierrors.IsNotFound(err) {
 		certS, err = cluster.ServerCertSecret(ca)
 		if err != nil {
@@ -335,7 +350,7 @@ func (ec *EtcdController) setupServerCert(cluster *EtcdCluster, ca *corev1.Secre
 }
 
 func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secret) (*corev1.Secret, error) {
-	certS, err := ec.client.CoreV1().Secrets(cluster.Namespace).Get(cluster.ClientCertSecretName(), metav1.GetOptions{})
+	certS, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.ClientCertSecretName())
 	if err != nil && apierrors.IsNotFound(err) {
 		certS, err = cluster.ClientCertSecret(ca)
 		if err != nil {
@@ -550,7 +565,7 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 }
 
 func (ec *EtcdController) ensureDiscoveryService(cluster *EtcdCluster) error {
-	_, err := ec.client.CoreV1().Services(cluster.Namespace).Get(cluster.ServerDiscoveryServiceName(), metav1.GetOptions{})
+	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ServerDiscoveryServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.client.CoreV1().Services(cluster.Namespace).Create(cluster.DiscoveryService())
 		if err != nil {
@@ -564,7 +579,7 @@ func (ec *EtcdController) ensureDiscoveryService(cluster *EtcdCluster) error {
 }
 
 func (ec *EtcdController) ensureClientService(cluster *EtcdCluster) error {
-	_, err := ec.client.CoreV1().Services(cluster.Namespace).Get(cluster.ClientServiceName(), metav1.GetOptions{})
+	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ClientServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.client.CoreV1().Services(cluster.Namespace).Create(cluster.ClientService())
 		if err != nil {
@@ -583,16 +598,12 @@ func (ec *EtcdController) getOwnedPods(cluster *EtcdCluster) ([]*corev1.Pod, err
 		return nil, err
 	}
 
-	list, err := ec.client.CoreV1().Pods(cluster.Namespace).List(metav1.ListOptions{LabelSelector: labels.NewSelector().Add(*r).String()})
+	pods, err := ec.podLister.Pods(cluster.Namespace).List(labels.NewSelector().Add(*r))
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*corev1.Pod, len(list.Items))
-	for i := range list.Items {
-		result[i] = &list.Items[i]
-	}
-	return result, nil
+	return pods, nil
 }
 
 func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {

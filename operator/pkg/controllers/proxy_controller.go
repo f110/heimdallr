@@ -26,6 +26,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	applisters "k8s.io/client-go/listers/apps/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -49,9 +50,15 @@ var (
 type ProxyController struct {
 	schema.GroupVersionKind
 
-	client        kubernetes.Interface
-	serviceLister listers.ServiceLister
-	secretLister  listers.SecretLister
+	client                 kubernetes.Interface
+	serviceLister          listers.ServiceLister
+	serviceListerSynced    cache.InformerSynced
+	secretLister           listers.SecretLister
+	secretListerSynced     cache.InformerSynced
+	configMapLister        listers.ConfigMapLister
+	configMapListerSynced  cache.InformerSynced
+	deploymentLister       applisters.DeploymentLister
+	deploymentListerSynced cache.InformerSynced
 
 	sharedInformer            informers.SharedInformerFactory
 	coreSharedInformer        kubeinformers.SharedInformerFactory
@@ -90,6 +97,8 @@ func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
+	configMapInformer := coreSharedInformerFactory.Core().V1().ConfigMaps()
+	deploymentInformer := coreSharedInformerFactory.Apps().V1().Deployments()
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
@@ -97,15 +106,21 @@ func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "proxy-controller"})
 
 	c := &ProxyController{
-		client:             client,
-		serviceLister:      serviceInformer.Lister(),
-		secretLister:       secretInformer.Lister(),
-		clientset:          proxyClient,
-		cmClientset:        cmClient,
-		sharedInformer:     sharedInformer,
-		coreSharedInformer: coreSharedInformerFactory,
-		queue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
-		recorder:           recorder,
+		client:                 client,
+		serviceLister:          serviceInformer.Lister(),
+		serviceListerSynced:    serviceInformer.Informer().HasSynced,
+		secretLister:           secretInformer.Lister(),
+		secretListerSynced:     secretInformer.Informer().HasSynced,
+		configMapLister:        configMapInformer.Lister(),
+		configMapListerSynced:  configMapInformer.Informer().HasSynced,
+		deploymentLister:       deploymentInformer.Lister(),
+		deploymentListerSynced: deploymentInformer.Informer().HasSynced,
+		clientset:              proxyClient,
+		cmClientset:            cmClient,
+		sharedInformer:         sharedInformer,
+		coreSharedInformer:     coreSharedInformerFactory,
+		queue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
+		recorder:               recorder,
 	}
 
 	_, apiList, err := client.Discovery().ServerGroupsAndResources()
@@ -177,6 +192,10 @@ func (c *ProxyController) Run(ctx context.Context, workers int) {
 		c.roleListerSynced,
 		c.backendListerSynced,
 		c.proxyListerSynced,
+		c.serviceListerSynced,
+		c.secretListerSynced,
+		c.configMapListerSynced,
+		c.deploymentListerSynced,
 	) {
 		return
 	}
@@ -328,13 +347,12 @@ func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
 
 func (c *ProxyController) prepare(lp *LagrangianProxy) error {
 	secrets := lp.Secrets()
-	lister := c.coreSharedInformer.Core().V1().Secrets().Lister()
 	for _, secret := range secrets {
 		if secret.Known() {
 			continue
 		}
 
-		_, err := lister.Secrets(lp.Namespace).Get(secret.Name)
+		_, err := c.secretLister.Secrets(lp.Namespace).Get(secret.Name)
 		if err != nil && apierrors.IsNotFound(err) {
 			secret, err := secret.Create()
 			if err != nil {
@@ -584,7 +602,7 @@ func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) erro
 }
 
 func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployment *appsv1.Deployment) error {
-	d, err := c.client.AppsV1().Deployments(deployment.Namespace).Get(deployment.Name, metav1.GetOptions{})
+	d, err := c.deploymentLister.Deployments(deployment.Namespace).Get(deployment.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
 
@@ -640,7 +658,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy,
 }
 
 func (c *ProxyController) createOrUpdateService(lp *LagrangianProxy, svc *corev1.Service) error {
-	s, err := c.client.CoreV1().Services(svc.Namespace).Get(svc.Name, metav1.GetOptions{})
+	s, err := c.serviceLister.Services(svc.Namespace).Get(svc.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(svc)
 
@@ -670,7 +688,7 @@ func (c *ProxyController) createOrUpdateService(lp *LagrangianProxy, svc *corev1
 }
 
 func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap *corev1.ConfigMap) error {
-	cm, err := c.client.CoreV1().ConfigMaps(configMap.Namespace).Get(configMap.Name, metav1.GetOptions{})
+	cm, err := c.configMapLister.ConfigMaps(configMap.Namespace).Get(configMap.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(configMap)
 

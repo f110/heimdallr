@@ -138,6 +138,7 @@ func TestProxyController(t *testing.T) {
 			}
 			f.ExpectCreateSecret()
 		}
+		f.ExpectUpdateProxy()
 		f.ExpectCreateEtcdCluster()
 
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
@@ -163,6 +164,7 @@ func TestProxyController(t *testing.T) {
 			f.RegisterSecretFixture(s)
 		}
 
+		f.ExpectUpdateProxy()
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
 	})
 
@@ -189,11 +191,12 @@ func TestProxyController(t *testing.T) {
 		}
 		f.client.Tracker().Add(p)
 
-		f.ExpectUpdateProxyStatus()
+		f.ExpectUpdateProxy()
 		f.ExpectCreateDeployment()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		f.ExpectCreateConfigMap()
+		f.ExpectUpdateProxy()
 		f.RunExpectError(t, p, ErrRPCServerIsNotReady)
 
 		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
@@ -243,21 +246,22 @@ func TestProxyController(t *testing.T) {
 		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
 		registerFixtureFromProcess(f, pcs)
 
-		f.ExpectUpdateProxyStatus()
+		f.ExpectUpdateProxy()
 		// Expect to create the proxy
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()
 		f.ExpectCreateService()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
-		f.ExpectUpdateBackendStatus()
+		f.ExpectUpdateProxy()
+		f.ExpectUpdateBackend()
 		// Expect to create the dashboard
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		// Finally update the status of proxy
-		f.ExpectUpdateProxyStatus()
+		f.ExpectUpdateProxy()
 		f.Run(t, p)
 
 		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})

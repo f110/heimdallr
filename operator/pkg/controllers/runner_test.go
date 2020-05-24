@@ -213,16 +213,14 @@ func (f *proxyControllerTestRunner) ExpectCreateEtcdCluster() {
 	f.actions = append(f.actions, action)
 }
 
-func (f *proxyControllerTestRunner) ExpectUpdateProxyStatus() {
+func (f *proxyControllerTestRunner) ExpectUpdateProxy() {
 	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
-	action.Subresource = "status"
 
 	f.actions = append(f.actions, action)
 }
 
-func (f *proxyControllerTestRunner) ExpectUpdateBackendStatus() {
+func (f *proxyControllerTestRunner) ExpectUpdateBackend() {
 	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
-	action.Subresource = "status"
 
 	f.actions = append(f.actions, action)
 }

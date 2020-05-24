@@ -209,7 +209,7 @@ Spec:
 						klog.Errorf("%s/%s is not found. This is a suspicious error.", proxy.Namespace, proxy.Status.GithubWebhookSecretName)
 					}
 
-					klog.Infof("fetch %s/%s error: %v", proxy.Namespace, proxy.Status.GithubWebhookSecretName)
+					klog.Infof("fetch %s/%s error: %v", proxy.Namespace, proxy.Name, proxy.Status.GithubWebhookSecretName)
 					continue
 				}
 
