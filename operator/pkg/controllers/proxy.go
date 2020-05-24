@@ -324,7 +324,7 @@ func (r *LagrangianProxy) RpcPermissions() []proxyv1.RpcPermission {
 	return r.rpcPermissions
 }
 
-func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
+func (r *LagrangianProxy) Certificate() *certmanager.Certificate {
 	backends := r.Backends()
 	layers := make(map[string]struct{})
 	fqdn := make([]string, 0)
@@ -356,7 +356,7 @@ func (r *LagrangianProxy) Certificate() (*certmanager.Certificate, error) {
 			CommonName: r.Spec.Domain,
 			DNSNames:   domains,
 		},
-	}, nil
+	}
 }
 
 func (r *LagrangianProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
@@ -498,15 +498,15 @@ func (r *LagrangianProxy) NewCA() (*corev1.Secret, error) {
 func (r *LagrangianProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	b, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	secret := &corev1.Secret{
@@ -601,7 +601,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	etcdUrl.Scheme = "etcds"
 
@@ -658,7 +658,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	configMap := &corev1.ConfigMap{
@@ -695,7 +695,7 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	configMap := &corev1.ConfigMap{
@@ -717,7 +717,7 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	etcdUrl.Scheme = "etcds"
 
@@ -764,7 +764,7 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	configMap := &corev1.ConfigMap{
@@ -807,12 +807,12 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		if len(v.Spec.ServiceSelector.MatchLabels) > 0 {
 			selector, err := metav1.LabelSelectorAsSelector(&v.Spec.ServiceSelector.LabelSelector)
 			if err != nil {
-				return nil, err
+				return nil, xerrors.Errorf(": %w", err)
 			}
 
 			services, err := r.serviceLister.Services(r.Spec.BackendSelector.Namespace).List(selector)
 			if err != nil {
-				return nil, err
+				return nil, xerrors.Errorf(": %w", err)
 			}
 			if len(services) == 0 {
 				continue
@@ -883,7 +883,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	})
 	proxyBinary, err := yaml.Marshal(proxies)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	roleList := r.Roles()
@@ -930,7 +930,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	})
 	roleBinary, err := yaml.Marshal(roles)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	rpcPermissionList := r.RpcPermissions()
@@ -946,7 +946,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	})
 	rpcPermissionBinary, err := yaml.Marshal(rpcPermissions)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	configMap := &corev1.ConfigMap{
@@ -973,7 +973,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 
 	conf, err := r.ConfigForMain()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1212,13 +1212,10 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	serverCert, err := r.Certificate()
-	if err != nil {
-		return nil, err
-	}
+	serverCert := r.Certificate()
 
 	return &process{
 		Deployment:          deployment,
@@ -1231,7 +1228,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 
 func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 	if err := r.checkSelfSignedIssuer(); err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	volumes := []corev1.Volume{
@@ -1287,7 +1284,7 @@ func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 
 	conf, err := r.ConfigForDashboard()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1399,7 +1396,7 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 
 	conf, err := r.ConfigForRPCServer()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1560,7 +1557,7 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	var rpcMetrics *monitoringv1.ServiceMonitor
@@ -1607,13 +1604,13 @@ func (r *LagrangianProxy) checkSelfSignedIssuer() error {
 	case certmanager.ClusterIssuerKind:
 		ci, err := r.cmClient.CertmanagerV1alpha2().ClusterIssuers().Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
 	case certmanager.IssuerKind:
 		ci, err := r.cmClient.CertmanagerV1alpha2().Issuers(r.Namespace).Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
 	}

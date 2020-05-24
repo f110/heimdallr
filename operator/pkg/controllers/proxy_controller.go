@@ -566,7 +566,7 @@ func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) erro
 		}
 
 		if err := c.createOrUpdateService(lp, svc); err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -847,7 +847,7 @@ func (c *ProxyController) enqueue(proxy *proxyv1.Proxy) {
 func (c *ProxyController) enqueueSubordinateResource(m *metav1.ObjectMeta) error {
 	ret, err := c.searchParentProxy(m)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	for _, v := range ret {

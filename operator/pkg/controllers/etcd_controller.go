@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
+	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -145,7 +146,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	klog.V(4).Info("syncEtcdCluster")
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	c, err := ec.clusterLister.EtcdClusters(namespace).Get(name)
@@ -153,35 +154,35 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		klog.V(4).Infof("%s is not found", key)
 		return nil
 	} else if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	if c.Status.Phase == "" {
 		c.Status.Phase = etcdv1alpha1.ClusterPhaseInitializing
 		_, err = ec.ecClient.EtcdV1alpha1().EtcdClusters(c.Namespace).Update(c)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
 	cluster := NewEtcdCluster(c, ec.clusterDomain)
 	caSecret, err := ec.setupCA(cluster)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	serverCertSecret, err := ec.setupServerCert(cluster, caSecret)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	_, err = ec.setupClientCert(cluster, caSecret)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	cluster.SetCASecret(caSecret)
 	cluster.SetServerCertSecret(serverCertSecret)
 
 	pods, err := ec.getOwnedPods(cluster)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	cluster.SetOwnedPods(pods)
 
@@ -195,7 +196,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 			cluster.SetAnnotationForPod(members[0])
 			_, err = ec.client.CoreV1().Pods(cluster.Namespace).Create(members[0])
 			if err != nil {
-				return err
+				return xerrors.Errorf(": %w", err)
 			}
 			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
 		} else {
@@ -208,7 +209,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		for _, v := range members[1:] {
 			if v.CreationTimestamp.IsZero() {
 				if err := ec.startMember(cluster, v); err != nil {
-					return err
+					return xerrors.Errorf(": %w", err)
 				}
 				break
 			}
@@ -235,7 +236,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 
 		if temporaryMember.CreationTimestamp.IsZero() {
 			if err := ec.startMember(cluster, temporaryMember); err != nil {
-				return err
+				return xerrors.Errorf(": %w", err)
 			}
 			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
 		} else if !cluster.IsPodReady(temporaryMember) {
@@ -271,7 +272,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		}
 		if clusterReady {
 			if err := ec.updateMember(cluster, targetMember); err != nil {
-				return err
+				return xerrors.Errorf(": %w", err)
 			}
 		} else {
 			klog.V(4).Infof("%s is waiting update", targetMember.Name)
@@ -279,21 +280,21 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	case InternalStateTeardownUpdating:
 		if v := cluster.TemporaryMember(); v != nil {
 			if err := ec.deleteMember(cluster, v); err != nil {
-				return err
+				return xerrors.Errorf(": %w", err)
 			}
 		}
 	}
 
 	if err := ec.ensureService(cluster); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	if err := ec.setupDefragmentJob(cluster); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	if err := ec.checkClusterStatus(cluster); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	ec.updateStatus(cluster)
@@ -301,7 +302,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		klog.V(4).Info("Update EtcdCluster")
 		_, err = ec.ecClient.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Update(cluster.EtcdCluster)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -313,12 +314,16 @@ func (ec *EtcdController) setupCA(cluster *EtcdCluster) (*corev1.Secret, error) 
 	if err != nil && apierrors.IsNotFound(err) {
 		caSecret, err = cluster.CA(nil)
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		return ec.client.CoreV1().Secrets(cluster.Namespace).Create(caSecret)
+		caSecret, err = ec.client.CoreV1().Secrets(cluster.Namespace).Create(caSecret)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return caSecret, nil
 	} else if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	return caSecret, nil
@@ -329,21 +334,29 @@ func (ec *EtcdController) setupServerCert(cluster *EtcdCluster, ca *corev1.Secre
 	if err != nil && apierrors.IsNotFound(err) {
 		certS, err = cluster.ServerCertSecret(ca)
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		return ec.client.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		certS, err = ec.client.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return certS, nil
 	} else if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	if cluster.ShouldUpdateServerCertificate(certS.Data[serverCertSecretCertName]) {
 		certS, err = cluster.ServerCertSecret(ca)
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		return ec.client.CoreV1().Secrets(cluster.Namespace).Update(certS)
+		certS, err = ec.client.CoreV1().Secrets(cluster.Namespace).Update(certS)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return certS, nil
 	}
 
 	return certS, nil
@@ -354,12 +367,16 @@ func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secre
 	if err != nil && apierrors.IsNotFound(err) {
 		certS, err = cluster.ClientCertSecret(ca)
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		return ec.client.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		certS, err = ec.client.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return certS, nil
 	} else if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	return certS, nil
@@ -375,7 +392,7 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 			if cluster.IsPodReady(v) {
 				forwarder, port, err := ec.portForward(v, 2379)
 				if err != nil {
-					return err
+					return xerrors.Errorf(": %w", err)
 				}
 				defer forwarder.Close()
 
@@ -389,12 +406,12 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 	klog.V(4).Infof("Create etcd client: %v", endpoints)
 	eClient, err := cluster.Client(endpoints)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	mList, err := eClient.MemberList(ctx)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	cancelFunc()
 
@@ -418,7 +435,7 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 			[]string{fmt.Sprintf("https://%s.%s.%s.svc.%s:2380", pod.Name, cluster.ServerDiscoveryServiceName(), cluster.Namespace, cluster.ClusterDomain)},
 		)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		cancelFunc()
 		klog.V(4).Infof("Added a new member: %+v", res.Member)
@@ -428,7 +445,7 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 		cluster.SetAnnotationForPod(pod)
 		_, err = ec.client.CoreV1().Pods(cluster.Namespace).Create(resetPod(pod))
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -464,11 +481,11 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
 	eClient, err := cluster.Client(endpoints)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	mList, err := eClient.MemberList(ctx)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	var member *etcdserverpb.Member
@@ -486,13 +503,13 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 	if member != nil {
 		_, err = eClient.MemberRemove(ctx, member.ID)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		klog.V(4).Infof("Remove a member: %+v", member)
 	}
 
 	if err := eClient.Close(); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	cancelFunc()
 
@@ -501,7 +518,7 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 	}
 
 	if err = ec.client.CoreV1().Pods(cluster.Namespace).Delete(pod.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -512,7 +529,7 @@ func (ec *EtcdController) updateMember(cluster *EtcdCluster, pod *corev1.Pod) er
 
 	if !pod.CreationTimestamp.IsZero() && cluster.ShouldUpdate(pod) {
 		if err := ec.deleteMember(cluster, pod); err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -521,10 +538,10 @@ func (ec *EtcdController) updateMember(cluster *EtcdCluster, pod *corev1.Pod) er
 
 func (ec *EtcdController) ensureService(cluster *EtcdCluster) error {
 	if err := ec.ensureDiscoveryService(cluster); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 	if err := ec.ensureClientService(cluster); err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -536,12 +553,16 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	if cluster.Spec.DefragmentSchedule == "" {
 		if found {
-			return ec.client.BatchV1beta1().CronJobs(cluster.Namespace).Delete(cluster.DefragmentCronJobName(), &metav1.DeleteOptions{})
+			err = ec.client.BatchV1beta1().CronJobs(cluster.Namespace).Delete(cluster.DefragmentCronJobName(), &metav1.DeleteOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			return nil
 		}
 
 		return nil
@@ -551,13 +572,13 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
 			_, err := ec.client.BatchV1beta1().CronJobs(cluster.Namespace).Update(cluster.DefragmentCronJob())
 			if err != nil {
-				return err
+				return xerrors.Errorf(": %w", err)
 			}
 		}
 	} else {
 		_, err := ec.client.BatchV1beta1().CronJobs(cluster.Namespace).Create(cluster.DefragmentCronJob())
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -569,10 +590,10 @@ func (ec *EtcdController) ensureDiscoveryService(cluster *EtcdCluster) error {
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.client.CoreV1().Services(cluster.Namespace).Create(cluster.DiscoveryService())
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	} else if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -583,10 +604,10 @@ func (ec *EtcdController) ensureClientService(cluster *EtcdCluster) error {
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.client.CoreV1().Services(cluster.Namespace).Create(cluster.ClientService())
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	} else if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -595,12 +616,12 @@ func (ec *EtcdController) ensureClientService(cluster *EtcdCluster) error {
 func (ec *EtcdController) getOwnedPods(cluster *EtcdCluster) ([]*corev1.Pod, error) {
 	r, err := labels.NewRequirement(etcd.LabelNameClusterName, selection.Equals, []string{cluster.Name})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	pods, err := ec.podLister.Pods(cluster.Namespace).List(labels.NewSelector().Add(*r))
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	return pods, nil
@@ -674,7 +695,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 
 	if err := etcdClient.Close(); err != nil {
 		klog.Error(err)
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
@@ -756,14 +777,14 @@ func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.P
 	req := ec.client.CoreV1().RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, xerrors.Errorf(": %w", err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
 
 	readyCh := make(chan struct{})
 	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, xerrors.Errorf(": %w", err)
 	}
 	go func() {
 		err := pf.ForwardPorts()
@@ -784,7 +805,7 @@ func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.P
 
 	ports, err := pf.GetPorts()
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, xerrors.Errorf(": %w", err)
 	}
 
 	return pf, ports[0].Local, nil
@@ -808,6 +829,7 @@ func (ec *EtcdController) processNextItem() bool {
 
 	err := func(obj interface{}) error {
 		defer ec.queue.Done(obj)
+
 		err := ec.syncEtcdCluster(obj.(string))
 		if err != nil {
 			ec.queue.AddRateLimited(obj)
@@ -818,7 +840,7 @@ func (ec *EtcdController) processNextItem() bool {
 		return nil
 	}(obj)
 	if err != nil {
-		klog.Info(err)
+		klog.Infof("%+v", err)
 		return true
 	}
 
