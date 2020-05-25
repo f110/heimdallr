@@ -29,6 +29,8 @@ const (
 	UserIdHeaderName = "X-Auth-Id"
 
 	requestIdLength = 32
+
+	slackCommonName = "platform-tls-client.slack.com"
 )
 
 type AccessLog struct {
@@ -252,6 +254,54 @@ func (p *HttpProxy) ServeGithubWebHook(_ context.Context, w http.ResponseWriter,
 	if err != nil {
 		logger.Log.Debug("Couldn't validate signature", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	p.reverseProxy.ServeHTTP(w, req)
+}
+
+func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
+	backend, ok := p.Config.General.GetBackendByHost(req.Host)
+	if !ok {
+		panic(http.ErrAbortHandler)
+	}
+
+	logged := &loggedResponseWriter{ResponseWriter: w}
+	if h, ok := w.(http.Hijacker); ok {
+		logged.Hijacker = h
+	}
+	if f, ok := w.(http.Flusher); ok {
+		logged.Flusher = f
+	}
+	w = logged
+	defer p.accessLog(ctx, w, req, &database.User{})
+
+	if backend.WebHook != "slack" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	ok = backend.WebHookRouter.Match(req, &mux.RouteMatch{})
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// We verify the client by client certificate.
+	if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
+		logger.Log.Info("The client does not submit any certificate")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	found := false
+	for _, v := range req.TLS.PeerCertificates {
+		if v.Subject.CommonName == slackCommonName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		logger.Log.Info("Slack's Common name could not be found in client certificates")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 

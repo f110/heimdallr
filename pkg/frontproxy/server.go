@@ -18,6 +18,7 @@ import (
 type httpProxy interface {
 	ServeHTTP(ctx context.Context, w http.ResponseWriter, req *http.Request)
 	ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request)
+	ServeSlackWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request)
 }
 
 type FrontendProxy struct {
@@ -52,6 +53,8 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch {
 	case req.Header.Get("X-Hub-Signature") != "":
 		p.httpProxy.ServeGithubWebHook(ctx, w, req)
+	case req.Header.Get("X-Slack-Signature") != "":
+		p.httpProxy.ServeSlackWebHook(ctx, w, req)
 	default:
 		p.httpProxy.ServeHTTP(ctx, w, req)
 	}

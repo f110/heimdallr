@@ -5,6 +5,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/database/memory"
@@ -52,6 +55,11 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			Name:        "webhook",
 			WebHook:     "github",
 			WebHookPath: []string{"/github"},
+		},
+		{
+			Name:        "slack",
+			WebHook:     "slack",
+			WebHookPath: []string{"/command"},
 		},
 		{
 			Name:      "http",
@@ -229,6 +237,82 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeGithubWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
+		if res.StatusCode != http.StatusBadGateway {
+			t.Fatalf("expect StatusBadGateway: %s", res.Status)
+		}
+	})
+
+	t.Run("Webhook from slack without client certificate", func(t *testing.T) {
+		t.Parallel()
+
+		recoder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "http://slack.example.com/command", nil)
+		p.ServeSlackWebHook(context.Background(), recoder, req)
+
+		res := recoder.Result()
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("expect StatusUnauthorized: %s", res.Status)
+		}
+	})
+
+	t.Run("Webhook from slack with invalid client certificate", func(t *testing.T) {
+		t.Parallel()
+
+		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ca := &config.CertificateAuthority{
+			Certificate: caCert,
+			PrivateKey:  caPrivateKey,
+		}
+		serial, err := cert.NewSerialNumber()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca)
+		if err != nil {
+			t.Fatal()
+		}
+
+		recoder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "http://slack.example.com/command", nil)
+		req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{clientCert}}
+		p.ServeSlackWebHook(context.Background(), recoder, req)
+
+		res := recoder.Result()
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("expect StatusBadGateway: %s", res.Status)
+		}
+	})
+
+	t.Run("Webhook from slack with client certificate", func(t *testing.T) {
+		t.Parallel()
+
+		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ca := &config.CertificateAuthority{
+			Certificate: caCert,
+			PrivateKey:  caPrivateKey,
+		}
+		serial, err := cert.NewSerialNumber()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca)
+		if err != nil {
+			t.Fatal()
+		}
+
+		recoder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "http://slack.example.com/command", nil)
+		req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{clientCert}}
+		p.ServeSlackWebHook(context.Background(), recoder, req)
+
+		res := recoder.Result()
+		// BadGateway is a normal status in test due to backend not found.
 		if res.StatusCode != http.StatusBadGateway {
 			t.Fatalf("expect StatusBadGateway: %s", res.Status)
 		}

@@ -16,6 +16,8 @@ type dummyHttpProxy struct {
 	webhookRequests []*http.Request
 }
 
+var _ httpProxy = &dummyHttpProxy{}
+
 func (d *dummyHttpProxy) ServeHTTP(_ context.Context, _ http.ResponseWriter, req *http.Request) {
 	if d.requests == nil {
 		d.requests = make([]*http.Request, 0)
@@ -25,6 +27,14 @@ func (d *dummyHttpProxy) ServeHTTP(_ context.Context, _ http.ResponseWriter, req
 }
 
 func (d *dummyHttpProxy) ServeGithubWebHook(_ context.Context, _ http.ResponseWriter, req *http.Request) {
+	if d.webhookRequests == nil {
+		d.webhookRequests = make([]*http.Request, 0)
+	}
+
+	d.webhookRequests = append(d.webhookRequests, req)
+}
+
+func (d *dummyHttpProxy) ServeSlackWebHook(_ context.Context, _ http.ResponseWriter, req *http.Request) {
 	if d.webhookRequests == nil {
 		d.webhookRequests = make([]*http.Request, 0)
 	}
@@ -49,7 +59,7 @@ func TestFrontendProxy_ServeHTTP(t *testing.T) {
 	}, nil, nil)
 	v.httpProxy = mockProxy
 
-	t.Run("webhook", func(t *testing.T) {
+	t.Run("GitHub Webhook", func(t *testing.T) {
 		t.Parallel()
 
 		req := httptest.NewRequest(http.MethodPost, "http://test.example.com", nil)
@@ -59,6 +69,19 @@ func TestFrontendProxy_ServeHTTP(t *testing.T) {
 
 		if len(mockProxy.webhookRequests) == 0 {
 			t.Errorf("should call ServeGithubWebHook but not")
+		}
+	})
+
+	t.Run("Slack Webhook", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "http://test.example.com", nil)
+		req.Header.Set("X-Slack-Signature", "test")
+		r := httptest.NewRecorder()
+		v.ServeHTTP(r, req)
+
+		if len(mockProxy.webhookRequests) == 0 {
+			t.Errorf("should call ServeSlackWebHook but not")
 		}
 	})
 

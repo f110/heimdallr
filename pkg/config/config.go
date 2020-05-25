@@ -273,7 +273,10 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 		ca.Certificate = cert
-		ca.CertPool = x509.NewCertPool()
+		ca.CertPool, err = x509.SystemCertPool()
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 		ca.CertPool.AddCert(cert)
 	}
 
