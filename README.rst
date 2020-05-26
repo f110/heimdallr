@@ -25,6 +25,85 @@ Optional
 
 * `prometheus-operator <https://github.com/coreos/prometheus-operator>`_
 
+How to deploy on k8s
+=======================
+
+This section describes how to deploy on k8s.
+
+We've designed this software to deploy to k8s.
+Deploying to baremetal, VM or something like that is more complexity than deploying to k8s by the operator.
+
+We've highly recommend to deploying to k8s by the operator.
+
+#. Deploy cert-manager
+#. Deploy the operator
+#. Create Secret resource which contains the client secret
+#. Create Proxy resource
+
+Deploy cert-manager
+-----------------------
+
+Basically, You're following [official guide](https://cert-manager.io/docs/installation/kubernetes/) .
+
+Deploy the operator
+----------------------
+
+We provide the manifest for the operator.
+
+.. code:: shell
+
+    $ kubectl create namespace lag-proxy
+    $ kubectl apply -f https://github.com/f110/lagrangian-proxy/blob/master/operator/deploy/all-in-one.yaml
+
+Create Secret resource
+-------------------------
+
+You have to create Secret which contains the client secret before create Proxy resource.
+
+.. code:: shell
+
+    $ kubectl -n lag-proxy create secret generic client-secret --from-file=client-secret
+
+Create Proxy resource
+-----------------------
+
+The operator automatically creates a related resources after you create Proxy resource.
+
+.. code:: yaml
+
+    apiVersion: proxy.f110.dev/v1
+    kind: Proxy
+    metadata:
+      name: test
+      namespace: lag-proxy
+    spec:
+      replicas: 3
+      version: v0.5.0
+      domain: x.f110.dev
+      port: 443
+      backendSelector:
+        matchLabels:
+          instance: test
+      roleSelector:
+        matchLabels:
+          instance: test
+      issuerRef:
+        name: lets-encrypt
+        kind: ClusterIssuer
+      identityProvider:
+        provider: google
+        clientId: [your oauth client id]
+        clientSecretRef:
+          name: client-secret
+          key: client_secret
+        redirectUrl: [The callback url you configured]
+      rootUsers:
+        - [Your email address]
+      session:
+        type: secure_cookie
+        keySecretRef:
+          name: cookie-secret
+
 Build & Run
 =============
 
