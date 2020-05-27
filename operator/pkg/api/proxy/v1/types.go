@@ -2,6 +2,7 @@ package v1
 
 import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,6 +42,14 @@ type ProxySpec struct {
 	Defragment            DefragmentSpec `json:"defragment,omitempty"`
 	Monitor               MonitorSpec    `json:"monitor,omitempty"`
 	Backup                BackupSpec     `json:"backup,omitempty"`
+	// ProxyResources field is able to control the resource requirements and limits of front proxy.
+	// If it isn't set, Use the default value.
+	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory: 256Mi)
+	ProxyResources *corev1.ResourceRequirements `json:"proxyResources,omitempty"`
+	// RPCServerResources field is able tot control the resource requiremets and limits of rpc server.
+	// If it isn't set, Use the default value.
+	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory 256Mi)
+	RPCServerResources *corev1.ResourceRequirements `json:"rpcServerResources,omitempty"`
 }
 
 type IdentityProviderSpec struct {

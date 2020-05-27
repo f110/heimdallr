@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -418,6 +419,16 @@ func (in *ProxySpec) DeepCopyInto(out *ProxySpec) {
 	out.Defragment = in.Defragment
 	in.Monitor.DeepCopyInto(&out.Monitor)
 	out.Backup = in.Backup
+	if in.ProxyResources != nil {
+		in, out := &in.ProxyResources, &out.ProxyResources
+		*out = new(corev1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.RPCServerResources != nil {
+		in, out := &in.RPCServerResources, &out.RPCServerResources
+		*out = new(corev1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

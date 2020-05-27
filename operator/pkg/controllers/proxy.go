@@ -981,6 +981,19 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+	}
+	if r.Spec.ProxyResources != nil {
+		resources = *r.Spec.ProxyResources
+	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.DeploymentNameForMain(),
@@ -1042,16 +1055,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 									},
 								},
 							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("200m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-							},
+							Resources: resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
 								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
@@ -1339,11 +1343,11 @@ func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 							},
@@ -1407,6 +1411,19 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+	}
+	if r.Spec.RPCServerResources != nil {
+		resources = *r.Spec.RPCServerResources
+	}
 	var replicas int32 = 2
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1464,16 +1481,7 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 								},
 								InitialDelaySeconds: 10,
 							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-							},
+							Resources: resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
 								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
