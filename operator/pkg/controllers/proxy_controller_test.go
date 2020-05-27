@@ -117,6 +117,10 @@ func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
 			f.RegisterConfigMapFixture(v)
 		}
 	}
+
+	if p.PodDisruptionBudget != nil {
+		f.RegisterPodDisruptionBudgetFixture(p.PodDisruptionBudget)
+	}
 }
 
 func TestProxyController(t *testing.T) {
@@ -193,6 +197,7 @@ func TestProxyController(t *testing.T) {
 
 		f.ExpectUpdateProxy()
 		f.ExpectCreateDeployment()
+		f.ExpectCreatePodDisruptionBudget()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		f.ExpectCreateConfigMap()

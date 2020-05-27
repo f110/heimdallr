@@ -296,6 +296,10 @@ func (r *LagrangianProxy) PodDisruptionBudgetNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
+func (r *LagrangianProxy) PodDisruptionBudgetNameForRPCServer() string {
+	return r.Name + "-rpcserver"
+}
+
 func (r *LagrangianProxy) ServiceNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
@@ -1590,11 +1594,26 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 		}
 	}
 
+	minAvailable := intstr.FromInt(1)
+	pdb := &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.PodDisruptionBudgetNameForRPCServer(),
+			Namespace: r.Namespace,
+		},
+		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: r.LabelsForRPCServer(),
+			},
+			MinAvailable: &minAvailable,
+		},
+	}
+
 	return &process{
-		Deployment:      deployment,
-		Service:         []*corev1.Service{svc},
-		ConfigMaps:      []*corev1.ConfigMap{conf, reverseProxyConf},
-		ServiceMonitors: []*monitoringv1.ServiceMonitor{rpcMetrics},
+		Deployment:          deployment,
+		PodDisruptionBudget: pdb,
+		Service:             []*corev1.Service{svc},
+		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
+		ServiceMonitors:     []*monitoringv1.ServiceMonitor{rpcMetrics},
 	}, nil
 }
 

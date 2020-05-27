@@ -103,6 +103,11 @@ func (f *proxyControllerTestRunner) RegisterDeploymentFixture(d *appsv1.Deployme
 	f.c.coreSharedInformer.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
 }
 
+func (f *proxyControllerTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1beta1.PodDisruptionBudget) {
+	f.coreClient.Tracker().Add(pdb)
+	f.c.coreSharedInformer.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
+}
+
 func (f *proxyControllerTestRunner) RegisterServiceFixture(s *corev1.Service) {
 	f.coreClient.Tracker().Add(s)
 	f.c.coreSharedInformer.Core().V1().Services().Informer().GetIndexer().Add(s)
