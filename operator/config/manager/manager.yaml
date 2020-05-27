@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: lag-proxy-operator
   labels:
-    control-plane: controller-manager
+    control-plane: lag-proxy-operator
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: lag-proxy-operator
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        control-plane: lag-proxy-operator
     spec:
       serviceAccountName: lag-proxy
       containers:

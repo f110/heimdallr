@@ -130,6 +130,31 @@ spec:
                 type: string
               webhook:
                 type: string
+              webhookConfiguration:
+                properties:
+                  appIdKey:
+                    type: string
+                  contentType:
+                    type: string
+                  credentialSecretName:
+                    type: string
+                  events:
+                    items:
+                      type: string
+                    type: array
+                  installationIdKey:
+                    type: string
+                  path:
+                    type: string
+                  privateKeyKey:
+                    type: string
+                  repositories:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - repositories
+                type: object
               webhookPath:
                 items:
                   type: string
@@ -137,6 +162,28 @@ spec:
             type: object
           status:
             description: BackendStatus defines the observed state of Backend
+            properties:
+              deployedBy:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    url:
+                      type: string
+                  type: object
+                type: array
+              webhookConfiguration:
+                items:
+                  properties:
+                    repository:
+                      type: string
+                    updateTime:
+                      format: date-time
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true
@@ -355,6 +402,11 @@ spec:
                 type: object
               country:
                 type: string
+              dashboardReplicas:
+                description: The number of replicas of dashboard. Default value is
+                  "3".
+                format: int32
+                type: integer
               defragment:
                 properties:
                   schedule:
@@ -420,7 +472,29 @@ spec:
               port:
                 format: int32
                 type: integer
+              proxyResources:
+                description: 'ProxyResources field is able to control the resource
+                  requirements and limits of front proxy. If it isn''t set, Use the
+                  default value. (Default Value: requirements is cpu: 100m and memory:
+                  128Mi. limits is cpu: 1 and memory: 256Mi)'
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: 'Limits describes the maximum amount of compute resources
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: 'Requests describes the minimum amount of compute
+                      resources required. If Requests is omitted for a container,
+                      it defaults to Limits if that is explicitly specified, otherwise
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                type: object
               replicas:
+                description: The number of replicas of front proxy.
                 format: int32
                 type: integer
               roleSelector:
@@ -516,6 +590,27 @@ spec:
                     type: object
                   namespace:
                     type: string
+                type: object
+              rpcServerResources:
+                description: 'RPCServerResources field is able tot control the resource
+                  requiremets and limits of rpc server. If it isn''t set, Use the
+                  default value. (Default Value: requirements is cpu: 100m and memory:
+                  128Mi. limits is cpu: 1 and memory 256Mi)'
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: 'Limits describes the maximum amount of compute resources
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: 'Requests describes the minimum amount of compute
+                      resources required. If Requests is omitted for a container,
+                      it defaults to Limits if that is explicitly specified, otherwise
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
                 type: object
               session:
                 properties:
@@ -906,18 +1001,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    control-plane: controller-manager
-  name: controller-manager
+    control-plane: lag-proxy-operator
+  name: lag-proxy-operator
   namespace: lag-proxy
 spec:
   replicas: 1
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: lag-proxy-operator
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        control-plane: lag-proxy-operator
     spec:
       containers:
       - args:
