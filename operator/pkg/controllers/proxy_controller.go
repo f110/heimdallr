@@ -86,15 +86,21 @@ type ProxyController struct {
 	cmClientset         cmClientset.Interface
 }
 
-func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset.Interface, cmClient cmClientset.Interface, mClient mClientset.Interface) (*ProxyController, error) {
-	sharedInformer := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
-	proxyInformer := sharedInformer.Proxy().V1().Proxies()
-	backendInformer := sharedInformer.Proxy().V1().Backends()
-	roleInformer := sharedInformer.Proxy().V1().Roles()
-	rpcPermissionInformer := sharedInformer.Proxy().V1().RpcPermissions()
-	ecInformer := sharedInformer.Etcd().V1alpha1().EtcdClusters()
+func New(
+	ctx context.Context,
+	sharedInformerFactory informers.SharedInformerFactory,
+	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
+	client kubernetes.Interface,
+	proxyClient clientset.Interface,
+	cmClient cmClientset.Interface,
+	mClient mClientset.Interface,
+) (*ProxyController, error) {
+	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
+	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
+	roleInformer := sharedInformerFactory.Proxy().V1().Roles()
+	rpcPermissionInformer := sharedInformerFactory.Proxy().V1().RpcPermissions()
+	ecInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 	configMapInformer := coreSharedInformerFactory.Core().V1().ConfigMaps()
@@ -117,7 +123,7 @@ func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset
 		deploymentListerSynced: deploymentInformer.Informer().HasSynced,
 		clientset:              proxyClient,
 		cmClientset:            cmClient,
-		sharedInformer:         sharedInformer,
+		sharedInformer:         sharedInformerFactory,
 		coreSharedInformer:     coreSharedInformerFactory,
 		queue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 		recorder:               recorder,
@@ -176,9 +182,6 @@ func New(ctx context.Context, client kubernetes.Interface, proxyClient clientset
 
 	c.ecLister = ecInformer.Lister()
 	c.ecListerSynced = ecInformer.Informer().HasSynced
-
-	sharedInformer.Start(ctx.Done())
-	coreSharedInformerFactory.Start(ctx.Done())
 
 	return c, nil
 }

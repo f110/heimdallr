@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,6 +21,7 @@ import (
 
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
+	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 	"github.com/f110/lagrangian-proxy/operator/pkg/signals"
 )
 
@@ -97,11 +99,17 @@ func main() {
 		RetryPeriod:     5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				c, err := controllers.New(ctx, kubeClient, proxyClient, cmClient, mClient)
+				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
+				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
+
+				c, err := controllers.New(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)
 				}
+
+				coreSharedInformerFactory.Start(ctx.Done())
+				sharedInformerFactory.Start(ctx.Done())
 
 				c.Run(ctx, 1)
 				klog.Info("Shutdown")

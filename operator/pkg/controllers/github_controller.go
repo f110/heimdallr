@@ -51,12 +51,15 @@ type GitHubController struct {
 	recorder record.EventRecorder
 }
 
-func NewGitHubController(ctx context.Context, coreClient kubernetes.Interface, client clientset.Interface) (*GitHubController, error) {
-	informerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
-	backendInformer := informerFactory.Proxy().V1().Backends()
-	proxyInformer := informerFactory.Proxy().V1().Proxies()
+func NewGitHubController(
+	sharedInformerFactory informers.SharedInformerFactory,
+	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
+	coreClient kubernetes.Interface,
+	client clientset.Interface,
+) (*GitHubController, error) {
+	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
+	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
 
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -81,9 +84,6 @@ func NewGitHubController(ctx context.Context, coreClient kubernetes.Interface, c
 		UpdateFunc: c.updateBackend,
 		DeleteFunc: c.deleteBackend,
 	})
-
-	informerFactory.Start(ctx.Done())
-	coreSharedInformerFactory.Start(ctx.Done())
 
 	return c, nil
 }

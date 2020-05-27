@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
@@ -15,7 +17,9 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog"
 
+	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
+	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 	"github.com/f110/lagrangian-proxy/operator/pkg/signals"
 )
 
@@ -64,6 +68,11 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+	proxyClient, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
 
 	lock, err := resourcelock.New(
 		resourcelock.LeasesResourceLock,
@@ -85,11 +94,17 @@ func main() {
 		RetryPeriod:     5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				c, err := controllers.NewEtcdController(ctx, kubeClient, cfg, clusterDomain, dev)
+				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
+				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
+
+				c, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, cfg, clusterDomain, dev)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)
 				}
+
+				coreSharedInformerFactory.Start(ctx.Done())
+				sharedInformerFactory.Start(ctx.Done())
 
 				c.Run(ctx, 1)
 				klog.Info("Shutdown")

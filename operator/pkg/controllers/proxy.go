@@ -798,9 +798,9 @@ func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	backends := r.Backends()
 
-	proxies := make([]*config.Backend, len(backends))
+	proxies := make([]*config.Backend, 0, len(backends))
 	backendMap := make(map[string]proxyv1.Backend)
-	for i, v := range backends {
+	for _, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = v
 
 		var service *corev1.Service
@@ -864,7 +864,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				}
 			}
 		}
-		proxies[i] = &config.Backend{
+		proxies = append(proxies, &config.Backend{
 			Name:            name,
 			FQDN:            v.Spec.FQDN,
 			Upstream:        upstream,
@@ -876,7 +876,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			DisableAuthn:    v.Spec.DisableAuthn,
 			Insecure:        v.Spec.Insecure,
 			AllowHttp:       v.Spec.AllowHttp,
-		}
+		})
 	}
 	sort.Slice(proxies, func(i, j int) bool {
 		return proxies[i].Name < proxies[j].Name

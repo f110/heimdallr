@@ -66,18 +66,23 @@ type EtcdController struct {
 	recorder record.EventRecorder
 }
 
-func NewEtcdController(ctx context.Context, client *kubernetes.Clientset, cfg *rest.Config, clusterDomain string, runOutsideCluster bool) (*EtcdController, error) {
+func NewEtcdController(
+	sharedInformerFactory informers.SharedInformerFactory,
+	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
+	client *kubernetes.Clientset,
+	cfg *rest.Config,
+	clusterDomain string,
+	runOutsideCluster bool,
+) (*EtcdController, error) {
 	etcdClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(client, 30*time.Second)
 	podInformer := coreSharedInformerFactory.Core().V1().Pods()
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
-	sharedInformerFactory := informers.NewSharedInformerFactory(etcdClient, 30*time.Second)
 	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -112,9 +117,6 @@ func NewEtcdController(ctx context.Context, client *kubernetes.Clientset, cfg *r
 		UpdateFunc: c.updatePod,
 		DeleteFunc: c.deletePod,
 	})
-
-	coreSharedInformerFactory.Start(ctx.Done())
-	sharedInformerFactory.Start(ctx.Done())
 
 	return c, nil
 }

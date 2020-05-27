@@ -15,6 +15,7 @@ import (
 	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
 	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	_ "github.com/smartystreets/goconvey/convey"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
@@ -25,6 +26,7 @@ import (
 	"github.com/f110/lagrangian-proxy/operator/e2e/framework"
 	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
 	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
+	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 )
 
 func init() {
@@ -109,15 +111,21 @@ func TestMain(m *testing.M) {
 				RetryPeriod:     5 * time.Second,
 				Callbacks: leaderelection.LeaderCallbacks{
 					OnStartedLeading: func(ctx context.Context) {
-						e, err := controllers.NewEtcdController(ctx, kubeClient, cfg, "cluster.local", true)
+						coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
+						sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
+
+						e, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, cfg, "cluster.local", true)
 						if err != nil {
 							log.Fatal(err)
 						}
 
-						c, err := controllers.New(ctx, kubeClient, proxyClient, cmClient, mClient)
+						c, err := controllers.New(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
 						if err != nil {
 							log.Fatal(err)
 						}
+
+						sharedInformerFactory.Start(ctx.Done())
+						coreSharedInformerFactory.Start(ctx.Done())
 
 						var wg sync.WaitGroup
 						wg.Add(1)
