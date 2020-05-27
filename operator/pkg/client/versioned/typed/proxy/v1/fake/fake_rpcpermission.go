@@ -98,6 +98,18 @@ func (c *FakeRpcPermissions) Update(rpcPermission *proxyv1.RpcPermission) (resul
 	return obj.(*proxyv1.RpcPermission), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeRpcPermissions) UpdateStatus(rpcPermission *proxyv1.RpcPermission) (*proxyv1.RpcPermission, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(rpcpermissionsResource, "status", c.ns, rpcPermission), &proxyv1.RpcPermission{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*proxyv1.RpcPermission), err
+}
+
 // Delete takes name of the rpcPermission and deletes it. Returns an error if one occurs.
 func (c *FakeRpcPermissions) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

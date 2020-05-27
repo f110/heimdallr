@@ -250,7 +250,7 @@ func (c *ProxyController) syncProxy(key string) error {
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1.ProxyPhaseCreating
-		proxy, err = c.clientset.ProxyV1().Proxies(proxy.Namespace).Update(proxy)
+		proxy, err = c.clientset.ProxyV1().Proxies(proxy.Namespace).UpdateStatus(proxy)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

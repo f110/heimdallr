@@ -98,6 +98,18 @@ func (c *FakeProxies) Update(proxy *proxyv1.Proxy) (result *proxyv1.Proxy, err e
 	return obj.(*proxyv1.Proxy), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeProxies) UpdateStatus(proxy *proxyv1.Proxy) (*proxyv1.Proxy, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(proxiesResource, "status", c.ns, proxy), &proxyv1.Proxy{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*proxyv1.Proxy), err
+}
+
 // Delete takes name of the proxy and deletes it. Returns an error if one occurs.
 func (c *FakeProxies) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

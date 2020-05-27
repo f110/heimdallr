@@ -142,7 +142,7 @@ func TestProxyController(t *testing.T) {
 			}
 			f.ExpectCreateSecret()
 		}
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		f.ExpectCreateEtcdCluster()
 
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
@@ -168,7 +168,7 @@ func TestProxyController(t *testing.T) {
 			f.RegisterSecretFixture(s)
 		}
 
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
 	})
 
@@ -195,7 +195,7 @@ func TestProxyController(t *testing.T) {
 		}
 		f.client.Tracker().Add(p)
 
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()
 		f.ExpectCreateService()
@@ -251,7 +251,7 @@ func TestProxyController(t *testing.T) {
 		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
 		registerFixtureFromProcess(f, pcs)
 
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		// Expect to create the proxy
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()

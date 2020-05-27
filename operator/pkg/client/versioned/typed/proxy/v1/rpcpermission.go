@@ -37,6 +37,7 @@ type RpcPermissionsGetter interface {
 type RpcPermissionInterface interface {
 	Create(*v1.RpcPermission) (*v1.RpcPermission, error)
 	Update(*v1.RpcPermission) (*v1.RpcPermission, error)
+	UpdateStatus(*v1.RpcPermission) (*v1.RpcPermission, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
 	Get(name string, options metav1.GetOptions) (*v1.RpcPermission, error)
@@ -124,6 +125,22 @@ func (c *rpcPermissions) Update(rpcPermission *v1.RpcPermission) (result *v1.Rpc
 		Namespace(c.ns).
 		Resource("rpcpermissions").
 		Name(rpcPermission.Name).
+		Body(rpcPermission).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *rpcPermissions) UpdateStatus(rpcPermission *v1.RpcPermission) (result *v1.RpcPermission, err error) {
+	result = &v1.RpcPermission{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("rpcpermissions").
+		Name(rpcPermission.Name).
+		SubResource("status").
 		Body(rpcPermission).
 		Do().
 		Into(result)

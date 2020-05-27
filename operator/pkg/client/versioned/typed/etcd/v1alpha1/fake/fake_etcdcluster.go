@@ -98,6 +98,18 @@ func (c *FakeEtcdClusters) Update(etcdCluster *v1alpha1.EtcdCluster) (result *v1
 	return obj.(*v1alpha1.EtcdCluster), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeEtcdClusters) UpdateStatus(etcdCluster *v1alpha1.EtcdCluster) (*v1alpha1.EtcdCluster, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(etcdclustersResource, "status", c.ns, etcdCluster), &v1alpha1.EtcdCluster{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.EtcdCluster), err
+}
+
 // Delete takes name of the etcdCluster and deletes it. Returns an error if one occurs.
 func (c *FakeEtcdClusters) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

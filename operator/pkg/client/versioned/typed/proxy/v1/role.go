@@ -37,6 +37,7 @@ type RolesGetter interface {
 type RoleInterface interface {
 	Create(*v1.Role) (*v1.Role, error)
 	Update(*v1.Role) (*v1.Role, error)
+	UpdateStatus(*v1.Role) (*v1.Role, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
 	Get(name string, options metav1.GetOptions) (*v1.Role, error)
@@ -124,6 +125,22 @@ func (c *roles) Update(role *v1.Role) (result *v1.Role, err error) {
 		Namespace(c.ns).
 		Resource("roles").
 		Name(role.Name).
+		Body(role).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *roles) UpdateStatus(role *v1.Role) (result *v1.Role, err error) {
+	result = &v1.Role{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("roles").
+		Name(role.Name).
+		SubResource("status").
 		Body(role).
 		Do().
 		Into(result)

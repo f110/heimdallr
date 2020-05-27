@@ -106,8 +106,8 @@ type ProxyStatus struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.ready",description="Ready",format="byte",priority=0
 // +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase",description="Phase",format="byte",priority=0
 // +kubebuilder:printcolumn:name="backends",type="string",JSONPath=".status.numberOfBackends",description="Backends",format="byte",priority=0
@@ -207,8 +207,8 @@ type WebhookConfigurationStatus struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 // Backend is the Schema for the backends API
 type Backend struct {
@@ -249,8 +249,8 @@ type RoleStatus struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 // Role is the Schema for the roles API
 type Role struct {
@@ -282,8 +282,8 @@ type RpcPermissionStatus struct {
 }
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 // RpcPermission is the Schema for the rpcpermissions API
 type RpcPermission struct {

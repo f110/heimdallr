@@ -98,6 +98,18 @@ func (c *FakeBackends) Update(backend *proxyv1.Backend) (result *proxyv1.Backend
 	return obj.(*proxyv1.Backend), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeBackends) UpdateStatus(backend *proxyv1.Backend) (*proxyv1.Backend, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(backendsResource, "status", c.ns, backend), &proxyv1.Backend{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*proxyv1.Backend), err
+}
+
 // Delete takes name of the backend and deletes it. Returns an error if one occurs.
 func (c *FakeBackends) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

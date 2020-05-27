@@ -237,6 +237,13 @@ func (f *proxyControllerTestRunner) ExpectUpdateProxy() {
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
+func (f *proxyControllerTestRunner) ExpectUpdateProxyStatus() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
+	action.Subresource = "status"
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
 func (f *proxyControllerTestRunner) ExpectUpdateBackend() {
 	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
 
