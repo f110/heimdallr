@@ -43,7 +43,7 @@ We've highly recommend to deploying to k8s by the operator.
 Deploy cert-manager
 -----------------------
 
-Basically, You're following [official guide](https://cert-manager.io/docs/installation/kubernetes/) .
+Basically, You're following `official guide <https://cert-manager.io/docs/installation/kubernetes/>`_ .
 
 Deploy the operator
 ----------------------
