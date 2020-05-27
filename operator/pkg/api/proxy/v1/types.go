@@ -108,6 +108,10 @@ type ProxyStatus struct {
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.ready",description="Ready",format="byte",priority=0
+// +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase",description="Phase",format="byte",priority=0
+// +kubebuilder:printcolumn:name="backends",type="string",JSONPath=".status.numberOfBackends",description="Backends",format="byte",priority=0
+// +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp",description="Age",format="date",priority=0
 
 // Proxy is the Schema for the proxies API
 type Proxy struct {
