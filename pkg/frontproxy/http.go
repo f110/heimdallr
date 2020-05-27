@@ -229,11 +229,15 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	}
 }
 
-func (p *HttpProxy) ServeGithubWebHook(_ context.Context, w http.ResponseWriter, req *http.Request) {
+func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
 	backend, ok := p.Config.General.GetBackendByHost(req.Host)
 	if !ok {
 		panic(http.ErrAbortHandler)
 	}
+
+	w = &loggedResponseWriter{ResponseWriter: w}
+	defer p.accessLog(ctx, w, req, &database.User{})
+
 	if backend.WebHook != "github" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -266,14 +270,7 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 		panic(http.ErrAbortHandler)
 	}
 
-	logged := &loggedResponseWriter{ResponseWriter: w}
-	if h, ok := w.(http.Hijacker); ok {
-		logged.Hijacker = h
-	}
-	if f, ok := w.(http.Flusher); ok {
-		logged.Flusher = f
-	}
-	w = logged
+	w = &loggedResponseWriter{ResponseWriter: w}
 	defer p.accessLog(ctx, w, req, &database.User{})
 
 	if backend.WebHook != "slack" {
