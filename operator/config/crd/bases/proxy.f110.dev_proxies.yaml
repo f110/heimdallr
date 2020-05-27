@@ -113,6 +113,11 @@ spec:
                 type: object
               country:
                 type: string
+              dashboardReplicas:
+                description: The number of replicas of dashboard. Default value is
+                  "3".
+                format: int32
+                type: integer
               defragment:
                 properties:
                   schedule:
@@ -179,6 +184,7 @@ spec:
                 format: int32
                 type: integer
               replicas:
+                description: The number of replicas of front proxy.
                 format: int32
                 type: integer
               roleSelector:

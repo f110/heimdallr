@@ -1292,7 +1292,10 @@ func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
-	var replicas int32 = 3
+	replicas := r.Spec.DashboardReplicas
+	if replicas == 0 {
+		replicas = 3 // This is default value of DashboardReplicas.
+	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.DeploymentNameForDashboard(),

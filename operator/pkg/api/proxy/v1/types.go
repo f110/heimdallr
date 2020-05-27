@@ -23,21 +23,24 @@ type ProxySpec struct {
 	Version        string `json:"version,omitempty"`
 	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
 	// Name of proxy. if not present, uses "Lagrangian Proxy CA"
-	Name                  string                 `json:"name,omitempty"`
-	Organization          string                 `json:"organization"`
-	AdministratorUnit     string                 `json:"administratorUnit"`
-	Country               string                 `json:"country,omitempty"`
-	IssuerRef             cmmeta.ObjectReference `json:"issuerRef"`
-	IdentityProvider      IdentityProviderSpec   `json:"identityProvider"`
-	RootUsers             []string               `json:"rootUsers,omitempty"`
-	Session               SessionSpec            `json:"session"`
-	Replicas              int32                  `json:"replicas"`
-	BackendSelector       LabelSelector          `json:"backendSelector,omitempty"`
-	RoleSelector          LabelSelector          `json:"roleSelector,omitempty"`
-	RpcPermissionSelector LabelSelector          `json:"rpcPermissionSelector,omitempty"`
-	Defragment            DefragmentSpec         `json:"defragment,omitempty"`
-	Monitor               MonitorSpec            `json:"monitor,omitempty"`
-	Backup                BackupSpec             `json:"backup,omitempty"`
+	Name              string                 `json:"name,omitempty"`
+	Organization      string                 `json:"organization"`
+	AdministratorUnit string                 `json:"administratorUnit"`
+	Country           string                 `json:"country,omitempty"`
+	IssuerRef         cmmeta.ObjectReference `json:"issuerRef"`
+	IdentityProvider  IdentityProviderSpec   `json:"identityProvider"`
+	RootUsers         []string               `json:"rootUsers,omitempty"`
+	Session           SessionSpec            `json:"session"`
+	// The number of replicas of front proxy.
+	Replicas int32 `json:"replicas"`
+	// The number of replicas of dashboard. Default value is "3".
+	DashboardReplicas     int32          `json:"dashboardReplicas,omitempty"`
+	BackendSelector       LabelSelector  `json:"backendSelector,omitempty"`
+	RoleSelector          LabelSelector  `json:"roleSelector,omitempty"`
+	RpcPermissionSelector LabelSelector  `json:"rpcPermissionSelector,omitempty"`
+	Defragment            DefragmentSpec `json:"defragment,omitempty"`
+	Monitor               MonitorSpec    `json:"monitor,omitempty"`
+	Backup                BackupSpec     `json:"backup,omitempty"`
 }
 
 type IdentityProviderSpec struct {
