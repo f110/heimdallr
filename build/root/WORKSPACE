@@ -34,7 +34,7 @@ http_archive(
 
 git_repository(
     name = "dev_f110_rules_extras",
-    commit = "7707fd5a50b277e60ef86d4bc258415d76274d4b",
+    commit = "375ebcf345681157e99ef3b5089507b87e2b937b",
     remote = "https://github.com/f110/rules_extras",
 )
 
