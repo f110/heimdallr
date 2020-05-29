@@ -2,20 +2,14 @@ package memory
 
 import (
 	"context"
-	"crypto"
 	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"math"
 	"math/big"
 	"sync"
-	"time"
 
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 )
 
@@ -25,144 +19,85 @@ type CA struct {
 	mu                  sync.Mutex
 	signedCertificates  []*database.SignedCertificate
 	revokedCertificates []*database.RevokedCertificate
+	watcher             []chan *database.RevokedCertificate
 }
 
 var _ database.CertificateAuthority = &CA{}
 
-func NewCA(config *config.CertificateAuthority) *CA {
+func NewCA() *CA {
 	return &CA{
-		config:              config,
 		signedCertificates:  make([]*database.SignedCertificate, 0),
 		revokedCertificates: make([]*database.RevokedCertificate, 0),
+		watcher:             make([]chan *database.RevokedCertificate, 0),
 	}
 }
 
 func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
-	return nil
+	ch := make(chan *database.RevokedCertificate)
+	c.mu.Lock()
+	c.watcher = append(c.watcher, ch)
+	c.mu.Unlock()
+
+	return ch
 }
 
-func (c *CA) GetSignedCertificates(_ context.Context) ([]*database.SignedCertificate, error) {
+func (c *CA) GetSignedCertificate(_ context.Context, serial *big.Int) ([]*database.SignedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if serial != nil {
+		for _, v := range c.signedCertificates {
+			if v.Certificate.SerialNumber.Cmp(serial) == 0 {
+				return []*database.SignedCertificate{v}, nil
+			}
+		}
+
+		return nil, xerrors.New("memory: certificate not found")
+	}
 
 	return c.signedCertificates, nil
 }
 
-func (c *CA) GetSignedCertificate(_ context.Context, serial *big.Int) (*database.SignedCertificate, error) {
+func (c *CA) GetRevokedCertificate(_ context.Context, serial *big.Int) ([]*database.RevokedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for _, v := range c.signedCertificates {
-		if v.Certificate.SerialNumber.Cmp(serial) == 0 {
-			return v, nil
+	if serial != nil {
+		for _, v := range c.revokedCertificates {
+			if v.SerialNumber.Cmp(serial) == 0 {
+				return []*database.RevokedCertificate{v}, nil
+			}
+		}
+
+		return nil, xerrors.New("memory: the revoked certificate not found")
+	}
+
+	return c.revokedCertificates, nil
+}
+
+func (c *CA) SetRevokedCertificate(_ context.Context, certificate *database.RevokedCertificate) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.revokedCertificates = append(c.revokedCertificates, certificate)
+	for i, v := range c.signedCertificates {
+		if v.Certificate.SerialNumber.Cmp(certificate.SerialNumber) == 0 {
+			c.signedCertificates = append(c.signedCertificates[:i], c.signedCertificates[i+1:]...)
 		}
 	}
 
-	return nil, xerrors.New("etcd: not found certificate")
-}
-
-func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	return c.revokedCertificates
-}
-
-func (c *CA) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*database.SignedCertificate, error) {
-	return c.generateClientCertificate(ctx, name, keyType, keyBits, password, comment, false)
-}
-
-func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) (*database.SignedCertificate, error) {
-	return c.generateClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, connector.DefaultCertificatePassword, comment, true)
-}
-
-func (c *CA) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) (*database.SignedCertificate, error) {
-	signedCert, err := cert.SigningCertificateRequest(csr, c.config)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	obj := &database.SignedCertificate{
-		Certificate: signedCert,
-		IssuedAt:    time.Now(),
-		Comment:     comment,
-		Agent:       agent,
-	}
-	if err := c.SetSignedCertificate(obj); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	return obj, nil
-}
-
-func (c *CA) generateClientCertificate(_ context.Context, name, keyType string, keyBits int, password, comment string, agent bool) (*database.SignedCertificate, error) {
-	serial, err := c.newSerialNumber()
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-	data, clientCert, err := cert.CreateNewCertificateForClient(
-		pkix.Name{
-			Organization:       []string{c.config.Organization},
-			OrganizationalUnit: []string{c.config.OrganizationUnit},
-			Country:            []string{c.config.Country},
-			CommonName:         name,
-		},
-		serial,
-		keyType,
-		keyBits,
-		password,
-		c.config,
-	)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	signed := &database.SignedCertificate{
-		Certificate: clientCert,
-		P12:         data,
-		IssuedAt:    time.Now(),
-		Comment:     comment,
-		Agent:       agent,
-	}
-	if err := c.SetSignedCertificate(signed); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	return signed, nil
-}
-
-func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
-	certificate, privateKey, err := cert.GenerateServerCertificate(c.config.Certificate, c.config.PrivateKey, []string{commonName})
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
-	}
-
-	return certificate, privateKey, nil
-}
-
-func (c *CA) Revoke(_ context.Context, certificate *database.SignedCertificate) error {
-	revokeCertificate := &database.RevokedCertificate{
-		CommonName:   certificate.Certificate.Subject.CommonName,
-		SerialNumber: certificate.Certificate.SerialNumber,
-		IssuedAt:     certificate.IssuedAt,
-		RevokedAt:    time.Now(),
-		Comment:      certificate.Comment,
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.revokedCertificates = append(c.revokedCertificates, revokeCertificate)
-	for i, v := range c.signedCertificates {
-		if v.Certificate.SerialNumber.Cmp(certificate.Certificate.SerialNumber) == 0 {
-			c.signedCertificates = append(c.signedCertificates[:i], c.signedCertificates[i+1:]...)
+	for i, v := range c.watcher {
+		select {
+		case v <- certificate:
+		default:
+			c.watcher = append(c.watcher[:i], c.watcher[i+1:]...)
 		}
 	}
 
 	return nil
 }
 
-func (c *CA) SetSignedCertificate(certificate *database.SignedCertificate) error {
+func (c *CA) SetSignedCertificate(_ context.Context, certificate *database.SignedCertificate) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -170,7 +105,7 @@ func (c *CA) SetSignedCertificate(certificate *database.SignedCertificate) error
 	return nil
 }
 
-func (c *CA) newSerialNumber() (*big.Int, error) {
+func (c *CA) NewSerialNumber(_ context.Context) (*big.Int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

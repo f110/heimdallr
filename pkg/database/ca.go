@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"crypto"
 	"crypto/x509"
 	"math/big"
 	"time"
@@ -14,15 +13,17 @@ const (
 )
 
 type CertificateAuthority interface {
-	GetSignedCertificates(ctx context.Context) ([]*SignedCertificate, error)
-	GetSignedCertificate(ctx context.Context, serial *big.Int) (*SignedCertificate, error)
-	GetRevokedCertificates() []*RevokedCertificate
-	NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*SignedCertificate, error)
-	NewAgentCertificate(ctx context.Context, name, comment string) (*SignedCertificate, error)
-	NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error)
-	SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, agent bool) (*SignedCertificate, error)
-	Revoke(ctx context.Context, certificate *SignedCertificate) error
+	// GetSignedCertificates returns a list of SignedCertificate.
+	// You want to get a specify SignedCertificate then also passed the serial number.
+	// You want to get all SignedCertificate then passed the nil to serialNumber.
+	GetSignedCertificate(ctx context.Context, serialNumber *big.Int) ([]*SignedCertificate, error)
+	// GetRevoedCertificate returns a list of RevokedCertificate.
+	// An interface of this method is the same as GetSignedCertificate.
+	GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) ([]*RevokedCertificate, error)
+	SetSignedCertificate(ctx context.Context, certificate *SignedCertificate) error
+	SetRevokedCertificate(ctx context.Context, certificate *RevokedCertificate) error
 	WatchRevokeCertificate() chan *RevokedCertificate
+	NewSerialNumber(ctx context.Context) (*big.Int, error)
 }
 
 type SignedCertificate struct {

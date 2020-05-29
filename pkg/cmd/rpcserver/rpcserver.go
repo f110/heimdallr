@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/database"
@@ -29,8 +30,8 @@ type mainProcess struct {
 
 	etcdClient      *clientv3.Client
 	readiness       *etcd.TapReadiness
+	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
-	caDatabase      database.CertificateAuthority
 	clusterDatabase database.ClusterDatabase
 	tokenDatabase   database.TokenDatabase
 	relayLocator    database.RelayLocator
@@ -76,10 +77,11 @@ func (m *mainProcess) Setup() error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		m.caDatabase, err = etcd.NewCA(context.Background(), m.Config.General.CertificateAuthority, client)
+		caDatabase, err := etcd.NewCA(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -96,7 +98,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.New("lag-rpcserver: required external datastore")
 	}
 
-	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase, m.readiness.IsReady)
+	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.readiness.IsReady)
 
 	auth.InitInterceptor(m.Config, m.userDatabase, m.tokenDatabase)
 	return nil

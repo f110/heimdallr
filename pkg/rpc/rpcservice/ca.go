@@ -13,6 +13,7 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
+	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
@@ -20,12 +21,12 @@ import (
 
 type CertificateAuthorityService struct {
 	Config *config.Config
-	ca     database.CertificateAuthority
+	ca     *cert.CertificateAuthority
 }
 
 var _ rpc.CertificateAuthorityServer = &CertificateAuthorityService{}
 
-func NewCertificateAuthorityService(conf *config.Config, ca database.CertificateAuthority) *CertificateAuthorityService {
+func NewCertificateAuthorityService(conf *config.Config, ca *cert.CertificateAuthority) *CertificateAuthorityService {
 	return &CertificateAuthorityService{Config: conf, ca: ca}
 }
 
@@ -78,7 +79,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 	var signed *database.SignedCertificate
 	if csr == nil {
 		if req.GetAgent() {
-			signed, err = s.ca.NewAgentCertificate(ctx, req.GetCommonName(), req.GetComment())
+			signed, err = s.ca.NewAgentCertificate(ctx, req.GetCommonName(), connector.DefaultCertificatePassword, req.GetComment())
 		} else {
 			signed, err = s.ca.NewClientCertificate(ctx, req.GetCommonName(), req.GetKeyType(), int(req.GetKeyBits()), req.GetPassword(), req.GetComment())
 		}
@@ -142,8 +143,11 @@ func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rp
 	return &rpc.ResponseNewServerCert{Certificate: c.Raw}, nil
 }
 
-func (s *CertificateAuthorityService) GetRevokedList(_ context.Context, _ *rpc.RequestGetRevokedList) (*rpc.ResponseGetRevokedList, error) {
-	revoked := s.ca.GetRevokedCertificates()
+func (s *CertificateAuthorityService) GetRevokedList(ctx context.Context, _ *rpc.RequestGetRevokedList) (*rpc.ResponseGetRevokedList, error) {
+	revoked, err := s.ca.GetRevokedCertificates(ctx)
+	if err != nil {
+		return nil, err
+	}
 	res := make([]*rpc.CertItem, len(revoked))
 	for i, v := range revoked {
 		res[i] = rpc.DatabaseRevokedCertToRPCCert(v)
@@ -158,7 +162,11 @@ func (s *CertificateAuthorityService) WatchRevokedCert(_ *rpc.RequestWatchRevoke
 		close(ch)
 	}()
 
-	revoked := s.ca.GetRevokedCertificates()
+	revoked, err := s.ca.GetRevokedCertificates(context.Background())
+	if err != nil {
+		return err
+	}
+
 	res := make([]*rpc.CertItem, len(revoked))
 	for i, v := range revoked {
 		res[i] = rpc.DatabaseRevokedCertToRPCCert(v)

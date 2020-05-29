@@ -17,16 +17,14 @@ import (
 type AdminService struct {
 	Config       *config.Config
 	userDatabase database.UserDatabase
-	ca           database.CertificateAuthority
 }
 
 var _ rpc.AdminServer = &AdminService{}
 
-func NewAdminService(conf *config.Config, user database.UserDatabase, ca database.CertificateAuthority) *AdminService {
+func NewAdminService(conf *config.Config, user database.UserDatabase) *AdminService {
 	return &AdminService{
 		Config:       conf,
 		userDatabase: user,
-		ca:           ca,
 	}
 }
 

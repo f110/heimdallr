@@ -51,7 +51,7 @@ func TestNewServer(t *testing.T) {
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		memory.NewCA(conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
 		nil,
 	)
 	if v == nil {
@@ -98,7 +98,7 @@ func TestServer_Start(t *testing.T) {
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		memory.NewCA(conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
 		nil,
 	)
 	go func() {
@@ -211,7 +211,7 @@ func TestServicesViaServer(t *testing.T) {
 		token,
 		cluster,
 		relay,
-		memory.NewCA(conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
 		func() bool { return true },
 	)
 	go func() {

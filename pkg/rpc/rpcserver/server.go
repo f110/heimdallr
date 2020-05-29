@@ -54,8 +54,15 @@ func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grp
 	return handler(srv, ss)
 }
 
-func NewServer(conf *config.Config, user database.UserDatabase, token database.TokenDatabase, cluster database.ClusterDatabase,
-	relay database.RelayLocator, ca database.CertificateAuthority, isReady func() bool) *Server {
+func NewServer(
+	conf *config.Config,
+	user database.UserDatabase,
+	token database.TokenDatabase,
+	cluster database.ClusterDatabase,
+	relay database.RelayLocator,
+	ca *cert.CertificateAuthority,
+	isReady func() bool,
+) *Server {
 	r := grpc_prometheus.NewServerMetrics()
 	grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
 	s := grpc.NewServer(
@@ -71,7 +78,7 @@ func NewServer(conf *config.Config, user database.UserDatabase, token database.T
 		)),
 	)
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
-	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user, ca))
+	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user))
 	rpc.RegisterCertificateAuthorityServer(s, rpcservice.NewCertificateAuthorityService(conf, ca))
 	rpc.RegisterAuthorityServer(s, rpcservice.NewAuthorityService(conf))
 	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService(isReady))

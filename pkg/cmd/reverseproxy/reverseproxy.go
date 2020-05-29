@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
+	"github.com/f110/lagrangian-proxy/pkg/cert"
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
 	"github.com/f110/lagrangian-proxy/pkg/connector"
@@ -64,8 +65,8 @@ type mainProcess struct {
 	wg              sync.WaitGroup
 	config          *config.Config
 	etcdClient      *clientv3.Client
+	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
-	caDatabase      database.CertificateAuthority
 	tokenDatabase   database.TokenDatabase
 	relayLocator    database.RelayLocator
 	clusterDatabase database.ClusterDatabase
@@ -386,10 +387,11 @@ func (m *mainProcess) Setup() error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		m.caDatabase, err = etcd.NewCA(context.Background(), m.config.General.CertificateAuthority, client)
+		caDatabase, err := etcd.NewCA(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.General.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -460,7 +462,7 @@ func (m *mainProcess) StartRPCServer() error {
 				m.rpcServerDoneCh <- struct{}{}
 			}()
 
-			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.caDatabase, m.readiness.IsReady)
+			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.readiness.IsReady)
 			if err := m.rpcServer.Start(); err != nil {
 				errCh <- err
 			}

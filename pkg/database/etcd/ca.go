@@ -3,31 +3,24 @@ package etcd
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
 	"github.com/f110/lagrangian-proxy/pkg/database"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
 type CA struct {
-	config *config.CertificateAuthority
 	client *clientv3.Client
 
 	mu          sync.RWMutex
@@ -46,10 +39,10 @@ func init() {
 	gob.Register(rsa.PublicKey{})
 }
 
-func NewCA(ctx context.Context, config *config.CertificateAuthority, client *clientv3.Client) (*CA, error) {
+func NewCA(ctx context.Context, client *clientv3.Client) (*CA, error) {
 	res, err := client.Get(ctx, "ca/revoke/", clientv3.WithPrefix())
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	revoked := make([]*database.RevokedCertificate, 0, res.Count)
@@ -57,36 +50,37 @@ func NewCA(ctx context.Context, config *config.CertificateAuthority, client *cli
 		r := &database.RevokedCertificate{}
 		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.Errorf(": %w", err)
 		}
 		revoked = append(revoked, r)
 	}
 
-	ca := &CA{config: config, client: client, revokedList: revoked}
+	ca := &CA{client: client, revokedList: revoked}
 	go ca.watchRevokeList(ctx, res.Header.Revision)
 	return ca, nil
 }
 
-func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
-	ch := make(chan *database.RevokedCertificate)
-	c.wMu.Lock()
-	defer c.wMu.Unlock()
-
-	c.watchCh = append(c.watchCh, ch)
-	return ch
-}
-
-func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
-	res, err := c.client.Get(ctx, "ca/signed_cert/", clientv3.WithPrefix())
+func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) ([]*database.SignedCertificate, error) {
+	key := "ca/signed_cert/"
+	var opt []clientv3.OpOption
+	if serial != nil {
+		key += fmt.Sprintf("%x", serial)
+	} else {
+		opt = append(opt, clientv3.WithPrefix())
+	}
+	res, err := c.client.Get(ctx, key, opt...)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	if res.Count == 0 {
+		return nil, nil
 	}
 
 	signedCertificates := make([]*database.SignedCertificate, 0, res.Count)
 	for _, v := range res.Kvs {
 		signedCertificate := &database.SignedCertificate{}
 		if err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(signedCertificate); err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.Errorf(": %w", err)
 		}
 		signedCertificates = append(signedCertificates, signedCertificate)
 	}
@@ -94,119 +88,42 @@ func (c *CA) GetSignedCertificates(ctx context.Context) ([]*database.SignedCerti
 	return signedCertificates, nil
 }
 
-func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) (*database.SignedCertificate, error) {
-	res, err := c.client.Get(ctx, fmt.Sprintf("ca/signed_cert/%x", serial))
+func (c *CA) GetRevokedCertificate(ctx context.Context, serial *big.Int) ([]*database.RevokedCertificate, error) {
+	key := "ca/revoke/"
+	var opt []clientv3.OpOption
+	if serial != nil {
+		key += fmt.Sprintf("%x", serial)
+	} else {
+		opt = append(opt, clientv3.WithPrefix())
+	}
+	res, err := c.client.Get(ctx, key, opt...)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	if res.Count == 0 {
-		return nil, xerrors.New("etcd: not found certificate")
+		return nil, nil
 	}
 
-	signedCertificate := &database.SignedCertificate{}
-	err = gob.NewDecoder(bytes.NewReader(res.Kvs[0].Value)).Decode(signedCertificate)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+	revokedCertificates := make([]*database.RevokedCertificate, 0, res.Count)
+	for _, v := range res.Kvs {
+		revokedCertificate := &database.RevokedCertificate{}
+		if err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(revokedCertificate); err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		revokedCertificates = append(revokedCertificates, revokedCertificate)
 	}
 
-	return signedCertificate, nil
+	return revokedCertificates, nil
 }
 
-func (c *CA) GetRevokedCertificates() []*database.RevokedCertificate {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.revokedList
-}
-
-func (c *CA) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*database.SignedCertificate, error) {
-	return c.generateClientCertificate(ctx, name, keyType, keyBits, password, comment, false)
-}
-
-func (c *CA) NewAgentCertificate(ctx context.Context, name, comment string) (*database.SignedCertificate, error) {
-	return c.generateClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, connector.DefaultCertificatePassword, comment, true)
-}
-
-func (c *CA) SignCertificateRequest(ctx context.Context, r *x509.CertificateRequest, comment string, agent bool) (*database.SignedCertificate, error) {
-	signedCert, err := cert.SigningCertificateRequest(r, c.config)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	obj := &database.SignedCertificate{
-		Certificate: signedCert,
-		IssuedAt:    time.Now(),
-		Comment:     comment,
-		Agent:       agent,
-	}
-	err = c.SetSignedCertificate(ctx, obj)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	return obj, nil
-}
-
-func (c *CA) generateClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent bool) (*database.SignedCertificate, error) {
-	serial, err := c.newSerialNumber(ctx)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-	data, clientCert, err := cert.CreateNewCertificateForClient(
-		pkix.Name{
-			Organization:       []string{c.config.Organization},
-			OrganizationalUnit: []string{c.config.OrganizationUnit},
-			Country:            []string{c.config.Country},
-			CommonName:         name,
-		},
-		serial,
-		keyType,
-		keyBits,
-		password,
-		c.config,
-	)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	signed := &database.SignedCertificate{
-		Certificate: clientCert,
-		P12:         data,
-		IssuedAt:    time.Now(),
-		Comment:     comment,
-		Agent:       agent,
-	}
-	if err := c.SetSignedCertificate(ctx, signed); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	return signed, nil
-}
-
-func (c *CA) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
-	certificate, privateKey, err := cert.GenerateServerCertificate(c.config.Certificate, c.config.PrivateKey, []string{commonName})
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
-	}
-
-	return certificate, privateKey, nil
-}
-
-func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate) error {
+func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.RevokedCertificate) error {
 	buf := new(bytes.Buffer)
-	err := gob.NewEncoder(buf).Encode(&database.RevokedCertificate{
-		CommonName:   certificate.Certificate.Subject.CommonName,
-		SerialNumber: certificate.Certificate.SerialNumber,
-		IssuedAt:     certificate.IssuedAt,
-		RevokedAt:    time.Now(),
-		Comment:      certificate.Comment,
-		Agent:        certificate.Agent,
-	})
+	err := gob.NewEncoder(buf).Encode(certificate)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.Errorf(": %w", err)
 	}
 
-	key := fmt.Sprintf("ca/revoke/%x", certificate.Certificate.SerialNumber)
+	key := fmt.Sprintf("ca/revoke/%x", certificate.SerialNumber)
 	res, err := c.client.Txn(ctx).
 		If(clientv3.Compare(clientv3.CreateRevision(key), "=", 0)).
 		Then(clientv3.OpPut(key, buf.String())).
@@ -218,9 +135,9 @@ func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate
 		return xerrors.New("etcd: failed revoke certificate")
 	}
 
-	_, err = c.client.Delete(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.Certificate.SerialNumber))
+	_, err = c.client.Delete(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.SerialNumber))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -229,27 +146,27 @@ func (c *CA) Revoke(ctx context.Context, certificate *database.SignedCertificate
 func (c *CA) SetSignedCertificate(ctx context.Context, certificate *database.SignedCertificate) error {
 	buf := new(bytes.Buffer)
 	if err := gob.NewEncoder(buf).Encode(certificate); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.Errorf(": %w", err)
 	}
 	_, err := c.client.Put(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.Certificate.SerialNumber), buf.String())
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
+func (c *CA) NewSerialNumber(ctx context.Context) (*big.Int, error) {
 	var serial *big.Int
 	retry := 0
 	for {
 		if retry == 3 {
-			return nil, xerrors.New("etcd: can not generate new serial number")
+			return nil, xerrors.New("etcd: can't generate new serial number")
 		}
 
 		s, err := cert.NewSerialNumber()
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.Errorf(": %w", err)
 		}
 		serial = s
 
@@ -270,6 +187,15 @@ func (c *CA) newSerialNumber(ctx context.Context) (*big.Int, error) {
 	}
 
 	return serial, nil
+}
+
+func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
+	ch := make(chan *database.RevokedCertificate)
+	c.wMu.Lock()
+	c.watchCh = append(c.watchCh, ch)
+	c.wMu.Unlock()
+
+	return ch
 }
 
 func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
@@ -295,7 +221,7 @@ func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
 				c.mu.Unlock()
 				logger.Log.Debug("Add new revoked certificate", zap.String("serial", r.SerialNumber.Text(16)))
 
-				c.wMu.RLock()
+				c.wMu.Lock()
 				for i, ch := range c.watchCh {
 					select {
 					case ch <- r:
@@ -303,7 +229,7 @@ func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
 						c.watchCh = append(c.watchCh[:i], c.watchCh[i+1:]...)
 					}
 				}
-				c.wMu.RUnlock()
+				c.wMu.Unlock()
 			}
 		case <-ctx.Done():
 			return
