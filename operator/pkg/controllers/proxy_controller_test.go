@@ -113,9 +113,7 @@ func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
 	}
 
 	if p.ConfigMaps != nil {
-		for _, v := range p.ConfigMaps {
-			f.RegisterConfigMapFixture(v)
-		}
+		f.RegisterConfigMapFixture(p.ConfigMaps...)
 	}
 
 	if p.PodDisruptionBudget != nil {
@@ -127,7 +125,7 @@ func TestProxyController(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		t.Parallel()
 
-		f := newFixture(t)
+		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
@@ -151,7 +149,7 @@ func TestProxyController(t *testing.T) {
 	t.Run("Preparing phase when EtcdCluster is not ready", func(t *testing.T) {
 		t.Parallel()
 
-		f := newFixture(t)
+		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
@@ -175,7 +173,7 @@ func TestProxyController(t *testing.T) {
 	t.Run("Finish preparing phase", func(t *testing.T) {
 		t.Parallel()
 
-		f := newFixture(t)
+		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
@@ -218,7 +216,7 @@ func TestProxyController(t *testing.T) {
 	t.Run("RPC server is ready", func(t *testing.T) {
 		t.Parallel()
 
-		f := newFixture(t)
+		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, services := newProxy("test")
 		f.RegisterProxyFixture(p)

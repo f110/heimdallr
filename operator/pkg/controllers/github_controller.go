@@ -51,6 +51,9 @@ type GitHubController struct {
 	recorder record.EventRecorder
 }
 
+// for testing
+var transport = http.DefaultTransport
+
 func NewGitHubController(
 	sharedInformerFactory informers.SharedInformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
@@ -142,7 +145,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rt, err := ghinstallation.New(http.DefaultTransport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
+	rt, err := ghinstallation.New(transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

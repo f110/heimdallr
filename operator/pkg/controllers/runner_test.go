@@ -32,128 +32,151 @@ type expectAction struct {
 	Caller string
 }
 
-type proxyControllerTestRunner struct {
+type commonTestRunner struct {
 	t           *testing.T
 	actions     []expectAction
 	coreActions []expectAction
 
-	c *ProxyController
-
 	client     *fake.Clientset
 	coreClient *k8sfake.Clientset
-	cmClient   *cmfake.Clientset
-	mClient    *mfake.Clientset
+
+	sharedInformerFactory     informers.SharedInformerFactory
+	coreSharedInformerFactory kubeinformers.SharedInformerFactory
 }
 
-func newFixture(t *testing.T) *proxyControllerTestRunner {
-	f := &proxyControllerTestRunner{t: t, actions: make([]expectAction, 0), coreActions: make([]expectAction, 0)}
+func newCommonTestRunner(t *testing.T) *commonTestRunner {
+	client := fake.NewSimpleClientset()
+	coreClient := k8sfake.NewSimpleClientset()
 
-	f.client = fake.NewSimpleClientset()
-	f.coreClient = k8sfake.NewSimpleClientset()
-	f.cmClient = cmfake.NewSimpleClientset()
-	f.mClient = mfake.NewSimpleClientset()
+	sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
+	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
 
-	sharedInformerFactory := informers.NewSharedInformerFactory(f.client, 30*time.Second)
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(f.coreClient, 30*time.Second)
 	sharedInformerFactory.Start(context.Background().Done())
 	coreSharedInformerFactory.Start(context.Background().Done())
 
-	f.coreClient.Resources = []*metav1.APIResourceList{
-		{
-			GroupVersion: "cert-manager.io/v1alpha2",
-			APIResources: []metav1.APIResource{
-				{
-					Kind: "Certificate",
-				},
-			},
-		},
+	return &commonTestRunner{
+		t:                         t,
+		actions:                   make([]expectAction, 0),
+		coreActions:               make([]expectAction, 0),
+		client:                    client,
+		coreClient:                coreClient,
+		sharedInformerFactory:     sharedInformerFactory,
+		coreSharedInformerFactory: coreSharedInformerFactory,
 	}
-
-	c, err := New(context.Background(), sharedInformerFactory, coreSharedInformerFactory, f.coreClient, f.client, f.cmClient, f.mClient)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.c = c
-
-	return f
 }
 
-func (f *proxyControllerTestRunner) RegisterProxyFixture(p *proxyv1.Proxy) {
+func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1.Proxy) {
 	f.client.Tracker().Add(p)
-	f.c.sharedInformer.Proxy().V1().Proxies().Informer().GetIndexer().Add(p)
+	f.sharedInformerFactory.Proxy().V1().Proxies().Informer().GetIndexer().Add(p)
 }
 
-func (f *proxyControllerTestRunner) RegisterBackendFixture(b *proxyv1.Backend) {
+func (f *commonTestRunner) RegisterBackendFixture(b *proxyv1.Backend) {
 	f.client.Tracker().Add(b)
-	f.c.sharedInformer.Proxy().V1().Backends().Informer().GetIndexer().Add(b)
+	f.sharedInformerFactory.Proxy().V1().Backends().Informer().GetIndexer().Add(b)
 }
 
-func (f *proxyControllerTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdCluster) {
+func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdCluster) {
 	f.client.Tracker().Add(ec)
-	f.c.sharedInformer.Etcd().V1alpha1().EtcdClusters().Informer().GetIndexer().Add(ec)
+	f.sharedInformerFactory.Etcd().V1alpha1().EtcdClusters().Informer().GetIndexer().Add(ec)
 }
 
-func (f *proxyControllerTestRunner) RegisterSecretFixture(s *corev1.Secret) {
-	f.coreClient.Tracker().Add(s)
-	f.c.coreSharedInformer.Core().V1().Secrets().Informer().GetIndexer().Add(s)
+func (f *commonTestRunner) RegisterSecretFixture(s ...*corev1.Secret) {
+	for _, v := range s {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Core().V1().Secrets().Informer().GetIndexer().Add(v)
+	}
 }
 
-func (f *proxyControllerTestRunner) RegisterDeploymentFixture(d *appsv1.Deployment) {
+func (f *commonTestRunner) RegisterDeploymentFixture(d *appsv1.Deployment) {
 	f.coreClient.Tracker().Add(d)
-	f.c.coreSharedInformer.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
+	f.coreSharedInformerFactory.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
 }
 
-func (f *proxyControllerTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1beta1.PodDisruptionBudget) {
+func (f *commonTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1beta1.PodDisruptionBudget) {
 	f.coreClient.Tracker().Add(pdb)
-	f.c.coreSharedInformer.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
+	f.coreSharedInformerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
 }
 
-func (f *proxyControllerTestRunner) RegisterServiceFixture(s *corev1.Service) {
+func (f *commonTestRunner) RegisterServiceFixture(s *corev1.Service) {
 	f.coreClient.Tracker().Add(s)
-	f.c.coreSharedInformer.Core().V1().Services().Informer().GetIndexer().Add(s)
+	f.coreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(s)
 }
 
-func (f *proxyControllerTestRunner) RegisterConfigMapFixture(c *corev1.ConfigMap) {
-	f.coreClient.Tracker().Add(c)
-	f.c.coreSharedInformer.Core().V1().ConfigMaps().Informer().GetIndexer().Add(c)
-}
-
-func checkAction(t *testing.T, expected expectAction, actual core.Action) {
-	if !(expected.Matches(actual.GetVerb(), actual.GetResource().Resource) && actual.GetSubresource() == expected.GetSubresource()) {
-		t.Errorf("Expected\n\t%#v\ngot\n\t%#v", expected, actual)
-		return
-	}
-
-	if reflect.TypeOf(actual) != reflect.TypeOf(expected.Action) {
-		t.Errorf("Action has wrong type. Expected: %s. Got: %s", reflect.TypeOf(expected.Action).Name(), reflect.TypeOf(actual).Name())
-		return
+func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
+	for _, v := range c {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *proxyControllerTestRunner) filterInformerActions(actions []core.Action) []core.Action {
-	ret := make([]core.Action, 0)
-	for _, action := range actions {
-		if len(action.GetNamespace()) == 0 {
-			continue
-		}
+func (f *commonTestRunner) ExpectCreateSecret() {
+	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
 
-		switch action.GetVerb() {
-		case "list", "watch":
-			switch action.GetResource().Resource {
-			case "proxies", "etcdclusters", "backends", "roles", "rpcpermissions":
-				continue
-			}
-		case "get":
-			continue
-		}
-		ret = append(ret, action)
-	}
-
-	return ret
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
-func (f *proxyControllerTestRunner) actionMatcher() {
-	actions := f.filterInformerActions(f.client.Actions())
+func (f *commonTestRunner) ExpectCreateDeployment() {
+	action := core.NewCreateAction(appsv1.SchemeGroupVersion.WithResource("deployments"), "", &appsv1.Deployment{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateService() {
+	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("services"), "", &corev1.Service{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateConfigMap() {
+	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreatePodDisruptionBudget() {
+	action := core.NewCreateAction(policyv1beta1.SchemeGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1beta1.PodDisruptionBudget{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateEtcdCluster() {
+	action := core.NewCreateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateProxy() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateProxyStatus() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
+	action.Subresource = "status"
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateBackend() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateConfigMap() {
+	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) expectActionWithCaller(action core.Action) expectAction {
+	_, file, line, _ := runtime.Caller(2)
+	return expectAction{Action: action, Caller: fmt.Sprintf("%s:%d", file, line)}
+}
+
+func (f *commonTestRunner) actionMatcher() {
+	actions := filterInformerActions(f.client.Actions())
 	for i, action := range actions {
 		if len(f.actions) < i+1 {
 			f.t.Errorf("%d unexpected actions:", len(actions)-len(f.actions))
@@ -171,7 +194,7 @@ func (f *proxyControllerTestRunner) actionMatcher() {
 		f.t.Errorf("%d additional expected actions:%+v", len(f.actions)-len(actions), f.actions[len(actions):])
 	}
 
-	kubeActions := f.filterInformerActions(f.coreClient.Actions())
+	kubeActions := filterInformerActions(f.coreClient.Actions())
 	for i, action := range kubeActions {
 		if len(f.coreActions) < i+1 {
 			f.t.Errorf("%d unexpected actions:", len(kubeActions)-len(f.coreActions))
@@ -190,70 +213,43 @@ func (f *proxyControllerTestRunner) actionMatcher() {
 	}
 }
 
-func (f *proxyControllerTestRunner) ExpectCreateSecret() {
-	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+type proxyControllerTestRunner struct {
+	*commonTestRunner
+	t *testing.T
 
-	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+	c *ProxyController
+
+	cmClient *cmfake.Clientset
+	mClient  *mfake.Clientset
 }
 
-func (f *proxyControllerTestRunner) ExpectCreateDeployment() {
-	action := core.NewCreateAction(appsv1.SchemeGroupVersion.WithResource("deployments"), "", &appsv1.Deployment{})
+func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
+	f := &proxyControllerTestRunner{
+		commonTestRunner: newCommonTestRunner(t),
+		t:                t,
+	}
 
-	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
-}
+	f.cmClient = cmfake.NewSimpleClientset()
+	f.mClient = mfake.NewSimpleClientset()
 
-func (f *proxyControllerTestRunner) ExpectCreateService() {
-	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("services"), "", &corev1.Service{})
+	f.commonTestRunner.coreClient.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "cert-manager.io/v1alpha2",
+			APIResources: []metav1.APIResource{
+				{
+					Kind: "Certificate",
+				},
+			},
+		},
+	}
 
-	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
-}
+	c, err := New(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client, f.cmClient, f.mClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.c = c
 
-func (f *proxyControllerTestRunner) ExpectCreateConfigMap() {
-	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
-
-	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) ExpectCreatePodDisruptionBudget() {
-	action := core.NewCreateAction(policyv1beta1.SchemeGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1beta1.PodDisruptionBudget{})
-
-	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) expectActionWithCaller(action core.Action) expectAction {
-	_, file, line, _ := runtime.Caller(2)
-	return expectAction{Action: action, Caller: fmt.Sprintf("%s:%d", file, line)}
-}
-
-func (f *proxyControllerTestRunner) ExpectCreateEtcdCluster() {
-	action := core.NewCreateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
-
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) ExpectUpdateProxy() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
-
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) ExpectUpdateProxyStatus() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
-	action.Subresource = "status"
-
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) ExpectUpdateBackend() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
-
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
-}
-
-func (f *proxyControllerTestRunner) ExpectUpdateConfigMap() {
-	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
-
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
+	return f
 }
 
 func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1.Proxy) {
@@ -282,9 +278,91 @@ func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1.Prox
 	IsError(t, syncErr, expectErr)
 }
 
+type githubControllerTestRunner struct {
+	*commonTestRunner
+	t *testing.T
+
+	c *GitHubController
+}
+
+func newGitHubControllerTestRunner(t *testing.T) *githubControllerTestRunner {
+	f := &githubControllerTestRunner{
+		commonTestRunner: newCommonTestRunner(t),
+		t:                t,
+	}
+
+	c, err := NewGitHubController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.c = c
+
+	return f
+}
+
+func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1.Backend) {
+	key, err := cache.MetaNamespaceKeyFunc(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	syncErr := f.c.syncBackend(key)
+	f.actionMatcher()
+
+	if syncErr != nil {
+		t.Errorf("Expect to not occurred error: %+v", syncErr)
+	}
+}
+
+func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1.Backend, expectErr error) {
+	key, err := cache.MetaNamespaceKeyFunc(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	syncErr := f.c.syncBackend(key)
+	f.actionMatcher()
+
+	IsError(t, syncErr, expectErr)
+}
+
 func IsError(t *testing.T, actual, expect error) {
 	if !xerrors.Is(actual, expect) {
 		t.Logf("%+v", actual)
 		t.Errorf("%q is not %q error", actual, expect)
+	}
+}
+
+func filterInformerActions(actions []core.Action) []core.Action {
+	ret := make([]core.Action, 0)
+	for _, action := range actions {
+		if len(action.GetNamespace()) == 0 {
+			continue
+		}
+
+		switch action.GetVerb() {
+		case "list", "watch":
+			switch action.GetResource().Resource {
+			case "proxies", "etcdclusters", "backends", "roles", "rpcpermissions":
+				continue
+			}
+		case "get":
+			continue
+		}
+		ret = append(ret, action)
+	}
+
+	return ret
+}
+
+func checkAction(t *testing.T, expected expectAction, actual core.Action) {
+	if !(expected.Matches(actual.GetVerb(), actual.GetResource().Resource) && actual.GetSubresource() == expected.GetSubresource()) {
+		t.Errorf("Expected\n\t%#v\ngot\n\t%#v", expected, actual)
+		return
+	}
+
+	if reflect.TypeOf(actual) != reflect.TypeOf(expected.Action) {
+		t.Errorf("Action has wrong type. Expected: %s. Got: %s", reflect.TypeOf(expected.Action).Name(), reflect.TypeOf(actual).Name())
+		return
 	}
 }
