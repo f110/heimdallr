@@ -28,7 +28,7 @@ func TestEtcdController(t *testing.T) {
 		f.RegisterEtcdClusterFixture(e)
 
 		// Setup
-		f.ExpectUpdateEtcdCluster()
+		f.ExpectUpdateEtcdClusterStatus()
 		f.ExpectCreateSecret()
 		f.ExpectCreateSecret()
 		f.ExpectCreateSecret()
@@ -36,7 +36,7 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectCreatePod()
 		f.ExpectCreateService()
 		f.ExpectCreateService()
-		f.ExpectUpdateEtcdCluster()
+		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
 		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
@@ -64,7 +64,7 @@ func TestEtcdController(t *testing.T) {
 		f.RegisterPodFixture(member)
 
 		f.ExpectCreatePod()
-		f.ExpectUpdateEtcdCluster()
+		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
 		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-2", e.Name), metav1.GetOptions{})
@@ -93,7 +93,7 @@ func TestEtcdController(t *testing.T) {
 		e.Spec.Version = "v3.3.0"
 
 		f.ExpectCreatePod()
-		f.ExpectUpdateEtcdCluster()
+		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
 		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-4", e.Name), metav1.GetOptions{})
@@ -133,7 +133,7 @@ func TestEtcdController(t *testing.T) {
 			f.RegisterPodFixture(tempMemberPod)
 
 			f.ExpectDeletePod()
-			f.ExpectUpdateEtcdCluster()
+			f.ExpectUpdateEtcdClusterStatus()
 			f.Run(t, e)
 		})
 
@@ -163,7 +163,7 @@ func TestEtcdController(t *testing.T) {
 			f.RegisterPodFixture(tempMemberPod)
 
 			f.ExpectCreatePod()
-			f.ExpectUpdateEtcdCluster()
+			f.ExpectUpdateEtcdClusterStatus()
 			f.Run(t, e)
 		})
 	})
@@ -193,7 +193,7 @@ func TestEtcdController(t *testing.T) {
 		f.RegisterPodFixture(tempMemberPod)
 
 		f.ExpectDeletePod()
-		f.ExpectUpdateEtcdCluster()
+		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 	})
 }

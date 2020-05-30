@@ -184,8 +184,22 @@ func (f *commonTestRunner) ExpectUpdateBackend() {
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
+func (f *commonTestRunner) ExpectUpdateBackendStatus() {
+	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+	action.Subresource = "status"
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
 func (f *commonTestRunner) ExpectUpdateEtcdCluster() {
 	action := core.NewUpdateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateEtcdClusterStatus() {
+	action := core.NewUpdateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }

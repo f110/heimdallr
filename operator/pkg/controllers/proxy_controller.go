@@ -305,7 +305,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
+		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -520,7 +520,7 @@ func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).Update(newP)
+		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

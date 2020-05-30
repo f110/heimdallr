@@ -4,6 +4,9 @@ run:
 run-operator:
 	bazel run //operator/cmd/lagproxycontroller -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4
 
+test:
+	bazel test //...
+
 install-operator:
 	kustomize build operator/config/crd | kubectl apply -f -
 
@@ -24,4 +27,8 @@ gen-operator:
 push:
 	bazel query 'kind(container_push, //...)' | xargs -n1 bazel run
 
-.PHONY: run run-operator install-operator update-deps gen push
+e2e-test:
+	bazel build //operator/e2e/test:go_default_test
+	./bazel-bin/operator/e2e/test/go_default_test_/go_default_test -test.v=true -crd $(CURDIR)/operator/config/crd/bases -proxy.version experimental
+
+.PHONY: run run-operator test install-operator update-deps gen push

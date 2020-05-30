@@ -199,7 +199,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		f.ExpectCreateConfigMap()
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		f.RunExpectError(t, p, ErrRPCServerIsNotReady)
 
 		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
@@ -256,15 +256,15 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateService()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
-		f.ExpectUpdateProxy()
+		f.ExpectUpdateProxyStatus()
 		f.ExpectUpdateBackend()
 		// Expect to create the dashboard
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
-		// Finally update the status of proxy
-		f.ExpectUpdateProxy()
+		// Finally, update the status of proxy
+		f.ExpectUpdateProxyStatus()
 		f.Run(t, p)
 
 		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})

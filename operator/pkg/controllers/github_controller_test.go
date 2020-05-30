@@ -55,7 +55,7 @@ func TestGitHubController(t *testing.T) {
 	f.RegisterBackendFixture(backend)
 	f.RegisterSecretFixture(secrets...)
 
-	f.ExpectUpdateBackend()
+	f.ExpectUpdateBackendStatus()
 	f.Run(t, backend)
 
 	ExpectCall(t, mockTransport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/lagrangian-proxy/hooks")

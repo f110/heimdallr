@@ -160,7 +160,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	}
 	if c.Status.Phase == "" {
 		c.Status.Phase = etcdv1alpha1.ClusterPhaseInitializing
-		_, err = ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).Update(c)
+		_, err = ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).UpdateStatus(c)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -302,7 +302,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	ec.updateStatus(cluster)
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		klog.V(4).Info("Update EtcdCluster")
-		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Update(cluster.EtcdCluster)
+		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(cluster.EtcdCluster)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

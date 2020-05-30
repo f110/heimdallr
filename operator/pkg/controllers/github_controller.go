@@ -237,7 +237,7 @@ Spec:
 		}
 	}
 
-	_, err = c.client.ProxyV1().Backends(backend.Namespace).Update(backend)
+	_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
 	if err != nil {
 		klog.Infof("Failed update backend: %v", err)
 	}
