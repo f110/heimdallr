@@ -114,7 +114,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				e, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, cfg, clusterDomain, dev)
+				e, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cfg, clusterDomain, dev, nil)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)

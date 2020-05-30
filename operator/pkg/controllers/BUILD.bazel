@@ -81,6 +81,7 @@ rbac_gen(
 go_test(
     name = "go_default_test",
     srcs = [
+        "etcd_controller_test.go",
         "github_controller_test.go",
         "proxy_controller_test.go",
         "runner_test.go",
@@ -88,6 +89,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//operator/pkg/api/etcd:go_default_library",
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
         "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/client/versioned/fake:go_default_library",
@@ -97,6 +99,8 @@ go_test(
         "//vendor/github.com/jarcoal/httpmock:go_default_library",
         "//vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/fake:go_default_library",
         "//vendor/github.com/stretchr/testify/assert:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
         "//vendor/k8s.io/api/apps/v1:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",

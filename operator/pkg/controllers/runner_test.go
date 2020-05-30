@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,6 +81,13 @@ func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdClust
 	f.sharedInformerFactory.Etcd().V1alpha1().EtcdClusters().Informer().GetIndexer().Add(ec)
 }
 
+func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
+	for _, v := range p {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Core().V1().Pods().Informer().GetIndexer().Add(v)
+	}
+}
+
 func (f *commonTestRunner) RegisterSecretFixture(s ...*corev1.Secret) {
 	for _, v := range s {
 		f.coreClient.Tracker().Add(v)
@@ -111,6 +119,18 @@ func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
 
 func (f *commonTestRunner) ExpectCreateSecret() {
 	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreatePod() {
+	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("pods"), "", &corev1.Pod{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectDeletePod() {
+	action := core.NewDeleteAction(scheme.SchemeGroupVersion.WithResource("pods"), "", "")
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -160,6 +180,12 @@ func (f *commonTestRunner) ExpectUpdateProxyStatus() {
 
 func (f *commonTestRunner) ExpectUpdateBackend() {
 	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateEtcdCluster() {
+	action := core.NewUpdateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
@@ -326,6 +352,44 @@ func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1.Bac
 	IsError(t, syncErr, expectErr)
 }
 
+type etcdControllerTestRunner struct {
+	*commonTestRunner
+	t *testing.T
+
+	c *EtcdController
+}
+
+func newEtcdControllerTestRunner(t *testing.T, mockOpt *MockOption) *etcdControllerTestRunner {
+	f := &etcdControllerTestRunner{
+		commonTestRunner: newCommonTestRunner(t),
+		t:                t,
+	}
+
+	// The controller assumes running inside cluster.
+	// Thus we don't have to pass rest.Config.
+	c, err := NewEtcdController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client, nil, "cluster.local", false, mockOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.c = c
+
+	return f
+}
+
+func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster) {
+	key, err := cache.MetaNamespaceKeyFunc(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	syncErr := f.c.syncEtcdCluster(key)
+	f.actionMatcher()
+
+	if syncErr != nil {
+		t.Errorf("Expect to not occurred error: %+v", syncErr)
+	}
+}
+
 func IsError(t *testing.T, actual, expect error) {
 	if !xerrors.Is(actual, expect) {
 		t.Logf("%+v", actual)
@@ -344,6 +408,8 @@ func filterInformerActions(actions []core.Action) []core.Action {
 		case "list", "watch":
 			switch action.GetResource().Resource {
 			case "proxies", "etcdclusters", "backends", "roles", "rpcpermissions":
+				continue
+			case "jobs":
 				continue
 			}
 		case "get":
@@ -365,4 +431,9 @@ func checkAction(t *testing.T, expected expectAction, actual core.Action) {
 		t.Errorf("Action has wrong type. Expected: %s. Got: %s", reflect.TypeOf(expected.Action).Name(), reflect.TypeOf(actual).Name())
 		return
 	}
+}
+
+func normalizeName(name string) string {
+	name = strings.Replace(name, "/", "-", -1)
+	return name
 }

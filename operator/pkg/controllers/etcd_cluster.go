@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
@@ -59,6 +60,11 @@ const (
 	clientCertSecretPrivateKeyName = "client.key"
 )
 
+type MockOption struct {
+	Cluster     clientv3.Cluster
+	Maintenance clientv3.Maintenance
+}
+
 type EtcdCluster struct {
 	*etcdv1alpha1.EtcdCluster
 
@@ -69,12 +75,15 @@ type EtcdCluster struct {
 	serverCertSecret Certificate
 	podsOnce         sync.Once
 	expectedPods     []*corev1.Pod
+
+	mockOpt *MockOption
 }
 
-func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string) *EtcdCluster {
+func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string, mockOpt *MockOption) *EtcdCluster {
 	return &EtcdCluster{
 		EtcdCluster:   c.DeepCopy(),
 		ClusterDomain: clusterDomain,
+		mockOpt:       mockOpt,
 	}
 }
 
@@ -359,14 +368,7 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
 			name := fmt.Sprintf("%s-%d", c.Name, c.Spec.Members+1)
 			if _, ok := pods[name]; !ok {
-				pod := c.newEtcdPod(
-					c.Spec.Members+1,
-					etcdVersion,
-					"existing",
-					append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
-				)
-				metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
-				pods[name] = pod
+				pods[name] = c.newTemporaryMemberPodSpec(name, etcdVersion, initialClusters)
 			}
 
 			result = append(result, pods[name])
@@ -414,8 +416,9 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 		return true
 	}
 
-	if v, ok := pod.Labels[etcd.LabelNameEtcdVersion]; ok && v != c.Spec.Version {
-		klog.V(4).Infof("%s is older version: %s", pod.Name, v)
+	etcdVersion := pod.Labels[etcd.LabelNameEtcdVersion]
+	if (c.Spec.Version != "" && etcdVersion != c.Spec.Version) || (c.Spec.Version == "" && etcdVersion != defaultEtcdVersion) {
+		klog.V(4).Infof("%s is older version: %s", pod.Name, etcdVersion)
 		return true
 	}
 
@@ -634,6 +637,16 @@ func (c *EtcdCluster) currentInternalStateUpdating() InternalState {
 }
 
 func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
+	// for test hack
+	if c.mockOpt != nil {
+		ctx, _ := context.WithCancel(context.Background())
+		client := clientv3.NewCtxClient(ctx)
+		client.Cluster = c.mockOpt.Cluster
+		client.Maintenance = c.mockOpt.Maintenance
+
+		return client, nil
+	}
+
 	caCertPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -693,6 +706,18 @@ func (c *EtcdCluster) GetMetrics(addr string) ([]*dto.MetricFamily, error) {
 
 func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate()))
+}
+
+func (c *EtcdCluster) newTemporaryMemberPodSpec(name, etcdVersion string, initialClusters []string) *corev1.Pod {
+	pod := c.newEtcdPod(
+		c.Spec.Members+1,
+		etcdVersion,
+		"existing",
+		append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
+	)
+	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
+
+	return pod
 }
 
 func (c *EtcdCluster) newEtcdPod(num int, etcdVersion string, clusterState string, initialCluster []string) *corev1.Pod {
