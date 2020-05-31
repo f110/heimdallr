@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"io"
+	"math/rand"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
@@ -11,6 +14,8 @@ import (
 
 	mfake "github.com/coreos/prometheus-operator/pkg/client/versioned/fake"
 	cmfake "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/fake"
+	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +68,31 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 		coreClient:                coreClient,
 		sharedInformerFactory:     sharedInformerFactory,
 		coreSharedInformerFactory: coreSharedInformerFactory,
+	}
+}
+
+func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
+	for _, v := range objs {
+		switch obj := v.(type) {
+		case *proxyv1.Proxy:
+			f.RegisterProxyFixture(obj)
+		case *proxyv1.Backend:
+			f.RegisterBackendFixture(obj)
+		case *etcdv1alpha1.EtcdCluster:
+			f.RegisterEtcdClusterFixture(obj)
+		case *corev1.Pod:
+			f.RegisterPodFixture(obj)
+		case *corev1.Secret:
+			f.RegisterSecretFixture(obj)
+		case *corev1.Service:
+			f.RegisterServiceFixture(obj)
+		case *corev1.ConfigMap:
+			f.RegisterConfigMapFixture(obj)
+		case *appsv1.Deployment:
+			f.RegisterDeploymentFixture(obj)
+		case *policyv1beta1.PodDisruptionBudget:
+			f.RegisterPodDisruptionBudgetFixture(obj)
+		}
 	}
 }
 
@@ -373,11 +403,15 @@ type etcdControllerTestRunner struct {
 	c *EtcdController
 }
 
-func newEtcdControllerTestRunner(t *testing.T, mockOpt *MockOption) *etcdControllerTestRunner {
+func newEtcdControllerTestRunner(t *testing.T) (*etcdControllerTestRunner, *MockOption) {
 	f := &etcdControllerTestRunner{
 		commonTestRunner: newCommonTestRunner(t),
 		t:                t,
 	}
+
+	etcdMockCluster := NewMockCluster()
+	etcdMockMaintenance := NewMockMaintenance()
+	mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
 
 	// The controller assumes running inside cluster.
 	// Thus we don't have to pass rest.Config.
@@ -387,7 +421,7 @@ func newEtcdControllerTestRunner(t *testing.T, mockOpt *MockOption) *etcdControl
 	}
 	f.c = c
 
-	return f
+	return f, mockOpt
 }
 
 func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster) {
@@ -402,6 +436,94 @@ func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster
 	if syncErr != nil {
 		t.Errorf("Expect to not occurred error: %+v", syncErr)
 	}
+}
+
+type MockCluster struct {
+	members []*etcdserverpb.Member
+}
+
+func NewMockCluster() *MockCluster {
+	return &MockCluster{members: make([]*etcdserverpb.Member, 0)}
+}
+
+func (m *MockCluster) AddMember(member *etcdserverpb.Member) {
+	member.ID = rand.Uint64()
+	m.members = append(m.members, member)
+}
+
+func (m *MockCluster) MemberList(_ context.Context) (*clientv3.MemberListResponse, error) {
+	return &clientv3.MemberListResponse{Members: m.members}, nil
+}
+
+func (m *MockCluster) MemberAdd(_ context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error) {
+	member := &etcdserverpb.Member{PeerURLs: peerAddrs, ID: rand.Uint64()}
+	m.members = append(m.members, member)
+
+	return &clientv3.MemberAddResponse{Member: member, Members: m.members}, nil
+}
+
+func (m *MockCluster) MemberAddAsLearner(ctx context.Context, peerAddrs []string) (*clientv3.MemberAddResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockCluster) MemberRemove(_ context.Context, id uint64) (*clientv3.MemberRemoveResponse, error) {
+	for i, v := range m.members {
+		if v.ID == id {
+			m.members = append(m.members[:i], m.members[i+1:]...)
+			break
+		}
+	}
+
+	return &clientv3.MemberRemoveResponse{}, nil
+}
+
+func (m *MockCluster) MemberUpdate(ctx context.Context, id uint64, peerAddrs []string) (*clientv3.MemberUpdateResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockCluster) MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error) {
+	panic("implement me")
+}
+
+type MockMaintenance struct {
+}
+
+func NewMockMaintenance() *MockMaintenance {
+	return &MockMaintenance{}
+}
+
+func (m *MockMaintenance) AlarmList(ctx context.Context) (*clientv3.AlarmResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockMaintenance) AlarmDisarm(ctx context.Context, alerm *clientv3.AlarmMember) (*clientv3.AlarmResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockMaintenance) Defragment(ctx context.Context, endpoint string) (*clientv3.DefragmentResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockMaintenance) Status(ctx context.Context, endpoint string) (*clientv3.StatusResponse, error) {
+	return &clientv3.StatusResponse{
+		Header: &etcdserverpb.ResponseHeader{},
+	}, nil
+}
+
+func (m *MockMaintenance) HashKV(ctx context.Context, endpoint string, rev int64) (*clientv3.HashKVResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockMaintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {
+	f, err := os.Open("testdata/snapshot.db")
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (m *MockMaintenance) MoveLeader(ctx context.Context, transfereeID uint64) (*clientv3.MoveLeaderResponse, error) {
+	panic("implement me")
 }
 
 func IsError(t *testing.T, actual, expect error) {

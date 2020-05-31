@@ -4,13 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/minio/minio-go/v6"
+	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/clientv3/snapshot"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +45,7 @@ import (
 	"github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
 	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
 	etcdlisters "github.com/f110/lagrangian-proxy/operator/pkg/listers/etcd/v1alpha1"
+	"github.com/f110/lagrangian-proxy/pkg/logger"
 )
 
 const (
@@ -65,6 +73,7 @@ type EtcdController struct {
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
 
+	// for testing hack
 	etcdClientMockOpt *MockOption
 }
 
@@ -158,7 +167,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	} else if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if c.Status.Phase == "" {
+	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha1.ClusterPhasePending {
 		c.Status.Phase = etcdv1alpha1.ClusterPhaseInitializing
 		_, err = ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).UpdateStatus(c)
 		if err != nil {
@@ -300,6 +309,28 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	}
 
 	ec.updateStatus(cluster)
+
+	if cluster.Status.Phase == etcdv1alpha1.ClusterPhaseRunning && ec.shouldBackup(cluster) {
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+		err := ec.doBackup(ctx, cluster)
+		if err != nil {
+			cluster.Status.Backup.Succeeded = false
+			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
+		} else {
+			cluster.Status.Backup.Succeeded = true
+			cluster.Status.Backup.LastSucceededTime = cluster.Status.Backup.History[0].ExecuteTime
+			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "BackupSuccess", fmt.Sprintf("Backup succeeded"))
+		}
+
+		err = ec.doRotateBackup(ctx, cluster)
+		if err != nil {
+			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
+		}
+		cancelFunc()
+
+		ec.updateBackupStatus(cluster)
+	}
+
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		klog.V(4).Info("Update EtcdCluster")
 		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(cluster.EtcdCluster)
@@ -387,26 +418,10 @@ func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secre
 func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) error {
 	klog.V(4).Infof("Create %s", pod.Name)
 
-	var endpoints []string
-	if ec.runOutsideCluster {
-		pods := cluster.AllMembers()
-		for _, v := range pods {
-			if cluster.IsPodReady(v) {
-				forwarder, port, err := ec.portForward(v, 2379)
-				if err != nil {
-					return xerrors.Errorf(": %w", err)
-				}
-				defer forwarder.Close()
-
-				endpoints = []string{fmt.Sprintf("https://127.0.0.1:%d", port)}
-				klog.V(4).Infof("Port forward to %s", v.Name)
-				break
-			}
-		}
+	eClient, forwarder, err := ec.etcdClient(cluster)
+	if forwarder != nil {
+		defer forwarder.Close()
 	}
-
-	klog.V(4).Infof("Create etcd client: %v", endpoints)
-	eClient, err := cluster.Client(endpoints)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -462,30 +477,11 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) error {
 	klog.V(4).Infof("Delete a member: %s", pod.Name)
 
-	var endpoints []string
-	var forwarder *portforward.PortForwarder
-	if ec.runOutsideCluster {
-		pods := cluster.AllMembers()
-		for _, v := range pods {
-			if cluster.IsPodReady(v) && v.Name != pod.Name {
-				f, port, err := ec.portForward(v, 2379)
-				if err != nil {
-					klog.V(4).Infof("Failed open forwarding port: %v", err)
-					continue
-				}
-
-				endpoints = []string{fmt.Sprintf("https://127.0.0.1:%d", port)}
-				forwarder = f
-				break
-			}
-		}
-		if forwarder == nil {
-			return errors.New("could not port forward to any pod")
-		}
-	}
-
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
-	eClient, err := cluster.Client(endpoints)
+	eClient, forwarder, err := ec.etcdClient(cluster)
+	if forwarder != nil {
+		defer forwarder.Close()
+	}
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -775,12 +771,277 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	}
 }
 
+func (ec *EtcdController) updateBackupStatus(cluster *EtcdCluster) {
+	succeededCount := 0
+	lastIndex := 0
+	for i, v := range cluster.Status.Backup.History {
+		if v.Succeeded {
+			succeededCount++
+			lastIndex = i
+		}
+		if succeededCount == cluster.Spec.Backup.MaxBackups {
+			break
+		}
+	}
+	if succeededCount == cluster.Spec.Backup.MaxBackups && lastIndex+1 < len(cluster.Status.Backup.History) {
+		cluster.Status.Backup.History = cluster.Status.Backup.History[:lastIndex+1]
+	}
+}
+
+func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
+	if cluster.Spec.Backup == nil {
+		return false
+	}
+	if cluster.Status.Backup == nil {
+		return true
+	}
+	if cluster.Status.Backup.LastSucceededTime.IsZero() {
+		return true
+	}
+	if cluster.Status.Backup.LastSucceededTime.Add(time.Duration(cluster.Spec.Backup.IntervalInSecond) * time.Second).Before(time.Now()) {
+		return true
+	}
+
+	return false
+}
+
+func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) error {
+	now := metav1.Now()
+	backupStatus := &etcdv1alpha1.BackupStatusHistory{ExecuteTime: &now}
+	defer func() {
+		if cluster.Status.Backup == nil {
+			cluster.Status.Backup = &etcdv1alpha1.BackupStatus{}
+		}
+		cluster.Status.Backup.History = append([]etcdv1alpha1.BackupStatusHistory{*backupStatus}, cluster.Status.Backup.History...)
+	}()
+
+	client, forwarder, err := ec.etcdClient(cluster)
+	if forwarder != nil {
+		defer forwarder.Close()
+	}
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	tmpFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	data, err := client.Snapshot(ctx)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	dataSize, err := io.Copy(tmpFile, data)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := tmpFile.Sync(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := data.Close(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	sm := snapshot.NewV3(logger.Log)
+	dbStatus, err := sm.Status(tmpFile.Name())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	backupStatus.EtcdRevision = dbStatus.Revision
+
+	f, err := os.Open(tmpFile.Name())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := ec.storeBackupFile(ctx, cluster, backupStatus, f, dataSize, now); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	backupStatus.Succeeded = true
+	return nil
+}
+
+func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdCluster, backupStatus *etcdv1alpha1.BackupStatusHistory, data io.Reader, dataSize int64, t metav1.Time) error {
+	switch {
+	case cluster.Spec.Backup.Storage.MinIO != nil:
+		spec := cluster.Spec.Backup.Storage.MinIO
+
+		mc, forwarder, err := ec.minioClient(spec)
+		if forwarder != nil {
+			defer forwarder.Close()
+		}
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
+		path := spec.Path
+		if path[0] == '/' {
+			path = path[1:]
+		}
+		backupStatus.Path = filepath.Join(path, filename)
+		_, err = mc.PutObjectWithContext(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	case cluster.Spec.Backup.Storage.S3 != nil:
+		spec := cluster.Spec.Backup.Storage.S3
+		credential, err := ec.secretLister.Secrets(spec.CredentialSecretNamespace).Get(spec.CredentialSecretName)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		accessKey := credential.Data[spec.AccessKeyIDKey]
+		secretAccessKey := credential.Data[spec.SecretAccessKeyKey]
+		mc, err := minio.New(spec.Endpoint, string(accessKey), string(secretAccessKey), spec.Insecure)
+		if err != nil {
+			return err
+		}
+		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
+		backupStatus.Path = filepath.Join(spec.Path, filename)
+		_, err = mc.PutObjectWithContext(ctx, spec.Bucket, filepath.Join(spec.Path, filename), data, dataSize, minio.PutObjectOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	default:
+		return xerrors.New("Not configured a storage")
+	}
+}
+
+func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdCluster) error {
+	if cluster.Spec.Backup.MaxBackups == 0 {
+		// In this case, we shouldn't rotate backup files.
+		return nil
+	}
+
+	switch {
+	case cluster.Spec.Backup.Storage.MinIO != nil:
+		spec := cluster.Spec.Backup.Storage.MinIO
+
+		mc, forwarder, err := ec.minioClient(spec)
+		if forwarder != nil {
+			defer forwarder.Close()
+		}
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		listCh := mc.ListObjectsV2(spec.Bucket, spec.Path+"/", false, ctx.Done())
+		backupFiles := make([]string, 0)
+		for obj := range listCh {
+			if obj.Err != nil {
+				return xerrors.Errorf(": %w", obj.Err)
+			}
+			if strings.HasPrefix(obj.Key, filepath.Join(spec.Path, cluster.Name)) {
+				backupFiles = append(backupFiles, obj.Key)
+			}
+		}
+		klog.V(4).Infof("Backup files: %v", backupFiles)
+		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
+			return nil
+		}
+		sort.Strings(backupFiles)
+		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
+		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
+		for _, v := range purgeTargets {
+			if err := mc.RemoveObject(spec.Bucket, v); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+
+		return nil
+	default:
+		return xerrors.New("Not configured a storage")
+	}
+}
+
+func (ec *EtcdController) minioClient(spec *etcdv1alpha1.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
+	svc, err := ec.serviceLister.Services(spec.ServiceSelector.Namespace).Get(spec.ServiceSelector.Name)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %w", err)
+	}
+
+	instanceEndpoint := fmt.Sprintf("%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+	var forwarder *portforward.PortForwarder
+	if ec.runOutsideCluster {
+		selector := labels.SelectorFromSet(svc.Spec.Selector)
+		pods, err := ec.podLister.List(selector)
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %w", err)
+		}
+		var targetPod *corev1.Pod
+		for _, v := range pods {
+			if v.Status.Phase == corev1.PodRunning {
+				targetPod = v
+				break
+			}
+		}
+		if targetPod == nil {
+			return nil, nil, xerrors.New("all pods are not running")
+		}
+
+		f, port, err := ec.portForward(targetPod, int(svc.Spec.Ports[0].Port))
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %w", err)
+		}
+		forwarder = f
+
+		instanceEndpoint = fmt.Sprintf("127.0.0.1:%d", port)
+	}
+
+	credential, err := ec.secretLister.Secrets(spec.CredentialSelector.Namespace).Get(spec.CredentialSelector.Name)
+	if err != nil {
+		return nil, forwarder, xerrors.Errorf(": %w", err)
+	}
+
+	accessKey := credential.Data[spec.CredentialSelector.AccessKeyIDKey]
+	secretAccessKey := credential.Data[spec.CredentialSelector.SecretAccessKeyKey]
+	mc, err := minio.New(instanceEndpoint, string(accessKey), string(secretAccessKey), spec.Secure)
+	if err != nil {
+		return nil, forwarder, xerrors.Errorf(": %w", err)
+	}
+	mc.SetCustomTransport(transport)
+
+	return mc, forwarder, nil
+}
+
+func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *portforward.PortForwarder, error) {
+	var endpoints []string
+	var forwarder *portforward.PortForwarder
+	if ec.runOutsideCluster {
+		pods := cluster.AllMembers()
+		for _, v := range pods {
+			if cluster.IsPodReady(v) {
+				f, port, err := ec.portForward(v, 2379)
+				if err != nil {
+					return nil, nil, xerrors.Errorf(": %w", err)
+				}
+				forwarder = f
+
+				endpoints = []string{fmt.Sprintf("https://127.0.0.1:%d", port)}
+				klog.V(4).Infof("Port forward to %s", v.Name)
+				break
+			}
+		}
+	}
+
+	client, err := cluster.Client(endpoints)
+	if err != nil {
+		return nil, forwarder, xerrors.Errorf(": %w", err)
+	}
+
+	return client, forwarder, nil
+}
+
 func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
 	if pod.Status.Phase != corev1.PodRunning {
 		return nil, 0, errors.New("pod is not running yet")
 	}
 
-	ec.coreClient.CoreV1()
 	req := ec.coreClient.CoreV1().RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
 	if err != nil {

@@ -55,6 +55,63 @@ spec:
             type: object
           spec:
             properties:
+              backup:
+                properties:
+                  intervalInSeconds:
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  storage:
+                    properties:
+                      minio:
+                        description: MinIO is in-cluster MinIO config
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              accessKeyIDKey:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              secretAccessKeyKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                          secure:
+                            type: boolean
+                          serviceSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            type: object
+                        type: object
+                      s3:
+                        properties:
+                          accessKeyIDKey:
+                            type: string
+                          bucket:
+                            type: string
+                          credentialSecretName:
+                            type: string
+                          credentialSecretNamespace:
+                            type: string
+                          endpoint:
+                            type: string
+                          insecure:
+                            type: boolean
+                          path:
+                            type: string
+                          secretAccessKeyKey:
+                            type: string
+                        type: object
+                    type: object
+                type: object
               defragmentSchedule:
                 type: string
               members:
@@ -68,6 +125,33 @@ spec:
             type: object
           status:
             properties:
+              backup:
+                properties:
+                  backupStatusHistory:
+                    items:
+                      properties:
+                        etcdRevision:
+                          format: int64
+                          type: integer
+                        etcdVersion:
+                          type: string
+                        executeTime:
+                          format: date-time
+                          type: string
+                        message:
+                          type: string
+                        path:
+                          type: string
+                        succeeded:
+                          type: boolean
+                      type: object
+                    type: array
+                  lastSucceededTime:
+                    format: date-time
+                    type: string
+                  succeeded:
+                    type: boolean
+                type: object
               clientCertSecretName:
                 type: string
               clientEndpoint:

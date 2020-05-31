@@ -21,6 +21,18 @@ const (
 	StoragePersistent StorageType = "persistent"
 )
 
+type ObjectSelector struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type AWSCredentialSelector struct {
+	Name               string `json:"name,omitempty"`
+	Namespace          string `json:"namespace,omitempty"`
+	AccessKeyIDKey     string `json:"accessKeyIDKey,omitempty"`
+	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
@@ -38,9 +50,41 @@ type EtcdCluster struct {
 }
 
 type EtcdClusterSpec struct {
-	Members            int    `json:"members"`
-	Version            string `json:"version"`
-	DefragmentSchedule string `json:"defragmentSchedule"`
+	Members            int         `json:"members"`
+	Version            string      `json:"version"`
+	DefragmentSchedule string      `json:"defragmentSchedule"`
+	Backup             *BackupSpec `json:"backup,omitempty"`
+}
+
+type BackupSpec struct {
+	IntervalInSecond int               `json:"intervalInSeconds,omitempty"`
+	MaxBackups       int               `json:"maxBackups,omitempty"`
+	Storage          BackupStorageSpec `json:"storage,omitempty"`
+}
+
+type BackupStorageSpec struct {
+	// MinIO is in-cluster MinIO config
+	MinIO *BackupStorageMinIOSpec `json:"minio,omitempty"`
+	S3    *BackupStorageS3Spec    `json:"s3,omitempty"`
+}
+
+type BackupStorageMinIOSpec struct {
+	ServiceSelector    ObjectSelector        `json:"serviceSelector,omitempty"`
+	CredentialSelector AWSCredentialSelector `json:"credentialSelector,omitempty"`
+	Bucket             string                `json:"bucket,omitempty"`
+	Path               string                `json:"path,omitempty"`
+	Secure             bool                  `json:"secure,omitempty"`
+}
+
+type BackupStorageS3Spec struct {
+	Endpoint                  string `json:"endpoint,omitempty"`
+	Bucket                    string `json:"bucket,omitempty"`
+	Path                      string `json:"path,omitempty"`
+	CredentialSecretName      string `json:"credentialSecretName,omitempty"`
+	CredentialSecretNamespace string `json:"credentialSecretNamespace,omitempty"`
+	AccessKeyIDKey            string `json:"accessKeyIDKey,omitempty"`
+	SecretAccessKeyKey        string `json:"secretAccessKeyKey,omitempty"`
+	Insecure                  bool   `json:"insecure,omitempty"`
 }
 
 type EtcdClusterStatus struct {
@@ -51,6 +95,7 @@ type EtcdClusterStatus struct {
 	LastDefragmentTime      *metav1.Time     `json:"lastDefragmentTime,omitempty"`
 	ClientEndpoint          string           `json:"clientEndpoint,omitempty"`
 	ClientCertSecretName    string           `json:"clientCertSecretName,omitempty"`
+	Backup                  *BackupStatus    `json:"backup,omitempty"`
 }
 
 type MemberStatus struct {
@@ -59,6 +104,21 @@ type MemberStatus struct {
 	PodName string `json:"podName,omitempty"`
 	Leader  bool   `json:"leader,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type BackupStatus struct {
+	Succeeded         bool                  `json:"succeeded,omitempty"`
+	LastSucceededTime *metav1.Time          `json:"lastSucceededTime,omitempty"`
+	History           []BackupStatusHistory `json:"backupStatusHistory,omitempty"`
+}
+
+type BackupStatusHistory struct {
+	Succeeded    bool         `json:"succeeded,omitempty"`
+	ExecuteTime  *metav1.Time `json:"executeTime,omitempty"`
+	Path         string       `json:"path,omitempty"`
+	EtcdVersion  string       `json:"etcdVersion,omitempty"`
+	EtcdRevision int64        `json:"etcdRevision,omitempty"`
+	Message      string       `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

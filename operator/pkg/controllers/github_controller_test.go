@@ -17,17 +17,6 @@ import (
 	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
 )
 
-func activateMockTransport() (*httpmock.MockTransport, func()) {
-	oldTransport := transport
-
-	mockTransport := httpmock.NewMockTransport()
-	transport = mockTransport
-
-	return mockTransport, func() {
-		transport = oldTransport
-	}
-}
-
 func TestGitHubController(t *testing.T) {
 	mockTransport, deactivate := activateMockTransport()
 	defer deactivate()
