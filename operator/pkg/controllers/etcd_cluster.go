@@ -779,8 +779,9 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 	}
 
 	return corev1.PodSpec{
-		Hostname:  fmt.Sprintf("%s-%d", c.Name, num),
-		Subdomain: c.ServerDiscoveryServiceName(),
+		Hostname:      fmt.Sprintf("%s-%d", c.Name, num),
+		Subdomain:     c.ServerDiscoveryServiceName(),
+		RestartPolicy: corev1.RestartPolicyNever,
 		InitContainers: []corev1.Container{
 			{
 				Name:    "wait",
