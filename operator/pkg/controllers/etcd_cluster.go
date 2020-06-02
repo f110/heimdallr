@@ -44,7 +44,7 @@ const (
 	InternalStateRunning             InternalState = "running"
 )
 
-const waitScript = `while ( ! nslookup {{ .Host }} )
+const waitDNSPropagationScript = `while ( ! nslookup {{ .Host }} )
 do
 	echo "Waiting for DNS propagation..."
 	sleep 1
@@ -740,18 +740,40 @@ func (c *EtcdCluster) newEtcdPod(num int, etcdVersion string, clusterState strin
 }
 
 func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, initialCluster []string) corev1.PodSpec {
-	t, err := template.New("").Parse(waitScript)
+	initContainers := make([]corev1.Container, 0)
+	dnsPropagationScript, err := template.New("").Parse(waitDNSPropagationScript)
 	if err != nil {
 		panic(err)
 	}
-	buf := new(bytes.Buffer)
-	err = t.Execute(buf, struct {
+
+	dnsPropagationScriptBuf := new(bytes.Buffer)
+	err = dnsPropagationScript.Execute(dnsPropagationScriptBuf, struct {
 		Host string
 	}{
 		Host: fmt.Sprintf("%s-%d.%s.%s.svc.%s", c.Name, num, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
 	})
 	if err != nil {
 		panic(err)
+	}
+
+	initContainers = append(initContainers, corev1.Container{
+		Name:    "wait-dns",
+		Image:   "busybox:latest",
+		Command: []string{"/bin/sh", "-c", dnsPropagationScriptBuf.String()},
+	})
+
+	// We have to wait for cache invalidation of kube-dns.
+	// Etcd will check the client's IP address by reverse lookup.
+	// I'm not sure why they are doing that.
+	// If we don't wait for cache invalidation, then they can't authenticate client certificates.
+	// As a result, newer member of etcd cluster could not join the cluster
+	// because current members closes connection.
+	if clusterState == "existing" {
+		initContainers = append(initContainers, corev1.Container{
+			Name:    "wait-dns-ptr",
+			Image:   "busybox:latest",
+			Command: []string{"/bin/sh", "-c", "sleep 60"},
+		})
 	}
 
 	name := fmt.Sprintf("%s-%d", c.Name, num)
@@ -779,16 +801,10 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 	}
 
 	return corev1.PodSpec{
-		Hostname:      fmt.Sprintf("%s-%d", c.Name, num),
-		Subdomain:     c.ServerDiscoveryServiceName(),
-		RestartPolicy: corev1.RestartPolicyNever,
-		InitContainers: []corev1.Container{
-			{
-				Name:    "wait",
-				Image:   "busybox:latest",
-				Command: []string{"/bin/sh", "-c", buf.String()},
-			},
-		},
+		Hostname:       fmt.Sprintf("%s-%d", c.Name, num),
+		Subdomain:      c.ServerDiscoveryServiceName(),
+		RestartPolicy:  corev1.RestartPolicyNever,
+		InitContainers: initContainers,
 		Containers: []corev1.Container{
 			{
 				Name:    "etcd",

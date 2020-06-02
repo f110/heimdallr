@@ -27,7 +27,7 @@ gen-operator:
 push:
 	bazel query 'kind(container_push, //...)' | xargs -n1 bazel run
 
-e2e-test:
+run-e2e:
 	bazel build //operator/e2e/test:go_default_test
 	./bazel-bin/operator/e2e/test/go_default_test_/go_default_test -test.v=true -crd $(CURDIR)/operator/config/crd/bases -proxy.version experimental
 
