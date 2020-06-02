@@ -1178,7 +1178,9 @@ func (ec *EtcdController) updatePod(old, cur interface{}) {
 	}
 
 	klog.V(4).Infof("Enqueue: %s/%s for update pod", curPod.Namespace, curPod.Labels[etcd.LabelNameClusterName])
-	ec.queue.Add(curPod.Namespace + "/" + curPod.Labels[etcd.LabelNameClusterName])
+	for _, v := range curPod.OwnerReferences {
+		ec.queue.Add(curPod.Namespace + "/" + v.Name)
+	}
 }
 
 func (ec *EtcdController) deletePod(obj interface{}) {
@@ -1202,5 +1204,7 @@ func (ec *EtcdController) deletePod(obj interface{}) {
 	}
 
 	klog.V(4).Infof("Enqueue: %s/%s for delete pod", pod.Namespace, pod.Labels[etcd.LabelNameClusterName])
-	ec.queue.Add(pod.Namespace + "/" + pod.Labels[etcd.LabelNameClusterName])
+	for _, v := range pod.OwnerReferences {
+		ec.queue.Add(pod.Namespace + "/" + v.Name)
+	}
 }
