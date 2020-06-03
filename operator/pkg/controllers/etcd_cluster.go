@@ -38,6 +38,7 @@ type InternalState string
 const (
 	InternalStateCreatingFirstMember InternalState = "creatingFirstNode"
 	InternalStateCreatingMembers     InternalState = "creatingMembers"
+	InternalStateRepair              InternalState = "repair"
 	InternalStatePreparingUpdate     InternalState = "preparingUpdate"
 	InternalStateUpdatingMember      InternalState = "updatingMember"
 	InternalStateTeardownUpdating    InternalState = "teardownUpdating"
@@ -460,6 +461,15 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 	return false
 }
 
+func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
+	switch pod.Status.Phase {
+	case corev1.PodUnknown, corev1.PodFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 func (c *EtcdCluster) ServerDiscoveryServiceName() string {
 	return fmt.Sprintf("%s-discovery", c.Name)
 }
@@ -537,8 +547,12 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 		return etcdv1alpha1.ClusterPhaseInitializing
 	}
 
-	if len(c.ownedPods) < c.Spec.Members && c.Status.LastReadyTransitionTime.IsZero() {
-		return etcdv1alpha1.ClusterPhaseCreating
+	if len(c.ownedPods) < c.Spec.Members {
+		if c.Status.LastReadyTransitionTime.IsZero() {
+			return etcdv1alpha1.ClusterPhaseCreating
+		} else {
+			return etcdv1alpha1.ClusterPhaseDegrading
+		}
 	}
 
 	for _, pod := range c.ownedPods {
@@ -546,11 +560,15 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 			return etcdv1alpha1.ClusterPhaseUpdating
 		}
 
+		if c.NeedRepair(pod) {
+			return etcdv1alpha1.ClusterPhaseDegrading
+		}
+
 		if !c.IsPodReady(pod) {
 			if c.Status.LastReadyTransitionTime.IsZero() {
 				return etcdv1alpha1.ClusterPhaseCreating
 			} else {
-				return etcdv1alpha1.ClusterPhaseUpdating
+				return etcdv1alpha1.ClusterPhaseDegrading
 			}
 		}
 	}
@@ -561,6 +579,12 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 func (c *EtcdCluster) CurrentInternalState() InternalState {
 	if len(c.ownedPods) < c.Spec.Members && c.Status.LastReadyTransitionTime.IsZero() {
 		return c.currentInternalStateCreating()
+	}
+
+	for _, p := range c.ownedPods {
+		if c.NeedRepair(p) {
+			return InternalStateRepair
+		}
 	}
 
 	// Cluster updating works in progress
@@ -583,6 +607,8 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 			if len(c.PermanentMembers()) > 3 {
 				return InternalStateUpdatingMember
 			} else {
+				// The cluster needs to update.
+				// We'll create a temporary member for updating.
 				return InternalStatePreparingUpdate
 			}
 		}

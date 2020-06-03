@@ -217,7 +217,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	case InternalStateCreatingMembers:
 		members := cluster.AllMembers()
 
-		for _, v := range members[1:] {
+		for _, v := range members {
 			if v.CreationTimestamp.IsZero() {
 				if err := ec.startMember(cluster, v); err != nil {
 					return xerrors.Errorf(": %w", err)
@@ -230,6 +230,41 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 			}
 
 			break
+		}
+	case InternalStateRepair:
+		members := cluster.AllMembers()
+
+		var targetMember *corev1.Pod
+		for _, v := range members {
+			if cluster.NeedRepair(v) {
+				targetMember = v
+				break
+
+			}
+		}
+
+		if targetMember != nil {
+			canDeleteMember := true
+			for _, v := range members {
+				if targetMember.UID == v.UID {
+					continue
+				}
+
+				if v.Status.Phase != corev1.PodRunning {
+					canDeleteMember = false
+				}
+			}
+
+			if !canDeleteMember {
+				ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeWarning, "CantRepairMember", "another member(s) is also not ready.")
+				break
+			}
+
+			// At this time, we will transition to CreatingMembers
+			// if we delete the member which is needs repair.
+			if err := ec.deleteMember(cluster, targetMember); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
 		}
 	case InternalStatePreparingUpdate:
 		members := cluster.AllMembers()

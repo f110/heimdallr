@@ -12,6 +12,7 @@ const (
 	ClusterPhaseCreating     EtcdClusterPhase = "Creating"
 	ClusterPhaseRunning      EtcdClusterPhase = "Running"
 	ClusterPhaseUpdating     EtcdClusterPhase = "Updating"
+	ClusterPhaseDegrading    EtcdClusterPhase = "Degrading"
 )
 
 type StorageType string
