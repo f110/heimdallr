@@ -11,6 +11,8 @@ import (
 
 	"go.etcd.io/etcd/v3/clientv3"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/cert"
@@ -29,7 +31,6 @@ type mainProcess struct {
 	server *rpcserver.Server
 
 	etcdClient      *clientv3.Client
-	readiness       *etcd.TapReadiness
 	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
 	clusterDatabase database.ClusterDatabase
@@ -39,6 +40,9 @@ type mainProcess struct {
 	Stop context.CancelFunc
 	wg   sync.WaitGroup
 	Err  error
+
+	mu    sync.Mutex
+	ready bool
 }
 
 func New() *mainProcess {
@@ -65,12 +69,7 @@ func (m *mainProcess) Setup() error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		m.readiness = &etcd.TapReadiness{
-			Watcher: etcd.NewTapWatcher(client.Watcher),
-			Lease:   etcd.NewTapLease(client.Lease),
-		}
-		client.Watcher = m.readiness.Watcher
-		client.Lease = m.readiness.Lease
+		go m.watchGRPCConnState(client.ActiveConnection())
 		m.etcdClient = client
 
 		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
@@ -98,7 +97,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.New("lag-rpcserver: required external datastore")
 	}
 
-	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.readiness.IsReady)
+	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
 
 	auth.InitInterceptor(m.Config, m.userDatabase, m.tokenDatabase)
 	return nil
@@ -153,5 +152,26 @@ func (m *mainProcess) signalHandling() {
 			cancelFunc()
 			return
 		}
+	}
+}
+
+func (m *mainProcess) IsReady() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ready
+}
+
+func (m *mainProcess) watchGRPCConnState(conn *grpc.ClientConn) {
+	state := conn.GetState()
+	for conn.WaitForStateChange(context.Background(), state) {
+		state = conn.GetState()
+		m.mu.Lock()
+		switch state {
+		case connectivity.Ready:
+			m.ready = true
+		default:
+			m.ready = false
+		}
+		m.mu.Unlock()
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
@@ -83,8 +84,8 @@ type mainProcess struct {
 
 	etcd *embed.Etcd
 
-	probeCh   chan struct{}
-	readiness *etcd.TapReadiness
+	mu    sync.Mutex
+	ready bool
 
 	stateCh         chan state
 	rpcServerDoneCh chan struct{}
@@ -92,7 +93,6 @@ type mainProcess struct {
 
 func New() *mainProcess {
 	m := &mainProcess{
-		probeCh:         make(chan struct{}),
 		stateCh:         make(chan state),
 		rpcServerDoneCh: make(chan struct{}),
 	}
@@ -283,10 +283,9 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) IsReady() bool {
-	if !m.revokedCert.IsReady() {
-		logger.Log.Warn("Revoked certificate watcher error", zap.Error(m.revokedCert.Error()))
-	}
-	return m.readiness.IsReady() && m.clusterDatabase.Alive() && m.revokedCert.IsReady()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ready
 }
 
 func (m *mainProcess) startServer() {
@@ -375,12 +374,8 @@ func (m *mainProcess) Setup() error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		m.readiness = &etcd.TapReadiness{
-			Watcher: etcd.NewTapWatcher(client.Watcher),
-			Lease:   etcd.NewTapLease(client.Lease),
-		}
-		client.Watcher = m.readiness.Watcher
-		client.Lease = m.readiness.Lease
+		go m.watchGRPCConnState(client.ActiveConnection())
+
 		m.etcdClient = client
 
 		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
@@ -462,7 +457,7 @@ func (m *mainProcess) StartRPCServer() error {
 				m.rpcServerDoneCh <- struct{}{}
 			}()
 
-			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.readiness.IsReady)
+			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
 			if err := m.rpcServer.Start(); err != nil {
 				errCh <- err
 			}
@@ -541,4 +536,19 @@ func (m *mainProcess) WaitEtcdShutdown() error {
 	}
 
 	return m.NextState(stateFinish)
+}
+
+func (m *mainProcess) watchGRPCConnState(conn *grpc.ClientConn) {
+	state := conn.GetState()
+	for conn.WaitForStateChange(context.Background(), state) {
+		state = conn.GetState()
+		m.mu.Lock()
+		switch state {
+		case connectivity.Ready:
+			m.ready = true
+		default:
+			m.ready = false
+		}
+		m.mu.Unlock()
+	}
 }
