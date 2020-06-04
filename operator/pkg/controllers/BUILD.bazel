@@ -88,7 +88,6 @@ go_test(
         "github_controller_test.go",
         "proxy_controller_test.go",
         "runner_test.go",
-        "util_test.go",
     ],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],

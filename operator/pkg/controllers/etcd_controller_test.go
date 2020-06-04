@@ -179,13 +179,33 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 	})
+
+	t.Run("Repair", func(t *testing.T) {
+		t.Parallel()
+
+		f, _ := newEtcdControllerTestRunner(t)
+
+		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+		f.RegisterEtcdClusterFixture(e)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster.AllMembers()[0].Status.Phase = corev1.PodSucceeded
+		for _, v := range cluster.AllMembers()[1:] {
+			podIsReady(v)
+		}
+		f.RegisterPodFixture(cluster.AllMembers()...)
+
+		f.ExpectDeletePod()
+		f.ExpectUpdateEtcdClusterStatus()
+		f.Run(t, e)
+	})
 }
 
 func TestEtcdController_Backup(t *testing.T) {
 	t.Run("MinIO", func(t *testing.T) {
+		t.Parallel()
+
 		f, _ := newEtcdControllerTestRunner(t)
-		mockTransport, deactivate := activateMockTransport()
-		defer deactivate()
 
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
@@ -217,13 +237,13 @@ func TestEtcdController_Backup(t *testing.T) {
 		}
 
 		// Get bucket location
-		mockTransport.RegisterResponder(
+		f.transport.RegisterResponder(
 			http.MethodGet,
 			"/etcdcontroller/?location=",
 			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
 		)
 		// Put object
-		mockTransport.RegisterResponder(
+		f.transport.RegisterResponder(
 			http.MethodPut,
 			fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
 			httpmock.NewStringResponder(http.StatusOK, ""),
@@ -243,9 +263,9 @@ func TestEtcdController_Backup(t *testing.T) {
 	})
 
 	t.Run("MinIO_Rotate", func(t *testing.T) {
+		t.Parallel()
+
 		f, _ := newEtcdControllerTestRunner(t)
-		mockTransport, deactivate := activateMockTransport()
-		defer deactivate()
 
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
@@ -277,13 +297,13 @@ func TestEtcdController_Backup(t *testing.T) {
 		}
 
 		// Get bucket location
-		mockTransport.RegisterResponder(
+		f.transport.RegisterResponder(
 			http.MethodGet,
 			"/etcdcontroller/?location=",
 			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
 		)
 		// Put object
-		mockTransport.RegisterResponder(
+		f.transport.RegisterResponder(
 			http.MethodPut,
 			fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
 			httpmock.NewStringResponder(http.StatusOK, ""),
@@ -291,6 +311,73 @@ func TestEtcdController_Backup(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 	})
+}
+
+func TestEtcdController_Restore(t *testing.T) {
+	f, _ := newEtcdControllerTestRunner(t)
+
+	e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+	e.Spec.Backup = &etcdv1alpha1.BackupSpec{
+		IntervalInSecond: 30,
+		Storage: etcdv1alpha1.BackupStorageSpec{
+			MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
+				ServiceSelector: etcdv1alpha1.ObjectSelector{Name: "test", Namespace: metav1.NamespaceDefault},
+				CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+					Name:               "test",
+					Namespace:          metav1.NamespaceDefault,
+					AccessKeyIDKey:     "accesskey",
+					SecretAccessKeyKey: "secretkey",
+				},
+				Path:   "/backup",
+				Bucket: "etcdcontroller",
+			},
+		},
+		MaxBackups: 5,
+	}
+	e.Status.Backup = &etcdv1alpha1.BackupStatus{
+		Succeeded: true,
+		History: []etcdv1alpha1.BackupStatusHistory{
+			{
+				Succeeded: true,
+				Path:      "backup/latest",
+			},
+		},
+	}
+	f.RegisterEtcdClusterFixture(e)
+	cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+	cluster.registerBasicObjectOfEtcdCluster(f)
+	for _, v := range cluster.AllMembers() {
+		v.Status.Phase = corev1.PodSucceeded
+		f.RegisterPodFixture(v)
+	}
+
+	// Get bucket location
+	f.transport.RegisterResponder(
+		http.MethodGet,
+		"/etcdcontroller/?location=",
+		httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
+	)
+	// Put object
+	f.transport.RegisterResponder(
+		http.MethodPut,
+		fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
+		httpmock.NewStringResponder(http.StatusOK, ""),
+	)
+
+	// Delete all members
+	f.ExpectDeletePod()
+	f.ExpectDeletePod()
+	f.ExpectDeletePod()
+	f.ExpectUpdateEtcdClusterStatus()
+	f.ExpectUpdateEtcdClusterStatus()
+	f.Run(t, e)
+
+	updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(cluster.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "backup/latest", updatedEC.Status.RestoreFrom)
 }
 
 func etcdControllerFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase) *etcdv1alpha1.EtcdCluster {

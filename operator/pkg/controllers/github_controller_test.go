@@ -18,26 +18,23 @@ import (
 )
 
 func TestGitHubController(t *testing.T) {
-	mockTransport, deactivate := activateMockTransport()
-	defer deactivate()
+	f := newGitHubControllerTestRunner(t)
 
-	mockTransport.RegisterResponder(
+	f.transport.RegisterResponder(
 		http.MethodPost,
 		"https://api.github.com/app/installations/2/access_tokens",
 		httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
 	)
-	mockTransport.RegisterResponder(
+	f.transport.RegisterResponder(
 		http.MethodGet,
 		"https://api.github.com/repos/f110/lagrangian-proxy/hooks",
 		httpmock.NewStringResponder(http.StatusOK, `[]`),
 	)
-	mockTransport.RegisterResponder(
+	f.transport.RegisterResponder(
 		http.MethodPost,
 		"https://api.github.com/repos/f110/lagrangian-proxy/hooks",
 		httpmock.NewStringResponder(http.StatusOK, `{}`),
 	)
-
-	f := newGitHubControllerTestRunner(t)
 
 	proxy, backend, secrets := githubControllerFixtures(t, "test")
 	f.RegisterProxyFixture(proxy)
@@ -47,7 +44,7 @@ func TestGitHubController(t *testing.T) {
 	f.ExpectUpdateBackendStatus()
 	f.Run(t, backend)
 
-	ExpectCall(t, mockTransport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/lagrangian-proxy/hooks")
+	ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/lagrangian-proxy/hooks")
 }
 
 func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {

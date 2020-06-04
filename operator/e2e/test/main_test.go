@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"sync"
 	"testing"
@@ -114,7 +115,17 @@ func TestMain(m *testing.M) {
 						coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 						sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
 
-						e, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cfg, "cluster.local", true, nil)
+						e, err := controllers.NewEtcdController(
+							sharedInformerFactory,
+							coreSharedInformerFactory,
+							kubeClient,
+							proxyClient,
+							cfg,
+							"cluster.local",
+							true,
+							http.DefaultTransport,
+							nil,
+						)
 						if err != nil {
 							log.Fatal(err)
 						}

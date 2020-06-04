@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -75,6 +76,7 @@ type EtcdController struct {
 
 	// for testing hack
 	etcdClientMockOpt *MockOption
+	transport         http.RoundTripper
 }
 
 func NewEtcdController(
@@ -85,6 +87,7 @@ func NewEtcdController(
 	cfg *rest.Config,
 	clusterDomain string,
 	runOutsideCluster bool,
+	transport http.RoundTripper,
 	mockOpt *MockOption,
 ) (*EtcdController, error) {
 	podInformer := coreSharedInformerFactory.Core().V1().Pods()
@@ -114,6 +117,7 @@ func NewEtcdController(
 		secretListerSynced:  secretInformer.Informer().HasSynced,
 		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 		recorder:            recorder,
+		transport:           transport,
 		etcdClientMockOpt:   mockOpt,
 	}
 
@@ -152,6 +156,8 @@ func (ec *EtcdController) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 	klog.V(2).Info("Shutdown workers")
 }
+
+type internalStateHandleFunc func(cluster *EtcdCluster) error
 
 func (ec *EtcdController) syncEtcdCluster(key string) error {
 	klog.V(4).Info("syncEtcdCluster")
@@ -197,137 +203,31 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	}
 	cluster.SetOwnedPods(pods)
 
+	var handler internalStateHandleFunc
 	klog.V(4).Infof("CurrentInternalState: %s", cluster.CurrentInternalState())
 	switch cluster.CurrentInternalState() {
 	case InternalStateCreatingFirstMember:
-		members := cluster.AllMembers()
-
-		if members[0].CreationTimestamp.IsZero() {
-			klog.V(4).Infof("Create first member: %s", members[0].Name)
-			cluster.SetAnnotationForPod(members[0])
-			_, err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(members[0])
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
-		} else {
-			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
-			klog.V(4).Info("Waiting for running first member")
-		}
+		handler = ec.stateCreatingFirstMember
 	case InternalStateCreatingMembers:
-		members := cluster.AllMembers()
-
-		for _, v := range members {
-			if v.CreationTimestamp.IsZero() {
-				if err := ec.startMember(cluster, v); err != nil {
-					return xerrors.Errorf(": %w", err)
-				}
-				break
-			}
-
-			if cluster.IsPodReady(v) {
-				continue
-			}
-
-			break
-		}
+		handler = ec.stateCreatingMembers
 	case InternalStateRepair:
-		members := cluster.AllMembers()
-
-		var targetMember *corev1.Pod
-		for _, v := range members {
-			if cluster.NeedRepair(v) {
-				targetMember = v
-				break
-
-			}
-		}
-
-		if targetMember != nil {
-			canDeleteMember := true
-			for _, v := range members {
-				if targetMember.UID == v.UID {
-					continue
-				}
-
-				if v.Status.Phase != corev1.PodRunning {
-					canDeleteMember = false
-				}
-			}
-
-			if !canDeleteMember {
-				ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeWarning, "CantRepairMember", "another member(s) is also not ready.")
-				break
-			}
-
-			// At this time, we will transition to CreatingMembers
-			// if we delete the member which is needs repair.
-			if err := ec.deleteMember(cluster, targetMember); err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		}
+		handler = ec.stateRepair
 	case InternalStatePreparingUpdate:
-		members := cluster.AllMembers()
-
-		var temporaryMember *corev1.Pod
-		for _, v := range members {
-			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
-				temporaryMember = v
-				break
-			}
-		}
-		if temporaryMember == nil {
-			return errors.New("all member has been created")
-		}
-
-		if temporaryMember.CreationTimestamp.IsZero() {
-			if err := ec.startMember(cluster, temporaryMember); err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
-		} else if !cluster.IsPodReady(temporaryMember) {
-			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running temporary member")
-			klog.V(4).Info("Waiting for running temporary member")
-		}
+		handler = ec.statePreparingUpdate
 	case InternalStateUpdatingMember:
-		members := cluster.AllMembers()
-
-		var targetMember *corev1.Pod
-		for _, p := range members {
-			if cluster.ShouldUpdate(p) {
-				targetMember = p
-				break
-			}
-		}
-
-		if targetMember == nil {
-			break
-		}
-
-		clusterReady := true
-		for _, p := range members {
-			if p.CreationTimestamp.IsZero() {
-				continue
-			}
-			if p.Name == targetMember.Name {
-				continue
-			}
-			if !cluster.IsPodReady(p) {
-				clusterReady = false
-			}
-		}
-		if clusterReady {
-			if err := ec.updateMember(cluster, targetMember); err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		} else {
-			klog.V(4).Infof("%s is waiting update", targetMember.Name)
-		}
+		handler = ec.stateUpdatingMember
 	case InternalStateTeardownUpdating:
-		if v := cluster.TemporaryMember(); v != nil {
-			if err := ec.deleteMember(cluster, v); err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
+		handler = ec.stateTeardownUpdating
+	case InternalStateRestore:
+		handler = ec.stateRestore
+	case InternalStateRunning:
+	default:
+		return xerrors.Errorf("Unknown internal state: %s", cluster.CurrentInternalState())
+	}
+
+	if handler != nil {
+		if err := handler(cluster); err != nil {
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -372,6 +272,272 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateCreatingFirstMember(cluster *EtcdCluster) error {
+	if cluster.Status.RestoreFrom == "" {
+		return ec.createNewCluster(cluster)
+	} else {
+		return ec.createNewClusterWithBackup(cluster)
+	}
+}
+
+func (ec *EtcdController) createNewCluster(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+
+	if members[0].CreationTimestamp.IsZero() {
+		klog.V(4).Infof("Create first member: %s", members[0].Name)
+		cluster.SetAnnotationForPod(members[0])
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(members[0])
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
+	} else {
+		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
+		klog.V(4).Info("Waiting for running first member")
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) createNewClusterWithBackup(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+	if members[0].CreationTimestamp.IsZero() {
+		klog.V(4).Infof("Create first member: %s", members[0].Name)
+		cluster.SetAnnotationForPod(members[0])
+		receiverContainer := corev1.Container{
+			Name:         "receive-backup-file",
+			Image:        "busybox:latest",
+			Command:      []string{"/bin/sh", "-c", "nc -l -p 2900 > /data/backup"},
+			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
+		}
+		members[0].Spec.InitContainers = append([]corev1.Container{receiverContainer}, members[0].Spec.InitContainers...)
+
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(members[0])
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	}
+
+	readyReceiver := false
+	for _, v := range members[0].Status.InitContainerStatuses {
+		if v.Name == "receive-backup-file" {
+			if v.State.Running != nil {
+				readyReceiver = true
+				break
+			}
+		}
+	}
+	if readyReceiver {
+		if err := ec.sendBackupToContainer(cluster, members[0], cluster.Status.RestoreFrom); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		cluster.Status.RestoreFrom = ""
+		return nil
+	}
+
+	ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
+	klog.V(4).Info("Waiting for running first member")
+
+	return nil
+}
+
+func (ec *EtcdController) stateCreatingMembers(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+
+	for _, v := range members {
+		if v.CreationTimestamp.IsZero() {
+			if err := ec.startMember(cluster, v); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			break
+		}
+
+		if cluster.IsPodReady(v) {
+			continue
+		}
+
+		break
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateRepair(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+
+	var targetMember *corev1.Pod
+	for _, v := range members {
+		if cluster.NeedRepair(v) {
+			targetMember = v
+			break
+
+		}
+	}
+
+	if targetMember != nil {
+		canDeleteMember := true
+		for _, v := range members {
+			if targetMember.UID == v.UID {
+				continue
+			}
+
+			if v.Status.Phase != corev1.PodRunning {
+				canDeleteMember = false
+			}
+		}
+
+		if !canDeleteMember {
+			ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeWarning, "CantRepairMember", "another member(s) is also not ready.")
+			return nil
+		}
+
+		// At this time, we will transition to CreatingMembers
+		// if we delete the member which is needs repair.
+		if err := ec.deleteMember(cluster, targetMember); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) statePreparingUpdate(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+
+	var temporaryMember *corev1.Pod
+	for _, v := range members {
+		if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+			temporaryMember = v
+			break
+		}
+	}
+	if temporaryMember == nil {
+		return errors.New("all member has been created")
+	}
+
+	if temporaryMember.CreationTimestamp.IsZero() {
+		if err := ec.startMember(cluster, temporaryMember); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
+	} else if !cluster.IsPodReady(temporaryMember) {
+		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running temporary member")
+		klog.V(4).Info("Waiting for running temporary member")
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateUpdatingMember(cluster *EtcdCluster) error {
+	members := cluster.AllMembers()
+
+	var targetMember *corev1.Pod
+	for _, p := range members {
+		if cluster.ShouldUpdate(p) {
+			targetMember = p
+			break
+		}
+	}
+
+	if targetMember == nil {
+		return nil
+	}
+
+	clusterReady := true
+	for _, p := range members {
+		if p.CreationTimestamp.IsZero() {
+			continue
+		}
+		if p.Name == targetMember.Name {
+			continue
+		}
+		if !cluster.IsPodReady(p) {
+			clusterReady = false
+		}
+	}
+	if clusterReady {
+		if err := ec.updateMember(cluster, targetMember); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	} else {
+		klog.V(4).Infof("%s is waiting update", targetMember.Name)
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateTeardownUpdating(cluster *EtcdCluster) error {
+	if v := cluster.TemporaryMember(); v != nil {
+		if err := ec.deleteMember(cluster, v); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateRestore(cluster *EtcdCluster) error {
+	for _, v := range cluster.Status.Backup.History {
+		if v.Succeeded {
+			cluster.Status.RestoreFrom = v.Path
+			break
+		}
+	}
+	_, err := ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(cluster.EtcdCluster)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	members := cluster.AllExistMembers()
+
+	for _, v := range members {
+		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(v.Name, &metav1.DeleteOptions{}); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	cluster.Status.LastReadyTransitionTime = nil
+	return nil
+}
+
+func (ec *EtcdController) sendBackupToContainer(cluster *EtcdCluster, pod *corev1.Pod, backupPath string) error {
+	klog.V(4).Infof("Send to a backup file to %s: %s", pod.Name, backupPath)
+	backupFile, forwarder, err := ec.getBackupFile(cluster, backupPath)
+	if forwarder != nil {
+		defer forwarder.Close()
+	}
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	endpoint := fmt.Sprintf("%s:%d", pod.Status.PodIP, 2900)
+	if ec.runOutsideCluster {
+		forwarder, localPort, err := ec.portForward(pod, 2900)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		defer forwarder.Close()
+
+		endpoint = fmt.Sprintf("127.0.0.1:%d", localPort)
+	}
+
+	conn, err := net.Dial("tcp", endpoint)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if _, err := io.Copy(conn, backupFile); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := conn.Close(); err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
@@ -769,7 +935,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	cluster.Status.Phase = cluster.CurrentPhase()
 	switch cluster.Status.Phase {
-	case etcdv1alpha1.ClusterPhaseRunning, etcdv1alpha1.ClusterPhaseUpdating:
+	case etcdv1alpha1.ClusterPhaseRunning, etcdv1alpha1.ClusterPhaseUpdating, etcdv1alpha1.ClusterPhaseDegrading:
 		if !cluster.Status.Ready {
 			now := metav1.Now()
 			cluster.Status.LastReadyTransitionTime = &now
@@ -994,6 +1160,27 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 	}
 }
 
+func (ec *EtcdController) getBackupFile(cluster *EtcdCluster, path string) (io.ReadCloser, *portforward.PortForwarder, error) {
+	switch {
+	case cluster.Spec.Backup.Storage.MinIO != nil:
+		spec := cluster.Spec.Backup.Storage.MinIO
+
+		mc, forwarder, err := ec.minioClient(spec)
+		if err != nil {
+			return nil, forwarder, xerrors.Errorf(": %w", err)
+		}
+
+		obj, err := mc.GetObject(spec.Bucket, path, minio.GetObjectOptions{})
+		if err != nil {
+			return nil, forwarder, xerrors.Errorf(": %w", err)
+		}
+
+		return obj, forwarder, nil
+	default:
+		return nil, nil, errors.New("not supported")
+	}
+}
+
 func (ec *EtcdController) minioClient(spec *etcdv1alpha1.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
 	svc, err := ec.serviceLister.Services(spec.ServiceSelector.Namespace).Get(spec.ServiceSelector.Name)
 	if err != nil {
@@ -1039,7 +1226,7 @@ func (ec *EtcdController) minioClient(spec *etcdv1alpha1.BackupStorageMinIOSpec)
 	if err != nil {
 		return nil, forwarder, xerrors.Errorf(": %w", err)
 	}
-	mc.SetCustomTransport(transport)
+	mc.SetCustomTransport(ec.transport)
 
 	return mc, forwarder, nil
 }
@@ -1073,10 +1260,6 @@ func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *p
 }
 
 func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
-	if pod.Status.Phase != corev1.PodRunning {
-		return nil, 0, errors.New("pod is not running yet")
-	}
-
 	req := ec.coreClient.CoreV1().RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
 	if err != nil {

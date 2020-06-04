@@ -96,7 +96,7 @@ func TestProxyController(t *testing.T) {
 			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1.ProxyPhaseRunning, 10*time.Minute); err != nil {
 				t.Fatal(err)
 			}
-			if err := e2eutil.WaitForReadyOfProxy(client, proxy, 1*time.Minute); err != nil {
+			if err := e2eutil.WaitForReadyOfProxy(client, proxy, 10*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 

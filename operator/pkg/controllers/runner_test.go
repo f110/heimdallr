@@ -13,6 +13,7 @@ import (
 	"time"
 
 	mfake "github.com/coreos/prometheus-operator/pkg/client/versioned/fake"
+	"github.com/jarcoal/httpmock"
 	cmfake "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/fake"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
@@ -48,6 +49,8 @@ type commonTestRunner struct {
 
 	sharedInformerFactory     informers.SharedInformerFactory
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory
+
+	transport *httpmock.MockTransport
 }
 
 func newCommonTestRunner(t *testing.T) *commonTestRunner {
@@ -68,6 +71,7 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 		coreClient:                coreClient,
 		sharedInformerFactory:     sharedInformerFactory,
 		coreSharedInformerFactory: coreSharedInformerFactory,
+		transport:                 httpmock.NewMockTransport(),
 	}
 }
 
@@ -361,7 +365,7 @@ func newGitHubControllerTestRunner(t *testing.T) *githubControllerTestRunner {
 		t:                t,
 	}
 
-	c, err := NewGitHubController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
+	c, err := NewGitHubController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client, f.commonTestRunner.transport)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,7 +419,17 @@ func newEtcdControllerTestRunner(t *testing.T) (*etcdControllerTestRunner, *Mock
 
 	// The controller assumes running inside cluster.
 	// Thus we don't have to pass rest.Config.
-	c, err := NewEtcdController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client, nil, "cluster.local", false, mockOpt)
+	c, err := NewEtcdController(
+		f.sharedInformerFactory,
+		f.coreSharedInformerFactory,
+		f.coreClient,
+		f.client,
+		nil,
+		"cluster.local",
+		false,
+		f.commonTestRunner.transport,
+		mockOpt,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

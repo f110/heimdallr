@@ -49,16 +49,16 @@ type GitHubController struct {
 
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
-}
 
-// for testing
-var transport = http.DefaultTransport
+	transport http.RoundTripper
+}
 
 func NewGitHubController(
 	sharedInformerFactory informers.SharedInformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
 	coreClient kubernetes.Interface,
 	client clientset.Interface,
+	transport http.RoundTripper,
 ) (*GitHubController, error) {
 	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
 	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
@@ -80,6 +80,7 @@ func NewGitHubController(
 		secretListerSynced:  secretInformer.Informer().HasSynced,
 		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "backend"),
 		recorder:            recorder,
+		transport:           transport,
 	}
 
 	backendInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -145,7 +146,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rt, err := ghinstallation.New(transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
+	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

@@ -39,6 +39,7 @@ const (
 	InternalStateCreatingFirstMember InternalState = "creatingFirstNode"
 	InternalStateCreatingMembers     InternalState = "creatingMembers"
 	InternalStateRepair              InternalState = "repair"
+	InternalStateRestore             InternalState = "restore"
 	InternalStatePreparingUpdate     InternalState = "preparingUpdate"
 	InternalStateUpdatingMember      InternalState = "updatingMember"
 	InternalStateTeardownUpdating    InternalState = "teardownUpdating"
@@ -463,7 +464,7 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 
 func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 	switch pod.Status.Phase {
-	case corev1.PodUnknown, corev1.PodFailed:
+	case corev1.PodUnknown, corev1.PodFailed, corev1.PodSucceeded:
 		return true
 	default:
 		return false
@@ -581,10 +582,44 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 		return c.currentInternalStateCreating()
 	}
 
-	for _, p := range c.ownedPods {
-		if c.NeedRepair(p) {
+	needRepair := false
+	canRepair := true
+	if len(c.ownedPods) == 0 {
+		needRepair = true
+		canRepair = false
+	} else {
+		for _, p := range c.ownedPods {
+			if !needRepair && c.NeedRepair(p) {
+				needRepair = true
+				continue
+			}
+
+			if p.Status.Phase != corev1.PodRunning {
+				canRepair = false
+			}
+		}
+	}
+	if needRepair {
+		if canRepair {
 			return InternalStateRepair
 		}
+
+		ok := false
+		if c.Status.Backup != nil {
+			for _, v := range c.Status.Backup.History {
+				if v.Succeeded {
+					ok = true
+					break
+				}
+			}
+			if ok {
+				return InternalStateRestore
+			}
+		}
+
+		// TODO: Handle this case
+		klog.Info("TODO: Need handle this case")
+		return InternalStateRunning
 	}
 
 	// Cluster updating works in progress
@@ -891,6 +926,12 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 							{Key: caSecretCertName, Path: caSecretCertName},
 						},
 					},
+				},
+			},
+			{
+				Name: "data",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 		},

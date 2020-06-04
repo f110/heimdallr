@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -114,13 +115,23 @@ func main() {
 					os.Exit(1)
 				}
 
-				e, err := controllers.NewEtcdController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cfg, clusterDomain, dev, nil)
+				e, err := controllers.NewEtcdController(
+					sharedInformerFactory,
+					coreSharedInformerFactory,
+					kubeClient,
+					proxyClient,
+					cfg,
+					clusterDomain,
+					dev,
+					http.DefaultTransport,
+					nil,
+				)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)
 				}
 
-				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
+				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, http.DefaultTransport)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)
