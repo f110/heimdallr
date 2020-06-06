@@ -9,7 +9,7 @@ go_library(
         "stream.go",
         "utils.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/docker/spdystream",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/docker/spdystream",
     importpath = "github.com/docker/spdystream",
     visibility = ["//visibility:public"],
     deps = ["//vendor/github.com/docker/spdystream/spdy:go_default_library"],

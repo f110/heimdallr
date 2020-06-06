@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth"
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/database/memory"
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database/memory"
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 type dummyTLSConn struct {

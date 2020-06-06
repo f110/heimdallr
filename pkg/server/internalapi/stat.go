@@ -7,8 +7,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/f110/lagrangian-proxy/pkg/server"
-	"github.com/f110/lagrangian-proxy/pkg/stat"
+	"go.f110.dev/heimdallr/pkg/server"
+	"go.f110.dev/heimdallr/pkg/stat"
 )
 
 const namespace = "lagrangian"

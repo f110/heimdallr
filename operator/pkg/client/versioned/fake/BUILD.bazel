@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "register.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/fake",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",

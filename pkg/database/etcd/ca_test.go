@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func newCertificate(t *testing.T) *x509.Certificate {

@@ -6,7 +6,7 @@ go_library(
         "appsTransport.go",
         "transport.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/bradleyfalzon/ghinstallation",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/bradleyfalzon/ghinstallation",
     importpath = "github.com/bradleyfalzon/ghinstallation",
     visibility = ["//visibility:public"],
     deps = [

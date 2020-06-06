@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["metrics.go"],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/metrics",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/metrics",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/client/versioned:go_default_library",

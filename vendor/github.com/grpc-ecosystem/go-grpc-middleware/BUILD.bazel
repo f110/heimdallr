@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "wrappers.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
     visibility = ["//visibility:public"],
     deps = ["//vendor/google.golang.org/grpc:go_default_library"],

@@ -8,7 +8,7 @@ go_library(
         "types.go",
         "write.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/docker/spdystream/spdy",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/docker/spdystream/spdy",
     importpath = "github.com/docker/spdystream/spdy",
     visibility = ["//visibility:public"],
 )

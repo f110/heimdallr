@@ -16,7 +16,7 @@ go_library(
         "storage.go",
         "util.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/raft",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/raft",
     importpath = "go.etcd.io/etcd/v3/raft",
     visibility = ["//visibility:public"],
     deps = [

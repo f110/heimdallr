@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["utils.go"],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/minio/minio-go/v6/pkg/s3utils",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v6/pkg/s3utils",
     importpath = "github.com/minio/minio-go/v6/pkg/s3utils",
     visibility = ["//visibility:public"],
 )

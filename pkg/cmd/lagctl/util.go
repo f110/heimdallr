@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configreader"
 )
 
 func Util(rootCmd *cobra.Command) {

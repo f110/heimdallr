@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["reader.go"],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/config/configreader",
+    importpath = "go.f110.dev/heimdallr/pkg/config/configreader",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",

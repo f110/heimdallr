@@ -13,7 +13,7 @@ go_library(
         "blake2x.go",
         "register.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/crypto/blake2b",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/crypto/blake2b",
     importpath = "golang.org/x/crypto/blake2b",
     visibility = ["//visibility:public"],
     deps = select({

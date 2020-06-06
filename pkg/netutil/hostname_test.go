@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/f110/lagrangian-proxy/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/k8s"
 )
 
 func TestGetHostname(t *testing.T) {

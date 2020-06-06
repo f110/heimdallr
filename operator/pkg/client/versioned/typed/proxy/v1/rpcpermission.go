@@ -30,8 +30,8 @@ package v1
 import (
 	"time"
 
-	v1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	scheme "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
+	v1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	scheme "go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

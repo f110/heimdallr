@@ -10,7 +10,7 @@ go_library(
         "blamka_generic.go",
         "blamka_ref.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/crypto/argon2",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/crypto/argon2",
     importpath = "golang.org/x/crypto/argon2",
     visibility = ["//visibility:public"],
     deps = [

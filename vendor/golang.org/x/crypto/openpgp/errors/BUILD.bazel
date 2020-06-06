@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["errors.go"],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/crypto/openpgp/errors",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/crypto/openpgp/errors",
     importpath = "golang.org/x/crypto/openpgp/errors",
     visibility = ["//visibility:public"],
 )

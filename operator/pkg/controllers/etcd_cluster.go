@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	"github.com/f110/lagrangian-proxy/pkg/cert"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	"go.f110.dev/heimdallr/pkg/cert"
 )
 
 type InternalState string

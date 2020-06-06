@@ -6,7 +6,7 @@ go_library(
         "extension.pb.go",
         "extensions.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/googleapis/gnostic/extensions",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/googleapis/gnostic/extensions",
     importpath = "github.com/googleapis/gnostic/extensions",
     visibility = ["//visibility:public"],
     deps = [

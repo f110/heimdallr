@@ -8,7 +8,7 @@ go_library(
         "readerfactory.go",
         "trie.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/grpc-gateway/utilities",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/grpc-gateway/utilities",
     importpath = "github.com/grpc-ecosystem/grpc-gateway/utilities",
     visibility = ["//visibility:public"],
 )

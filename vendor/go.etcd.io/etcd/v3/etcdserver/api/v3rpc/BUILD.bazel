@@ -17,7 +17,7 @@ go_library(
         "util.go",
         "watch.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc",
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/v3rpc",
     visibility = ["//visibility:public"],
     deps = [

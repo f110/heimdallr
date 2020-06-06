@@ -11,11 +11,11 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/server"
-	"github.com/f110/lagrangian-proxy/pkg/session"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/server"
+	"go.f110.dev/heimdallr/pkg/session"
 )
 
 type claims struct {

@@ -31,8 +31,8 @@ import (
 	"fmt"
 
 	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	v1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
+	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

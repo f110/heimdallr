@@ -10,7 +10,7 @@ go_library(
         "fake_clusterissuer.go",
         "fake_issuer.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1alpha2/fake",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1alpha2/fake",
     importpath = "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1alpha2/fake",
     visibility = ["//visibility:public"],
     deps = [

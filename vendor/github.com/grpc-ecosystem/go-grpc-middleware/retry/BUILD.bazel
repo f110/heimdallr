@@ -8,7 +8,7 @@ go_library(
         "options.go",
         "retry.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/retry",
     visibility = ["//visibility:public"],
     deps = [

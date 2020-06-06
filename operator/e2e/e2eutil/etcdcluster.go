@@ -6,9 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 )
 
 func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alpha1.EtcdCluster, phase etcdv1alpha1.EtcdClusterPhase, timeout time.Duration) error {

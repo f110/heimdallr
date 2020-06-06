@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/f110/lagrangian-proxy/pkg/version"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 func Version(rootCmd *cobra.Command) {

@@ -15,7 +15,7 @@ go_library(
         "si.go",
         "times.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/dustin/go-humanize",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/dustin/go-humanize",
     importpath = "github.com/dustin/go-humanize",
     visibility = ["//visibility:public"],
 )

@@ -11,7 +11,7 @@ go_library(
         "servicemonitor.go",
         "thanosruler.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/monitoring/v1",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/monitoring/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/client/versioned:go_default_library",

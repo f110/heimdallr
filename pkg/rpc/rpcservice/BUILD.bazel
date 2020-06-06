@@ -9,7 +9,7 @@ go_library(
         "doc.go",
         "health.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice",
+    importpath = "go.f110.dev/heimdallr/pkg/rpc/rpcservice",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth:go_default_library",

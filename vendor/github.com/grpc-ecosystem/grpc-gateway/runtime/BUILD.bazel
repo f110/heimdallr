@@ -21,7 +21,7 @@ go_library(
         "proto_errors.go",
         "query.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/grpc-gateway/runtime",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/grpc-gateway/runtime",
     importpath = "github.com/grpc-ecosystem/grpc-gateway/runtime",
     visibility = ["//visibility:public"],
     deps = [

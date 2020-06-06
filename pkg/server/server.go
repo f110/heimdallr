@@ -13,11 +13,11 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/connector"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/frontproxy"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 var allowCipherSuites = []uint16{

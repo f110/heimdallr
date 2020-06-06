@@ -6,7 +6,7 @@ go_library(
         "dns_resolver.go",
         "go113.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/grpc/internal/resolver/dns",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/grpc/internal/resolver/dns",
     importpath = "google.golang.org/grpc/internal/resolver/dns",
     visibility = ["//vendor/google.golang.org/grpc:__subpackages__"],
     deps = [

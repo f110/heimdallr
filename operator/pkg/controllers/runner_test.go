@@ -28,10 +28,10 @@ import (
 	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	"github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/fake"
-	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	"go.f110.dev/heimdallr/operator/pkg/client/versioned/fake"
+	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 )
 
 type expectAction struct {

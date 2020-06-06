@@ -6,7 +6,7 @@ go_library(
         "legacy.go",
         "methods.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/protobuf/runtime/protoiface",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/protobuf/runtime/protoiface",
     importpath = "google.golang.org/protobuf/runtime/protoiface",
     visibility = ["//visibility:public"],
     deps = [

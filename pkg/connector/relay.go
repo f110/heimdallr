@@ -14,11 +14,11 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 type Relay struct {

@@ -9,7 +9,7 @@ go_library(
         "decode_token.go",
         "encode.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/protobuf/internal/encoding/json",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/protobuf/internal/encoding/json",
     importpath = "google.golang.org/protobuf/internal/encoding/json",
     visibility = ["//vendor/google.golang.org/protobuf:__subpackages__"],
     deps = [

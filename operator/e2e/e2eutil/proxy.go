@@ -27,10 +27,10 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/klog"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy) (*proxyv1.Backend, *proxyv1.Role, error) {

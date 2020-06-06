@@ -6,7 +6,7 @@ go_library(
         "codec_factory.go",
         "negotiated_codec.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/apimachinery/pkg/runtime/serializer",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/apimachinery/pkg/runtime/serializer",
     importpath = "k8s.io/apimachinery/pkg/runtime/serializer",
     visibility = ["//visibility:public"],
     deps = [

@@ -10,11 +10,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/f110/lagrangian-proxy/operator/e2e/e2eutil"
-	. "github.com/f110/lagrangian-proxy/operator/e2e/framework"
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
+	. "go.f110.dev/heimdallr/operator/e2e/framework"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 )
 
 var (

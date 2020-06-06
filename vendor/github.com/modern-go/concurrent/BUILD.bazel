@@ -9,7 +9,7 @@ go_library(
         "log.go",
         "unbounded_executor.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/modern-go/concurrent",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/modern-go/concurrent",
     importpath = "github.com/modern-go/concurrent",
     visibility = ["//visibility:public"],
 )

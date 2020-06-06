@@ -12,7 +12,7 @@ go_library(
         "open_mode_darwin.go",
         "windows.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/fsnotify/fsnotify",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/fsnotify/fsnotify",
     importpath = "github.com/fsnotify/fsnotify",
     visibility = ["//visibility:public"],
     deps = select({

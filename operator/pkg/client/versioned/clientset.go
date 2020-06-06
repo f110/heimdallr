@@ -30,9 +30,9 @@ package versioned
 import (
 	"fmt"
 
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/etcd/v1alpha1"
-	monitoringv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/proxy/v1"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
+	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

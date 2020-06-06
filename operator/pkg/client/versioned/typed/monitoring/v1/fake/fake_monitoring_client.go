@@ -28,7 +28,7 @@ SOFTWARE.
 package fake
 
 import (
-	v1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1"
+	v1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

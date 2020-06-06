@@ -9,7 +9,7 @@ go_library(
         "openbrowser_windows.go",
         "token_client.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/auth/token",
+    importpath = "go.f110.dev/heimdallr/pkg/auth/token",
     visibility = ["//visibility:public"],
     deps = ["//vendor/golang.org/x/xerrors:go_default_library"],
 )

@@ -7,7 +7,7 @@ go_library(
         "port.go",
         "socket.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/netutil",
+    importpath = "go.f110.dev/heimdallr/pkg/netutil",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/k8s:go_default_library",

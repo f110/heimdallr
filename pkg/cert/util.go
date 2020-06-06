@@ -19,7 +19,7 @@ import (
 	"golang.org/x/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 const (

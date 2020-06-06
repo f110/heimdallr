@@ -12,7 +12,7 @@ go_library(
         "fake_servicemonitor.go",
         "fake_thanosruler.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1/fake",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1/fake",
     importpath = "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1/fake",
     visibility = ["//visibility:public"],
     deps = [

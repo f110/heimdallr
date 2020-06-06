@@ -29,7 +29,7 @@ go_library(
         "page.go",
         "tx.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/bbolt",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/bbolt",
     importpath = "go.etcd.io/bbolt",
     visibility = ["//visibility:public"],
     deps = select({

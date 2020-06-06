@@ -9,8 +9,8 @@ import (
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 type ClusterDatabase struct {

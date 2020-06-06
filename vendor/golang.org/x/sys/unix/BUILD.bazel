@@ -238,7 +238,7 @@ go_library(
         "ztypes_solaris_amd64.go",
     ],
     cgo = True,
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/sys/unix",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/sys/unix",
     importpath = "golang.org/x/sys/unix",
     visibility = ["//visibility:public"],
 )

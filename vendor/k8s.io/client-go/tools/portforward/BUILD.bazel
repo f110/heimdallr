@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "portforward.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/tools/portforward",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/tools/portforward",
     importpath = "k8s.io/client-go/tools/portforward",
     visibility = ["//visibility:public"],
     deps = [

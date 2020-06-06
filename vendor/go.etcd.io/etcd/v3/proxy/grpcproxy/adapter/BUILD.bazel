@@ -14,7 +14,7 @@ go_library(
         "maintenance_client_adapter.go",
         "watch_client_adapter.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/proxy/grpcproxy/adapter",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/proxy/grpcproxy/adapter",
     importpath = "go.etcd.io/etcd/v3/proxy/grpcproxy/adapter",
     visibility = ["//visibility:public"],
     deps = [

@@ -11,8 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 )
 
 func TestEtcdController(t *testing.T) {

@@ -8,7 +8,7 @@ go_library(
         "instrument_client.go",
         "instrument_server.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/prometheus/client_golang/prometheus/promhttp",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/prometheus/client_golang/prometheus/promhttp",
     importpath = "github.com/prometheus/client_golang/prometheus/promhttp",
     visibility = ["//visibility:public"],
     deps = [

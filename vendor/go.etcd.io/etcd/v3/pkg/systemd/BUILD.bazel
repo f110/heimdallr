@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "journal.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/systemd",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/systemd",
     importpath = "go.etcd.io/etcd/v3/pkg/systemd",
     visibility = ["//visibility:public"],
 )

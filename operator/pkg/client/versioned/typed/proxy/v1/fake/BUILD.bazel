@@ -10,7 +10,7 @@ go_library(
         "fake_role.go",
         "fake_rpcpermission.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/proxy/v1/fake",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/proxy/v1:go_default_library",

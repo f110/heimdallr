@@ -28,13 +28,13 @@ SOFTWARE.
 package fake
 
 import (
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/etcd/v1alpha1"
-	fakeetcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/etcd/v1alpha1/fake"
-	monitoringv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1"
-	fakemonitoringv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1/fake"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/proxy/v1"
-	fakeproxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/proxy/v1/fake"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
+	fakeetcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1/fake"
+	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
+	fakemonitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1/fake"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1"
+	fakeproxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

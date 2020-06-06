@@ -6,7 +6,7 @@ go_library(
         "wait.go",
         "wait_time.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/wait",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/wait",
     importpath = "go.etcd.io/etcd/v3/pkg/wait",
     visibility = ["//visibility:public"],
 )

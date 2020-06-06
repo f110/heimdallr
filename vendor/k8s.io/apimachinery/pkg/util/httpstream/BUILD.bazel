@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "httpstream.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/apimachinery/pkg/util/httpstream",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/apimachinery/pkg/util/httpstream",
     importpath = "k8s.io/apimachinery/pkg/util/httpstream",
     visibility = ["//visibility:public"],
 )

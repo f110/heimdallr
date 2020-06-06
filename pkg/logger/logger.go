@@ -4,7 +4,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 var (

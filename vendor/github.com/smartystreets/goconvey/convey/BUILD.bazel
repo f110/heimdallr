@@ -10,7 +10,7 @@ go_library(
         "init.go",
         "nilReporter.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/smartystreets/goconvey/convey",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/goconvey/convey",
     importpath = "github.com/smartystreets/goconvey/convey",
     visibility = ["//visibility:public"],
     deps = [

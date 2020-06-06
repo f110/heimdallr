@@ -30,10 +30,10 @@ package v1
 import (
 	time "time"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	versioned "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	internalinterfaces "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/f110/lagrangian-proxy/operator/pkg/listers/proxy/v1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	versioned "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
+	v1 "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

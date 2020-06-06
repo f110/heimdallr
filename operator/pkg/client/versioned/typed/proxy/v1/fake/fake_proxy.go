@@ -28,7 +28,7 @@ SOFTWARE.
 package fake
 
 import (
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

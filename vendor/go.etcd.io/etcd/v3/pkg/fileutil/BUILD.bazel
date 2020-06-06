@@ -24,7 +24,7 @@ go_library(
         "sync_darwin.go",
         "sync_linux.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/fileutil",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/fileutil",
     importpath = "go.etcd.io/etcd/v3/pkg/fileutil",
     visibility = ["//visibility:public"],
     deps = ["//vendor/go.uber.org/zap:go_default_library"],

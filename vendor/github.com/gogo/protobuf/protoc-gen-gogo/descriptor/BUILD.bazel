@@ -8,7 +8,7 @@ go_library(
         "descriptor_gostring.gen.go",
         "helper.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
     importpath = "github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
     visibility = ["//visibility:public"],
     deps = ["//vendor/github.com/gogo/protobuf/proto:go_default_library"],

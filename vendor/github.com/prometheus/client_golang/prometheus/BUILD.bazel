@@ -28,7 +28,7 @@ go_library(
         "vec.go",
         "wrap.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/prometheus/client_golang/prometheus",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/prometheus/client_golang/prometheus",
     importpath = "github.com/prometheus/client_golang/prometheus",
     visibility = ["//visibility:public"],
     deps = [

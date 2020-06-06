@@ -8,9 +8,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, []proxyv1.Role, []proxyv1.RpcPermission, []corev1.Service) {

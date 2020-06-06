@@ -88,7 +88,7 @@ go_library(
         "users_keys.go",
         "without_appengine.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/google/go-github/github",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-github/github",
     importpath = "github.com/google/go-github/github",
     visibility = ["//visibility:public"],
     deps = ["//vendor/github.com/google/go-querystring/query:go_default_library"],

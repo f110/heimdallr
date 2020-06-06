@@ -46,7 +46,7 @@ go_library(
         "stream_int.go",
         "stream_str.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/json-iterator/go",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/json-iterator/go",
     importpath = "github.com/json-iterator/go",
     visibility = ["//visibility:public"],
     deps = [

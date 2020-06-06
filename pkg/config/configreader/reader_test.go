@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cert"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 func TestReadConfig(t *testing.T) {

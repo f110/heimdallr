@@ -13,7 +13,7 @@ go_library(
         "shell_completions.go",
         "zsh_completions.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/spf13/cobra",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/spf13/cobra",
     importpath = "github.com/spf13/cobra",
     visibility = ["//visibility:public"],
     deps = [

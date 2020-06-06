@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth/token"
-	"github.com/f110/lagrangian-proxy/pkg/frontproxy"
-	"github.com/f110/lagrangian-proxy/pkg/version"
+	"go.f110.dev/heimdallr/pkg/auth/token"
+	"go.f110.dev/heimdallr/pkg/frontproxy"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 func printVersion() {

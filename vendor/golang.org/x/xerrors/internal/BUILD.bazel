@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["internal.go"],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/xerrors/internal",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/xerrors/internal",
     importpath = "golang.org/x/xerrors/internal",
     visibility = ["//vendor/golang.org/x/xerrors:__subpackages__"],
 )

@@ -28,7 +28,7 @@ SOFTWARE.
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/internalinterfaces"
+	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

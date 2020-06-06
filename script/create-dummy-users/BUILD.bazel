@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["create-dummy-users.go"],
-    importpath = "github.com/f110/lagrangian-proxy/script/create-dummy-users",
+    importpath = "go.f110.dev/heimdallr/script/create-dummy-users",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/rpc/rpcclient:go_default_library",

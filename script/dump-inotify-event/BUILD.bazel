@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["dump-inotify-event.go"],
-    importpath = "github.com/f110/lagrangian-proxy/script/dump-inotify-event",
+    importpath = "go.f110.dev/heimdallr/script/dump-inotify-event",
     visibility = ["//visibility:private"],
     deps = ["//vendor/github.com/fsnotify/fsnotify:go_default_library"],
 )

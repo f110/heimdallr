@@ -8,7 +8,7 @@ go_library(
         "connector.go",
         "relay.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/connector",
+    importpath = "go.f110.dev/heimdallr/pkg/connector",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert:go_default_library",

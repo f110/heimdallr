@@ -28,8 +28,8 @@ SOFTWARE.
 package etcd
 
 import (
-	v1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/etcd/v1alpha1"
-	internalinterfaces "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/internalinterfaces"
+	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/etcd/v1alpha1"
+	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

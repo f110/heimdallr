@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["identity_provider.go"],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/server/identityprovider",
+    importpath = "go.f110.dev/heimdallr/pkg/server/identityprovider",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",

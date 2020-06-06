@@ -11,7 +11,7 @@ import (
 	"go.etcd.io/etcd/v3/embed"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 func TestGeneral(t *testing.T) {

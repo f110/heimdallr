@@ -9,7 +9,7 @@ go_library(
         "generated_expansion.go",
         "order.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/acme/v1alpha2",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/acme/v1alpha2",
     importpath = "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/acme/v1alpha2",
     visibility = ["//visibility:public"],
     deps = [

@@ -27,6 +27,6 @@ go_library(
     name = "go_default_library",
     srcs = [],  # keep
     embed = [":embed_crd"],  # keep
-    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/data",
+    importpath = "go.f110.dev/heimdallr/operator/e2e/data",
     visibility = ["//visibility:public"],
 )

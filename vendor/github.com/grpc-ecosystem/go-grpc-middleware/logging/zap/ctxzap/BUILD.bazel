@@ -6,7 +6,7 @@ go_library(
         "context.go",
         "doc.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap",
     visibility = ["//visibility:public"],
     deps = [

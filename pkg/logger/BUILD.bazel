@@ -6,7 +6,7 @@ go_library(
         "log.go",
         "logger.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/logger",
+    importpath = "go.f110.dev/heimdallr/pkg/logger",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",

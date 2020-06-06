@@ -30,10 +30,10 @@ package v1alpha1
 import (
 	time "time"
 
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	versioned "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	internalinterfaces "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/listers/etcd/v1alpha1"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	versioned "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
+	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

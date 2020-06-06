@@ -10,7 +10,7 @@ go_library(
         "stream.go",
         "tags.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/gopkg.in/square/go-jose.v2/json",
+    importmap = "go.f110.dev/heimdallr/vendor/gopkg.in/square/go-jose.v2/json",
     importpath = "gopkg.in/square/go-jose.v2/json",
     visibility = ["//visibility:public"],
 )

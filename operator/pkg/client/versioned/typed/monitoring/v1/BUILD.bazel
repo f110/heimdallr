@@ -13,7 +13,7 @@ go_library(
         "servicemonitor.go",
         "thanosruler.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/client/versioned/scheme:go_default_library",

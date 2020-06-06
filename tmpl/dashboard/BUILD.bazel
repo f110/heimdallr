@@ -32,6 +32,6 @@ go_library(
     name = "go_default_library",
     srcs = [],  # keep
     embed = [":embed_tmpl"],  # keep
-    importpath = "github.com/f110/lagrangian-proxy/tmpl/dashboard",
+    importpath = "go.f110.dev/heimdallr/tmpl/dashboard",
     visibility = ["//visibility:public"],
 )

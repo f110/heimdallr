@@ -12,9 +12,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/f110/lagrangian-proxy/pkg/config/configreader"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func getClient(confFile string) (*rpcclient.Client, error) {

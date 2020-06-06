@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 func TestMain(m *testing.M) {

@@ -10,7 +10,7 @@ go_library(
         "routes.go",
         "routes_linux.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/netutil",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/netutil",
     importpath = "go.etcd.io/etcd/v3/pkg/netutil",
     visibility = ["//visibility:public"],
     deps = [

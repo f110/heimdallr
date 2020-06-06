@@ -14,7 +14,7 @@ go_library(
         "section.go",
         "struct.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/gopkg.in/ini.v1",
+    importmap = "go.f110.dev/heimdallr/vendor/gopkg.in/ini.v1",
     importpath = "gopkg.in/ini.v1",
     visibility = ["//visibility:public"],
 )

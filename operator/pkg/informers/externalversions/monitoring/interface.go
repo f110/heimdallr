@@ -28,8 +28,8 @@ SOFTWARE.
 package monitoring
 
 import (
-	internalinterfaces "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/monitoring/v1"
+	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
+	v1 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/monitoring/v1"
 )
 
 // Interface provides access to each of this group's versions.

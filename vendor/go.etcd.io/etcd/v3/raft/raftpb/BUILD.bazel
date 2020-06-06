@@ -7,7 +7,7 @@ go_library(
         "confstate.go",
         "raft.pb.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/raft/raftpb",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/raft/raftpb",
     importpath = "go.etcd.io/etcd/v3/raft/raftpb",
     visibility = ["//visibility:public"],
     deps = [

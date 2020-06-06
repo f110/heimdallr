@@ -8,7 +8,7 @@ go_library(
         "merge.go",
         "mergo.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/imdario/mergo",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/imdario/mergo",
     importpath = "github.com/imdario/mergo",
     visibility = ["//visibility:public"],
 )

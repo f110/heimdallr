@@ -16,7 +16,7 @@ go_library(
         "transport.go",
         "unix_listener.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/transport",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/transport",
     importpath = "go.etcd.io/etcd/v3/pkg/transport",
     visibility = ["//visibility:public"],
     deps = [

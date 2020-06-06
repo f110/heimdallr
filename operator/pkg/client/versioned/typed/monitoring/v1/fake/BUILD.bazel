@@ -12,7 +12,7 @@ go_library(
         "fake_servicemonitor.go",
         "fake_thanosruler.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/monitoring/v1/fake",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/client/versioned/typed/monitoring/v1:go_default_library",

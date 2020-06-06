@@ -11,7 +11,7 @@ go_library(
         "util_linux.go",
         "util_nonlinux.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/grpc/internal/channelz",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/grpc/internal/channelz",
     importpath = "google.golang.org/grpc/internal/channelz",
     visibility = ["//vendor/google.golang.org/grpc:__subpackages__"],
     deps = [

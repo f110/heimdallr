@@ -8,7 +8,7 @@ go_library(
         "server.go",
         "stats.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/v2stats",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/api/v2stats",
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/v2stats",
     visibility = ["//visibility:public"],
     deps = [

@@ -27,8 +27,8 @@ import (
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
-	"github.com/f110/lagrangian-proxy/pkg/k8s"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (

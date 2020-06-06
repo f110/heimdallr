@@ -7,7 +7,7 @@ go_library(
         "sort.go",
         "zero.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/google/go-cmp/cmp/internal/value",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-cmp/cmp/internal/value",
     importpath = "github.com/google/go-cmp/cmp/internal/value",
     visibility = ["//vendor/github.com/google/go-cmp/cmp:__subpackages__"],
 )

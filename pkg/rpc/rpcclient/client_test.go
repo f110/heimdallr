@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpctestutil"
+	"go.f110.dev/heimdallr/pkg/rpc/rpctestutil"
 )
 
 func TestNewWithClient(t *testing.T) {

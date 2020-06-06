@@ -17,7 +17,7 @@ go_library(
         "time.go",
         "type.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/smartystreets/assertions",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/assertions",
     importpath = "github.com/smartystreets/assertions",
     visibility = ["//visibility:public"],
     deps = [

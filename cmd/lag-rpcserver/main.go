@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/cmd/rpcserver"
-	"github.com/f110/lagrangian-proxy/pkg/version"
+	"go.f110.dev/heimdallr/pkg/cmd/rpcserver"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 func printVersion() {

@@ -7,9 +7,9 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func TestMain(m *testing.M) {

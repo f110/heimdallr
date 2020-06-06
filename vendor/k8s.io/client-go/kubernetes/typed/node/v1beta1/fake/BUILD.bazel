@@ -7,7 +7,7 @@ go_library(
         "fake_node_client.go",
         "fake_runtimeclass.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/kubernetes/typed/node/v1beta1/fake",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/kubernetes/typed/node/v1beta1/fake",
     importpath = "k8s.io/client-go/kubernetes/typed/node/v1beta1/fake",
     visibility = ["//visibility:public"],
     deps = [

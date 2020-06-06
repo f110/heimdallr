@@ -6,6 +6,6 @@ go_library(
         "signals.go",
         "signals_posix.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/signals",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/signals",
     visibility = ["//visibility:public"],
 )

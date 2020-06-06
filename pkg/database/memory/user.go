@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database"
 )
 
 type UserDatabase struct {

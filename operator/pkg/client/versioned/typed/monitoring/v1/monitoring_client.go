@@ -29,7 +29,7 @@ package v1
 
 import (
 	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
+	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

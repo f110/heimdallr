@@ -10,7 +10,7 @@ go_library(
         "urls.go",
         "urlsmap.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/pkg/types",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/types",
     importpath = "go.etcd.io/etcd/v3/pkg/types",
     visibility = ["//visibility:public"],
 )

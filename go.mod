@@ -1,4 +1,4 @@
-module github.com/f110/lagrangian-proxy
+module go.f110.dev/heimdallr
 
 go 1.13
 

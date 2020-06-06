@@ -9,7 +9,7 @@ go_library(
         "util.go",
         "watch.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/clientv3/namespace",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/clientv3/namespace",
     importpath = "go.etcd.io/etcd/v3/clientv3/namespace",
     visibility = ["//visibility:public"],
     deps = [

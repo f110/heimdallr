@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "helper.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/discovery",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/discovery",
     importpath = "k8s.io/client-go/discovery",
     visibility = ["//visibility:public"],
     deps = [

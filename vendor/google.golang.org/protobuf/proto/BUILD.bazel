@@ -20,7 +20,7 @@ go_library(
         "size_gen.go",
         "wrappers.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/protobuf/proto",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/protobuf/proto",
     importpath = "google.golang.org/protobuf/proto",
     visibility = ["//visibility:public"],
     deps = [

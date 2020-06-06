@@ -22,7 +22,7 @@ go_library(
         "userattribute.go",
         "userid.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/crypto/openpgp/packet",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/crypto/openpgp/packet",
     importpath = "golang.org/x/crypto/openpgp/packet",
     visibility = ["//visibility:public"],
     deps = [

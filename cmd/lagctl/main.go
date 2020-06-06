@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/f110/lagrangian-proxy/pkg/cmd/lagctl"
+	"go.f110.dev/heimdallr/pkg/cmd/lagctl"
 )
 
 func cli(args []string) error {

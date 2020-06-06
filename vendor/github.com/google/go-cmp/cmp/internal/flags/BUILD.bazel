@@ -7,7 +7,7 @@ go_library(
         "toolchain_legacy.go",
         "toolchain_recent.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/google/go-cmp/cmp/internal/flags",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-cmp/cmp/internal/flags",
     importpath = "github.com/google/go-cmp/cmp/internal/flags",
     visibility = ["//vendor/github.com/google/go-cmp/cmp:__subpackages__"],
 )

@@ -23,7 +23,7 @@ go_library(
         "v2_server.go",
         "v3_server.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver",
     importpath = "go.etcd.io/etcd/v3/etcdserver",
     visibility = ["//visibility:public"],
     deps = [

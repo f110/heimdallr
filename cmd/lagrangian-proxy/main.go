@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/f110/lagrangian-proxy/pkg/cmd/reverseproxy"
-	"github.com/f110/lagrangian-proxy/pkg/version"
+	"go.f110.dev/heimdallr/pkg/cmd/reverseproxy"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 func printVersion() {

@@ -6,7 +6,7 @@ go_library(
         "decoder.go",
         "encoder.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/rest/watch",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/rest/watch",
     importpath = "k8s.io/client-go/rest/watch",
     visibility = ["//visibility:public"],
     deps = [

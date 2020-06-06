@@ -7,7 +7,7 @@ go_library(
         "server.go",
         "socket.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/frontproxy",
+    importpath = "go.f110.dev/heimdallr/pkg/frontproxy",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth:go_default_library",
@@ -45,7 +45,6 @@ go_test(
         "//pkg/logger:go_default_library",
         "//pkg/netutil:go_default_library",
         "//pkg/rpc/rpcclient:go_default_library",
-        "//pkg/rpc/rpctestutil:go_default_library",
         "//pkg/session:go_default_library",
     ],
 )

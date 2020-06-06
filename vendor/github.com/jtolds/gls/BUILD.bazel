@@ -10,7 +10,7 @@ go_library(
         "stack_tags.go",
         "stack_tags_main.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/jtolds/gls",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/jtolds/gls",
     importpath = "github.com/jtolds/gls",
     visibility = ["//visibility:public"],
 )

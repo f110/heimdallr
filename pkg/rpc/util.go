@@ -3,7 +3,7 @@ package rpc
 import (
 	"github.com/golang/protobuf/ptypes"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func DatabaseUserToRPCUser(in *database.User) *UserItem {

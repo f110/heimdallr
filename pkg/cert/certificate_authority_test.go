@@ -13,9 +13,9 @@ import (
 
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/database/memory"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database/memory"
 )
 
 func newCertificateAuthorityConfig(t *testing.T) *config.CertificateAuthority {

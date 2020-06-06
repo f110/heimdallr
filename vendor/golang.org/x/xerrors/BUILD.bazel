@@ -11,7 +11,7 @@ go_library(
         "frame.go",
         "wrap.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/xerrors",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/xerrors",
     importpath = "golang.org/x/xerrors",
     visibility = ["//visibility:public"],
     deps = ["//vendor/golang.org/x/xerrors/internal:go_default_library"],

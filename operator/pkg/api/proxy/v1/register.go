@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/proxy"
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 )
 
 // SchemeGroupVersion is group version used to register these objects

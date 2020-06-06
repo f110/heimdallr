@@ -11,7 +11,7 @@ go_library(
         "role.go",
         "rpcpermission.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/typed/proxy/v1",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/proxy/v1:go_default_library",

@@ -10,7 +10,7 @@ go_library(
         "metrics.go",
         "store.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/membership",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/api/membership",
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/membership",
     visibility = ["//visibility:public"],
     deps = [

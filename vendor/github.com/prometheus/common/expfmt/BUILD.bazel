@@ -10,7 +10,7 @@ go_library(
         "text_create.go",
         "text_parse.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/prometheus/common/expfmt",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/prometheus/common/expfmt",
     importpath = "github.com/prometheus/common/expfmt",
     visibility = ["//visibility:public"],
     deps = [

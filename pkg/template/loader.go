@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (

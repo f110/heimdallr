@@ -27,7 +27,7 @@ go_library(
         "sha256block_arm64.s",
         "sha256block_other.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/minio/sha256-simd",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/sha256-simd",
     importpath = "github.com/minio/sha256-simd",
     visibility = ["//visibility:public"],
 )

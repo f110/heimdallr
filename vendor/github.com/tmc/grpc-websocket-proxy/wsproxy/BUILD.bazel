@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "websocket_proxy.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/tmc/grpc-websocket-proxy/wsproxy",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/tmc/grpc-websocket-proxy/wsproxy",
     importpath = "github.com/tmc/grpc-websocket-proxy/wsproxy",
     visibility = ["//visibility:public"],
     deps = [

@@ -8,7 +8,7 @@ go_library(
         "response.go",
         "transport.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/jarcoal/httpmock",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/jarcoal/httpmock",
     importpath = "github.com/jarcoal/httpmock",
     visibility = ["//visibility:public"],
 )

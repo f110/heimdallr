@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
-	"github.com/f110/lagrangian-proxy/operator/e2e/data"
+	"go.f110.dev/heimdallr/operator/e2e/data"
 )
 
 func CreateCluster(id string) (string, error) {

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/k8s"
 )
 
 const (

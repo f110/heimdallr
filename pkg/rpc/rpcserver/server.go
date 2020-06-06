@@ -22,13 +22,13 @@ import (
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth"
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcservice"
+	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcservice"
 )
 
 var (

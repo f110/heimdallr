@@ -11,7 +11,7 @@ go_library(
         "servicemonitor.go",
         "thanosruler.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/coreos/prometheus-operator/pkg/client/informers/externalversions/monitoring/v1",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/coreos/prometheus-operator/pkg/client/informers/externalversions/monitoring/v1",
     importpath = "github.com/coreos/prometheus-operator/pkg/client/informers/externalversions/monitoring/v1",
     visibility = ["//visibility:public"],
     deps = [

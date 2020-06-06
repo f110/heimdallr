@@ -16,7 +16,7 @@ go_library(
         "members.go",
         "util.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/client",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/client",
     importpath = "go.etcd.io/etcd/v3/client",
     visibility = ["//visibility:public"],
     deps = [

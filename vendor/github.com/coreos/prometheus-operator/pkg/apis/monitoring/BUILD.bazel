@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["register.go"],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring",
     importpath = "github.com/coreos/prometheus-operator/pkg/apis/monitoring",
     visibility = ["//visibility:public"],
 )

@@ -6,7 +6,7 @@ go_library(
         "clientset.go",
         "doc.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned",
     importpath = "github.com/jetstack/cert-manager/pkg/client/clientset/versioned",
     visibility = ["//visibility:public"],
     deps = [

@@ -9,7 +9,7 @@ import (
 	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"sigs.k8s.io/yaml"
 
-	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func TestNewRelayLocator(t *testing.T) {

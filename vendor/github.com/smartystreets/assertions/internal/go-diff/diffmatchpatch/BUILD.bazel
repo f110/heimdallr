@@ -11,7 +11,7 @@ go_library(
         "patch.go",
         "stringutil.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
     importpath = "github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
     visibility = ["//vendor/github.com/smartystreets/assertions:__subpackages__"],
 )

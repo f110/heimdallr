@@ -18,7 +18,7 @@ go_library(
         "signing_method.go",
         "token.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/dgrijalva/jwt-go",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/dgrijalva/jwt-go",
     importpath = "github.com/dgrijalva/jwt-go",
     visibility = ["//visibility:public"],
 )

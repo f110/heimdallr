@@ -14,8 +14,8 @@ import (
 
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func createCAForTest(t *testing.T) *config.CertificateAuthority {

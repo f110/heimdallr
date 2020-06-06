@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
 )
 
 func TestGitHubController(t *testing.T) {

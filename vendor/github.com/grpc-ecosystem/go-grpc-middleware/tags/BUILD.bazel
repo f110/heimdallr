@@ -9,7 +9,7 @@ go_library(
         "interceptors.go",
         "options.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware/tags",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/tags",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/tags",
     visibility = ["//visibility:public"],
     deps = [

@@ -6,7 +6,7 @@ go_library(
         "armor.go",
         "encode.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/crypto/openpgp/armor",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/crypto/openpgp/armor",
     importpath = "golang.org/x/crypto/openpgp/armor",
     visibility = ["//visibility:public"],
     deps = ["//vendor/golang.org/x/crypto/openpgp/errors:go_default_library"],

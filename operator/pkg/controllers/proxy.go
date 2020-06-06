@@ -29,12 +29,12 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/netutil"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 const (

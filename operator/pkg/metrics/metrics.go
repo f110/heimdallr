@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 )
 
 const namespace = "lag_operator"

@@ -6,7 +6,7 @@ go_library(
         "certificate_authority.go",
         "util.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/cert",
+    importpath = "go.f110.dev/heimdallr/pkg/cert",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",

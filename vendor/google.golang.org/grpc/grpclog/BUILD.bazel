@@ -7,7 +7,7 @@ go_library(
         "logger.go",
         "loggerv2.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/google.golang.org/grpc/grpclog",
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/grpc/grpclog",
     importpath = "google.golang.org/grpc/grpclog",
     visibility = ["//visibility:public"],
     deps = ["//vendor/google.golang.org/grpc/internal/grpclog:go_default_library"],

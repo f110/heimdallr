@@ -6,7 +6,7 @@ go_library(
         "internal.go",
         "server.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/server",
+    importpath = "go.f110.dev/heimdallr/pkg/server",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config:go_default_library",

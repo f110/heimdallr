@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 type AdminClient struct {

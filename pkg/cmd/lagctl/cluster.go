@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func memberList(c *rpcclient.Client) error {

@@ -28,7 +28,7 @@ SOFTWARE.
 package v1
 
 import (
-	v1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
+	v1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"

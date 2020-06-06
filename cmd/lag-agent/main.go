@@ -15,11 +15,11 @@ import (
 	"golang.org/x/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/version"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/connector"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 func printVersion() {

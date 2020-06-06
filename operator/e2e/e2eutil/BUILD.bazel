@@ -9,7 +9,7 @@ go_library(
         "id.go",
         "proxy.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/e2eutil",
+    importpath = "go.f110.dev/heimdallr/operator/e2e/e2eutil",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/e2e/data:go_default_library",

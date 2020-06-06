@@ -9,7 +9,7 @@ go_library(
         "xxhash_other.go",
         "xxhash_unsafe.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/cespare/xxhash/v2",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/cespare/xxhash/v2",
     importpath = "github.com/cespare/xxhash/v2",
     visibility = ["//visibility:public"],
 )

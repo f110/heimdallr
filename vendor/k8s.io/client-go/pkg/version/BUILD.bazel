@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "version.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/pkg/version",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/pkg/version",
     importpath = "k8s.io/client-go/pkg/version",
     visibility = ["//visibility:public"],
     deps = ["//vendor/k8s.io/apimachinery/pkg/version:go_default_library"],

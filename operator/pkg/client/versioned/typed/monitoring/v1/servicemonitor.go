@@ -31,7 +31,7 @@ import (
 	"time"
 
 	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	scheme "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
+	scheme "go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

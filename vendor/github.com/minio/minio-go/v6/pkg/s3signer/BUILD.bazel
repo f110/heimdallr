@@ -8,7 +8,7 @@ go_library(
         "request-signature-v4.go",
         "utils.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/minio/minio-go/v6/pkg/s3signer",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v6/pkg/s3signer",
     importpath = "github.com/minio/minio-go/v6/pkg/s3signer",
     visibility = ["//visibility:public"],
     deps = [

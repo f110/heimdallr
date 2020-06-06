@@ -14,7 +14,7 @@ go_library(
         "report_text.go",
         "report_value.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/google/go-cmp/cmp",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-cmp/cmp",
     importpath = "github.com/google/go-cmp/cmp",
     visibility = ["//visibility:public"],
     deps = [

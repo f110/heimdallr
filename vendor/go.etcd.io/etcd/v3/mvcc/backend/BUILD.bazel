@@ -13,7 +13,7 @@ go_library(
         "read_tx.go",
         "tx_buffer.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/mvcc/backend",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/mvcc/backend",
     importpath = "go.etcd.io/etcd/v3/mvcc/backend",
     visibility = ["//visibility:public"],
     deps = [

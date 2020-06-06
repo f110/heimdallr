@@ -22,7 +22,7 @@ go_library(
         "util.go",
         "x_net_proxy.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/gorilla/websocket",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/gorilla/websocket",
     importpath = "github.com/gorilla/websocket",
     visibility = ["//visibility:public"],
 )

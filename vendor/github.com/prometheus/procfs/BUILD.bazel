@@ -37,7 +37,7 @@ go_library(
         "xfrm.go",
         "zoneinfo.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/prometheus/procfs",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/prometheus/procfs",
     importpath = "github.com/prometheus/procfs",
     visibility = ["//visibility:public"],
     deps = [

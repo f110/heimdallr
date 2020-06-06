@@ -7,7 +7,7 @@ filegroup(
 load("//build/rules/go:vendor.bzl", "go_vendor")
 
 # gazelle:proto disable_global
-# gazelle:prefix github.com/f110/lagrangian-proxy
+# gazelle:prefix go.f110.dev/heimdallr
 
 go_vendor(
     name = "vendor",

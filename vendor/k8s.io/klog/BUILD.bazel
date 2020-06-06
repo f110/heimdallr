@@ -6,7 +6,7 @@ go_library(
         "klog.go",
         "klog_file.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/klog",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/klog",
     importpath = "k8s.io/klog",
     visibility = ["//visibility:public"],
 )

@@ -28,7 +28,7 @@ SOFTWARE.
 package fake
 
 import (
-	v1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
+	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/f110/lagrangian-proxy/pkg/server"
+	"go.f110.dev/heimdallr/pkg/server"
 )
 
 type Probe struct {

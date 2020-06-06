@@ -12,7 +12,7 @@ go_library(
         "urlbackoff.go",
         "zz_generated.deepcopy.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/rest",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/rest",
     importpath = "k8s.io/client-go/rest",
     visibility = ["//visibility:public"],
     deps = [

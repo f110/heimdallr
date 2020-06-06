@@ -8,7 +8,7 @@ go_library(
         "md.go",
         "metadatafields.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc/rpctypes",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc/rpctypes",
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/v3rpc/rpctypes",
     visibility = ["//visibility:public"],
     deps = [

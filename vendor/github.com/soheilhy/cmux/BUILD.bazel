@@ -9,7 +9,7 @@ go_library(
         "matchers.go",
         "patricia.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/soheilhy/cmux",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/soheilhy/cmux",
     importpath = "github.com/soheilhy/cmux",
     visibility = ["//visibility:public"],
     deps = [

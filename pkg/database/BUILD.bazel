@@ -9,7 +9,7 @@ go_library(
         "token.go",
         "user.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/database",
+    importpath = "go.f110.dev/heimdallr/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",

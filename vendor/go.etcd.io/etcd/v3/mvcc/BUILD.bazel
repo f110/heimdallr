@@ -20,7 +20,7 @@ go_library(
         "watcher.go",
         "watcher_group.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/mvcc",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/mvcc",
     importpath = "go.etcd.io/etcd/v3/mvcc",
     visibility = ["//visibility:public"],
     deps = [

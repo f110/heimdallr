@@ -6,7 +6,7 @@ go_library(
         "etcdcluster.go",
         "interface.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions/etcd/v1alpha1",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/etcd/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",

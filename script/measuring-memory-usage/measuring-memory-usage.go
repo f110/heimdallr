@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 
 	"github.com/spf13/pflag"
 )

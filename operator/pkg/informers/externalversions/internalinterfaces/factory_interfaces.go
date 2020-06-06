@@ -30,7 +30,7 @@ package internalinterfaces
 import (
 	time "time"
 
-	versioned "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
+	versioned "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"

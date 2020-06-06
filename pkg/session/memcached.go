@@ -9,7 +9,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	"golang.org/x/xerrors"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 type MemcachedStore struct {

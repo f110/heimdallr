@@ -17,12 +17,12 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/template"
-	"github.com/f110/lagrangian-proxy/tmpl/dashboard"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/template"
+	"go.f110.dev/heimdallr/tmpl/dashboard"
 )
 
 type Server struct {

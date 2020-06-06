@@ -10,7 +10,7 @@ go_library(
         "main.go",
         "reader.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/googleapis/gnostic/compiler",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/googleapis/gnostic/compiler",
     importpath = "github.com/googleapis/gnostic/compiler",
     visibility = ["//visibility:public"],
     deps = [

@@ -21,10 +21,10 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog"
 
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	"github.com/f110/lagrangian-proxy/operator/pkg/controllers"
-	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
-	"github.com/f110/lagrangian-proxy/operator/pkg/signals"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers"
+	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
+	"go.f110.dev/heimdallr/operator/pkg/signals"
 )
 
 func main() {

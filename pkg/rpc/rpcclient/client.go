@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/f110/lagrangian-proxy/pkg/auth/token"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/auth/token"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (

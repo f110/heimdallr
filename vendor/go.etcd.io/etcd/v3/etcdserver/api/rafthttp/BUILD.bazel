@@ -20,7 +20,7 @@ go_library(
         "urlpick.go",
         "util.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/api/rafthttp",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/api/rafthttp",
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/rafthttp",
     visibility = ["//visibility:public"],
     deps = [

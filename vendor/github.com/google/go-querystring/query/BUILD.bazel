@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["encode.go"],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/google/go-querystring/query",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-querystring/query",
     importpath = "github.com/google/go-querystring/query",
     visibility = ["//visibility:public"],
 )

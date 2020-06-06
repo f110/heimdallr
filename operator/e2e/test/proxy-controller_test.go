@@ -16,11 +16,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/f110/lagrangian-proxy/operator/e2e/e2eutil"
-	. "github.com/f110/lagrangian-proxy/operator/e2e/framework"
-	proxyv1 "github.com/f110/lagrangian-proxy/operator/pkg/api/proxy/v1"
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	"github.com/f110/lagrangian-proxy/pkg/config"
+	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
+	. "go.f110.dev/heimdallr/operator/e2e/framework"
+	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/config"
 )
 
 func TestProxyController(t *testing.T) {

@@ -11,7 +11,7 @@ go_library(
         "proxy_controller.go",
         "rbac.go",
     ],
-    importpath = "github.com/f110/lagrangian-proxy/operator/pkg/controllers",
+    importpath = "go.f110.dev/heimdallr/operator/pkg/controllers",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd:go_default_library",

@@ -7,7 +7,7 @@ go_library(
         "util.go",
         "v3_snapshot.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/clientv3/snapshot",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/clientv3/snapshot",
     importpath = "go.etcd.io/etcd/v3/clientv3/snapshot",
     visibility = ["//visibility:public"],
     deps = [

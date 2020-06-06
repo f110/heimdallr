@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["measuring-memory-usage.go"],
-    importpath = "github.com/f110/lagrangian-proxy/script/measuring-memory-usage",
+    importpath = "go.f110.dev/heimdallr/script/measuring-memory-usage",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/rpc/rpcclient:go_default_library",

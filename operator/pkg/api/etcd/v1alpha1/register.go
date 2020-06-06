@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 )
 
 var SchemeGroupVersion = schema.GroupVersion{Group: etcd.GroupName, Version: "v1alpha1"}

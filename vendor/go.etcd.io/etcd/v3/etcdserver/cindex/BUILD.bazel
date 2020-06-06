@@ -6,7 +6,7 @@ go_library(
         "cindex.go",
         "doc.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/etcdserver/cindex",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/cindex",
     importpath = "go.etcd.io/etcd/v3/etcdserver/cindex",
     visibility = ["//visibility:public"],
     deps = ["//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library"],

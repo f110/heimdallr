@@ -9,7 +9,7 @@ go_library(
         "patch.go",
         "uid.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/apimachinery/pkg/types",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/apimachinery/pkg/types",
     importpath = "k8s.io/apimachinery/pkg/types",
     visibility = ["//visibility:public"],
 )

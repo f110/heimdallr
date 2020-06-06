@@ -24,7 +24,7 @@ go_library(
         "zknownfolderids_windows.go",
         "zsyscall_windows.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/golang.org/x/sys/windows",
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/sys/windows",
     importpath = "golang.org/x/sys/windows",
     visibility = ["//visibility:public"],
 )

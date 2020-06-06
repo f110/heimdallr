@@ -15,7 +15,7 @@ go_library(
         "not.go",
         "transform_description.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/smartystreets/assertions/internal/oglematchers",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/assertions/internal/oglematchers",
     importpath = "github.com/smartystreets/assertions/internal/oglematchers",
     visibility = ["//vendor/github.com/smartystreets/assertions:__subpackages__"],
 )

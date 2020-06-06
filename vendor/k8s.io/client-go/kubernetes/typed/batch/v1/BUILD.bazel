@@ -8,7 +8,7 @@ go_library(
         "generated_expansion.go",
         "job.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/k8s.io/client-go/kubernetes/typed/batch/v1",
+    importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/kubernetes/typed/batch/v1",
     importpath = "k8s.io/client-go/kubernetes/typed/batch/v1",
     visibility = ["//visibility:public"],
     deps = [

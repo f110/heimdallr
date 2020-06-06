@@ -19,13 +19,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/f110/lagrangian-proxy/pkg/cert"
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/database"
-	"github.com/f110/lagrangian-proxy/pkg/database/memory"
-	"github.com/f110/lagrangian-proxy/pkg/rpc"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/session"
+	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/database"
+	"go.f110.dev/heimdallr/pkg/database/memory"
+	"go.f110.dev/heimdallr/pkg/rpc"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/session"
 )
 
 func TestInit(t *testing.T) {

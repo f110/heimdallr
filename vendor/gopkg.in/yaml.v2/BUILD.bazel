@@ -17,7 +17,7 @@ go_library(
         "yamlh.go",
         "yamlprivateh.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/gopkg.in/yaml.v2",
+    importmap = "go.f110.dev/heimdallr/vendor/gopkg.in/yaml.v2",
     importpath = "gopkg.in/yaml.v2",
     visibility = ["//visibility:public"],
 )

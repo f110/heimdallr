@@ -7,7 +7,7 @@ go_library(
         "nicemd.go",
         "single_key.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
     visibility = ["//visibility:public"],
     deps = ["//vendor/google.golang.org/grpc/metadata:go_default_library"],

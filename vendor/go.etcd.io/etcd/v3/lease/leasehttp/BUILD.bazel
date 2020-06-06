@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "http.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/lease/leasehttp",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/lease/leasehttp",
     importpath = "go.etcd.io/etcd/v3/lease/leasehttp",
     visibility = ["//visibility:public"],
     deps = [

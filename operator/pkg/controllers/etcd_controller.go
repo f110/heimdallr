@@ -40,13 +40,13 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
-	"github.com/f110/lagrangian-proxy/operator/pkg/api/etcd"
-	etcdv1alpha1 "github.com/f110/lagrangian-proxy/operator/pkg/api/etcd/v1alpha1"
-	clientset "github.com/f110/lagrangian-proxy/operator/pkg/client/versioned"
-	"github.com/f110/lagrangian-proxy/operator/pkg/client/versioned/scheme"
-	informers "github.com/f110/lagrangian-proxy/operator/pkg/informers/externalversions"
-	etcdlisters "github.com/f110/lagrangian-proxy/operator/pkg/listers/etcd/v1alpha1"
-	"github.com/f110/lagrangian-proxy/pkg/logger"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
+	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
+	etcdlisters "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (

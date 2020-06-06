@@ -36,7 +36,7 @@ go_library(
         "wrappers.go",
         "wrappers_gogo.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/gogo/protobuf/proto",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/gogo/protobuf/proto",
     importpath = "github.com/gogo/protobuf/proto",
     visibility = ["//visibility:public"],
 )

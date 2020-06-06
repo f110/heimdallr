@@ -6,7 +6,7 @@ go_library(
         "clientset.go",
         "doc.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/github.com/coreos/prometheus-operator/pkg/client/versioned",
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/coreos/prometheus-operator/pkg/client/versioned",
     importpath = "github.com/coreos/prometheus-operator/pkg/client/versioned",
     visibility = ["//visibility:public"],
     deps = [

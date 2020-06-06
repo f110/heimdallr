@@ -6,7 +6,7 @@ go_library(
         "record.go",
         "record.pb.go",
     ],
-    importmap = "github.com/f110/lagrangian-proxy/vendor/go.etcd.io/etcd/v3/wal/walpb",
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/wal/walpb",
     importpath = "go.etcd.io/etcd/v3/wal/walpb",
     visibility = ["//visibility:public"],
     deps = [

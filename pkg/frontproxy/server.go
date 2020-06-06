@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/f110/lagrangian-proxy/pkg/config"
-	"github.com/f110/lagrangian-proxy/pkg/connector"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/connector"
+	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 type httpProxy interface {
