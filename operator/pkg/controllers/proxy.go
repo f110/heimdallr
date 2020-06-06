@@ -624,7 +624,8 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			CertificateAuthority: &config.CertificateAuthority{
 				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
 			},
-			InternalTokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 		},
 		IdentityProvider: &config.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
@@ -1059,6 +1060,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
 								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
+								{Name: "signing-priv-key", MountPath: signPrivateKeyPath, ReadOnly: true},
 								{Name: "github-secret", MountPath: githubSecretPath, ReadOnly: true},
 								{Name: "cookie-secret", MountPath: sessionSecretPath, ReadOnly: true},
 								{Name: "config", MountPath: configMountPath, ReadOnly: true},
@@ -1086,6 +1088,14 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 									Items: []corev1.KeyToPath{
 										{Key: caCertificateFilename, Path: caCertificateFilename},
 									},
+								},
+							},
+						},
+						{
+							Name: "signing-priv-key",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: r.PrivateKeySecretName(),
 								},
 							},
 						},
