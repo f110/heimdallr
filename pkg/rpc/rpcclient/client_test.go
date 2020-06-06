@@ -10,9 +10,8 @@ import (
 func TestNewWithClient(t *testing.T) {
 	a := rpctestutil.NewAdminClient()
 	cl := rpctestutil.NewClusterClient()
-	auth := rpctestutil.NewAuthorityClient()
 	ca := rpctestutil.NewCertificateAuthorityClient()
-	c := NewWithClient(a, cl, auth, ca)
+	c := NewWithClient(a, cl, ca)
 	if c == nil {
 		t.Fatal("NewWithClient should return a value")
 	}
@@ -114,14 +113,5 @@ func TestNewWithClient(t *testing.T) {
 	_, _ = c.GetCert(big.NewInt(0))
 	if ca.GetCall != 1 {
 		t.Error("Expect call Get")
-	}
-
-	_, _ = c.SignRequest("")
-	if auth.SignRequestCall != 1 {
-		t.Error("Expect call SignRequest")
-	}
-	_, _ = c.GetPublicKey()
-	if auth.GetPublicKeyCall != 1 {
-		t.Error("Expect call GetPublicKey")
 	}
 }

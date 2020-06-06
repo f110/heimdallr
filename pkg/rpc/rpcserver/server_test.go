@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/pem"
 	"fmt"
 	"os"
 	"testing"
@@ -373,44 +372,6 @@ func TestServicesViaServer(t *testing.T) {
 				t.Errorf("Unexpected issuer: %s", getRes.GetUser().GetTokens()[0].GetIssuer())
 			}
 		})
-	})
-
-	t.Run("Authority", func(t *testing.T) {
-		t.Parallel()
-
-		authorityClient := rpc.NewAuthorityClient(conn)
-
-		pubKeyRes, err := authorityClient.GetPublicKey(systemUserCtx, &rpc.RequestGetPublicKey{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(pubKeyRes.PublicKey) == 0 {
-			t.Error("Expect return a public key")
-		}
-		b, rest := pem.Decode(pubKeyRes.PublicKey)
-		if len(rest) != 0 {
-			t.Fatal("responsed value decoded as a pem block but have rest bytes")
-		}
-		if b.Type != "PUBLIC KEY" {
-			t.Errorf("Expect Public Key: %s", b.Type)
-		}
-		pub, err := x509.ParsePKIXPublicKey(b.Bytes)
-		if err != nil {
-			t.Fatal(err)
-		}
-		switch pub.(type) {
-		case *ecdsa.PublicKey:
-		default:
-			t.Fatal("Unexpected public key type")
-		}
-
-		signRes, err := authorityClient.SignRequest(systemUserCtx, &rpc.RequestSignRequest{UserId: testUser.Id})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(signRes.Token) == 0 {
-			t.Fatal("Expect return token")
-		}
 	})
 
 	t.Run("CertificateAuthority", func(t *testing.T) {

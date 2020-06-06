@@ -54,13 +54,12 @@ func NewClientWithUserToken(conn *grpc.ClientConn) *ClientWithUserToken {
 }
 
 type Client struct {
-	conn            *grpc.ClientConn
-	adminClient     rpc.AdminClient
-	clusterClient   rpc.ClusterClient
-	caClient        rpc.CertificateAuthorityClient
-	authorityClient rpc.AuthorityClient
-	md              context.Context
-	ka              keepalive.ClientParameters
+	conn          *grpc.ClientConn
+	adminClient   rpc.AdminClient
+	clusterClient rpc.ClusterClient
+	caClient      rpc.CertificateAuthorityClient
+	md            context.Context
+	ka            keepalive.ClientParameters
 }
 
 func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
@@ -97,12 +96,11 @@ func NewWithInternalToken(conn *grpc.ClientConn, token string) (*Client, error) 
 	return c, nil
 }
 
-func NewWithClient(a rpc.AdminClient, c rpc.ClusterClient, auth rpc.AuthorityClient, ca rpc.CertificateAuthorityClient) *Client {
+func NewWithClient(a rpc.AdminClient, c rpc.ClusterClient, ca rpc.CertificateAuthorityClient) *Client {
 	return &Client{
-		adminClient:     a,
-		clusterClient:   c,
-		authorityClient: auth,
-		caClient:        ca,
+		adminClient:   a,
+		clusterClient: c,
+		caClient:      ca,
 	}
 }
 
@@ -110,7 +108,6 @@ func (c *Client) setConn(conn *grpc.ClientConn) {
 	c.conn = conn
 	c.adminClient = rpc.NewAdminClient(conn)
 	c.clusterClient = rpc.NewClusterClient(conn)
-	c.authorityClient = rpc.NewAuthorityClient(conn)
 	c.caClient = rpc.NewCertificateAuthorityClient(conn)
 }
 
@@ -324,24 +321,6 @@ func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
 	}
 
 	return res.Item, nil
-}
-
-func (c *Client) SignRequest(userId string) (string, error) {
-	res, err := c.authorityClient.SignRequest(c.md, &rpc.RequestSignRequest{UserId: userId})
-	if err != nil {
-		return "", err
-	}
-
-	return res.Token, nil
-}
-
-func (c *Client) GetPublicKey() ([]byte, error) {
-	res, err := c.authorityClient.GetPublicKey(c.md, &rpc.RequestGetPublicKey{})
-	if err != nil {
-		return nil, err
-	}
-
-	return res.PublicKey, nil
 }
 
 func extractEndpointFromError(err error) (string, error) {

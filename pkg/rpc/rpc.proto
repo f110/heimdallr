@@ -36,11 +36,6 @@ service CertificateAuthority {
     rpc WatchRevokedCert (RequestWatchRevokedCert) returns (stream ResponseWatchRevokedCert);
 }
 
-service Authority {
-    rpc SignRequest (RequestSignRequest) returns (ResponseSignResponse);
-    rpc GetPublicKey (RequestGetPublicKey) returns (ResponseGetPublicKey);
-}
-
 message RequestPing {}
 
 message ResponsePong {}

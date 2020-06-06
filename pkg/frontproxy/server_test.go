@@ -8,7 +8,6 @@ import (
 
 	"github.com/f110/lagrangian-proxy/pkg/config"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpctestutil"
 )
 
 type dummyHttpProxy struct {
@@ -43,8 +42,7 @@ func (d *dummyHttpProxy) ServeSlackWebHook(_ context.Context, _ http.ResponseWri
 }
 
 func TestNewFrontendProxy(t *testing.T) {
-	authority := rpctestutil.NewAuthorityClient()
-	c := rpcclient.NewWithClient(nil, nil, authority, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil)
 
 	v := NewFrontendProxy(&config.Config{Logger: &config.Logger{}}, nil, c)
 	if v == nil {

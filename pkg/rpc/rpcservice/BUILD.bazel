@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "admin.go",
-        "authority.go",
         "ca.go",
         "cluster.go",
         "doc.go",
@@ -20,7 +19,6 @@ go_library(
         "//pkg/database:go_default_library",
         "//pkg/logger:go_default_library",
         "//pkg/rpc:go_default_library",
-        "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",

@@ -2,7 +2,10 @@ package frontproxy
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -20,7 +23,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/database/memory"
 	"github.com/f110/lagrangian-proxy/pkg/logger"
 	"github.com/f110/lagrangian-proxy/pkg/rpc/rpcclient"
-	"github.com/f110/lagrangian-proxy/pkg/rpc/rpctestutil"
 	"github.com/f110/lagrangian-proxy/pkg/session"
 )
 
@@ -32,8 +34,7 @@ func TestNewHttpProxy(t *testing.T) {
 	conf := &config.Config{
 		Logger: &config.Logger{},
 	}
-	authority := rpctestutil.NewAuthorityClient()
-	c := rpcclient.NewWithClient(nil, nil, authority, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	if p == nil {
@@ -79,9 +80,17 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		},
 	}
 	rpcPermissions := []*config.RpcPermission{}
+
+	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signReqPubKey := signReqKey.PublicKey
 	conf := &config.Config{
 		General: &config.General{
-			ServerNameHost: "example.com",
+			ServerNameHost:    "example.com",
+			SigningPrivateKey: signReqKey,
+			SigningPublicKey:  signReqPubKey,
 		},
 		Logger: &config.Logger{
 			Level: "debug",
@@ -99,8 +108,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authority := rpctestutil.NewAuthorityClient()
-	c := rpcclient.NewWithClient(nil, nil, authority, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	t.Run("Session not found", func(t *testing.T) {

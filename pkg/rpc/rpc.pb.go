@@ -3104,22 +3104,11 @@ var file_pkg_rpc_rpc_proto_rawDesc = []byte{
 	0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x76,
 	0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74, 0x1a, 0x23, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
 	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x61, 0x74,
-	0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74, 0x30, 0x01, 0x32,
-	0xab, 0x01, 0x0a, 0x09, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x12, 0x4d, 0x0a,
-	0x0b, 0x53, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1d, 0x2e, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x53, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x70, 0x72,
-	0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x53, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4f, 0x0a, 0x0c,
-	0x47, 0x65, 0x74, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x1e, 0x2e, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x47, 0x65, 0x74, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x1a, 0x1f, 0x2e, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x47, 0x65, 0x74, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x42, 0x31, 0x5a,
-	0x2f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x66, 0x31, 0x31, 0x30,
-	0x2f, 0x6c, 0x61, 0x67, 0x72, 0x61, 0x6e, 0x67, 0x69, 0x61, 0x6e, 0x2d, 0x70, 0x72, 0x6f, 0x78,
-	0x79, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2f, 0x72, 0x70, 0x63,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74, 0x30, 0x01, 0x42,
+	0x31, 0x5a, 0x2f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x66, 0x31,
+	0x31, 0x30, 0x2f, 0x6c, 0x61, 0x67, 0x72, 0x61, 0x6e, 0x67, 0x69, 0x61, 0x6e, 0x2d, 0x70, 0x72,
+	0x6f, 0x78, 0x79, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2f, 0x72,
+	0x70, 0x63, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3232,32 +3221,28 @@ var file_pkg_rpc_rpc_proto_depIdxs = []int32{
 	40, // 36: proxy.rpc.CertificateAuthority.Get:input_type -> proxy.rpc.CARequestGet
 	42, // 37: proxy.rpc.CertificateAuthority.GetRevokedList:input_type -> proxy.rpc.RequestGetRevokedList
 	44, // 38: proxy.rpc.CertificateAuthority.WatchRevokedCert:input_type -> proxy.rpc.RequestWatchRevokedCert
-	48, // 39: proxy.rpc.Authority.SignRequest:input_type -> proxy.rpc.RequestSignRequest
-	50, // 40: proxy.rpc.Authority.GetPublicKey:input_type -> proxy.rpc.RequestGetPublicKey
-	4,  // 41: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
-	6,  // 42: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
-	8,  // 43: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
-	2,  // 44: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
-	17, // 45: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
-	19, // 46: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
-	21, // 47: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
-	23, // 48: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
-	25, // 49: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
-	27, // 50: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
-	29, // 51: proxy.rpc.Admin.TokenNew:output_type -> proxy.rpc.ResponseTokenNew
-	31, // 52: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
-	33, // 53: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
-	35, // 54: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
-	37, // 55: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
-	47, // 56: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
-	39, // 57: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
-	41, // 58: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
-	43, // 59: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
-	45, // 60: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
-	49, // 61: proxy.rpc.Authority.SignRequest:output_type -> proxy.rpc.ResponseSignResponse
-	51, // 62: proxy.rpc.Authority.GetPublicKey:output_type -> proxy.rpc.ResponseGetPublicKey
-	41, // [41:63] is the sub-list for method output_type
-	19, // [19:41] is the sub-list for method input_type
+	4,  // 39: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
+	6,  // 40: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
+	8,  // 41: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
+	2,  // 42: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
+	17, // 43: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
+	19, // 44: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
+	21, // 45: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
+	23, // 46: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
+	25, // 47: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
+	27, // 48: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
+	29, // 49: proxy.rpc.Admin.TokenNew:output_type -> proxy.rpc.ResponseTokenNew
+	31, // 50: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
+	33, // 51: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
+	35, // 52: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
+	37, // 53: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
+	47, // 54: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
+	39, // 55: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
+	41, // 56: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
+	43, // 57: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
+	45, // 58: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
+	39, // [39:59] is the sub-list for method output_type
+	19, // [19:39] is the sub-list for method input_type
 	19, // [19:19] is the sub-list for extension type_name
 	19, // [19:19] is the sub-list for extension extendee
 	0,  // [0:19] is the sub-list for field type_name
@@ -3902,7 +3887,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			NumEnums:      1,
 			NumMessages:   52,
 			NumExtensions: 0,
-			NumServices:   4,
+			NumServices:   3,
 		},
 		GoTypes:           file_pkg_rpc_rpc_proto_goTypes,
 		DependencyIndexes: file_pkg_rpc_rpc_proto_depIdxs,
@@ -4776,113 +4761,5 @@ var _CertificateAuthority_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "pkg/rpc/rpc.proto",
-}
-
-// AuthorityClient is the client API for Authority service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type AuthorityClient interface {
-	SignRequest(ctx context.Context, in *RequestSignRequest, opts ...grpc.CallOption) (*ResponseSignResponse, error)
-	GetPublicKey(ctx context.Context, in *RequestGetPublicKey, opts ...grpc.CallOption) (*ResponseGetPublicKey, error)
-}
-
-type authorityClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewAuthorityClient(cc grpc.ClientConnInterface) AuthorityClient {
-	return &authorityClient{cc}
-}
-
-func (c *authorityClient) SignRequest(ctx context.Context, in *RequestSignRequest, opts ...grpc.CallOption) (*ResponseSignResponse, error) {
-	out := new(ResponseSignResponse)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.Authority/SignRequest", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authorityClient) GetPublicKey(ctx context.Context, in *RequestGetPublicKey, opts ...grpc.CallOption) (*ResponseGetPublicKey, error) {
-	out := new(ResponseGetPublicKey)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.Authority/GetPublicKey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// AuthorityServer is the server API for Authority service.
-type AuthorityServer interface {
-	SignRequest(context.Context, *RequestSignRequest) (*ResponseSignResponse, error)
-	GetPublicKey(context.Context, *RequestGetPublicKey) (*ResponseGetPublicKey, error)
-}
-
-// UnimplementedAuthorityServer can be embedded to have forward compatible implementations.
-type UnimplementedAuthorityServer struct {
-}
-
-func (*UnimplementedAuthorityServer) SignRequest(context.Context, *RequestSignRequest) (*ResponseSignResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignRequest not implemented")
-}
-func (*UnimplementedAuthorityServer) GetPublicKey(context.Context, *RequestGetPublicKey) (*ResponseGetPublicKey, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
-}
-
-func RegisterAuthorityServer(s *grpc.Server, srv AuthorityServer) {
-	s.RegisterService(&_Authority_serviceDesc, srv)
-}
-
-func _Authority_SignRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestSignRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthorityServer).SignRequest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proxy.rpc.Authority/SignRequest",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthorityServer).SignRequest(ctx, req.(*RequestSignRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Authority_GetPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestGetPublicKey)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthorityServer).GetPublicKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proxy.rpc.Authority/GetPublicKey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthorityServer).GetPublicKey(ctx, req.(*RequestGetPublicKey))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Authority_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "proxy.rpc.Authority",
-	HandlerType: (*AuthorityServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "SignRequest",
-			Handler:    _Authority_SignRequest_Handler,
-		},
-		{
-			MethodName: "GetPublicKey",
-			Handler:    _Authority_GetPublicKey_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/rpc/rpc.proto",
 }

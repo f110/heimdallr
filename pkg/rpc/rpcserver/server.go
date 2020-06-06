@@ -80,7 +80,6 @@ func NewServer(
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
 	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user))
 	rpc.RegisterCertificateAuthorityServer(s, rpcservice.NewCertificateAuthorityService(conf, ca))
-	rpc.RegisterAuthorityServer(s, rpcservice.NewAuthorityService(conf))
 	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService(isReady))
 	r.InitializeMetrics(s)
 	registerOnce.Do(func() {

@@ -9,33 +9,6 @@ import (
 	"github.com/f110/lagrangian-proxy/pkg/rpc"
 )
 
-type AuthorityClient struct {
-	sync.Mutex
-
-	SignRequestCall  int
-	GetPublicKeyCall int
-}
-
-func NewAuthorityClient() *AuthorityClient {
-	return &AuthorityClient{}
-}
-
-func (a *AuthorityClient) SignRequest(_ context.Context, in *rpc.RequestSignRequest, opts ...grpc.CallOption) (*rpc.ResponseSignResponse, error) {
-	a.Lock()
-	defer a.Unlock()
-	a.SignRequestCall++
-
-	return &rpc.ResponseSignResponse{}, nil
-}
-
-func (a *AuthorityClient) GetPublicKey(ctx context.Context, in *rpc.RequestGetPublicKey, opts ...grpc.CallOption) (*rpc.ResponseGetPublicKey, error) {
-	a.Lock()
-	defer a.Unlock()
-	a.GetPublicKeyCall++
-
-	return &rpc.ResponseGetPublicKey{}, nil
-}
-
 type AdminClient struct {
 	sync.Mutex
 

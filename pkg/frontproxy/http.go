@@ -10,10 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/go-github/v29/github"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/xerrors"
 
 	"github.com/f110/lagrangian-proxy/pkg/auth"
 	"github.com/f110/lagrangian-proxy/pkg/config"
@@ -32,6 +34,8 @@ const (
 
 	slackCommonName = "platform-tls-client.slack.com"
 )
+
+var TokenExpiration = 5 * time.Minute
 
 type AccessLog struct {
 	Host      string `json:"host"`
@@ -218,7 +222,9 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		return
 	}
 
-	p.setHeader(req, user)
+	if err := p.setHeader(req, user); err != nil {
+		return
+	}
 	p.reverseProxy.ServeHTTP(w, req)
 
 	if logged.status >= 200 && logged.status <= 299 && req.TLS != nil {
@@ -322,19 +328,25 @@ func (p *HttpProxy) director(req *http.Request) {
 	}
 }
 
-func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
+func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 
 	if user.Id == "" {
-		return
+		return xerrors.New("could not get user id")
 	}
 
-	token, err := p.client.SignRequest(user.Id)
+	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
+		Id:        user.Id,
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
+	})
+	token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
 	if err != nil {
-		logger.Log.Debug("Failed sign jwt", zap.Error(err))
-		return
+		logger.Log.Warn("Failed sign jwt", zap.Error(err))
+		return xerrors.Errorf(": %w", err)
 	}
+
 	req.Header.Set(TokenHeaderName, token)
 	req.Header.Set(UserIdHeaderName, user.Id)
 	cookies := req.Cookies()
@@ -345,6 +357,8 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) {
 		}
 		req.AddCookie(c)
 	}
+
+	return nil
 }
 
 func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *http.Request, user *database.User) {
