@@ -78,7 +78,7 @@ rbac_gen(
     name = "rbac",
     srcs = [":go_default_library"],
     dir = "operator/config/rbac",
-    rolename = "lag-proxy",
+    rolename = "heimdallr",
 )
 
 go_test(

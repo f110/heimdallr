@@ -1,6 +1,6 @@
 syntax = "proto3";
 package proxy.rpc;
-option go_package = "github.com/f110/lagrangian-proxy/pkg/server/rpc";
+option go_package = "go.f110.dev/heimdallr/pkg/server/rpc";
 
 import "google/protobuf/timestamp.proto";
 

@@ -1,4 +1,4 @@
-namespace: lag-proxy
+namespace: heimdallr
 bases:
   - ../config/manager
   - ../config/crd

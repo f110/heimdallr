@@ -6,7 +6,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/bazel-bin" />
       <excludeFolder url="file://$MODULE_DIR$/bazel-genfiles" />
-      <excludeFolder url="file://$MODULE_DIR$/bazel-lagrangian-proxy" />
+      <excludeFolder url="file://$MODULE_DIR$/bazel-heimdallr" />
       <excludeFolder url="file://$MODULE_DIR$/bazel-out" />
       <excludeFolder url="file://$MODULE_DIR$/bazel-testlogs" />
     </content>

@@ -40,10 +40,9 @@ import (
 const (
 	EtcdVersion = "v3.4.7"
 
-	imageRepository            = "quay.io/f110/lagrangian-proxy-proxy"
+	imageRepository            = "quay.io/f110/heimdallr-proxy"
 	defaultImageTag            = "latest"
-	rpcServerImageRepository   = "quay.io/f110/lagrangian-proxy-rpcserver"
-	ctlImageRepository         = "quay.io/f110/lagrangian-proxy-ctl"
+	rpcServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
 	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
 	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
 	ctlCommand                 = "/usr/local/bin/lagctl"
@@ -53,7 +52,7 @@ const (
 	dashboardPort              = 4100
 	rpcServerPort              = 4001
 	rpcMetricsServerPort       = 4005
-	configVolumePath           = "/etc/lagrangian-proxy"
+	configVolumePath           = "/etc/heimdallr"
 	configMountPath            = configVolumePath + "/config"
 	proxyConfigMountPath       = configVolumePath + "/proxy"
 	serverCertMountPath        = configVolumePath + "/certs"
@@ -636,7 +635,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 		},
 		Datastore: &config.Datastore{
 			RawUrl:     etcdUrl.String(),
-			Namespace:  "/lagrangian-proxy/",
+			Namespace:  "/heimdallr/",
 			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
 			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
 			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
@@ -750,7 +749,7 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 		},
 		Datastore: &config.Datastore{
 			RawUrl:     etcdUrl.String(),
-			Namespace:  "/lagrangian-proxy/",
+			Namespace:  "/heimdallr/",
 			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
 			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
 			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
@@ -785,19 +784,19 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 }
 
 func (r *LagrangianProxy) LabelsForMain() map[string]string {
-	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "proxy"}
+	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "proxy"}
 }
 
 func (r *LagrangianProxy) LabelsForDashboard() map[string]string {
-	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "dashboard"}
+	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "dashboard"}
 }
 
 func (r *LagrangianProxy) LabelsForRPCServer() map[string]string {
-	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "rpcserver"}
+	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "rpcserver"}
 }
 
 func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
-	return map[string]string{"app": "lagrangian-proxy", "instance": r.Name, "role": "job", "job": "defragment"}
+	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "job", "proxy.f110.dev/job": "defragment"}
 }
 
 func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {

@@ -42,7 +42,7 @@ container_push(
     format = "Docker",
     image = ":image",
     registry = "quay.io",
-    repository = "f110/lagrangian-proxy-proxy",
+    repository = "f110/heimdallr-proxy",
     tag = VERSION,
 )
 
@@ -68,7 +68,7 @@ container_push(
     format = "Docker",
     image = ":image_rpcserver",
     registry = "quay.io",
-    repository = "f110/lagrangian-proxy-rpcserver",
+    repository = "f110/heimdallr-rpcserver",
     tag = VERSION,
 )
 
@@ -91,6 +91,6 @@ container_push(
     format = "Docker",
     image = ":image_ctl",
     registry = "quay.io",
-    repository = "f110/lagrangian-proxy-ctl",
+    repository = "f110/heimdallr-ctl",
     tag = VERSION,
 )

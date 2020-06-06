@@ -1,5 +1,5 @@
 ===================
-lagrangian-proxy
+heimdallr
 ===================
 
 **Currently under development**
@@ -9,8 +9,8 @@ Zero trust proxy for using in corporate.
 Deployment
 =============
 
-lagrangian-proxy is deployed to a kubernetes by the operator.
-You can deploying by yourself. but we highly recommend to using the operator.
+heimdallr is designed to deploying to a kubernetes by the operator.
+You also can deploying by yourself. but we highly recommend to using the operator.
 
 Depend on
 ---------------------
@@ -53,7 +53,7 @@ We provide the manifest for the operator.
 .. code:: shell
 
     $ kubectl create namespace lag-proxy
-    $ kubectl apply -f https://github.com/f110/lagrangian-proxy/blob/master/operator/deploy/all-in-one.yaml
+    $ kubectl apply -f https://github.com/f110/heimdallr/blob/master/operator/deploy/all-in-one.yaml
 
 Create Secret resource
 -------------------------

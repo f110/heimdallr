@@ -12,7 +12,7 @@ proto_library(
 go_proto_library(
     name = "rpc_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/f110/lagrangian-proxy/pkg/server/rpc",
+    importpath = "go.f110.dev/heimdallr/pkg/server/rpc",
     proto = ":rpc_proto",
     visibility = ["//visibility:private"],
 )

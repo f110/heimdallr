@@ -13,7 +13,7 @@ go_embed_data(
 go_library(
     name = "embed_tmpl",
     srcs = [":embed"],
-    importpath = "github.com/f110/lagrangian-proxy/tmpl/ui",
+    importpath = "go.f110.dev/heimdallr/tmpl/ui",
     visibility = ["//visibility:private"],
 )
 

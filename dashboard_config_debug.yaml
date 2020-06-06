@@ -4,7 +4,7 @@ dashboard:
   template:
     loader: shotgun
 datastore:
-  namespace: /lagrangian-proxy/
+  namespace: /heimdallr/
   url: etcd://localhost:57527
 general:
   certificate_authority:

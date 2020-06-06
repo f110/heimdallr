@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lag-proxy-operator
+  name: heimdallr-operator
   labels:
-    control-plane: lag-proxy-operator
+    control-plane: heimdallr-operator
 spec:
   selector:
     matchLabels:
-      control-plane: lag-proxy-operator
+      control-plane: heimdallr-operator
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: lag-proxy-operator
+        control-plane: heimdallr-operator
     spec:
-      serviceAccountName: lag-proxy
+      serviceAccountName: heimdallr
       containers:
         - name: operator
-          image: quay.io/f110/lagrangian-proxy-operator:v0.5.0
+          image: quay.io/f110/heimdallr-operator:v0.5.0
           imagePullPolicy: Always
           args:
             - -lease-lock-name=operator

@@ -19,7 +19,7 @@ go_embed_data(
 go_library(
     name = "embed_crd",
     srcs = [":embed"],
-    importpath = "github.com/f110/lagrangian-proxy/operator/e2e/data",
+    importpath = "go.f110.dev/heimdallr/operator/e2e/data",
     visibility = ["//visibility:private"],
 )
 

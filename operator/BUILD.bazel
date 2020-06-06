@@ -22,6 +22,6 @@ container_push(
     format = "Docker",
     image = ":image",
     registry = "quay.io",
-    repository = "f110/lagrangian-proxy-operator",
+    repository = "f110/heimdallr-operator",
     tag = VERSION,
 )
