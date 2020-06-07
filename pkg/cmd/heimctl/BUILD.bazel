@@ -10,7 +10,7 @@ go_library(
         "util.go",
         "version.go",
     ],
-    importpath = "go.f110.dev/heimdallr/pkg/cmd/lagctl",
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/heimctl",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert:go_default_library",

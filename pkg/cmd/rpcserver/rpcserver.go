@@ -94,7 +94,7 @@ func (m *mainProcess) Setup() error {
 			}
 		}
 	} else {
-		return xerrors.New("lag-rpcserver: required external datastore")
+		return xerrors.New("cmd/rpcserver: required external datastore")
 	}
 
 	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)

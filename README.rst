@@ -139,24 +139,24 @@ the agent will connect to the proxy and relay ingress traffic of proxy.
 Thus it can be proxying to the backend that likes behind NAT.
 
 #. Decide the backend's name with your proxy admin
-#. Generate CSR(Certificate Signing Request) and private key by lag-agent
+#. Generate CSR(Certificate Signing Request) and private key by heim-agent
 #. Send CSR to the proxy admin
 #. You got signed certificate from the proxy admin
-#. Run lag-agent with signed certificate
+#. Run heim-agent with signed certificate
 
 Generate CSR
 +++++++++++++++++
 
-Generating CSR by lag-agent.
+Generating CSR by heim-agent.
 CSR includes the backend's name. so you have to pass it by an argument.
 
 .. code:: console
 
     $ heim-agent --name test --privatekey $HOME/.heimdallr/privatekey.pem
 
-lag-agent will create a CSR in temporary directory.
+heim-agent will create a CSR in temporary directory.
 
-Start lag-agent with signed certificate
+Start heim-agent with signed certificate
 +++++++++++++++++++++++++++++++++++++++++++++
 
 .. code:: console

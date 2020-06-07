@@ -1,4 +1,4 @@
-package lagctl
+package heimctl
 
 import (
 	"crypto"
