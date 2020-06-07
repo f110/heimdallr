@@ -3,7 +3,7 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image", "cont
 
 pkg_tar(
     name = "bin",
-    srcs = ["//operator/cmd/lagproxycontroller"],
+    srcs = ["//operator/cmd/heimdallrcontroller"],
     mode = "0755",
     package_dir = "/usr/local/bin",
 )
@@ -11,7 +11,7 @@ pkg_tar(
 container_image(
     name = "image",
     base = "@com_google_distroless_base//image",
-    entrypoint = ["/usr/local/bin/lagproxycontroller"],
+    entrypoint = ["/usr/local/bin/heimdallrcontroller"],
     tars = [":bin"],
 )
 

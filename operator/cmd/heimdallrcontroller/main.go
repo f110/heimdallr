@@ -35,7 +35,7 @@ func main() {
 	leaseLockNamespace := ""
 	clusterDomain := ""
 	dev := false
-	fs := flag.NewFlagSet("operator", flag.ExitOnError)
+	fs := flag.NewFlagSet("heimdallrcontroller", flag.ExitOnError)
 	fs.StringVar(&id, "id", uuid.New().String(), "the holder identity name")
 	fs.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	fs.BoolVar(&enableLeaderElection, "enable-leader-election", enableLeaderElection,
