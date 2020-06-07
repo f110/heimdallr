@@ -113,7 +113,7 @@ Generate some secret keys and certificates for development.
 
 .. code:: console
 
-    $ bazel run //cmd/lagctl -- bootstrap -c $(pwd)/config_debug.yaml
+    $ bazel run //cmd/heimctl -- bootstrap -c $(pwd)/config_debug.yaml
 
 `config_debug.yaml` is configuration for development. **DO NOT USE THIS FILE IN PRODUCTION WITHOUT CHANGES.**
 
@@ -128,8 +128,11 @@ After running bootstrap command, build and run.
 
 All dependent libraries are included in the repository.
 
-How to run the agent
-=======================
+Agent
+========
+
+How to run
+----------------
 
 The agent is a client program that beside a backend like a sidecar.
 the agent will connect to the proxy and relay ingress traffic of proxy.
@@ -142,23 +145,23 @@ Thus it can be proxying to the backend that likes behind NAT.
 #. Run lag-agent with signed certificate
 
 Generate CSR
------------------
++++++++++++++++++
 
 Generating CSR by lag-agent.
 CSR includes the backend's name. so you have to pass it by an argument.
 
 .. code:: console
 
-    $ lag-agent --name test --privatekey $HOME/.lagrangian/privatekey.pem
+    $ heim-agent --name test --privatekey $HOME/.lagrangian/privatekey.pem
 
 lag-agent will create a CSR in temporary directory.
 
 Start lag-agent with signed certificate
-------------------------------------------
++++++++++++++++++++++++++++++++++++++++++++++
 
 .. code:: console
 
-    $ lag-agent --host your.proxy.f110.dev \
+    $ heim-agent --host your.proxy.f110.dev \
         --name test \
         --privatekey $HOME/.lagrangian/privatekey.pem \
         --backend 127.0.0.1:22 \

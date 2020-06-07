@@ -10,7 +10,7 @@ import (
 )
 
 func cli(args []string) error {
-	rootCmd := &cobra.Command{Use: "lagctl"}
+	rootCmd := &cobra.Command{Use: "heimctl"}
 
 	lagctl.Version(rootCmd)
 	lagctl.Bootstrap(rootCmd)

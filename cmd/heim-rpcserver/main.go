@@ -20,7 +20,7 @@ func printVersion() {
 func rpcServer(args []string) error {
 	confFile := ""
 	v := false
-	fs := pflag.NewFlagSet("lag-rpcserver", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("heim-rpcserver", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	fs.BoolVarP(&v, "version", "v", v, "Show version")
 	if err := fs.Parse(args); err != nil {

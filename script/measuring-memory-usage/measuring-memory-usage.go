@@ -31,7 +31,7 @@ func findPid() string {
 	line := ""
 	lines := strings.Split(string(buf), "\n")
 	for _, v := range lines {
-		if !strings.Contains(v, "cmd/lagrangian-proxy") {
+		if !strings.Contains(v, "cmd/haimdallr-proxy") {
 			continue
 		}
 		if strings.Contains(v, "grep") {

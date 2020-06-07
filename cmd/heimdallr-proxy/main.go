@@ -19,7 +19,7 @@ func printVersion() {
 func command(args []string) error {
 	confFile := ""
 	version := false
-	fs := pflag.NewFlagSet("lagrangian-proxy", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("heimdallr-proxy", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
 	fs.BoolVarP(&version, "version", "v", version, "Show version")
 	if err := fs.Parse(args); err != nil {

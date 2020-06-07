@@ -43,9 +43,9 @@ const (
 	imageRepository            = "quay.io/f110/heimdallr-proxy"
 	defaultImageTag            = "latest"
 	rpcServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
-	defaultCommand             = "/usr/local/bin/lagrangian-proxy"
-	rpcServerCommand           = "/usr/local/bin/lag-rpcserver"
-	ctlCommand                 = "/usr/local/bin/lagctl"
+	defaultCommand             = "/usr/local/bin/heimdallr-proxy"
+	rpcServerCommand           = "/usr/local/bin/heim-rpcserver"
+	ctlCommand                 = "/usr/local/bin/heimctl"
 	proxyPort                  = 4000
 	proxyHttpPort              = 4002
 	internalApiPort            = 4004
