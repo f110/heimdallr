@@ -161,7 +161,7 @@ type WebhookConfiguration struct {
 }
 
 type GitHubHookConfiguration struct {
-	Repositories         []string `json:"repositories"` // Target repositories (e.g. f110/lagrangian-proxy)
+	Repositories         []string `json:"repositories"` // Target repositories (e.g. f110/heimdallr)
 	Path                 string   `json:"path,omitempty"`
 	Events               []string `json:"events,omitempty"`
 	ContentType          string   `json:"contentType,omitempty"`

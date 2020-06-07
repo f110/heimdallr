@@ -27,12 +27,12 @@ func TestGitHubController(t *testing.T) {
 	)
 	f.transport.RegisterResponder(
 		http.MethodGet,
-		"https://api.github.com/repos/f110/lagrangian-proxy/hooks",
+		"https://api.github.com/repos/f110/heimdallr/hooks",
 		httpmock.NewStringResponder(http.StatusOK, `[]`),
 	)
 	f.transport.RegisterResponder(
 		http.MethodPost,
-		"https://api.github.com/repos/f110/lagrangian-proxy/hooks",
+		"https://api.github.com/repos/f110/heimdallr/hooks",
 		httpmock.NewStringResponder(http.StatusOK, `{}`),
 	)
 
@@ -44,7 +44,7 @@ func TestGitHubController(t *testing.T) {
 	f.ExpectUpdateBackendStatus()
 	f.Run(t, backend)
 
-	ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/lagrangian-proxy/hooks")
+	ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
 }
 
 func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {
@@ -91,7 +91,7 @@ func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1.Proxy, 
 					ContentType:          "application/json",
 					Events:               []string{"push"},
 					CredentialSecretName: "github-secret",
-					Repositories:         []string{"f110/lagrangian-proxy"},
+					Repositories:         []string{"f110/heimdallr"},
 					AppIdKey:             "appid",
 					InstallationIdKey:    "installationid",
 					PrivateKeyKey:        "privatekey",
