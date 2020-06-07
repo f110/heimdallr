@@ -8,7 +8,7 @@ import (
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 )
 
-const namespace = "lag_operator"
+const namespace = "heimdallr_operator"
 
 type Collector struct {
 	client clientset.Interface
