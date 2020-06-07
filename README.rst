@@ -52,7 +52,7 @@ We provide the manifest for the operator.
 
 .. code:: shell
 
-    $ kubectl create namespace lag-proxy
+    $ kubectl create namespace heimdallr
     $ kubectl apply -f https://github.com/f110/heimdallr/blob/master/operator/deploy/all-in-one.yaml
 
 Create Secret resource
@@ -62,7 +62,7 @@ You have to create Secret which contains the client secret before create Proxy r
 
 .. code:: shell
 
-    $ kubectl -n lag-proxy create secret generic client-secret --from-file=client-secret
+    $ kubectl -n heimdallr create secret generic client-secret --from-file=client-secret
 
 Create Proxy resource
 -----------------------
@@ -75,7 +75,7 @@ The operator automatically creates a related resources after you create Proxy re
     kind: Proxy
     metadata:
       name: test
-      namespace: lag-proxy
+      namespace: heimdallr
     spec:
       replicas: 3
       version: v0.5.0
