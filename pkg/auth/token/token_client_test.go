@@ -25,11 +25,11 @@ func TestClient_GetToken(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	err = os.Mkdir(filepath.Join(tmpDir, ".lagrangian"), 0755)
+	err = os.Mkdir(filepath.Join(tmpDir, Directory), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(tmpDir, ".lagrangian", "token"), []byte("test-token"), 0644)
+	err = ioutil.WriteFile(filepath.Join(tmpDir, Directory, "token"), []byte("test-token"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}

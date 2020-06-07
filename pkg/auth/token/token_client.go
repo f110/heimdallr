@@ -20,6 +20,7 @@ import (
 
 const (
 	ClientRedirectUrl = "http://localhost:6391/callback"
+	Directory         = ".heimdallr"
 )
 
 type ExchangeResponse struct {
@@ -76,7 +77,7 @@ func (c *Client) readToken() (string, error) {
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
-	f, err := os.Open(filepath.Join(home, ".lagrangian", c.tokenFilename))
+	f, err := os.Open(filepath.Join(home, Directory, c.tokenFilename))
 	if os.IsNotExist(err) {
 		return "", nil
 	}
@@ -93,13 +94,13 @@ func (c *Client) saveToken(token string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	_, err = os.Stat(filepath.Join(home, ".lagrangian"))
+	_, err = os.Stat(filepath.Join(home, Directory))
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Join(home, ".lagrangian"), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(home, Directory), 0755); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-	f, err := os.Create(filepath.Join(home, ".lagrangian", c.tokenFilename))
+	f, err := os.Create(filepath.Join(home, Directory, c.tokenFilename))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
