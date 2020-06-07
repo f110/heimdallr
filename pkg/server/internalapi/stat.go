@@ -11,7 +11,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/stat"
 )
 
-const namespace = "lagrangian"
+const namespace = "heimdallr"
 
 type Collector struct {
 	descActiveSocketCount *prometheus.Desc
