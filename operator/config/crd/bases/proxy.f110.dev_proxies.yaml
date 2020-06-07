@@ -196,8 +196,7 @@ spec:
                     type: boolean
                 type: object
               name:
-                description: Name of proxy. if not present, uses "Lagrangian Proxy
-                  CA"
+                description: Name of proxy. if not present, uses "Heimdallr CA".
                 type: string
               organization:
                 type: string

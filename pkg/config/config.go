@@ -312,7 +312,7 @@ func (ca *CertificateAuthority) inflate(dir string) error {
 		Organization:       []string{ca.Organization},
 		OrganizationalUnit: []string{ca.OrganizationUnit},
 		Country:            []string{ca.Country},
-		CommonName:         "Lagrangian Proxy CA",
+		CommonName:         "Heimdallr CA",
 	}
 
 	return nil

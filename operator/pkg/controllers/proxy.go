@@ -455,7 +455,7 @@ func (r *LagrangianProxy) Secrets() []CreateSecret {
 }
 
 func (r *LagrangianProxy) NewCA() (*corev1.Secret, error) {
-	caName := "Lagrangian Proxy NewCA"
+	caName := "Heimdallr CA"
 	if r.Spec.Name != "" {
 		caName = r.Spec.Name
 	}

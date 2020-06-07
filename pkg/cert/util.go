@@ -231,7 +231,7 @@ func GenerateMutualTLSCertificate(ca *x509.Certificate, caPrivateKey crypto.Priv
 
 func CreateCertificateAuthorityForConfig(conf *config.Config) (*x509.Certificate, crypto.PrivateKey, error) {
 	return CreateCertificateAuthority(
-		"Lagrangian Proxy CA",
+		"Heimdallr CA",
 		conf.General.CertificateAuthority.Organization,
 		conf.General.CertificateAuthority.OrganizationUnit,
 		conf.General.CertificateAuthority.Country,
