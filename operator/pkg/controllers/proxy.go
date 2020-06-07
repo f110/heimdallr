@@ -92,7 +92,7 @@ type process struct {
 	ServiceMonitors     []*monitoringv1.ServiceMonitor
 }
 
-type LagrangianProxy struct {
+type HeimdallrProxy struct {
 	Name                string
 	Namespace           string
 	Object              *proxyv1.Proxy
@@ -117,11 +117,11 @@ type LagrangianProxy struct {
 	selfSignedIssuer bool
 }
 
-func NewLagrangianProxy(
+func NewHeimdallrProxy(
 	spec *proxyv1.Proxy,
 	cmClient cmClientset.Interface, serviceLister listers.ServiceLister,
-	backends []proxyv1.Backend, roles []proxyv1.Role, rpcPermissions []proxyv1.RpcPermission) *LagrangianProxy {
-	r := &LagrangianProxy{
+	backends []proxyv1.Backend, roles []proxyv1.Role, rpcPermissions []proxyv1.RpcPermission) *HeimdallrProxy {
+	r := &HeimdallrProxy{
 		Name:           spec.Name,
 		Namespace:      spec.Namespace,
 		Object:         spec,
@@ -208,13 +208,13 @@ func NewLagrangianProxy(
 	return r
 }
 
-func (r *LagrangianProxy) ControlObject(obj metav1.Object) {
+func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
 	if !metav1.IsControlledBy(obj, r.Object) {
 		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy"))})
 	}
 }
 
-func (r *LagrangianProxy) Version() string {
+func (r *HeimdallrProxy) Version() string {
 	if r.Spec.Version != "" {
 		return r.Spec.Version
 	}
@@ -222,31 +222,31 @@ func (r *LagrangianProxy) Version() string {
 	return defaultImageTag
 }
 
-func (r *LagrangianProxy) EtcdClusterName() string {
+func (r *HeimdallrProxy) EtcdClusterName() string {
 	return r.Name + "-datastore"
 }
 
-func (r *LagrangianProxy) CertificateSecretName() string {
+func (r *HeimdallrProxy) CertificateSecretName() string {
 	return r.Name + "-cert"
 }
 
-func (r *LagrangianProxy) CASecretName() string {
+func (r *HeimdallrProxy) CASecretName() string {
 	return r.Name + "-ca"
 }
 
-func (r *LagrangianProxy) PrivateKeySecretName() string {
+func (r *HeimdallrProxy) PrivateKeySecretName() string {
 	return r.Name + "-privkey"
 }
 
-func (r *LagrangianProxy) GithubSecretName() string {
+func (r *HeimdallrProxy) GithubSecretName() string {
 	return r.Name + "-github-secret"
 }
 
-func (r *LagrangianProxy) InternalTokenSecretName() string {
+func (r *HeimdallrProxy) InternalTokenSecretName() string {
 	return r.Name + "-internal-token"
 }
 
-func (r *LagrangianProxy) CookieSecretName() string {
+func (r *HeimdallrProxy) CookieSecretName() string {
 	switch r.Spec.Session.Type {
 	case config.SessionTypeSecureCookie:
 		return r.Name + "-cookie-secret"
@@ -255,79 +255,79 @@ func (r *LagrangianProxy) CookieSecretName() string {
 	}
 }
 
-func (r *LagrangianProxy) EtcdHost() string {
+func (r *HeimdallrProxy) EtcdHost() string {
 	return r.EtcdClusterName() + "-client"
 }
 
-func (r *LagrangianProxy) ConfigNameForMain() string {
+func (r *HeimdallrProxy) ConfigNameForMain() string {
 	return r.Name
 }
 
-func (r *LagrangianProxy) ConfigNameForDashboard() string {
+func (r *HeimdallrProxy) ConfigNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
-func (r *LagrangianProxy) ConfigNameForRPCServer() string {
+func (r *HeimdallrProxy) ConfigNameForRPCServer() string {
 	return r.Name + "-rpcserver"
 }
 
-func (r *LagrangianProxy) DeploymentNameForMain() string {
+func (r *HeimdallrProxy) DeploymentNameForMain() string {
 	return r.Name
 }
 
-func (r *LagrangianProxy) PodDisruptionBudgetNameForMain() string {
+func (r *HeimdallrProxy) PodDisruptionBudgetNameForMain() string {
 	return r.Name
 }
 
-func (r *LagrangianProxy) ServiceNameForMain() string {
+func (r *HeimdallrProxy) ServiceNameForMain() string {
 	return r.Name
 }
 
-func (r *LagrangianProxy) DeploymentNameForDashboard() string {
+func (r *HeimdallrProxy) DeploymentNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
-func (r *LagrangianProxy) DeploymentNameForRPCServer() string {
+func (r *HeimdallrProxy) DeploymentNameForRPCServer() string {
 	return r.Name + "-rpcserver"
 }
 
-func (r *LagrangianProxy) PodDisruptionBudgetNameForDashboard() string {
+func (r *HeimdallrProxy) PodDisruptionBudgetNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
-func (r *LagrangianProxy) PodDisruptionBudgetNameForRPCServer() string {
+func (r *HeimdallrProxy) PodDisruptionBudgetNameForRPCServer() string {
 	return r.Name + "-rpcserver"
 }
 
-func (r *LagrangianProxy) ServiceNameForDashboard() string {
+func (r *HeimdallrProxy) ServiceNameForDashboard() string {
 	return r.Name + "-dashboard"
 }
 
-func (r *LagrangianProxy) ServiceNameForRPCServer() string {
+func (r *HeimdallrProxy) ServiceNameForRPCServer() string {
 	return r.Name + "-rpcserver"
 }
 
-func (r *LagrangianProxy) ReverseProxyConfigName() string {
+func (r *HeimdallrProxy) ReverseProxyConfigName() string {
 	return r.Name + "-proxy"
 }
 
-func (r *LagrangianProxy) ServiceNameForInternalApi() string {
+func (r *HeimdallrProxy) ServiceNameForInternalApi() string {
 	return r.Name + "-internal"
 }
 
-func (r *LagrangianProxy) Backends() []proxyv1.Backend {
+func (r *HeimdallrProxy) Backends() []proxyv1.Backend {
 	return r.backends
 }
 
-func (r *LagrangianProxy) Roles() []proxyv1.Role {
+func (r *HeimdallrProxy) Roles() []proxyv1.Role {
 	return r.roles
 }
 
-func (r *LagrangianProxy) RpcPermissions() []proxyv1.RpcPermission {
+func (r *HeimdallrProxy) RpcPermissions() []proxyv1.RpcPermission {
 	return r.rpcPermissions
 }
 
-func (r *LagrangianProxy) Certificate() *certmanager.Certificate {
+func (r *HeimdallrProxy) Certificate() *certmanager.Certificate {
 	backends := r.Backends()
 	layers := make(map[string]struct{})
 	fqdn := make([]string, 0)
@@ -362,12 +362,12 @@ func (r *LagrangianProxy) Certificate() *certmanager.Certificate {
 	}
 }
 
-func (r *LagrangianProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
+func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
 	cluster := r.newEtcdCluster()
 	return cluster, r.newPodMonitorForEtcdCluster(cluster)
 }
 
-func (r *LagrangianProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
+func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 	return &etcdv1alpha1.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
@@ -384,7 +384,7 @@ func (r *LagrangianProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 	}
 }
 
-func (r *LagrangianProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdCluster) *monitoringv1.PodMonitor {
+func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdCluster) *monitoringv1.PodMonitor {
 	return &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
@@ -424,7 +424,7 @@ type CreateSecret struct {
 	Create func() (*corev1.Secret, error)
 }
 
-func (r *LagrangianProxy) Secrets() []CreateSecret {
+func (r *HeimdallrProxy) Secrets() []CreateSecret {
 	return []CreateSecret{
 		{
 			Name:   r.CASecretName(),
@@ -454,7 +454,7 @@ func (r *LagrangianProxy) Secrets() []CreateSecret {
 	}
 }
 
-func (r *LagrangianProxy) NewCA() (*corev1.Secret, error) {
+func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 	caName := "Heimdallr CA"
 	if r.Spec.Name != "" {
 		caName = r.Spec.Name
@@ -498,7 +498,7 @@ func (r *LagrangianProxy) NewCA() (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func (r *LagrangianProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
+func (r *HeimdallrProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -527,7 +527,7 @@ func (r *LagrangianProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func (r *LagrangianProxy) NewGithubSecret() (*corev1.Secret, error) {
+func (r *HeimdallrProxy) NewGithubSecret() (*corev1.Secret, error) {
 	b := make([]byte, 32)
 	for i := range b {
 		b[i] = letters[mrand.Intn(len(letters))]
@@ -548,7 +548,7 @@ func (r *LagrangianProxy) NewGithubSecret() (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func (r *LagrangianProxy) NewCookieSecret() (*corev1.Secret, error) {
+func (r *HeimdallrProxy) NewCookieSecret() (*corev1.Secret, error) {
 	hashKey := make([]byte, 32)
 	for i := range hashKey {
 		hashKey[i] = letters[mrand.Intn(len(letters))]
@@ -577,7 +577,7 @@ func (r *LagrangianProxy) NewCookieSecret() (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func (r *LagrangianProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
+func (r *HeimdallrProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 	b := make([]byte, 32)
 	for i := range b {
 		b[i] = letters[mrand.Intn(len(letters))]
@@ -597,7 +597,7 @@ func (r *LagrangianProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 	return secret, nil
 }
 
-func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
+func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
@@ -677,7 +677,7 @@ func (r *LagrangianProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
+func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	conf := &config.Config{
 		General: &config.General{
 			Enable:     false,
@@ -714,7 +714,7 @@ func (r *LagrangianProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
+func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
@@ -783,23 +783,23 @@ func (r *LagrangianProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) LabelsForMain() map[string]string {
+func (r *HeimdallrProxy) LabelsForMain() map[string]string {
 	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "proxy"}
 }
 
-func (r *LagrangianProxy) LabelsForDashboard() map[string]string {
+func (r *HeimdallrProxy) LabelsForDashboard() map[string]string {
 	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "dashboard"}
 }
 
-func (r *LagrangianProxy) LabelsForRPCServer() map[string]string {
+func (r *HeimdallrProxy) LabelsForRPCServer() map[string]string {
 	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "rpcserver"}
 }
 
-func (r *LagrangianProxy) LabelsForDefragmentJob() map[string]string {
+func (r *HeimdallrProxy) LabelsForDefragmentJob() map[string]string {
 	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "job", "proxy.f110.dev/job": "defragment"}
 }
 
-func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
+func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	backends := r.Backends()
 
 	proxies := make([]*config.Backend, 0, len(backends))
@@ -970,7 +970,7 @@ func (r *LagrangianProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
+func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
@@ -1243,7 +1243,7 @@ func (r *LagrangianProxy) IdealProxyProcess() (*process, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) IdealDashboard() (*process, error) {
+func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 	if err := r.checkSelfSignedIssuer(); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -1409,7 +1409,7 @@ func (r *LagrangianProxy) IdealDashboard() (*process, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
+func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	if r.Datastore == nil {
 		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
@@ -1637,7 +1637,7 @@ func (r *LagrangianProxy) IdealRPCServer() (*process, error) {
 	}, nil
 }
 
-func (r *LagrangianProxy) checkSelfSignedIssuer() error {
+func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
 	case certmanager.ClusterIssuerKind:

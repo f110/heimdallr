@@ -122,7 +122,7 @@ func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
 }
 
 func TestProxyController(t *testing.T) {
-	t.Run("New", func(t *testing.T) {
+	t.Run("NewProxyController", func(t *testing.T) {
 		t.Parallel()
 
 		f := newProxyControllerTestRunner(t)
@@ -131,7 +131,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewLagrangianProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
 
 		for _, v := range proxy.Secrets() {
 			_, err := v.Create()
@@ -155,7 +155,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewLagrangianProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
 		ec, _ := proxy.EtcdCluster()
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
@@ -179,7 +179,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewLagrangianProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
 		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning
@@ -228,7 +228,7 @@ func TestProxyController(t *testing.T) {
 		}
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewLagrangianProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
 		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning

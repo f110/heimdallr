@@ -130,7 +130,7 @@ func TestMain(m *testing.M) {
 							log.Fatal(err)
 						}
 
-						c, err := controllers.New(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
+						c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
 						if err != nil {
 							log.Fatal(err)
 						}

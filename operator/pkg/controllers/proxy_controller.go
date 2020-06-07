@@ -86,7 +86,7 @@ type ProxyController struct {
 	cmClientset         cmClientset.Interface
 }
 
-func New(
+func NewProxyController(
 	ctx context.Context,
 	sharedInformerFactory informers.SharedInformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
@@ -280,7 +280,7 @@ func (c *ProxyController) syncProxy(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	lp := NewLagrangianProxy(proxy, c.cmClientset, c.serviceLister, backends.Items, roles.Items, rpcPermissions.Items)
+	lp := NewHeimdallrProxy(proxy, c.cmClientset, c.serviceLister, backends.Items, roles.Items, rpcPermissions.Items)
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	} else if ec != nil {
@@ -335,11 +335,11 @@ func (c *ProxyController) syncProxy(key string) error {
 	return nil
 }
 
-func (c *ProxyController) ownedEtcdCluster(lp *LagrangianProxy) (*etcdv1alpha1.EtcdCluster, error) {
+func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha1.EtcdCluster, error) {
 	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 }
 
-func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
+func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
 	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -348,7 +348,7 @@ func (c *ProxyController) preCheck(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) prepare(lp *LagrangianProxy) error {
+func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
 	secrets := lp.Secrets()
 	for _, secret := range secrets {
 		if secret.Known() {
@@ -378,7 +378,7 @@ func (c *ProxyController) prepare(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 	newC, newPM := lp.EtcdCluster()
 
 	cluster, err := c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
@@ -433,7 +433,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) {
+func (c *ProxyController) reconcileRPCServer(lp *HeimdallrProxy) (bool, error) {
 	objs, err := lp.IdealRPCServer()
 	if err != nil {
 		return false, xerrors.Errorf(": %w", err)
@@ -451,7 +451,7 @@ func (c *ProxyController) reconcileRPCServer(lp *LagrangianProxy) (bool, error) 
 	return true, nil
 }
 
-func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileDashboard(lp *HeimdallrProxy) error {
 	objs, err := lp.IdealDashboard()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -466,7 +466,7 @@ func (c *ProxyController) reconcileDashboard(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileProxyProcess(lp *LagrangianProxy) error {
+func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -509,7 +509,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
+func (c *ProxyController) finishReconcile(lp *HeimdallrProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = c.isReady(lp)
 	newP.Status.Phase = proxyv1.ProxyPhaseRunning
@@ -528,7 +528,7 @@ func (c *ProxyController) finishReconcile(lp *LagrangianProxy) error {
 	return nil
 }
 
-func (c *ProxyController) isReady(lp *LagrangianProxy) bool {
+func (c *ProxyController) isReady(lp *HeimdallrProxy) bool {
 	if !c.isReadyDeployment(lp.RPCServer.Deployment) {
 		return false
 	}
@@ -550,7 +550,7 @@ func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
 	return true
 }
 
-func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) error {
+func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error {
 	if p.Deployment != nil {
 		if err := c.createOrUpdateDeployment(lp, p.Deployment); err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -604,7 +604,7 @@ func (c *ProxyController) reconcileProcess(lp *LagrangianProxy, p *process) erro
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployment *appsv1.Deployment) error {
+func (c *ProxyController) createOrUpdateDeployment(lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
 	d, err := c.deploymentLister.Deployments(deployment.Namespace).Get(deployment.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
@@ -633,7 +633,7 @@ func (c *ProxyController) createOrUpdateDeployment(lp *LagrangianProxy, deployme
 	return nil
 }
 
-func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
+func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *HeimdallrProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
 	p, err := c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Get(pdb.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(pdb)
@@ -660,7 +660,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *LagrangianProxy,
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateService(lp *LagrangianProxy, svc *corev1.Service) error {
+func (c *ProxyController) createOrUpdateService(lp *HeimdallrProxy, svc *corev1.Service) error {
 	s, err := c.serviceLister.Services(svc.Namespace).Get(svc.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(svc)
@@ -690,7 +690,7 @@ func (c *ProxyController) createOrUpdateService(lp *LagrangianProxy, svc *corev1
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap *corev1.ConfigMap) error {
+func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
 	cm, err := c.configMapLister.ConfigMaps(configMap.Namespace).Get(configMap.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(configMap)
@@ -719,7 +719,7 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *LagrangianProxy, configMap
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateCertificate(lp *LagrangianProxy, certificate *certmanager.Certificate) error {
+func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, certificate *certmanager.Certificate) error {
 	crt, err := c.cmClientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(certificate.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(certificate)
@@ -747,7 +747,7 @@ func (c *ProxyController) createOrUpdateCertificate(lp *LagrangianProxy, certifi
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateServiceMonitor(lp *LagrangianProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
+func (c *ProxyController) createOrUpdateServiceMonitor(lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
 	sm, err := c.monitoringClientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Get(serviceMonitor.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)

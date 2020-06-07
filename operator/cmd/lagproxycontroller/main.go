@@ -109,7 +109,7 @@ func main() {
 				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
 
-				c, err := controllers.New(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
+				c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)
