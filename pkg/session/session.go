@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CookieName = "lagrangian"
+	CookieName = "heimdallr"
 )
 
 var (
