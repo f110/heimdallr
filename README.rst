@@ -152,7 +152,7 @@ CSR includes the backend's name. so you have to pass it by an argument.
 
 .. code:: console
 
-    $ heim-agent --name test --privatekey $HOME/.lagrangian/privatekey.pem
+    $ heim-agent --name test --privatekey $HOME/.heimdallr/privatekey.pem
 
 lag-agent will create a CSR in temporary directory.
 
@@ -163,10 +163,10 @@ Start lag-agent with signed certificate
 
     $ heim-agent --host your.proxy.f110.dev \
         --name test \
-        --privatekey $HOME/.lagrangian/privatekey.pem \
+        --privatekey $HOME/.heimdallr/privatekey.pem \
         --backend 127.0.0.1:22 \
-        --credential $HOME/.lagrangian/cert.pem \
-        --ca-cert $HOME/.lagrangian/cacert.pem
+        --credential $HOME/.heimdallr/cert.pem \
+        --ca-cert $HOME/.heimdallr/cacert.pem
 
 Reference
 ============
