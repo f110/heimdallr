@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -151,6 +152,7 @@ func (c *GitHubController) syncBackend(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	ghClient := github.NewClient(&http.Client{Transport: rt})
+	originalBackend := backend.DeepCopy()
 
 Spec:
 	for _, ownerAndRepo := range backend.Spec.WebhookConfiguration.Repositories {
@@ -238,9 +240,11 @@ Spec:
 		}
 	}
 
-	_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
-	if err != nil {
-		klog.Infof("Failed update backend: %v", err)
+	if !reflect.DeepEqual(backend.Status, originalBackend.Status) {
+		_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
+		if err != nil {
+			klog.Infof("Failed update backend: %v", err)
+		}
 	}
 
 	return nil
