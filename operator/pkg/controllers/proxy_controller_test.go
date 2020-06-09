@@ -257,7 +257,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		f.ExpectUpdateProxyStatus()
-		f.ExpectUpdateBackend()
+		f.ExpectUpdateBackendStatus()
 		// Expect to create the dashboard
 		f.ExpectCreateDeployment()
 		f.ExpectCreatePodDisruptionBudget()

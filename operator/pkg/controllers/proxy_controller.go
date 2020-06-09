@@ -499,7 +499,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 				Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
 			})
 
-			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).Update(&backend)
+			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).UpdateStatus(&backend)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
