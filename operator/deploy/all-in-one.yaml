@@ -941,6 +941,16 @@ rules:
 - apiGroups:
   - '*'
   resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - '*'
+  resources:
   - pods/portforward
   verbs:
   - create
@@ -1140,15 +1150,15 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: quay.io/f110/heimdallr-operator:v0.5.0
+        image: quay.io/f110/heimdallr-operator:v0.6.2
         imagePullPolicy: Always
         name: operator
         resources:
           limits:
             cpu: 100m
-            memory: 30Mi
+            memory: 128Mi
           requests:
-            cpu: 100m
-            memory: 20Mi
+            cpu: 30m
+            memory: 32Mi
       serviceAccountName: heimdallr
       terminationGracePeriodSeconds: 10

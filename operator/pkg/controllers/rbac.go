@@ -18,3 +18,4 @@ package controllers
 // +kubebuilder:rbac:groups=*,resources=pods;secrets;configmaps;services;cronjobs;deployments;poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=*,resources=pods/portforward,verbs=get;list;create
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=*,resources=events,verbs=get;list;watch;create;patch
