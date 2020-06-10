@@ -83,7 +83,31 @@ func TestProxyController(t *testing.T) {
 				},
 			}
 
-			testServiceBackend, testServiceRole, err := e2eutil.DeployTestService(coreClient, client, proxy)
+			testServiceBackend, err := e2eutil.DeployTestService(coreClient, client, proxy, "hello")
+			if err != nil {
+				t.Fatal(err)
+			}
+			disableAuthnTestBackend, err := e2eutil.DeployDisableAuthnTestService(coreClient, client, proxy, "disauth")
+			if err != nil {
+				t.Fatal(err)
+			}
+			role := &proxyv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "admin",
+					Namespace: proxy.Namespace,
+					Labels:    proxy.Spec.RoleSelector.MatchLabels,
+				},
+				Spec: proxyv1.RoleSpec{
+					Title:       "administrator",
+					Description: "admin",
+					Bindings: []proxyv1.Binding{
+						{BackendName: "dashboard", Permission: "all"},
+						{BackendName: testServiceBackend.Name, Permission: "all"},
+						{BackendName: disableAuthnTestBackend.Name, Permission: "all"},
+					},
+				},
+			}
+			role, err = client.ProxyV1().Roles(role.Namespace).Create(role)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -93,7 +117,7 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1.ProxyPhaseRunning, 10*time.Minute); err != nil {
+			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1.ProxyPhaseRunning, 15*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 			if err := e2eutil.WaitForReadyOfProxy(client, proxy, 10*time.Minute); err != nil {
@@ -109,7 +133,7 @@ func TestProxyController(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := e2eutil.EnsureExistingTestUser(rpcClient, testUserId, testServiceRole.Name); err != nil {
+			if err := e2eutil.EnsureExistingTestUser(rpcClient, testUserId, role.Name); err != nil {
 				t.Fatal(err)
 			}
 			clientCert, err := e2eutil.SetupClientCert(rpcClient, testUserId)
@@ -154,6 +178,22 @@ func TestProxyController(t *testing.T) {
 
 			So(res.StatusCode, ShouldEqual, http.StatusOK)
 			So(res.Header.Get("Server"), ShouldContainSubstring, "nginx")
+
+			testReq, err = http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			testReq.Host = fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain)
+			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
+				RootCAs:    proxyCertPool,
+				ServerName: testReq.Host,
+			}
+			res, err = http.DefaultClient.Do(testReq)
+			if err != nil {
+				b, _ := httputil.DumpRequest(testReq, true)
+				log.Print(string(b))
+				t.Fatal(err)
+			}
 		})
 	})
 }

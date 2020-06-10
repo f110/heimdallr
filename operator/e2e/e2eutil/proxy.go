@@ -33,10 +33,48 @@ import (
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
-func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy) (*proxyv1.Backend, *proxyv1.Role, error) {
+func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy, name string) (*proxyv1.Backend, error) {
+	deployment, service, backend := makeTestService(proxy, name)
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	backend, err = client.ProxyV1().Backends(backend.Namespace).Create(backend)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return backend, nil
+}
+
+func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1.Proxy, name string) (*proxyv1.Backend, error) {
+	deployment, service, backend := makeTestService(proxy, name)
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	backend.Spec.DisableAuthn = true
+	backend, err = client.ProxyV1().Backends(backend.Namespace).Create(backend)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return backend, nil
+}
+
+func makeTestService(proxy *proxyv1.Proxy, name string) (*appsv1.Deployment, *corev1.Service, *proxyv1.Backend) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hello",
+			Name:      name,
 			Namespace: proxy.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -45,7 +83,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "nginx"},
+					Labels: map[string]string{"app": "nginx", "name": name},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -55,30 +93,22 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			},
 		},
 	}
-	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
-	}
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hello",
+			Name:      name,
 			Namespace: proxy.Namespace,
-			Labels:    map[string]string{"app": "hello"},
+			Labels:    map[string]string{"app": name},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{"app": "nginx"},
+			Selector: map[string]string{"app": "nginx", "name": name},
 			Ports: []corev1.ServicePort{
 				{Name: "http", Port: 80},
 			},
 		},
 	}
-	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
-	}
 	backend := &proxyv1.Backend{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hello",
+			Name:      name,
 			Namespace: proxy.Namespace,
 			Labels:    proxy.Spec.BackendSelector.MatchLabels,
 		},
@@ -86,7 +116,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			Layer: "test",
 			ServiceSelector: proxyv1.ServiceSelector{
 				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"app": "hello"},
+					MatchLabels: map[string]string{"app": name},
 				},
 				Port: "http",
 			},
@@ -95,31 +125,8 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 			},
 		},
 	}
-	backend, err = client.ProxyV1().Backends(backend.Namespace).Create(backend)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
-	}
-	role := &proxyv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "admin",
-			Namespace: proxy.Namespace,
-			Labels:    proxy.Spec.RoleSelector.MatchLabels,
-		},
-		Spec: proxyv1.RoleSpec{
-			Title:       "administrator",
-			Description: "admin",
-			Bindings: []proxyv1.Binding{
-				{BackendName: "dashboard", Permission: "all"},
-				{BackendName: "hello", Permission: "all"},
-			},
-		},
-	}
-	role, err = client.ProxyV1().Roles(role.Namespace).Create(role)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
-	}
 
-	return backend, role, nil
+	return deployment, service, backend
 }
 
 type RPCClient struct {

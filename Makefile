@@ -29,6 +29,6 @@ push:
 
 run-e2e:
 	bazel build //operator/e2e/test:go_default_test
-	./bazel-bin/operator/e2e/test/go_default_test_/go_default_test -test.v=true -crd $(CURDIR)/operator/config/crd/bases -proxy.version experimental
+	./bazel-bin/operator/e2e/test/go_default_test_/go_default_test -test.v=true -crd $(CURDIR)/operator/config/crd/bases -proxy.version v0.6.3
 
 .PHONY: run run-operator test install-operator update-deps gen push
