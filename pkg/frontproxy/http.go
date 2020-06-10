@@ -223,6 +223,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	}
 
 	if err := p.setHeader(req, user); err != nil {
+		logger.Log.Warn("Failed to set headers to request of backend", zap.Error(err))
 		return
 	}
 	p.reverseProxy.ServeHTTP(w, req)
@@ -325,6 +326,7 @@ func (p *HttpProxy) director(req *http.Request) {
 		if _, ok := req.Header["User-Agent"]; !ok {
 			req.Header.Set("User-Agent", "")
 		}
+		logger.Log.Debug("Backend is ", zap.String("url", req.URL.String()))
 	}
 }
 
@@ -332,23 +334,22 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 
-	if user.Id == "" {
-		return xerrors.New("could not get user id")
+	if user.Id != "" {
+		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
+			Id:        user.Id,
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
+		})
+		token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
+		if err != nil {
+			logger.Log.Warn("Failed sign jwt", zap.Error(err))
+			return xerrors.Errorf(": %w", err)
+		}
+
+		req.Header.Set(TokenHeaderName, token)
+		req.Header.Set(UserIdHeaderName, user.Id)
 	}
 
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-		Id:        user.Id,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
-	})
-	token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
-	if err != nil {
-		logger.Log.Warn("Failed sign jwt", zap.Error(err))
-		return xerrors.Errorf(": %w", err)
-	}
-
-	req.Header.Set(TokenHeaderName, token)
-	req.Header.Set(UserIdHeaderName, user.Id)
 	cookies := req.Cookies()
 	req.Header.Del("Cookie")
 	for _, c := range cookies {
