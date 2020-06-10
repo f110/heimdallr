@@ -17,7 +17,7 @@ spec:
       serviceAccountName: heimdallr
       containers:
         - name: operator
-          image: quay.io/f110/heimdallr-operator:v0.5.0
+          image: quay.io/f110/heimdallr-operator:v0.6.2
           imagePullPolicy: Always
           args:
             - -lease-lock-name=operator
@@ -32,8 +32,8 @@ spec:
           resources:
             limits:
               cpu: 100m
-              memory: 30Mi
+              memory: 128Mi
             requests:
-              cpu: 100m
-              memory: 20Mi
+              cpu: 30m
+              memory: 32Mi
       terminationGracePeriodSeconds: 10
