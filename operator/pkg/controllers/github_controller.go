@@ -130,7 +130,11 @@ func (c *GitHubController) syncBackend(key string) error {
 		klog.V(4).Infof("not set WebhookConfiguration")
 		return nil
 	}
-	secret, err := c.secretLister.Secrets(backend.Namespace).Get(backend.Spec.WebhookConfiguration.CredentialSecretName)
+	secretNamespace := backend.Spec.WebhookConfiguration.CredentialSecretNamespace
+	if secretNamespace == "" {
+		secretNamespace = backend.Namespace
+	}
+	secret, err := c.secretLister.Secrets(secretNamespace).Get(backend.Spec.WebhookConfiguration.CredentialSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.V(4).Infof("%s is not found", backend.Spec.WebhookConfiguration.CredentialSecretName)

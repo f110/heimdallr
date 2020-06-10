@@ -138,6 +138,8 @@ spec:
                     type: string
                   credentialSecretName:
                     type: string
+                  credentialSecretNamespace:
+                    type: string
                   events:
                     items:
                       type: string
