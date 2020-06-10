@@ -352,9 +352,11 @@ func (ec *EtcdController) createNewClusterWithBackup(cluster *EtcdCluster) error
 func (ec *EtcdController) stateCreatingMembers(cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
+	ctx, cancelFunc := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFunc()
 	for _, v := range members {
 		if v.CreationTimestamp.IsZero() {
-			if err := ec.startMember(cluster, v); err != nil {
+			if err := ec.startMember(ctx, cluster, v); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 			break
@@ -424,7 +426,10 @@ func (ec *EtcdController) statePreparingUpdate(cluster *EtcdCluster) error {
 	}
 
 	if temporaryMember.CreationTimestamp.IsZero() {
-		if err := ec.startMember(cluster, temporaryMember); err != nil {
+		ctx, cancelFunc := context.WithTimeout(context.TODO(), 5*time.Second)
+		defer cancelFunc()
+
+		if err := ec.startMember(ctx, cluster, temporaryMember); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
@@ -616,7 +621,7 @@ func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secre
 	return certS, nil
 }
 
-func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) error {
+func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod) error {
 	klog.V(4).Infof("Create %s", pod.Name)
 
 	eClient, forwarder, err := ec.etcdClient(cluster)
@@ -626,12 +631,16 @@ func (ec *EtcdController) startMember(cluster *EtcdCluster, pod *corev1.Pod) err
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		if eClient != nil {
+			eClient.Close()
+		}
+	}()
+
 	mList, err := eClient.MemberList(ctx)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	cancelFunc()
 
 	isExistAsMember := false
 	for _, v := range mList.Members {
@@ -736,7 +745,9 @@ func (ec *EtcdController) updateMember(cluster *EtcdCluster, pod *corev1.Pod) er
 		}
 	}
 
-	return ec.startMember(cluster, pod)
+	ctx, cancelFunc := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancelFunc()
+	return ec.startMember(ctx, cluster, pod)
 }
 
 func (ec *EtcdController) ensureService(cluster *EtcdCluster) error {
