@@ -46,10 +46,15 @@ type ProxySpec struct {
 	// If it isn't set, Use the default value.
 	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory: 256Mi)
 	ProxyResources *corev1.ResourceRequirements `json:"proxyResources,omitempty"`
-	// RPCServerResources field is able tot control the resource requiremets and limits of rpc server.
+	// RPCServerResources field is able tot control the resource requirements and limits of rpc server.
 	// If it isn't set, Use the default value.
 	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory 256Mi)
 	RPCServerResources *corev1.ResourceRequirements `json:"rpcServerResources,omitempty"`
+	// Development indicates the development mode. If the proxy deployed with the development mode,
+	// then the log level of logger will be "Debug".
+	// Debug level outputs many useful logs for development. On the other hand, It is a noisy
+	// when you are an user of proxy.
+	Development bool `json:"development,omitempty"`
 }
 
 type IdentityProviderSpec struct {

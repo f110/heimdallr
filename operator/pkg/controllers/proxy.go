@@ -608,6 +608,10 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	}
 	etcdUrl.Scheme = "etcds"
 
+	logLevel := "info"
+	if r.Spec.Development {
+		logLevel = "debug"
+	}
 	conf := &config.Config{
 		General: &config.General{
 			Enable:            true,
@@ -649,7 +653,7 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			},
 		},
 		Logger: &config.Logger{
-			Level:    "info",
+			Level:    logLevel,
 			Encoding: "console",
 		},
 		Dashboard: &config.Dashboard{
@@ -678,6 +682,10 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 }
 
 func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
+	logLevel := "info"
+	if r.Spec.Development {
+		logLevel = "debug"
+	}
 	conf := &config.Config{
 		General: &config.General{
 			Enable:     false,
@@ -689,7 +697,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			InternalTokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
-			Level:    "info",
+			Level:    logLevel,
 			Encoding: "console",
 		},
 		Dashboard: &config.Dashboard{
@@ -725,6 +733,10 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	}
 	etcdUrl.Scheme = "etcds"
 
+	logLevel := "info"
+	if r.Spec.Development {
+		logLevel = "debug"
+	}
 	conf := &config.Config{
 		General: &config.General{
 			Enable:            true,
@@ -744,7 +756,7 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 		Logger: &config.Logger{
-			Level:    "info",
+			Level:    logLevel,
 			Encoding: "console",
 		},
 		Datastore: &config.Datastore{

@@ -4,7 +4,7 @@ metadata:
   name: proxy-sample
 spec:
   replicas: 3
-  version: experimental
+  version: v0.6.3
   domain: local-proxy.f110.dev
   port: 443
   organization: test
@@ -38,6 +38,7 @@ spec:
       k8s-app: etcd
   defragment:
     schedule: "18 13 * * *"
+  development: true
   backup:
     intervalInSecond: 60
     maxBackups: 10
