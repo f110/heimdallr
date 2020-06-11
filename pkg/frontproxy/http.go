@@ -191,12 +191,12 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		}
 	}
 
-	user, err := auth.Authenticate(req)
+	user, err := auth.Authenticate(ctx, req)
 	defer p.accessLog(ctx, w, req, user)
 
 	switch err {
 	case auth.ErrSessionNotFound:
-		logger.Log.Debug("Session not found")
+		logger.Log.Debug("Session not found", logger.WithRequestId(ctx))
 		u := &url.URL{}
 		*u = *req.URL
 		u.Scheme = "https"
@@ -208,22 +208,22 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
-		logger.Log.Debug("Unauthorized", zap.Error(err))
+		logger.Log.Debug("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	case auth.ErrHostnameNotFound:
-		logger.Log.Debug("Hostname not found", zap.String("host", req.Host))
+		logger.Log.Debug("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
 		panic(http.ErrAbortHandler)
 	}
 
 	if user == nil {
-		logger.Log.Warn("Unhandled error", zap.Error(err))
+		logger.Log.Warn("Unhandled error", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if err := p.setHeader(req, user); err != nil {
-		logger.Log.Warn("Failed to set headers to request of backend", zap.Error(err))
+		logger.Log.Warn("Failed to set headers to request of backend", zap.Error(err), logger.WithRequestId(ctx))
 		return
 	}
 	p.reverseProxy.ServeHTTP(w, req)
@@ -263,7 +263,7 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 	req.Body = ioutil.NopCloser(bytes.NewReader(buf))
 	err = github.ValidateSignature(req.Header.Get("X-Hub-Signature"), buf, p.Config.FrontendProxy.GithubWebhookSecret)
 	if err != nil {
-		logger.Log.Debug("Couldn't validate signature", zap.Error(err))
+		logger.Log.Debug("Couldn't validate signature", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -292,7 +292,7 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 
 	// We verify the client by client certificate.
 	if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
-		logger.Log.Info("The client does not submit any certificate")
+		logger.Log.Info("The client does not submit any certificate", logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -304,7 +304,7 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 		}
 	}
 	if !found {
-		logger.Log.Info("Slack's Common name could not be found in client certificates")
+		logger.Log.Info("Slack's Common name could not be found in client certificates", logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

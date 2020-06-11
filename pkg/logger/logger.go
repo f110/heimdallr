@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -23,6 +25,16 @@ func Init(conf *config.Logger) error {
 	}
 
 	return nil
+}
+
+func WithRequestId(ctx context.Context) zap.Field {
+	v := ctx.Value("request_id")
+	switch value := v.(type) {
+	case string:
+		return zap.String("request_id", value)
+	default:
+		return zap.Skip()
+	}
 }
 
 func initLogger(conf *config.Logger) error {

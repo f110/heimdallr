@@ -82,8 +82,8 @@ func InitInterceptor(conf *config.Config, user database.UserDatabase, token data
 	defaultAuthInterceptor.publicKey = conf.General.SigningPublicKey
 }
 
-func Authenticate(req *http.Request) (*database.User, error) {
-	return defaultAuthenticator.Authenticate(req)
+func Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
+	return defaultAuthenticator.Authenticate(ctx, req)
 }
 
 func AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
@@ -98,7 +98,7 @@ func StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamS
 	return defaultAuthInterceptor.StreamInterceptor(srv, ss, info, handler)
 }
 
-func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) {
+func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
 	backend, ok := a.Config.GetBackendByHost(req.Host)
 	if !ok {
 		return nil, ErrHostnameNotFound
@@ -115,7 +115,7 @@ func (a *authenticator) Authenticate(req *http.Request) (*database.User, error) 
 		return &database.User{}, nil
 	}
 
-	user, err := a.findUser(req)
+	user, err := a.findUser(ctx, req)
 	if backend.AllowAsRootUser && err == ErrUserNotFound {
 		u, err := a.findRootUser(req)
 		if err != nil {
@@ -189,9 +189,9 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	return nil, ErrNotAllowed
 }
 
-func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
+func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*database.User, error) {
 	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
-		logger.Log.Debug("Client Certificate authorization")
+		logger.Log.Debug("Client Certificate authorization", logger.WithRequestId(ctx))
 		// Client Certificate Authorization
 		cert := req.TLS.PeerCertificates[0]
 		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
@@ -202,7 +202,7 @@ func (a *authenticator) findUser(req *http.Request) (*database.User, error) {
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {
-			logger.Log.Debug("Failure verify certificate", zap.Error(err))
+			logger.Log.Debug("Failure verify certificate", zap.Error(err), logger.WithRequestId(ctx))
 			return nil, ErrInvalidCertificate
 		}
 
