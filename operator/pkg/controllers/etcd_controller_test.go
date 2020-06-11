@@ -67,6 +67,11 @@ func TestEtcdController(t *testing.T) {
 			t.Fatal(err)
 		}
 		assert.Contains(t, member.Spec.Containers[0].Command, "--initial-cluster-state=existing")
+		portNames := make([]string, 0)
+		for _, v := range member.Spec.Containers[0].Ports {
+			portNames = append(portNames, v.Name)
+		}
+		assert.Contains(t, portNames, "metrics")
 	})
 
 	t.Run("PreparingUpdate", func(t *testing.T) {

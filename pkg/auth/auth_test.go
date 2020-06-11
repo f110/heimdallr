@@ -116,7 +116,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public.proxy.example.com/ok", nil)
-			_, err := Authenticate(req)
+			_, err := Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -126,7 +126,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/ok", nil)
-			_, err := Authenticate(req)
+			_, err := Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -136,7 +136,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/disallow", nil)
-			_, err := Authenticate(req)
+			_, err := Authenticate(context.TODO(), req)
 			if err != ErrNotAllowed {
 				t.Fatalf("expected ErrNotAllowed: %v", err)
 			}
@@ -156,7 +156,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			}
 			req.AddCookie(c)
 
-			user, err := Authenticate(req)
+			user, err := Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -164,7 +164,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Errorf("expect foobar@example.com: %s", user.Id)
 			}
 
-			user, err = a.Authenticate(req)
+			user, err = a.Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -182,7 +182,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.AddCookie(c)
-			user, err := a.Authenticate(req)
+			user, err := a.Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -199,7 +199,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 
-			_, err := a.Authenticate(req)
+			_, err := a.Authenticate(context.TODO(), req)
 			if err != ErrSessionNotFound {
 				t.Errorf("expect session not found: %v", err)
 			}
@@ -214,7 +214,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.AddCookie(c)
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err != ErrUserNotFound {
 				t.Errorf("expect user not found: %v", err)
 			}
@@ -225,7 +225,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://unknownhost.example.com/ok", nil)
 
-			_, err := a.Authenticate(req)
+			_, err := a.Authenticate(context.TODO(), req)
 			if err != ErrHostnameNotFound {
 				t.Errorf("expect hostname not found: %v", err)
 			}
@@ -240,7 +240,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.AddCookie(c)
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err != ErrNotAllowed {
 				t.Errorf("expect not allowed: %v", err)
 			}
@@ -255,7 +255,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.AddCookie(c)
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err != ErrNotAllowed {
 				t.Errorf("expect not allowed: %v", err)
 			}
@@ -286,7 +286,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			req.TLS = &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{clientCert},
 			}
-			user, err := a.Authenticate(req)
+			user, err := a.Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -317,7 +317,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			req.TLS = &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{clientCert},
 			}
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err == nil {
 				t.Fatal("expected to occurred error but not")
 			}
@@ -340,7 +340,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-TOKEN", t.Name())
-			user, err := a.Authenticate(req)
+			user, err := a.Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -354,7 +354,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err == nil {
 				t.Fatal("expected to occurred error but not")
 			}
@@ -369,7 +369,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-Token", "unknown-token")
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err == nil {
 				t.Fatal("expected to occurred error but not")
 			}
@@ -388,7 +388,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-TOKEN", "dummy-token")
-			_, err = a.Authenticate(req)
+			_, err = a.Authenticate(context.TODO(), req)
 			if err == nil {
 				t.Fatal("expected to occurred error but not")
 			}
