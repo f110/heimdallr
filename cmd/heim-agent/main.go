@@ -27,8 +27,105 @@ func printVersion() {
 	fmt.Printf("Go version: %s\n", runtime.Version())
 }
 
+func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath string) (*x509.Certificate, crypto.PrivateKey, []*x509.Certificate, error) {
+	_, err := os.Stat(privateKeyPath)
+	if os.IsNotExist(err) {
+		subject := pkix.Name{CommonName: name}
+		csr, key, err := cert.CreateCertificateRequest(subject, []string{})
+		if err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+
+		b, err := x509.MarshalECPrivateKey(key)
+		if err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+		buf := new(bytes.Buffer)
+		if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+		if err := ioutil.WriteFile(privateKeyPath, buf.Bytes(), 0400); err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+
+		f, err := ioutil.TempFile("", "csr")
+		if err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+		f.Write(csr)
+		f.Close()
+		fmt.Fprintf(os.Stderr, "Create CSR: %s\n", f.Name())
+		return nil, nil, nil, xerrors.New("Send CSR to the administrator")
+	}
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	_, err = os.Stat(certFilePath)
+	if os.IsNotExist(err) {
+		return nil, nil, nil, xerrors.New("certificate not found. please pass a cert path to --certificate")
+	}
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	b, err := ioutil.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, nil, nil, xerrors.Errorf(": %v", err)
+	}
+	block, _ := pem.Decode(b)
+	if block.Type != "EC PRIVATE KEY" {
+		return nil, nil, nil, xerrors.New("invalid private key")
+	}
+	privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return nil, nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	b, err = ioutil.ReadFile(certFilePath)
+	if err != nil {
+		return nil, nil, nil, xerrors.Errorf(": %v", err)
+	}
+	block, _ = pem.Decode(b)
+	if block.Type != "CERTIFICATE" {
+		return nil, nil, nil, xerrors.New("invalid certificate")
+	}
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, nil, xerrors.Errorf(": %v", err)
+	}
+
+	var caCertificates []*x509.Certificate
+	if caCertPath != "" {
+		b, err = ioutil.ReadFile(caCertPath)
+		if err != nil {
+			return nil, nil, nil, xerrors.Errorf(": %v", err)
+		}
+		for {
+			block, rest := pem.Decode(b)
+			if block.Type != "CERTIFICATE" {
+				return nil, nil, nil, xerrors.Errorf(": %v", err)
+			}
+			caCertificate, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, nil, nil, xerrors.Errorf(": %v", err)
+			}
+			caCertificates = append(caCertificates, caCertificate)
+
+			if len(rest) != 0 {
+				b = rest
+			} else {
+				break
+			}
+		}
+	}
+
+	return certificate, privateKey, caCertificates, nil
+}
+
 func agent(args []string) error {
 	credential := ""
+	certificate := ""
 	privateKey := ""
 	backend := ""
 	name := ""
@@ -37,12 +134,13 @@ func agent(args []string) error {
 	debug := false
 	v := false
 	fs := pflag.NewFlagSet("heim-agent", pflag.ExitOnError)
-	fs.StringVarP(&credential, "credential", "k", credential, "Credential file (p12)")
-	fs.StringVarP(&privateKey, "privatekey", "p", privateKey, "Private Key")
-	fs.StringVar(&caCertPath, "ca-cert", caCertPath, "CA Certificate Path")
-	fs.StringVarP(&backend, "backend", "b", backend, "Backend service")
-	fs.StringVarP(&host, "host", "h", host, "Connect host")
-	fs.StringVarP(&name, "name", "n", name, "Name")
+	fs.StringVarP(&credential, "credential", "k", credential, "Credential file for proxy (p12)")
+	fs.StringVarP(&certificate, "certificate", "c", certificate, "Signed certificate file path")
+	fs.StringVarP(&privateKey, "privatekey", "p", privateKey, "Private Key file path. If file is not exists, agent will be create a new private key.")
+	fs.StringVar(&caCertPath, "ca-cert", caCertPath, "CA Certificate file path")
+	fs.StringVarP(&backend, "backend", "b", backend, "Backend address")
+	fs.StringVarP(&host, "host", "h", host, "Proxy host")
+	fs.StringVarP(&name, "name", "n", name, "Name of this agent")
 	fs.BoolVar(&debug, "debug", debug, "Show debug log")
 	fs.BoolVarP(&v, "version", "v", v, "Show version")
 	if err := fs.Parse(args); err != nil {
@@ -61,84 +159,11 @@ func agent(args []string) error {
 	var myCert *x509.Certificate
 	var caCerts []*x509.Certificate
 	var privKey crypto.PrivateKey
+	var err error
 	if privateKey != "" {
-		_, err := os.Stat(privateKey)
-		if os.IsNotExist(err) {
-			subject := pkix.Name{CommonName: name}
-			csr, key, err := cert.CreateCertificateRequest(subject, []string{})
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-
-			b, err := x509.MarshalECPrivateKey(key)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			buf := new(bytes.Buffer)
-			if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			if err := ioutil.WriteFile(privateKey, buf.Bytes(), 0400); err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-
-			f, err := ioutil.TempFile("", "csr")
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			f.Write(csr)
-			f.Close()
-			fmt.Fprintf(os.Stderr, "Create CSR: %s\n", f.Name())
-			return xerrors.New("Send CSR to proxy admin")
-		} else {
-			_, err := os.Stat(credential)
-			if os.IsNotExist(err) {
-				return xerrors.New("certificate not found. please pass a cert path to -k")
-			}
-
-			b, err := ioutil.ReadFile(privateKey)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			block, _ := pem.Decode(b)
-			if block.Type != "EC PRIVATE KEY" {
-				return xerrors.New("invalid private key")
-			}
-			privateKey, err := x509.ParseECPrivateKey(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			privKey = privateKey
-
-			b, err = ioutil.ReadFile(credential)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			block, _ = pem.Decode(b)
-			if block.Type != "CERTIFICATE" {
-				return xerrors.New("invalid certificate")
-			}
-			c, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			myCert = c
-
-			if caCertPath != "" {
-				b, err = ioutil.ReadFile(caCertPath)
-				if err != nil {
-					return xerrors.Errorf(": %v", err)
-				}
-				block, _ = pem.Decode(b)
-				if block.Type != "CERTIFICATE" {
-					return xerrors.Errorf(": %v", err)
-				}
-				c, err = x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return xerrors.Errorf(": %v", err)
-				}
-				caCerts = []*x509.Certificate{c}
-			}
+		myCert, privKey, caCerts, err = useCertificateAndPrivateKey(name, certificate, privateKey, caCertPath)
+		if err != nil {
+			return err
 		}
 	} else if credential != "" {
 		b, err := ioutil.ReadFile(credential)
@@ -152,9 +177,11 @@ func agent(args []string) error {
 		myCert = c
 		caCerts = caC
 		privKey = privateKey
+	} else {
+		return xerrors.New("privatekey or credential is required")
 	}
 
-	err := logger.Init(&config.Logger{
+	err = logger.Init(&config.Logger{
 		Level:    logLevel,
 		Encoding: "console",
 	})

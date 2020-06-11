@@ -165,7 +165,7 @@ Start heim-agent with signed certificate
         --name test \
         --privatekey $HOME/.heimdallr/privatekey.pem \
         --backend 127.0.0.1:22 \
-        --credential $HOME/.heimdallr/cert.pem \
+        --certificate $HOME/.heimdallr/cert.pem \
         --ca-cert $HOME/.heimdallr/cacert.pem
 
 Reference
