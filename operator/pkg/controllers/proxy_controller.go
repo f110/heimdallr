@@ -401,13 +401,14 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 
 	var podMonitor *monitoringv1.PodMonitor
 	if c.enablePrometheusOperator && lp.Spec.Monitor.PrometheusMonitoring {
-		podMonitor, err = c.pmLister.PodMonitors(lp.Namespace).Get(lp.EtcdClusterName())
+		podMonitor, err = c.pmLister.PodMonitors(lp.Namespace).Get(newPM.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				_, err = c.monitoringClientset.MonitoringV1().PodMonitors(lp.Namespace).Create(newPM)
 				if err != nil {
 					return xerrors.Errorf(": %w", err)
 				}
+				return nil
 			}
 
 			return xerrors.Errorf(": %w", err)
@@ -415,7 +416,8 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 	}
 
 	if !reflect.DeepEqual(newC.Spec, cluster.Spec) {
-		_, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Update(newC)
+		cluster.Spec = newC.Spec
+		_, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Update(cluster)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

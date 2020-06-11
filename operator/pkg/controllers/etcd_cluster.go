@@ -46,6 +46,12 @@ const (
 	InternalStateRunning             InternalState = "running"
 )
 
+const (
+	EtcdClientPort  = 2379
+	EtcdPeerPort    = 2380
+	EtcdMetricsPort = 2381
+)
+
 const waitDNSPropagationScript = `while ( ! nslookup {{ .Host }} )
 do
 	echo "Waiting for DNS propagation..."
@@ -255,7 +261,7 @@ func (c *EtcdCluster) DefragmentCronJob() *batchv1beta1.CronJob {
 				Name:  "etcdctl",
 				Image: fmt.Sprintf("quay.io/coreos/etcd:%s", c.Spec.Version),
 				Command: []string{"/usr/local/bin/etcdctl",
-					fmt.Sprintf("--endpoints=https://%s.%s.svc.%s:2379", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
+					fmt.Sprintf("--endpoints=https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
 					fmt.Sprintf("--cacert=/etc/etcd-ca/%s", caCertificateFilename),
 					fmt.Sprintf("--cert=/etc/etcd-client/%s", clientCertSecretCertName),
 					fmt.Sprintf("--key=/etc/etcd-client/%s", clientCertSecretPrivateKeyName),
@@ -338,7 +344,7 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		for _, v := range c.ownedPods {
 			pods[v.Name] = v
 			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodRunning {
-				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", v.Name, v.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain))
+				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", v.Name, v.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort))
 			}
 		}
 
@@ -356,7 +362,7 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 					i,
 					etcdVersion,
 					clusterState,
-					append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
+					append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 				)
 				result = append(result, pods[name])
 				continue
@@ -496,12 +502,12 @@ func (c *EtcdCluster) DiscoveryService() *corev1.Service {
 				{
 					Name:     "etcd-server-ssl",
 					Protocol: corev1.ProtocolTCP,
-					Port:     2380,
+					Port:     EtcdPeerPort,
 				},
 				{
 					Name:     "etcd-client-ssl",
 					Protocol: corev1.ProtocolTCP,
-					Port:     2379,
+					Port:     EtcdClientPort,
 				},
 			},
 		},
@@ -532,7 +538,7 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 				{
 					Name:     "https",
 					Protocol: corev1.ProtocolTCP,
-					Port:     2379,
+					Port:     EtcdClientPort,
 				},
 			},
 		},
@@ -716,7 +722,7 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 	certPool.AddCert(caCertPair.Cert)
 
 	if endpoints == nil {
-		endpoints = []string{fmt.Sprintf("https://%s.%s.svc.%s:2379", c.ClientServiceName(), c.Namespace, c.ClusterDomain)}
+		endpoints = []string{fmt.Sprintf("https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort)}
 	}
 
 	cfg := clientv3.Config{
@@ -774,7 +780,7 @@ func (c *EtcdCluster) newTemporaryMemberPodSpec(name, etcdVersion string, initia
 		c.Spec.Members+1,
 		etcdVersion,
 		"existing",
-		append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:2380", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)),
+		append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 	)
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
 
@@ -843,11 +849,11 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 		fmt.Sprintf("--name=%s", name),
 		fmt.Sprintf("--data-dir=/var/%s.etcd", name),
 		fmt.Sprintf("--initial-cluster-state=%s", clusterState),
-		fmt.Sprintf("--initial-advertise-peer-urls=https://%s.%s:2380", name, discoveryService),
-		fmt.Sprintf("--advertise-client-urls=https://%s.%s:2379", name, discoveryService),
-		"--listen-client-urls=https://0.0.0.0:2379",
-		"--listen-peer-urls=https://0.0.0.0:2380",
-		"--listen-metrics-urls=http://0.0.0.0:2381",
+		fmt.Sprintf("--initial-advertise-peer-urls=https://%s.%s:%d", name, discoveryService, EtcdPeerPort),
+		fmt.Sprintf("--advertise-client-urls=https://%s.%s:%d", name, discoveryService, EtcdClientPort),
+		fmt.Sprintf("--listen-client-urls=https://0.0.0.0:%d", EtcdClientPort),
+		fmt.Sprintf("--listen-peer-urls=https://0.0.0.0:%d", EtcdPeerPort),
+		fmt.Sprintf("--listen-metrics-urls=http://0.0.0.0:%d", EtcdMetricsPort),
 		fmt.Sprintf("--trusted-ca-file=/etc/etcd-ca/%s", caSecretCertName),
 		"--client-cert-auth",
 		fmt.Sprintf("--cert-file=/etc/etcd-cert/%s", serverCertSecretCertName),
@@ -881,17 +887,22 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 						},
 					},
 				},
+				Ports: []corev1.ContainerPort{
+					{Name: "client", ContainerPort: EtcdClientPort, Protocol: corev1.ProtocolTCP},
+					{Name: "peer", ContainerPort: EtcdPeerPort, Protocol: corev1.ProtocolTCP},
+					{Name: "metrics", ContainerPort: EtcdMetricsPort, Protocol: corev1.ProtocolTCP},
+				},
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						TCPSocket: &corev1.TCPSocketAction{
-							Port: intstr.FromInt(2379),
+							Port: intstr.FromInt(EtcdClientPort),
 						},
 					},
 				},
 				ReadinessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Port: intstr.FromInt(2381),
+							Port: intstr.FromInt(EtcdMetricsPort),
 							Path: "/health",
 						},
 					},

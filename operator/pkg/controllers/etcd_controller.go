@@ -659,7 +659,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		res, err := eClient.MemberAdd(
 			ctx,
-			[]string{fmt.Sprintf("https://%s.%s.%s.svc.%s:2380", pod.Name, cluster.ServerDiscoveryServiceName(), cluster.Namespace, cluster.ClusterDomain)},
+			[]string{fmt.Sprintf("https://%s.%s.%s.svc.%s:%d", pod.Name, cluster.ServerDiscoveryServiceName(), cluster.Namespace, cluster.ClusterDomain, EtcdPeerPort)},
 		)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -854,7 +854,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 				continue
 			}
 
-			pf, port, err := ec.portForward(v, 2379)
+			pf, port, err := ec.portForward(v, EtcdClientPort)
 			if err != nil {
 				klog.Info(err)
 				continue
@@ -862,7 +862,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 			forwarder = append(forwarder, pf)
 			ep.Endpoint = fmt.Sprintf("https://127.0.0.1:%d", port)
 		} else {
-			ep.Endpoint = fmt.Sprintf("https://%s:2379", v.Status.PodIP)
+			ep.Endpoint = fmt.Sprintf("https://%s:%d", v.Status.PodIP, EtcdClientPort)
 		}
 
 		etcdPods = append(etcdPods, ep)
@@ -958,7 +958,7 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	klog.V(4).Infof("Phase: %v", cluster.Status.Phase)
 
 	cluster.Status.ClientCertSecretName = cluster.ClientCertSecretName()
-	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:2379", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain)
+	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:%d", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain, EtcdClientPort)
 
 	s := labels.SelectorFromSet(map[string]string{
 		etcd.LabelNameClusterName: cluster.Name,
@@ -1249,7 +1249,7 @@ func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *p
 		pods := cluster.AllMembers()
 		for _, v := range pods {
 			if cluster.IsPodReady(v) {
-				f, port, err := ec.portForward(v, 2379)
+				f, port, err := ec.portForward(v, EtcdClientPort)
 				if err != nil {
 					return nil, nil, xerrors.Errorf(": %w", err)
 				}

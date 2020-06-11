@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	EtcdVersion = "v3.4.7"
+	EtcdVersion = "v3.4.8"
 
 	imageRepository            = "quay.io/f110/heimdallr-proxy"
 	defaultImageTag            = "latest"
@@ -407,7 +407,7 @@ func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdC
 			},
 			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
 				{
-					TargetPort:  intOrStringFromInt(2379),
+					TargetPort:  intOrStringFromInt(EtcdMetricsPort),
 					Path:        "/metrics",
 					Scheme:      "http",
 					HonorLabels: true,
