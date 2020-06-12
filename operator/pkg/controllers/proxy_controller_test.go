@@ -20,7 +20,8 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, [
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: proxyv1.ProxySpec{
-			Domain: "test-proxy.f110.dev",
+			Domain:      "test-proxy.f110.dev",
+			EtcdVersion: "v3.4.9",
 			BackendSelector: proxyv1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
@@ -168,6 +169,12 @@ func TestProxyController(t *testing.T) {
 
 		f.ExpectUpdateProxyStatus()
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+
+		etcdC, err := f.client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(ec.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, p.Spec.EtcdVersion, etcdC.Spec.Version)
 	})
 
 	t.Run("Finish preparing phase", func(t *testing.T) {

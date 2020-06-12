@@ -5,6 +5,7 @@ metadata:
 spec:
   replicas: 3
   version: v0.6.3
+  etcdVersion: v3.4.9
   domain: local-proxy.f110.dev
   port: 443
   organization: test

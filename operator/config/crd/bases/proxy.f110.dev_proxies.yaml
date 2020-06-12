@@ -152,6 +152,8 @@ spec:
                 type: boolean
               domain:
                 type: string
+              etcdVersion:
+                type: string
               httpPort:
                 format: int32
                 type: integer

@@ -22,6 +22,7 @@ type ProxySpec struct {
 	Port           int32  `json:"port,omitempty"`
 	HttpPort       int32  `json:"httpPort,omitempty"`
 	Version        string `json:"version,omitempty"`
+	EtcdVersion    string `json:"etcdVersion,omitempty"`
 	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
 	// Name of proxy. if not present, uses "Heimdallr CA".
 	Name              string                 `json:"name,omitempty"`
