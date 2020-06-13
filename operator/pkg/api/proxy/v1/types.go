@@ -251,8 +251,6 @@ type Binding struct {
 
 // RoleStatus defines the observed state of Role
 type RoleStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +genclient
@@ -284,8 +282,6 @@ type RpcPermissionSpec struct {
 
 // RpcPermissionStatus defines the observed state of RpcPermission
 type RpcPermissionStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +genclient
@@ -308,4 +304,41 @@ type RpcPermissionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []RpcPermission `json:"items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient:noStatus
+
+type RoleBinding struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Subjects []Subject `json:"subjects"`
+	RoleRef  RoleRef   `json:"roleRef"`
+}
+
+type RoleRef struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+type Subject struct {
+	// Kind of object.
+	// Value is "Backend" or "RpcPermission"
+	Kind string `json:"kind"`
+	// Name of object.
+	Name string `json:"name"`
+	// Namespace of object. If not set, will be use same namespace.
+	Namespace string `json:"namespace,omitempty"`
+	// Permission is the name of permission of backend.
+	Permission string `json:"permission,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type RoleBindingList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []RoleBinding `json:"items"`
 }

@@ -59,3 +59,15 @@ spec:
       permission: all
     - backendName: hello
       permission: all
+---
+apiVersion:  proxy.f110.dev/v1
+kind: RoleBinding
+metadata:
+  name: hello-admin
+roleRef:
+  name: admin
+  namespace: default
+subjects:
+  - kind: Backend
+    name: hello
+    permission: all

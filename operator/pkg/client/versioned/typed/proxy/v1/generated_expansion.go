@@ -33,4 +33,6 @@ type ProxyExpansion interface{}
 
 type RoleExpansion interface{}
 
+type RoleBindingExpansion interface{}
+
 type RpcPermissionExpansion interface{}

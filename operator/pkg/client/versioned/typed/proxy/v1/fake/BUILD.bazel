@@ -8,6 +8,7 @@ go_library(
         "fake_proxy.go",
         "fake_proxy_client.go",
         "fake_role.go",
+        "fake_rolebinding.go",
         "fake_rpcpermission.go",
     ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1/fake",

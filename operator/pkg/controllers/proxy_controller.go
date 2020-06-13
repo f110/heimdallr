@@ -68,6 +68,8 @@ type ProxyController struct {
 	backendListerSynced       cache.InformerSynced
 	roleLister                proxyListers.RoleLister
 	roleListerSynced          cache.InformerSynced
+	roleBindingLister         proxyListers.RoleBindingLister
+	roleBindingListerSynced   cache.InformerSynced
 	rpcPermissionLister       proxyListers.RpcPermissionLister
 	rpcPermissionListerSynced cache.InformerSynced
 
@@ -98,6 +100,7 @@ func NewProxyController(
 	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
 	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
 	roleInformer := sharedInformerFactory.Proxy().V1().Roles()
+	roleBindingInformer := sharedInformerFactory.Proxy().V1().RoleBindings()
 	rpcPermissionInformer := sharedInformerFactory.Proxy().V1().RpcPermissions()
 	ecInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
@@ -172,6 +175,14 @@ func NewProxyController(
 	c.roleLister = roleInformer.Lister()
 	c.roleListerSynced = roleInformer.Informer().HasSynced
 
+	roleBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.addRoleBinding,
+		UpdateFunc: c.updateRoleBinding,
+		DeleteFunc: c.deleteRoleBinding,
+	})
+	c.roleBindingLister = roleBindingInformer.Lister()
+	c.roleBindingListerSynced = roleBindingInformer.Informer().HasSynced
+
 	rpcPermissionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addRpcPermission,
 		UpdateFunc: c.updateRpcPermission,
@@ -193,6 +204,7 @@ func (c *ProxyController) Run(ctx context.Context, workers int) {
 		c.ecListerSynced,
 		c.rpcPermissionListerSynced,
 		c.roleListerSynced,
+		c.roleBindingListerSynced,
 		c.backendListerSynced,
 		c.proxyListerSynced,
 		c.serviceListerSynced,
@@ -260,7 +272,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	backends, err := c.clientset.ProxyV1().Backends("").List(metav1.ListOptions{LabelSelector: selector.String()})
+	backends, err := c.backendLister.List(selector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -269,7 +281,10 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	roles, err := c.clientset.ProxyV1().Roles("").List(metav1.ListOptions{LabelSelector: selector.String()})
+	roles, err := c.roleLister.List(selector)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
 
 	selector, err = metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
 	if err != nil {
@@ -280,7 +295,28 @@ func (c *ProxyController) syncProxy(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	lp := NewHeimdallrProxy(proxy, c.cmClientset, c.serviceLister, backends.Items, roles.Items, rpcPermissions.Items)
+	rolesMap := make(map[string]*proxyv1.Role)
+	for _, v := range roles {
+		rolesMap[fmt.Sprintf("%s/%s", v.Namespace, v.Name)] = v
+	}
+	bindings, err := c.roleBindingLister.List(labels.Everything())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1.RoleBinding) bool {
+		_, ok := rolesMap[fmt.Sprintf("%s/%s", binding.RoleRef.Namespace, binding.RoleRef.Name)]
+		return ok
+	})
+
+	lp := NewHeimdallrProxy(HeimdallrProxyParams{
+		Spec:              proxy,
+		CertManagerClient: c.cmClientset,
+		ServiceLister:     c.serviceLister,
+		Backends:          backends,
+		Roles:             roles,
+		RpcPermissions:    rpcPermissions.Items,
+		RoleBindings:      roleBindings,
+	})
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	} else if ec != nil {
@@ -501,7 +537,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 				Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
 			})
 
-			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).UpdateStatus(&backend)
+			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -862,6 +898,41 @@ func (c *ProxyController) enqueueSubordinateResource(m *metav1.ObjectMeta) error
 	return nil
 }
 
+func (c *ProxyController) enqueueDependentProxy(role *proxyv1.Role) error {
+	proxies, err := c.proxyLister.List(labels.Everything())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	target := make(map[string]*proxyv1.Proxy)
+NextProxy:
+	for _, proxy := range proxies {
+		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
+		if err != nil {
+			continue
+		}
+		roles, err := c.roleLister.List(selector)
+		if err != nil {
+			continue
+		}
+
+		for _, v := range roles {
+			if proxy.Spec.RoleSelector.Namespace != "" && v.Namespace != proxy.Spec.RoleSelector.Namespace {
+				continue
+			}
+			if v.Name == role.Name {
+				target[proxy.Name] = proxy
+				continue NextProxy
+			}
+		}
+	}
+
+	for _, v := range target {
+		c.enqueue(v)
+	}
+	return nil
+}
+
 func (c *ProxyController) addProxy(obj interface{}) {
 	proxy := obj.(*proxyv1.Proxy)
 
@@ -981,6 +1052,64 @@ func (c *ProxyController) deleteRole(obj interface{}) {
 	}
 
 	if err := c.enqueueSubordinateResource(&role.ObjectMeta); err != nil {
+		return
+	}
+}
+
+func (c *ProxyController) addRoleBinding(obj interface{}) {
+	roleBinding := obj.(*proxyv1.RoleBinding)
+
+	role, err := c.roleLister.Roles(roleBinding.RoleRef.Namespace).Get(roleBinding.RoleRef.Name)
+	if err != nil {
+		return
+	}
+
+	if err := c.enqueueDependentProxy(role); err != nil {
+		return
+	}
+}
+
+func (c *ProxyController) updateRoleBinding(before, after interface{}) {
+	beforeRoleBinding := before.(*proxyv1.RoleBinding)
+	afterRoleBinding := after.(*proxyv1.RoleBinding)
+
+	if beforeRoleBinding.UID != afterRoleBinding.UID {
+		if key, err := cache.MetaNamespaceKeyFunc(beforeRoleBinding); err != nil {
+			return
+		} else {
+			c.deleteRole(cache.DeletedFinalStateUnknown{Key: key, Obj: beforeRoleBinding})
+		}
+	}
+
+	role, err := c.roleLister.Roles(afterRoleBinding.RoleRef.Namespace).Get(afterRoleBinding.RoleRef.Name)
+	if err != nil {
+		return
+	}
+
+	if err := c.enqueueDependentProxy(role); err != nil {
+		return
+	}
+}
+
+func (c *ProxyController) deleteRoleBinding(obj interface{}) {
+	roleBinding, ok := obj.(*proxyv1.RoleBinding)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			return
+		}
+		roleBinding, ok = tombstone.Obj.(*proxyv1.RoleBinding)
+		if !ok {
+			return
+		}
+	}
+
+	role, err := c.roleLister.Roles(roleBinding.RoleRef.Namespace).Get(roleBinding.RoleRef.Name)
+	if err != nil {
+		return
+	}
+
+	if err := c.enqueueDependentProxy(role); err != nil {
 		return
 	}
 }

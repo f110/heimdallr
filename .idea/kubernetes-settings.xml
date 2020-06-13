@@ -14,6 +14,9 @@
       <SpecSource>
         <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/etcd.f110.dev_etcdclusters.yaml" />
       </SpecSource>
+      <SpecSource>
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_rolebindings.yaml" />
+      </SpecSource>
     </specSources>
   </component>
 </project>

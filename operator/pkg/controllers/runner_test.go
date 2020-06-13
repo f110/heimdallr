@@ -105,9 +105,25 @@ func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1.Proxy) {
 	f.sharedInformerFactory.Proxy().V1().Proxies().Informer().GetIndexer().Add(p)
 }
 
-func (f *commonTestRunner) RegisterBackendFixture(b *proxyv1.Backend) {
-	f.client.Tracker().Add(b)
-	f.sharedInformerFactory.Proxy().V1().Backends().Informer().GetIndexer().Add(b)
+func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1.Backend) {
+	for _, v := range b {
+		f.client.Tracker().Add(v)
+		f.sharedInformerFactory.Proxy().V1().Backends().Informer().GetIndexer().Add(v)
+	}
+}
+
+func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1.Role) {
+	for _, v := range r {
+		f.client.Tracker().Add(v)
+		f.sharedInformerFactory.Proxy().V1().Roles().Informer().GetIndexer().Add(v)
+	}
+}
+
+func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1.RoleBinding) {
+	for _, v := range r {
+		f.client.Tracker().Add(v)
+		f.sharedInformerFactory.Proxy().V1().RoleBindings().Informer().GetIndexer().Add(v)
+	}
 }
 
 func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdCluster) {

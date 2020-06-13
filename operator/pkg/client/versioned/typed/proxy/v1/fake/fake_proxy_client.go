@@ -49,6 +49,10 @@ func (c *FakeProxyV1) Roles(namespace string) v1.RoleInterface {
 	return &FakeRoles{c, namespace}
 }
 
+func (c *FakeProxyV1) RoleBindings(namespace string) v1.RoleBindingInterface {
+	return &FakeRoleBindings{c, namespace}
+}
+
 func (c *FakeProxyV1) RpcPermissions(namespace string) v1.RpcPermissionInterface {
 	return &FakeRpcPermissions{c, namespace}
 }

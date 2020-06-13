@@ -111,41 +111,50 @@ type HeimdallrProxy struct {
 	cmClient      cmClientset.Interface
 	serviceLister listers.ServiceLister
 
-	backends         []proxyv1.Backend
-	roles            []proxyv1.Role
+	backends         []*proxyv1.Backend
+	roles            []*proxyv1.Role
 	rpcPermissions   []proxyv1.RpcPermission
+	roleBindings     []*proxyv1.RoleBinding
 	selfSignedIssuer bool
 }
 
-func NewHeimdallrProxy(
-	spec *proxyv1.Proxy,
-	cmClient cmClientset.Interface, serviceLister listers.ServiceLister,
-	backends []proxyv1.Backend, roles []proxyv1.Role, rpcPermissions []proxyv1.RpcPermission) *HeimdallrProxy {
+type HeimdallrProxyParams struct {
+	Spec              *proxyv1.Proxy
+	CertManagerClient cmClientset.Interface
+	ServiceLister     listers.ServiceLister
+	Backends          []*proxyv1.Backend
+	Roles             []*proxyv1.Role
+	RpcPermissions    []proxyv1.RpcPermission
+	RoleBindings      []*proxyv1.RoleBinding
+}
+
+func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	r := &HeimdallrProxy{
-		Name:           spec.Name,
-		Namespace:      spec.Namespace,
-		Object:         spec,
-		Spec:           spec.Spec,
-		serviceLister:  serviceLister,
-		cmClient:       cmClient,
-		backends:       backends,
-		roles:          roles,
-		rpcPermissions: rpcPermissions,
+		Name:           opt.Spec.Name,
+		Namespace:      opt.Spec.Namespace,
+		Object:         opt.Spec,
+		Spec:           opt.Spec.Spec,
+		serviceLister:  opt.ServiceLister,
+		cmClient:       opt.CertManagerClient,
+		backends:       opt.Backends,
+		roles:          opt.Roles,
+		rpcPermissions: opt.RpcPermissions,
+		roleBindings:   opt.RoleBindings,
 	}
 
 	found := false
-	for _, v := range backends {
-		if v.Name == "dashboard" && v.Namespace == spec.Namespace && v.Spec.Layer == "" {
+	for _, v := range opt.Backends {
+		if v.Name == "dashboard" && v.Namespace == opt.Spec.Namespace && v.Spec.Layer == "" {
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		r.backends = append(r.backends, proxyv1.Backend{
+		r.backends = append(r.backends, &proxyv1.Backend{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dashboard",
-				Namespace: spec.Namespace,
+				Namespace: opt.Spec.Namespace,
 			},
 			Spec: proxyv1.BackendSpec{
 				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
@@ -163,14 +172,14 @@ func NewHeimdallrProxy(
 	}
 
 	found = false
-	for _, v := range roles {
+	for _, v := range opt.Roles {
 		if v.Name == "admin" && v.Namespace == r.Namespace {
 			found = true
 			break
 		}
 	}
 	if !found {
-		r.roles = append(r.roles, proxyv1.Role{
+		r.roles = append(r.roles, &proxyv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
@@ -184,10 +193,28 @@ func NewHeimdallrProxy(
 				},
 			},
 		})
+		r.roleBindings = append(r.roleBindings, &proxyv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "admin-dashboard",
+				Namespace: r.Namespace,
+			},
+			Subjects: []proxyv1.Subject{
+				{
+					Kind:       "Backend",
+					Name:       "dashboard",
+					Namespace:  r.Namespace,
+					Permission: "all",
+				},
+			},
+			RoleRef: proxyv1.RoleRef{
+				Name:      "admin",
+				Namespace: r.Namespace,
+			},
+		})
 	}
 
 	found = false
-	for _, v := range rpcPermissions {
+	for _, v := range opt.RpcPermissions {
 		if v.Name == "admin" && v.Namespace == r.Namespace {
 			found = true
 			break
@@ -315,11 +342,11 @@ func (r *HeimdallrProxy) ServiceNameForInternalApi() string {
 	return r.Name + "-internal"
 }
 
-func (r *HeimdallrProxy) Backends() []proxyv1.Backend {
+func (r *HeimdallrProxy) Backends() []*proxyv1.Backend {
 	return r.backends
 }
 
-func (r *HeimdallrProxy) Roles() []proxyv1.Role {
+func (r *HeimdallrProxy) Roles() []*proxyv1.Role {
 	return r.roles
 }
 
@@ -819,7 +846,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	backends := r.Backends()
 
 	proxies := make([]*config.Backend, 0, len(backends))
-	backendMap := make(map[string]proxyv1.Backend)
+	backendMap := make(map[string]*proxyv1.Backend)
 	for _, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = v
 
@@ -908,40 +935,57 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 
 	roleList := r.Roles()
 	roles := make([]*config.Role, len(roleList))
-	for i, v := range roleList {
-		bindings := make([]*config.Binding, 0, len(v.Spec.Bindings))
-		for _, b := range v.Spec.Bindings {
-			switch {
-			case b.BackendName != "":
-				namespace := v.Namespace
-				if b.Namespace != "" {
-					namespace = b.Namespace
-				}
-				backendHost := ""
-				if bn, ok := backendMap[namespace+"/"+b.BackendName]; ok {
-					backendHost = bn.Name + "." + bn.Spec.Layer
-					if bn.Spec.Layer == "" {
-						backendHost = bn.Name
-					}
-				} else {
-					continue
-				}
+	for i, role := range roleList {
+		bindings := make([]*config.Binding, 0, len(role.Spec.Bindings))
 
-				bindings = append(bindings, &config.Binding{
-					Permission: b.Permission,
-					Backend:    backendHost,
-				})
-			case b.RpcPermissionName != "":
-				bindings = append(bindings, &config.Binding{
-					Rpc: b.RpcPermissionName,
-				})
+		matchedBindings := RoleBindings(r.roleBindings).Select(func(binding *proxyv1.RoleBinding) bool {
+			if binding.RoleRef.Name != role.Name {
+				return false
+			}
+			if binding.RoleRef.Namespace != "" && binding.RoleRef.Namespace == role.Namespace {
+				return true
+			}
+			if binding.RoleRef.Namespace == "" && role.Namespace == metav1.NamespaceDefault {
+				return true
+			}
+
+			return false
+		})
+
+		for _, binding := range matchedBindings {
+			for _, subject := range binding.Subjects {
+				switch subject.Kind {
+				case "Backend":
+					namespace := role.Namespace
+					if subject.Namespace != "" {
+						namespace = subject.Namespace
+					}
+					backendHost := ""
+					if bn, ok := backendMap[namespace+"/"+subject.Name]; ok {
+						backendHost = bn.Name + "." + bn.Spec.Layer
+						if bn.Spec.Layer == "" {
+							backendHost = bn.Name
+						}
+					} else {
+						continue
+					}
+
+					bindings = append(bindings, &config.Binding{
+						Permission: subject.Permission,
+						Backend:    backendHost,
+					})
+				case "RpcPermission":
+					bindings = append(bindings, &config.Binding{
+						Rpc: subject.Name,
+					})
+				}
 			}
 		}
 
 		roles[i] = &config.Role{
-			Name:        v.Name,
-			Title:       v.Spec.Title,
-			Description: v.Spec.Description,
+			Name:        role.Name,
+			Title:       role.Spec.Title,
+			Description: role.Spec.Description,
 			Bindings:    bindings,
 		}
 	}
@@ -1693,4 +1737,17 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 func intOrStringFromInt(val int) *intstr.IntOrString {
 	v := intstr.FromInt(val)
 	return &v
+}
+
+type RoleBindings []*proxyv1.RoleBinding
+
+func (rb RoleBindings) Select(fn func(*proxyv1.RoleBinding) bool) []*proxyv1.RoleBinding {
+	n := make([]*proxyv1.RoleBinding, 0)
+	for _, v := range rb {
+		if fn(v) {
+			n = append(n, v)
+		}
+	}
+
+	return n
 }

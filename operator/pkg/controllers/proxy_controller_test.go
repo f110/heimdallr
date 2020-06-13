@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -13,7 +14,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config"
 )
 
-func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, []proxyv1.Role, []proxyv1.RpcPermission, []corev1.Service) {
+func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []*proxyv1.Backend, []*proxyv1.Role, []proxyv1.RpcPermission, []*proxyv1.RoleBinding, []corev1.Service) {
 	proxy := &proxyv1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -58,7 +59,7 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, [
 		Data: map[string][]byte{"client-secret": []byte("hidden")},
 	}
 
-	backends := []proxyv1.Backend{
+	backends := []*proxyv1.Backend{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test",
@@ -80,9 +81,37 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, [
 		},
 	}
 
-	roles := []proxyv1.Role{}
-
+	roles := []*proxyv1.Role{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test",
+				Namespace:         metav1.NamespaceDefault,
+				CreationTimestamp: metav1.Now(),
+				Labels:            map[string]string{"instance": "test"},
+			},
+			Spec: proxyv1.RoleSpec{
+				Title:       "test",
+				Description: "for testing",
+			},
+		},
+	}
 	rpcPermissions := []proxyv1.RpcPermission{}
+	roleBindings := []*proxyv1.RoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-test",
+				Namespace:         metav1.NamespaceDefault,
+				CreationTimestamp: metav1.Now(),
+			},
+			Subjects: []proxyv1.Subject{
+				{Kind: "Backend", Name: "test", Namespace: metav1.NamespaceDefault, Permission: "all"},
+			},
+			RoleRef: proxyv1.RoleRef{
+				Name:      "test",
+				Namespace: metav1.NamespaceDefault,
+			},
+		},
+	}
 
 	services := []corev1.Service{
 		{
@@ -99,7 +128,7 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []proxyv1.Backend, [
 		},
 	}
 
-	return proxy, clientSecret, backends, roles, rpcPermissions, services
+	return proxy, clientSecret, backends, roles, rpcPermissions, roleBindings, services
 }
 
 func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
@@ -128,11 +157,19 @@ func TestProxyController(t *testing.T) {
 
 		f := newProxyControllerTestRunner(t)
 
-		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:              p,
+			CertManagerClient: f.cmClient,
+			ServiceLister:     f.c.serviceLister,
+			Backends:          backends,
+			Roles:             roles,
+			RpcPermissions:    rpcPermissions,
+			RoleBindings:      roleBindings,
+		})
 
 		for _, v := range proxy.Secrets() {
 			_, err := v.Create()
@@ -152,11 +189,19 @@ func TestProxyController(t *testing.T) {
 
 		f := newProxyControllerTestRunner(t)
 
-		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:              p,
+			CertManagerClient: f.cmClient,
+			ServiceLister:     f.c.serviceLister,
+			Backends:          backends,
+			Roles:             roles,
+			RpcPermissions:    rpcPermissions,
+			RoleBindings:      roleBindings,
+		})
 		ec, _ := proxy.EtcdCluster()
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
@@ -182,11 +227,22 @@ func TestProxyController(t *testing.T) {
 
 		f := newProxyControllerTestRunner(t)
 
-		p, clientSecret, backends, roles, rpcPermissions, _ := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
+		f.RegisterBackendFixture(backends...)
+		f.RegisterRoleFixture(roles...)
+		f.RegisterRoleBindingFixture(roleBindings...)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:              p,
+			CertManagerClient: f.cmClient,
+			ServiceLister:     f.c.serviceLister,
+			Backends:          backends,
+			Roles:             roles,
+			RpcPermissions:    rpcPermissions,
+			RoleBindings:      roleBindings,
+		})
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
 		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning
@@ -213,11 +269,34 @@ func TestProxyController(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(proxy.Namespace).Get(proxy.ReverseProxyConfigName(), metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		assert.NotEmpty(t, updatedP.Status.CASecretName)
 		assert.NotEmpty(t, updatedP.Status.SigningPrivateKeySecretName)
 		assert.NotEmpty(t, updatedP.Status.GithubWebhookSecretName)
 		assert.NotEmpty(t, updatedP.Status.InternalTokenSecretName)
 		assert.NotEmpty(t, updatedP.Status.CookieSecretName)
+
+		assert.NotEmpty(t, proxyConfigMap.Data[proxyFilename])
+		assert.NotEmpty(t, proxyConfigMap.Data[roleFilename])
+		assert.NotEmpty(t, proxyConfigMap.Data[rpcPermissionFilename])
+
+		roleConfig := make([]*config.Role, 0)
+		if err := yaml.Unmarshal([]byte(proxyConfigMap.Data[roleFilename]), &roleConfig); err != nil {
+			t.Fatal(err)
+		}
+		roleMap := make(map[string]*config.Role)
+		for _, v := range roleConfig {
+			roleMap[v.Name] = v
+		}
+		assert.Len(t, roleConfig, 2)
+		assert.Contains(t, roleMap, "test")
+		assert.Contains(t, roleMap, "admin")
+		assert.Len(t, roleMap["test"].Bindings, 1)
+		assert.Len(t, roleMap["admin"].Bindings, 1)
 	})
 
 	t.Run("RPC server is ready", func(t *testing.T) {
@@ -225,17 +304,25 @@ func TestProxyController(t *testing.T) {
 
 		f := newProxyControllerTestRunner(t)
 
-		p, clientSecret, backends, roles, rpcPermissions, services := newProxy("test")
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
 		f.RegisterProxyFixture(p)
-		for _, b := range backends {
-			f.RegisterBackendFixture(&b)
-		}
+		f.RegisterBackendFixture(backends...)
+		f.RegisterRoleFixture(roles...)
+		f.RegisterRoleBindingFixture(roleBindings...)
 		for _, s := range services {
 			f.RegisterServiceFixture(&s)
 		}
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(p, f.cmClient, f.c.serviceLister, backends, roles, rpcPermissions)
+		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:              p,
+			CertManagerClient: f.cmClient,
+			ServiceLister:     f.c.serviceLister,
+			Backends:          backends,
+			Roles:             roles,
+			RpcPermissions:    rpcPermissions,
+			RoleBindings:      roleBindings,
+		})
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
 		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning

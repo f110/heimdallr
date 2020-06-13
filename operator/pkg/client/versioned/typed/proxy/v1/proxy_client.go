@@ -38,6 +38,7 @@ type ProxyV1Interface interface {
 	BackendsGetter
 	ProxiesGetter
 	RolesGetter
+	RoleBindingsGetter
 	RpcPermissionsGetter
 }
 
@@ -56,6 +57,10 @@ func (c *ProxyV1Client) Proxies(namespace string) ProxyInterface {
 
 func (c *ProxyV1Client) Roles(namespace string) RoleInterface {
 	return newRoles(c, namespace)
+}
+
+func (c *ProxyV1Client) RoleBindings(namespace string) RoleBindingInterface {
+	return newRoleBindings(c, namespace)
 }
 
 func (c *ProxyV1Client) RpcPermissions(namespace string) RpcPermissionInterface {

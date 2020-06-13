@@ -39,6 +39,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RpcPermissionList{},
 		&Role{},
 		&RoleList{},
+		&RoleBinding{},
+		&RoleBindingList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

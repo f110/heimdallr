@@ -88,6 +88,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().Proxies().Informer()}, nil
 	case proxyv1.SchemeGroupVersion.WithResource("roles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().Roles().Informer()}, nil
+	case proxyv1.SchemeGroupVersion.WithResource("rolebindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().RoleBindings().Informer()}, nil
 	case proxyv1.SchemeGroupVersion.WithResource("rpcpermissions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().RpcPermissions().Informer()}, nil
 

@@ -39,6 +39,8 @@ type Interface interface {
 	Proxies() ProxyInformer
 	// Roles returns a RoleInformer.
 	Roles() RoleInformer
+	// RoleBindings returns a RoleBindingInformer.
+	RoleBindings() RoleBindingInformer
 	// RpcPermissions returns a RpcPermissionInformer.
 	RpcPermissions() RpcPermissionInformer
 }
@@ -67,6 +69,11 @@ func (v *version) Proxies() ProxyInformer {
 // Roles returns a RoleInformer.
 func (v *version) Roles() RoleInformer {
 	return &roleInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// RoleBindings returns a RoleBindingInformer.
+func (v *version) RoleBindings() RoleBindingInformer {
+	return &roleBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // RpcPermissions returns a RpcPermissionInformer.

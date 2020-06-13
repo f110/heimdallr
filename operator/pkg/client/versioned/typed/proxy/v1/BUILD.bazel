@@ -9,6 +9,7 @@ go_library(
         "proxy.go",
         "proxy_client.go",
         "role.go",
+        "rolebinding.go",
         "rpcpermission.go",
     ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1",

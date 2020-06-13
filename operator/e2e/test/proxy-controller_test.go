@@ -58,9 +58,10 @@ func TestProxyController(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: proxyv1.ProxySpec{
-					Version:  Config.ProxyVersion,
-					Domain:   "e2e.f110.dev",
-					Replicas: 3,
+					Version:     Config.ProxyVersion,
+					EtcdVersion: "v3.4.8",
+					Domain:      "e2e.f110.dev",
+					Replicas:    3,
 					BackendSelector: proxyv1.LabelSelector{
 						LabelSelector: metav1.LabelSelector{},
 					},
@@ -100,14 +101,28 @@ func TestProxyController(t *testing.T) {
 				Spec: proxyv1.RoleSpec{
 					Title:       "administrator",
 					Description: "admin",
-					Bindings: []proxyv1.Binding{
-						{BackendName: "dashboard", Permission: "all"},
-						{BackendName: testServiceBackend.Name, Permission: "all"},
-						{BackendName: disableAuthnTestBackend.Name, Permission: "all"},
-					},
 				},
 			}
 			role, err = client.ProxyV1().Roles(role.Namespace).Create(role)
+			if err != nil {
+				t.Fatal(err)
+			}
+			roleBinding := &proxyv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "admin",
+					Namespace: proxy.Namespace,
+				},
+				RoleRef: proxyv1.RoleRef{
+					Name:      "admin",
+					Namespace: proxy.Namespace,
+				},
+				Subjects: []proxyv1.Subject{
+					{Kind: "Backend", Name: "dashboard", Namespace: proxy.Namespace, Permission: "all"},
+					{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
+					{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
+				},
+			}
+			_, err = client.ProxyV1().RoleBindings(proxy.Namespace).Create(roleBinding)
 			if err != nil {
 				t.Fatal(err)
 			}
