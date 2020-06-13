@@ -116,7 +116,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 	}
 
 	user, err := a.findUser(ctx, req)
-	if backend.AllowAsRootUser && err == ErrUserNotFound {
+	if backend.AllowRootUser && err == ErrUserNotFound {
 		u, err := a.findRootUser(req)
 		if err != nil {
 			return nil, err

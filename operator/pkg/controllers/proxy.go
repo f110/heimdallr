@@ -912,17 +912,17 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			}
 		}
 		proxies = append(proxies, &config.Backend{
-			Name:            name,
-			FQDN:            v.Spec.FQDN,
-			Upstream:        upstream,
-			Permissions:     permissions,
-			WebHook:         v.Spec.Webhook,
-			WebHookPath:     v.Spec.WebhookPath,
-			Agent:           v.Spec.Agent,
-			AllowAsRootUser: v.Spec.AllowRootUser,
-			DisableAuthn:    v.Spec.DisableAuthn,
-			Insecure:        v.Spec.Insecure,
-			AllowHttp:       v.Spec.AllowHttp,
+			Name:          name,
+			FQDN:          v.Spec.FQDN,
+			Upstream:      upstream,
+			Permissions:   permissions,
+			WebHook:       v.Spec.Webhook,
+			WebHookPath:   v.Spec.WebhookPath,
+			Agent:         v.Spec.Agent,
+			AllowRootUser: v.Spec.AllowRootUser,
+			DisableAuthn:  v.Spec.DisableAuthn,
+			Insecure:      v.Spec.Insecure,
+			AllowHttp:     v.Spec.AllowHttp,
 		})
 	}
 	sort.Slice(proxies, func(i, j int) bool {

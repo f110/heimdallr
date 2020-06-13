@@ -165,17 +165,17 @@ type Binding struct {
 }
 
 type Backend struct {
-	Name            string        `json:"name"` // Name is an identifier
-	FQDN            string        `json:"fqdn,omitempty"`
-	Upstream        string        `json:"upstream"`
-	Permissions     []*Permission `json:"permissions"`
-	WebHook         string        `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
-	WebHookPath     []string      `json:"webhook_path,omitempty"`
-	Agent           bool          `json:"agent,omitempty"`
-	AllowAsRootUser bool          `json:"allow_as_root_user,omitempty"`
-	DisableAuthn    bool          `json:"disable_authn,omitempty"`
-	Insecure        bool          `json:"insecure,omitempty"`
-	AllowHttp       bool          `json:"allow_http,omitempty"`
+	Name          string        `json:"name"` // Name is an identifier
+	FQDN          string        `json:"fqdn,omitempty"`
+	Upstream      string        `json:"upstream"`
+	Permissions   []*Permission `json:"permissions"`
+	WebHook       string        `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
+	WebHookPath   []string      `json:"webhook_path,omitempty"`
+	Agent         bool          `json:"agent,omitempty"`
+	AllowRootUser bool          `json:"allow_root_user,omitempty"`
+	DisableAuthn  bool          `json:"disable_authn,omitempty"`
+	Insecure      bool          `json:"insecure,omitempty"`
+	AllowHttp     bool          `json:"allow_http,omitempty"`
 
 	Url           *url.URL        `json:"-"`
 	Socket        bool            `json:"-"`

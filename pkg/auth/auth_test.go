@@ -69,8 +69,8 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 					},
 				},
 				{
-					Name:            "root",
-					AllowAsRootUser: true,
+					Name:          "root",
+					AllowRootUser: true,
 					Permissions: []*config.Permission{
 						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
 					},

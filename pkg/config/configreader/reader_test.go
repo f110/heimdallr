@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.f110.dev/heimdallr/pkg/cert"
 
 	"go.f110.dev/heimdallr/pkg/config"
@@ -119,6 +121,7 @@ logger:
 	}
 
 	conf, err := ReadConfig(f.Name())
+	assert.NoError(t, err)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,8 +161,27 @@ logger:
 }
 
 func TestReadConfigFromFile(t *testing.T) {
-	_, err := ReadConfig("./testdata/config_debug.yaml")
-	if err != nil {
-		t.Fatalf("%+v", err)
+	conf, err := ReadConfig("./testdata/config_debug.yaml")
+	assert.NoError(t, err)
+
+	backends := make(map[string]*config.Backend)
+	for _, v := range conf.General.GetAllBackends() {
+		backends[v.Name] = v
 	}
+	roles := make(map[string]*config.Role)
+	for _, v := range conf.General.GetAllRoles() {
+		roles[v.Name] = v
+	}
+
+	assert.Contains(t, backends, "dashboard")
+	assert.True(t, backends["dashboard"].AllowRootUser)
+	assert.Contains(t, backends, "test")
+	assert.Equal(t, backends["test"].WebHook, "github")
+	assert.Contains(t, backends, "test-agent")
+	assert.True(t, backends["test-agent"].Agent)
+	assert.Contains(t, backends, "short")
+	assert.True(t, backends["short"].DisableAuthn)
+	assert.Equal(t, backends["short"].FQDN, "short.f110.dev")
+
+	assert.Contains(t, roles, "user")
 }

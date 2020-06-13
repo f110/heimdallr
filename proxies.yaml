@@ -21,7 +21,7 @@
         - get: /
 - name: dashboard
   upstream: http://localhost:4100
-  allow_as_root_user: true
+  allow_root_user: true
   permissions:
     - name: all
       locations:
