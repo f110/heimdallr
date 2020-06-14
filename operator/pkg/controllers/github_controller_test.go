@@ -8,9 +8,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -18,33 +20,77 @@ import (
 )
 
 func TestGitHubController(t *testing.T) {
-	f := newGitHubControllerTestRunner(t)
+	t.Run("CreateHook", func(t *testing.T) {
+		t.Parallel()
 
-	f.transport.RegisterResponder(
-		http.MethodPost,
-		"https://api.github.com/app/installations/2/access_tokens",
-		httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
-	)
-	f.transport.RegisterResponder(
-		http.MethodGet,
-		"https://api.github.com/repos/f110/heimdallr/hooks",
-		httpmock.NewStringResponder(http.StatusOK, `[]`),
-	)
-	f.transport.RegisterResponder(
-		http.MethodPost,
-		"https://api.github.com/repos/f110/heimdallr/hooks",
-		httpmock.NewStringResponder(http.StatusOK, `{}`),
-	)
+		f := newGitHubControllerTestRunner(t)
 
-	proxy, backend, secrets := githubControllerFixtures(t, "test")
-	f.RegisterProxyFixture(proxy)
-	f.RegisterBackendFixture(backend)
-	f.RegisterSecretFixture(secrets...)
+		f.transport.RegisterResponder(
+			http.MethodPost,
+			"https://api.github.com/app/installations/2/access_tokens",
+			httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
+		)
+		f.transport.RegisterResponder(
+			http.MethodGet,
+			"https://api.github.com/repos/f110/heimdallr/hooks",
+			httpmock.NewStringResponder(http.StatusOK, `[]`),
+		)
+		f.transport.RegisterResponder(
+			http.MethodPost,
+			"https://api.github.com/repos/f110/heimdallr/hooks",
+			httpmock.NewStringResponder(http.StatusOK, `{}`),
+		)
 
-	f.ExpectUpdateBackendStatus()
-	f.Run(t, backend)
+		proxy, backend, secrets := githubControllerFixtures(t, "test")
+		f.RegisterProxyFixture(proxy)
+		f.RegisterBackendFixture(backend)
+		f.RegisterSecretFixture(secrets...)
 
-	ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
+		f.ExpectUpdateBackend()
+		f.ExpectUpdateBackendStatus()
+		f.Run(t, backend)
+
+		ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
+
+		updatedB, err := f.client.ProxyV1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Contains(t, updatedB.Finalizers, githubControllerFinalizerName)
+	})
+
+	t.Run("DeleteHook", func(t *testing.T) {
+		t.Parallel()
+
+		f := newGitHubControllerTestRunner(t)
+
+		proxy, backend, secrets := githubControllerFixtures(t, "test")
+		now := metav1.Now()
+		backend.DeletionTimestamp = &now
+		backend.Finalizers = append(backend.Finalizers, githubControllerFinalizerName)
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1.WebhookConfigurationStatus{
+			Id:         1234,
+			Repository: "f110/heimdallr",
+			UpdateTime: metav1.Now(),
+		})
+		f.RegisterProxyFixture(proxy)
+		f.RegisterBackendFixture(backend)
+		f.RegisterSecretFixture(secrets...)
+
+		f.transport.RegisterResponder(
+			http.MethodPost,
+			"https://api.github.com/app/installations/2/access_tokens",
+			httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
+		)
+		f.transport.RegisterRegexpResponder(
+			http.MethodDelete,
+			regexp.MustCompile(`/repos/f110/heimdallr/hooks/1234$`),
+			httpmock.NewStringResponder(http.StatusNoContent, ""),
+		)
+
+		f.ExpectUpdateBackend()
+		f.Run(t, backend)
+	})
 }
 
 func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {

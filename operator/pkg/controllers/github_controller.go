@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -25,6 +26,7 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
@@ -33,6 +35,10 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1"
+)
+
+const (
+	githubControllerFinalizerName = "github-controller.heimdallr.f110.dev/finalizer"
 )
 
 type GitHubController struct {
@@ -130,34 +136,28 @@ func (c *GitHubController) syncBackend(key string) error {
 		klog.V(4).Infof("not set WebhookConfiguration")
 		return nil
 	}
-	secretNamespace := backend.Spec.WebhookConfiguration.CredentialSecretNamespace
-	if secretNamespace == "" {
-		secretNamespace = backend.Namespace
-	}
-	secret, err := c.secretLister.Secrets(secretNamespace).Get(backend.Spec.WebhookConfiguration.CredentialSecretName)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			klog.V(4).Infof("%s is not found", backend.Spec.WebhookConfiguration.CredentialSecretName)
-			return nil
+
+	if backend.DeletionTimestamp.IsZero() {
+		if !containsString(backend.Finalizers, githubControllerFinalizerName) {
+			backend.ObjectMeta.Finalizers = append(backend.ObjectMeta.Finalizers, githubControllerFinalizerName)
+			_, err = c.client.ProxyV1().Backends(backend.Namespace).Update(backend)
+			if err != nil {
+				return err
+			}
 		}
+	}
 
-		return xerrors.Errorf(": %w", err)
+	// Object has been deleted
+	if !backend.DeletionTimestamp.IsZero() {
+		return c.finalizeBackend(backend)
 	}
-	appId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.AppIdKey]), 10, 64)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	installationId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.InstallationIdKey]), 10, 64)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	ghClient := github.NewClient(&http.Client{Transport: rt})
-	originalBackend := backend.DeepCopy()
 
+	ghClient, err := c.newGithubClient(backend)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	updatedB := backend.DeepCopy()
 Spec:
 	for _, ownerAndRepo := range backend.Spec.WebhookConfiguration.Repositories {
 		for _, v := range backend.Status.WebhookConfigurations {
@@ -231,27 +231,137 @@ Spec:
 						"secret":       string(secret.Data[githubWebhookSecretFilename]),
 					},
 				}
-				_, _, err = ghClient.Repositories.CreateHook(context.Background(), owner, repo, newHook)
+				klog.V(4).Infof("Create new hook: %s/%s", owner, repo)
+				newHook, _, err = ghClient.Repositories.CreateHook(context.Background(), owner, repo, newHook)
 				if err != nil {
 					klog.Infof("Failed create hook: %v", err)
 					continue
 				}
 
-				backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
-					&proxyv1.WebhookConfigurationStatus{Repository: ownerAndRepo, UpdateTime: metav1.Now()},
+				updatedB.Status.WebhookConfigurations = append(updatedB.Status.WebhookConfigurations,
+					&proxyv1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: ownerAndRepo, UpdateTime: metav1.Now()},
 				)
 			}
 		}
 	}
 
-	if !reflect.DeepEqual(backend.Status, originalBackend.Status) {
-		_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
+	if !reflect.DeepEqual(backend.Status, updatedB.Status) {
+		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			backend, err := c.backendLister.Backends(updatedB.Namespace).Get(updatedB.Name)
+			if err != nil {
+				return err
+			}
+
+			backend.Status = updatedB.Status
+			_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
+			if err != nil {
+				klog.Infof("Failed update backend: %v", err)
+				return err
+			}
+			return nil
+		})
 		if err != nil {
-			klog.Infof("Failed update backend: %v", err)
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
+	if len(backend.Status.WebhookConfigurations) == 0 {
+		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+			if err != nil {
+				return err
+			}
+
+			updatedB := backend.DeepCopy()
+			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
+			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
+				_, err = c.client.ProxyV1().Backends(updatedB.Namespace).Update(updatedB)
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		return nil
+	}
+
+	ghClient, err := c.newGithubClient(backend)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	webhookConfigurations := make([]*proxyv1.WebhookConfigurationStatus, 0)
+	for _, v := range backend.Status.WebhookConfigurations {
+		if v.Id == 0 {
+			continue
+		}
+		s := strings.SplitN(v.Repository, "/", 2)
+		owner, repo := s[0], s[1]
+
+		klog.V(4).Infof("Delete hook: %s/%s/%d", owner, repo, v.Id)
+		_, err := ghClient.Repositories.DeleteHook(context.Background(), owner, repo, v.Id)
+		if err != nil {
+			log.Print(err)
+			klog.V(4).Infof("Failed delete hook: %v", err)
+			webhookConfigurations = append(webhookConfigurations, v)
+		}
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		backend, err = c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+		if err != nil {
+			return err
+		}
+
+		updatedB := backend.DeepCopy()
+		updatedB.Status.WebhookConfigurations = webhookConfigurations
+		if len(updatedB.Status.WebhookConfigurations) == 0 {
+			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
+		}
+		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
+			_, err = c.client.ProxyV1().Backends(updatedB.Namespace).Update(updatedB)
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	return nil
+}
+
+func (c *GitHubController) newGithubClient(backend *proxyv1.Backend) (*github.Client, error) {
+	secretNamespace := backend.Spec.WebhookConfiguration.CredentialSecretNamespace
+	if secretNamespace == "" {
+		secretNamespace = backend.Namespace
+	}
+	secret, err := c.secretLister.Secrets(secretNamespace).Get(backend.Spec.WebhookConfiguration.CredentialSecretName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	appId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.AppIdKey]), 10, 64)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	installationId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.InstallationIdKey]), 10, 64)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return github.NewClient(&http.Client{Transport: rt}), nil
 }
 
 func (c *GitHubController) worker() {
@@ -339,4 +449,27 @@ func (c *GitHubController) enqueue(backend *proxyv1.Backend) {
 		klog.V(4).Infof("Enqueue: %s", key)
 		c.queue.Add(key)
 	}
+}
+
+func containsString(v []string, s string) bool {
+	for _, item := range v {
+		if item == s {
+			return true
+		}
+	}
+
+	return false
+}
+
+func removeString(v []string, s string) []string {
+	result := make([]string, 0, len(v))
+	for _, item := range v {
+		if item == s {
+			continue
+		}
+
+		result = append(result, item)
+	}
+
+	return result
 }

@@ -184,11 +184,16 @@ spec:
               webhookConfiguration:
                 items:
                   properties:
+                    id:
+                      format: int64
+                      type: integer
                     repository:
                       type: string
                     updateTime:
                       format: date-time
                       type: string
+                  required:
+                  - id
                   type: object
                 type: array
             type: object
