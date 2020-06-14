@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Role
 metadata:
   name: role-sample
@@ -16,7 +16,7 @@ spec:
     - backendName: backend-fqdn
       permission: all
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Role
 metadata:
   name: role-sample-2

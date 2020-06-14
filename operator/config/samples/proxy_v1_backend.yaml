@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: backend-sample
@@ -22,7 +22,7 @@ spec:
     path: /webhook
     events: ["push"]
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: backend-agent-sample
@@ -37,7 +37,7 @@ spec:
       locations:
         - get: /
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: backend-fqdn
@@ -51,7 +51,7 @@ spec:
       locations:
         - any: /
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: backend-kubernetes

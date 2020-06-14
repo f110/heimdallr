@@ -34,12 +34,12 @@ import (
 	"k8s.io/klog"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	etcdListers "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
-	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1"
+	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
 )
 
 var (
@@ -97,11 +97,11 @@ func NewProxyController(
 	cmClient cmClientset.Interface,
 	mClient mClientset.Interface,
 ) (*ProxyController, error) {
-	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
-	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
-	roleInformer := sharedInformerFactory.Proxy().V1().Roles()
-	roleBindingInformer := sharedInformerFactory.Proxy().V1().RoleBindings()
-	rpcPermissionInformer := sharedInformerFactory.Proxy().V1().RpcPermissions()
+	proxyInformer := sharedInformerFactory.Proxy().V1alpha1().Proxies()
+	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
+	roleInformer := sharedInformerFactory.Proxy().V1alpha1().Roles()
+	roleBindingInformer := sharedInformerFactory.Proxy().V1alpha1().RoleBindings()
+	rpcPermissionInformer := sharedInformerFactory.Proxy().V1alpha1().RpcPermissions()
 	ecInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
@@ -261,8 +261,8 @@ func (c *ProxyController) syncProxy(key string) error {
 	}
 
 	if proxy.Status.Phase == "" {
-		proxy.Status.Phase = proxyv1.ProxyPhaseCreating
-		proxy, err = c.clientset.ProxyV1().Proxies(proxy.Namespace).UpdateStatus(proxy)
+		proxy.Status.Phase = proxyv1alpha1.ProxyPhaseCreating
+		proxy, err = c.clientset.ProxyV1alpha1().Proxies(proxy.Namespace).UpdateStatus(proxy)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -290,12 +290,12 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rpcPermissions, err := c.clientset.ProxyV1().RpcPermissions("").List(metav1.ListOptions{LabelSelector: selector.String()})
+	rpcPermissions, err := c.clientset.ProxyV1alpha1().RpcPermissions("").List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	rolesMap := make(map[string]*proxyv1.Role)
+	rolesMap := make(map[string]*proxyv1alpha1.Role)
 	for _, v := range roles {
 		rolesMap[fmt.Sprintf("%s/%s", v.Namespace, v.Name)] = v
 	}
@@ -303,7 +303,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1.RoleBinding) bool {
+	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
 		_, ok := rolesMap[fmt.Sprintf("%s/%s", binding.RoleRef.Namespace, binding.RoleRef.Name)]
 		return ok
 	})
@@ -341,7 +341,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
+		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -531,13 +531,13 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 		}
 
 		if !found && !backend.CreationTimestamp.IsZero() {
-			backend.Status.DeployedBy = append(backend.Status.DeployedBy, &proxyv1.ProxyReference{
+			backend.Status.DeployedBy = append(backend.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
 				Name:      lp.Name,
 				Namespace: lp.Namespace,
 				Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
 			})
 
-			_, err := c.clientset.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
+			_, err := c.clientset.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(backend)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -550,7 +550,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 func (c *ProxyController) finishReconcile(lp *HeimdallrProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = c.isReady(lp)
-	newP.Status.Phase = proxyv1.ProxyPhaseRunning
+	newP.Status.Phase = proxyv1alpha1.ProxyPhaseRunning
 	newP.Status.CASecretName = lp.CASecretName()
 	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
 	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()
@@ -558,7 +558,7 @@ func (c *ProxyController) finishReconcile(lp *HeimdallrProxy) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1().Proxies(newP.Namespace).UpdateStatus(newP)
+		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(newP)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -814,13 +814,13 @@ func (c *ProxyController) createOrUpdateServiceMonitor(lp *HeimdallrProxy, servi
 	return nil
 }
 
-func (c *ProxyController) searchParentProxy(m *metav1.ObjectMeta) ([]*proxyv1.Proxy, error) {
+func (c *ProxyController) searchParentProxy(m *metav1.ObjectMeta) ([]*proxyv1alpha1.Proxy, error) {
 	ret, err := c.proxyLister.List(labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	targets := make([]*proxyv1.Proxy, 0)
+	targets := make([]*proxyv1alpha1.Proxy, 0)
 Item:
 	for _, v := range ret {
 		if m.Labels != nil {
@@ -877,7 +877,7 @@ func (c *ProxyController) processNextItem() bool {
 	return true
 }
 
-func (c *ProxyController) enqueue(proxy *proxyv1.Proxy) {
+func (c *ProxyController) enqueue(proxy *proxyv1alpha1.Proxy) {
 	if key, err := cache.MetaNamespaceKeyFunc(proxy); err != nil {
 		return
 	} else {
@@ -898,13 +898,13 @@ func (c *ProxyController) enqueueSubordinateResource(m *metav1.ObjectMeta) error
 	return nil
 }
 
-func (c *ProxyController) enqueueDependentProxy(role *proxyv1.Role) error {
+func (c *ProxyController) enqueueDependentProxy(role *proxyv1alpha1.Role) error {
 	proxies, err := c.proxyLister.List(labels.Everything())
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	target := make(map[string]*proxyv1.Proxy)
+	target := make(map[string]*proxyv1alpha1.Proxy)
 NextProxy:
 	for _, proxy := range proxies {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
@@ -934,14 +934,14 @@ NextProxy:
 }
 
 func (c *ProxyController) addProxy(obj interface{}) {
-	proxy := obj.(*proxyv1.Proxy)
+	proxy := obj.(*proxyv1alpha1.Proxy)
 
 	c.enqueue(proxy)
 }
 
 func (c *ProxyController) updateProxy(before, after interface{}) {
-	beforeProxy := before.(*proxyv1.Proxy)
-	afterProxy := after.(*proxyv1.Proxy)
+	beforeProxy := before.(*proxyv1alpha1.Proxy)
+	afterProxy := after.(*proxyv1alpha1.Proxy)
 
 	if beforeProxy.UID != afterProxy.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(beforeProxy); err != nil {
@@ -955,13 +955,13 @@ func (c *ProxyController) updateProxy(before, after interface{}) {
 }
 
 func (c *ProxyController) deleteProxy(obj interface{}) {
-	proxy, ok := obj.(*proxyv1.Proxy)
+	proxy, ok := obj.(*proxyv1alpha1.Proxy)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		proxy, ok = tombstone.Obj.(*proxyv1.Proxy)
+		proxy, ok = tombstone.Obj.(*proxyv1alpha1.Proxy)
 		if !ok {
 			return
 		}
@@ -971,7 +971,7 @@ func (c *ProxyController) deleteProxy(obj interface{}) {
 }
 
 func (c *ProxyController) addBackend(obj interface{}) {
-	backend := obj.(*proxyv1.Backend)
+	backend := obj.(*proxyv1alpha1.Backend)
 
 	if err := c.enqueueSubordinateResource(&backend.ObjectMeta); err != nil {
 		return
@@ -979,8 +979,8 @@ func (c *ProxyController) addBackend(obj interface{}) {
 }
 
 func (c *ProxyController) updateBackend(before, after interface{}) {
-	beforeBackend := before.(*proxyv1.Backend)
-	afterBackend := after.(*proxyv1.Backend)
+	beforeBackend := before.(*proxyv1alpha1.Backend)
+	afterBackend := after.(*proxyv1alpha1.Backend)
 
 	if beforeBackend.UID != afterBackend.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(beforeBackend); err != nil {
@@ -996,13 +996,13 @@ func (c *ProxyController) updateBackend(before, after interface{}) {
 }
 
 func (c *ProxyController) deleteBackend(obj interface{}) {
-	backend, ok := obj.(*proxyv1.Backend)
+	backend, ok := obj.(*proxyv1alpha1.Backend)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		backend, ok = tombstone.Obj.(*proxyv1.Backend)
+		backend, ok = tombstone.Obj.(*proxyv1alpha1.Backend)
 		if !ok {
 			return
 		}
@@ -1014,7 +1014,7 @@ func (c *ProxyController) deleteBackend(obj interface{}) {
 }
 
 func (c *ProxyController) addRole(obj interface{}) {
-	role := obj.(*proxyv1.Role)
+	role := obj.(*proxyv1alpha1.Role)
 
 	if err := c.enqueueSubordinateResource(&role.ObjectMeta); err != nil {
 		return
@@ -1022,8 +1022,8 @@ func (c *ProxyController) addRole(obj interface{}) {
 }
 
 func (c *ProxyController) updateRole(before, after interface{}) {
-	beforeRole := before.(*proxyv1.Role)
-	afterRole := after.(*proxyv1.Role)
+	beforeRole := before.(*proxyv1alpha1.Role)
+	afterRole := after.(*proxyv1alpha1.Role)
 
 	if beforeRole.UID != afterRole.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(beforeRole); err != nil {
@@ -1039,13 +1039,13 @@ func (c *ProxyController) updateRole(before, after interface{}) {
 }
 
 func (c *ProxyController) deleteRole(obj interface{}) {
-	role, ok := obj.(*proxyv1.Role)
+	role, ok := obj.(*proxyv1alpha1.Role)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		role, ok = tombstone.Obj.(*proxyv1.Role)
+		role, ok = tombstone.Obj.(*proxyv1alpha1.Role)
 		if !ok {
 			return
 		}
@@ -1057,7 +1057,7 @@ func (c *ProxyController) deleteRole(obj interface{}) {
 }
 
 func (c *ProxyController) addRoleBinding(obj interface{}) {
-	roleBinding := obj.(*proxyv1.RoleBinding)
+	roleBinding := obj.(*proxyv1alpha1.RoleBinding)
 
 	role, err := c.roleLister.Roles(roleBinding.RoleRef.Namespace).Get(roleBinding.RoleRef.Name)
 	if err != nil {
@@ -1070,8 +1070,8 @@ func (c *ProxyController) addRoleBinding(obj interface{}) {
 }
 
 func (c *ProxyController) updateRoleBinding(before, after interface{}) {
-	beforeRoleBinding := before.(*proxyv1.RoleBinding)
-	afterRoleBinding := after.(*proxyv1.RoleBinding)
+	beforeRoleBinding := before.(*proxyv1alpha1.RoleBinding)
+	afterRoleBinding := after.(*proxyv1alpha1.RoleBinding)
 
 	if beforeRoleBinding.UID != afterRoleBinding.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(beforeRoleBinding); err != nil {
@@ -1092,13 +1092,13 @@ func (c *ProxyController) updateRoleBinding(before, after interface{}) {
 }
 
 func (c *ProxyController) deleteRoleBinding(obj interface{}) {
-	roleBinding, ok := obj.(*proxyv1.RoleBinding)
+	roleBinding, ok := obj.(*proxyv1alpha1.RoleBinding)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		roleBinding, ok = tombstone.Obj.(*proxyv1.RoleBinding)
+		roleBinding, ok = tombstone.Obj.(*proxyv1alpha1.RoleBinding)
 		if !ok {
 			return
 		}
@@ -1115,7 +1115,7 @@ func (c *ProxyController) deleteRoleBinding(obj interface{}) {
 }
 
 func (c *ProxyController) addRpcPermission(obj interface{}) {
-	rpcPermission := obj.(*proxyv1.RpcPermission)
+	rpcPermission := obj.(*proxyv1alpha1.RpcPermission)
 
 	if err := c.enqueueSubordinateResource(&rpcPermission.ObjectMeta); err != nil {
 		return
@@ -1123,8 +1123,8 @@ func (c *ProxyController) addRpcPermission(obj interface{}) {
 }
 
 func (c *ProxyController) updateRpcPermission(before, after interface{}) {
-	beforeRpcPermission := before.(*proxyv1.RpcPermission)
-	afterRpcPermission := after.(*proxyv1.RpcPermission)
+	beforeRpcPermission := before.(*proxyv1alpha1.RpcPermission)
+	afterRpcPermission := after.(*proxyv1alpha1.RpcPermission)
 
 	if beforeRpcPermission.UID != afterRpcPermission.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(beforeRpcPermission); err != nil {
@@ -1140,13 +1140,13 @@ func (c *ProxyController) updateRpcPermission(before, after interface{}) {
 }
 
 func (c *ProxyController) deleteRpcPermission(obj interface{}) {
-	rpcPermission, ok := obj.(*proxyv1.RpcPermission)
+	rpcPermission, ok := obj.(*proxyv1alpha1.RpcPermission)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		rpcPermission, ok = tombstone.Obj.(*proxyv1.RpcPermission)
+		rpcPermission, ok = tombstone.Obj.(*proxyv1alpha1.RpcPermission)
 		if !ok {
 			return
 		}

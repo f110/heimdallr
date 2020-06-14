@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Proxy
 metadata:
   name: proxy-sample

@@ -18,7 +18,7 @@ import (
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	. "go.f110.dev/heimdallr/operator/e2e/framework"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/config"
 )
@@ -52,23 +52,23 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			proxy := &proxyv1.Proxy{
+			proxy := &proxyv1alpha1.Proxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "create",
 					Namespace: "default",
 				},
-				Spec: proxyv1.ProxySpec{
+				Spec: proxyv1alpha1.ProxySpec{
 					Version:     Config.ProxyVersion,
 					EtcdVersion: "v3.4.8",
 					Domain:      "e2e.f110.dev",
 					Replicas:    3,
-					BackendSelector: proxyv1.LabelSelector{
+					BackendSelector: proxyv1alpha1.LabelSelector{
 						LabelSelector: metav1.LabelSelector{},
 					},
-					IdentityProvider: proxyv1.IdentityProviderSpec{
+					IdentityProvider: proxyv1alpha1.IdentityProviderSpec{
 						Provider: "google",
 						ClientId: "e2e",
-						ClientSecretRef: proxyv1.SecretSelector{
+						ClientSecretRef: proxyv1alpha1.SecretSelector{
 							Name: clientSecret.Name,
 							Key:  "client-secret",
 						},
@@ -77,7 +77,7 @@ func TestProxyController(t *testing.T) {
 						Kind: "ClusterIssuer",
 						Name: "self-signed",
 					},
-					Session: proxyv1.SessionSpec{
+					Session: proxyv1alpha1.SessionSpec{
 						Type: config.SessionTypeSecureCookie,
 					},
 					RootUsers: []string{testUserId},
@@ -92,54 +92,54 @@ func TestProxyController(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			role := &proxyv1.Role{
+			role := &proxyv1alpha1.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 					Labels:    proxy.Spec.RoleSelector.MatchLabels,
 				},
-				Spec: proxyv1.RoleSpec{
+				Spec: proxyv1alpha1.RoleSpec{
 					Title:       "administrator",
 					Description: "admin",
 				},
 			}
-			role, err = client.ProxyV1().Roles(role.Namespace).Create(role)
+			role, err = client.ProxyV1alpha1().Roles(role.Namespace).Create(role)
 			if err != nil {
 				t.Fatal(err)
 			}
-			roleBinding := &proxyv1.RoleBinding{
+			roleBinding := &proxyv1alpha1.RoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 				},
-				RoleRef: proxyv1.RoleRef{
+				RoleRef: proxyv1alpha1.RoleRef{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 				},
-				Subjects: []proxyv1.Subject{
+				Subjects: []proxyv1alpha1.Subject{
 					{Kind: "Backend", Name: "dashboard", Namespace: proxy.Namespace, Permission: "all"},
 					{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
 					{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
 				},
 			}
-			_, err = client.ProxyV1().RoleBindings(proxy.Namespace).Create(roleBinding)
+			_, err = client.ProxyV1alpha1().RoleBindings(proxy.Namespace).Create(roleBinding)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = client.ProxyV1().Proxies(proxy.Namespace).Create(proxy)
+			_, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Create(proxy)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1.ProxyPhaseRunning, 15*time.Minute); err != nil {
+			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1alpha1.ProxyPhaseRunning, 15*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 			if err := e2eutil.WaitForReadyOfProxy(client, proxy, 10*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 
-			proxy, err = client.ProxyV1().Proxies(proxy.Namespace).Get(proxy.Name, metav1.GetOptions{})
+			proxy, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Get(proxy.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

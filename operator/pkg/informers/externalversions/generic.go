@@ -33,6 +33,7 @@ import (
 	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -92,6 +93,18 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().RoleBindings().Informer()}, nil
 	case proxyv1.SchemeGroupVersion.WithResource("rpcpermissions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1().RpcPermissions().Informer()}, nil
+
+		// Group=proxy.f110.dev, Version=v1alpha1
+	case proxyv1alpha1.SchemeGroupVersion.WithResource("backends"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1alpha1().Backends().Informer()}, nil
+	case proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1alpha1().Proxies().Informer()}, nil
+	case proxyv1alpha1.SchemeGroupVersion.WithResource("roles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1alpha1().Roles().Informer()}, nil
+	case proxyv1alpha1.SchemeGroupVersion.WithResource("rolebindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1alpha1().RoleBindings().Informer()}, nil
+	case proxyv1alpha1.SchemeGroupVersion.WithResource("rpcpermissions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Proxy().V1alpha1().RpcPermissions().Informer()}, nil
 
 	}
 

@@ -30,11 +30,11 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
-	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1"
+	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
 )
 
 const (
@@ -67,8 +67,8 @@ func NewGitHubController(
 	client clientset.Interface,
 	transport http.RoundTripper,
 ) (*GitHubController, error) {
-	backendInformer := sharedInformerFactory.Proxy().V1().Backends()
-	proxyInformer := sharedInformerFactory.Proxy().V1().Proxies()
+	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
+	proxyInformer := sharedInformerFactory.Proxy().V1alpha1().Proxies()
 
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
@@ -140,7 +140,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	if backend.DeletionTimestamp.IsZero() {
 		if !containsString(backend.Finalizers, githubControllerFinalizerName) {
 			backend.ObjectMeta.Finalizers = append(backend.ObjectMeta.Finalizers, githubControllerFinalizerName)
-			_, err = c.client.ProxyV1().Backends(backend.Namespace).Update(backend)
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(backend)
 			if err != nil {
 				return err
 			}
@@ -239,7 +239,7 @@ Spec:
 				}
 
 				updatedB.Status.WebhookConfigurations = append(updatedB.Status.WebhookConfigurations,
-					&proxyv1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: ownerAndRepo, UpdateTime: metav1.Now()},
+					&proxyv1alpha1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: ownerAndRepo, UpdateTime: metav1.Now()},
 				)
 			}
 		}
@@ -253,7 +253,7 @@ Spec:
 			}
 
 			backend.Status = updatedB.Status
-			_, err = c.client.ProxyV1().Backends(backend.Namespace).UpdateStatus(backend)
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(backend)
 			if err != nil {
 				klog.Infof("Failed update backend: %v", err)
 				return err
@@ -268,7 +268,7 @@ Spec:
 	return nil
 }
 
-func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
+func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error {
 	if len(backend.Status.WebhookConfigurations) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
@@ -279,7 +279,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
 			updatedB := backend.DeepCopy()
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1().Backends(updatedB.Namespace).Update(updatedB)
+				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(updatedB)
 				return err
 			}
 			return nil
@@ -295,7 +295,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	webhookConfigurations := make([]*proxyv1.WebhookConfigurationStatus, 0)
+	webhookConfigurations := make([]*proxyv1alpha1.WebhookConfigurationStatus, 0)
 	for _, v := range backend.Status.WebhookConfigurations {
 		if v.Id == 0 {
 			continue
@@ -324,7 +324,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-			_, err = c.client.ProxyV1().Backends(updatedB.Namespace).Update(updatedB)
+			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(updatedB)
 			return err
 		}
 		return nil
@@ -335,7 +335,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1.Backend) error {
 	return nil
 }
 
-func (c *GitHubController) newGithubClient(backend *proxyv1.Backend) (*github.Client, error) {
+func (c *GitHubController) newGithubClient(backend *proxyv1alpha1.Backend) (*github.Client, error) {
 	secretNamespace := backend.Spec.WebhookConfiguration.CredentialSecretNamespace
 	if secretNamespace == "" {
 		secretNamespace = backend.Namespace
@@ -405,14 +405,14 @@ func (c *GitHubController) processNextItem() bool {
 }
 
 func (c *GitHubController) addBackend(obj interface{}) {
-	backend := obj.(*proxyv1.Backend)
+	backend := obj.(*proxyv1alpha1.Backend)
 
 	c.enqueue(backend)
 }
 
 func (c *GitHubController) updateBackend(old, cur interface{}) {
-	oldBackend := old.(*proxyv1.Backend)
-	curBackend := cur.(*proxyv1.Backend)
+	oldBackend := old.(*proxyv1alpha1.Backend)
+	curBackend := cur.(*proxyv1alpha1.Backend)
 
 	if oldBackend.UID != curBackend.UID {
 		if key, err := cache.MetaNamespaceKeyFunc(oldBackend); err != nil {
@@ -426,13 +426,13 @@ func (c *GitHubController) updateBackend(old, cur interface{}) {
 }
 
 func (c *GitHubController) deleteBackend(obj interface{}) {
-	backend, ok := obj.(*proxyv1.Backend)
+	backend, ok := obj.(*proxyv1alpha1.Backend)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			return
 		}
-		backend, ok = tombstone.Obj.(*proxyv1.Backend)
+		backend, ok = tombstone.Obj.(*proxyv1alpha1.Backend)
 		if !ok {
 			return
 		}
@@ -441,7 +441,7 @@ func (c *GitHubController) deleteBackend(obj interface{}) {
 	c.enqueue(backend)
 }
 
-func (c *GitHubController) enqueue(backend *proxyv1.Backend) {
+func (c *GitHubController) enqueue(backend *proxyv1alpha1.Backend) {
 	if key, err := cache.MetaNamespaceKeyFunc(backend); err != nil {
 		klog.Info(err)
 		return

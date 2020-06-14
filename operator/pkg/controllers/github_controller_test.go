@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 )
 
 func TestGitHubController(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGitHubController(t *testing.T) {
 
 		ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
 
-		updatedB, err := f.client.ProxyV1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
+		updatedB, err := f.client.ProxyV1alpha1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,7 +68,7 @@ func TestGitHubController(t *testing.T) {
 		now := metav1.Now()
 		backend.DeletionTimestamp = &now
 		backend.Finalizers = append(backend.Finalizers, githubControllerFinalizerName)
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1.WebhookConfigurationStatus{
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1alpha1.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
 			UpdateTime: metav1.Now(),
@@ -99,7 +99,7 @@ func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {
 	}
 }
 
-func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1.Proxy, backend *proxyv1.Backend, secret []*corev1.Secret) {
+func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1alpha1.Proxy, backend *proxyv1alpha1.Backend, secret []*corev1.Secret) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -110,29 +110,29 @@ func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1.Proxy, 
 		t.Fatal(err)
 	}
 
-	p := &proxyv1.Proxy{
+	p := &proxyv1alpha1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: proxyv1.ProxySpec{
+		Spec: proxyv1alpha1.ProxySpec{
 			Domain: "test-proxy.f110.dev",
 		},
-		Status: proxyv1.ProxyStatus{
+		Status: proxyv1alpha1.ProxyStatus{
 			GithubWebhookSecretName: "github-webhook-secret",
 		},
 	}
 
-	b := &proxyv1.Backend{
+	b := &proxyv1alpha1.Backend{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: proxyv1.BackendSpec{
+		Spec: proxyv1alpha1.BackendSpec{
 			Layer:   "test",
 			Webhook: "github",
-			WebhookConfiguration: &proxyv1.WebhookConfiguration{
-				GitHubHookConfiguration: proxyv1.GitHubHookConfiguration{
+			WebhookConfiguration: &proxyv1alpha1.WebhookConfiguration{
+				GitHubHookConfiguration: proxyv1alpha1.GitHubHookConfiguration{
 					Path:                 "/hook",
 					ContentType:          "application/json",
 					Events:               []string{"push"},
@@ -144,8 +144,8 @@ func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1.Proxy, 
 				},
 			},
 		},
-		Status: proxyv1.BackendStatus{
-			DeployedBy: []*proxyv1.ProxyReference{
+		Status: proxyv1alpha1.BackendStatus{
+			DeployedBy: []*proxyv1alpha1.ProxyReference{
 				{Name: p.Name, Namespace: metav1.NamespaceDefault, Url: fmt.Sprintf("https://test.test.%s", p.Spec.Domain)},
 			},
 		},

@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: RpcPermission
 metadata:
   name: rpcpermission-sample
@@ -6,7 +6,7 @@ spec:
   allow:
     - proxy.rpc.admin.*
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: RoleBinding
 metadata:
   name: rpcpermission-sample-admin

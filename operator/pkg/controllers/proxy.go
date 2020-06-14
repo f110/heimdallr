@@ -31,7 +31,7 @@ import (
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -95,8 +95,8 @@ type process struct {
 type HeimdallrProxy struct {
 	Name                string
 	Namespace           string
-	Object              *proxyv1.Proxy
-	Spec                proxyv1.ProxySpec
+	Object              *proxyv1alpha1.Proxy
+	Spec                proxyv1alpha1.ProxySpec
 	Datastore           *etcdv1alpha1.EtcdCluster
 	CASecret            *corev1.Secret
 	SigningPrivateKey   *corev1.Secret
@@ -111,21 +111,21 @@ type HeimdallrProxy struct {
 	cmClient      cmClientset.Interface
 	serviceLister listers.ServiceLister
 
-	backends         []*proxyv1.Backend
-	roles            []*proxyv1.Role
-	rpcPermissions   []proxyv1.RpcPermission
-	roleBindings     []*proxyv1.RoleBinding
+	backends         []*proxyv1alpha1.Backend
+	roles            []*proxyv1alpha1.Role
+	rpcPermissions   []proxyv1alpha1.RpcPermission
+	roleBindings     []*proxyv1alpha1.RoleBinding
 	selfSignedIssuer bool
 }
 
 type HeimdallrProxyParams struct {
-	Spec              *proxyv1.Proxy
+	Spec              *proxyv1alpha1.Proxy
 	CertManagerClient cmClientset.Interface
 	ServiceLister     listers.ServiceLister
-	Backends          []*proxyv1.Backend
-	Roles             []*proxyv1.Role
-	RpcPermissions    []proxyv1.RpcPermission
-	RoleBindings      []*proxyv1.RoleBinding
+	Backends          []*proxyv1alpha1.Backend
+	Roles             []*proxyv1alpha1.Role
+	RpcPermissions    []proxyv1alpha1.RpcPermission
+	RoleBindings      []*proxyv1alpha1.RoleBinding
 }
 
 func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
@@ -151,18 +151,18 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	}
 
 	if !found {
-		r.backends = append(r.backends, &proxyv1.Backend{
+		r.backends = append(r.backends, &proxyv1alpha1.Backend{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dashboard",
 				Namespace: opt.Spec.Namespace,
 			},
-			Spec: proxyv1.BackendSpec{
+			Spec: proxyv1alpha1.BackendSpec{
 				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
 				AllowRootUser: true,
-				Permissions: []proxyv1.Permission{
+				Permissions: []proxyv1alpha1.Permission{
 					{
 						Name: "all",
-						Locations: []proxyv1.Location{
+						Locations: []proxyv1alpha1.Location{
 							{Any: "/"},
 						},
 					},
@@ -179,26 +179,26 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		}
 	}
 	if !found {
-		r.roles = append(r.roles, &proxyv1.Role{
+		r.roles = append(r.roles, &proxyv1alpha1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
 			},
-			Spec: proxyv1.RoleSpec{
+			Spec: proxyv1alpha1.RoleSpec{
 				Title:       "administrator",
 				Description: fmt.Sprintf("%s administrators", r.Name),
-				Bindings: []proxyv1.Binding{
+				Bindings: []proxyv1alpha1.Binding{
 					{BackendName: "dashboard", Namespace: r.Namespace, Permission: "all"},
 					{RpcPermissionName: "admin"},
 				},
 			},
 		})
-		r.roleBindings = append(r.roleBindings, &proxyv1.RoleBinding{
+		r.roleBindings = append(r.roleBindings, &proxyv1alpha1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin-dashboard",
 				Namespace: r.Namespace,
 			},
-			Subjects: []proxyv1.Subject{
+			Subjects: []proxyv1alpha1.Subject{
 				{
 					Kind:       "Backend",
 					Name:       "dashboard",
@@ -206,7 +206,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 					Permission: "all",
 				},
 			},
-			RoleRef: proxyv1.RoleRef{
+			RoleRef: proxyv1alpha1.RoleRef{
 				Name:      "admin",
 				Namespace: r.Namespace,
 			},
@@ -221,12 +221,12 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		}
 	}
 	if !found {
-		r.rpcPermissions = append(r.rpcPermissions, proxyv1.RpcPermission{
+		r.rpcPermissions = append(r.rpcPermissions, proxyv1alpha1.RpcPermission{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
 			},
-			Spec: proxyv1.RpcPermissionSpec{
+			Spec: proxyv1alpha1.RpcPermissionSpec{
 				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
 			},
 		})
@@ -237,7 +237,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 
 func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
 	if !metav1.IsControlledBy(obj, r.Object) {
-		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy"))})
+		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy"))})
 	}
 }
 
@@ -342,15 +342,15 @@ func (r *HeimdallrProxy) ServiceNameForInternalApi() string {
 	return r.Name + "-internal"
 }
 
-func (r *HeimdallrProxy) Backends() []*proxyv1.Backend {
+func (r *HeimdallrProxy) Backends() []*proxyv1alpha1.Backend {
 	return r.backends
 }
 
-func (r *HeimdallrProxy) Roles() []*proxyv1.Role {
+func (r *HeimdallrProxy) Roles() []*proxyv1alpha1.Role {
 	return r.roles
 }
 
-func (r *HeimdallrProxy) RpcPermissions() []proxyv1.RpcPermission {
+func (r *HeimdallrProxy) RpcPermissions() []proxyv1alpha1.RpcPermission {
 	return r.rpcPermissions
 }
 
@@ -404,7 +404,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 			Namespace: r.Namespace,
 			Name:      r.EtcdClusterName(),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: etcdv1alpha1.EtcdClusterSpec{
@@ -422,7 +422,7 @@ func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdC
 			Namespace: r.Namespace,
 			Labels:    r.Spec.Monitor.Labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
@@ -846,7 +846,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	backends := r.Backends()
 
 	proxies := make([]*config.Backend, 0, len(backends))
-	backendMap := make(map[string]*proxyv1.Backend)
+	backendMap := make(map[string]*proxyv1alpha1.Backend)
 	for _, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = v
 
@@ -938,7 +938,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	for i, role := range roleList {
 		bindings := make([]*config.Binding, 0, len(role.Spec.Bindings))
 
-		matchedBindings := RoleBindings(r.roleBindings).Select(func(binding *proxyv1.RoleBinding) bool {
+		matchedBindings := RoleBindings(r.roleBindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
 			if binding.RoleRef.Name != role.Name {
 				return false
 			}
@@ -1499,7 +1499,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 			Name:      r.DeploymentNameForRPCServer(),
 			Namespace: r.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -1739,10 +1739,10 @@ func intOrStringFromInt(val int) *intstr.IntOrString {
 	return &v
 }
 
-type RoleBindings []*proxyv1.RoleBinding
+type RoleBindings []*proxyv1alpha1.RoleBinding
 
-func (rb RoleBindings) Select(fn func(*proxyv1.RoleBinding) bool) []*proxyv1.RoleBinding {
-	n := make([]*proxyv1.RoleBinding, 0)
+func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxyv1alpha1.RoleBinding {
+	n := make([]*proxyv1alpha1.RoleBinding, 0)
 	for _, v := range rb {
 		if fn(v) {
 			n = append(n, v)

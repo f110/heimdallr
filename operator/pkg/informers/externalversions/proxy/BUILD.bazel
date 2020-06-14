@@ -8,5 +8,6 @@ go_library(
     deps = [
         "//operator/pkg/informers/externalversions/internalinterfaces:go_default_library",
         "//operator/pkg/informers/externalversions/proxy/v1:go_default_library",
+        "//operator/pkg/informers/externalversions/proxy/v1alpha1:go_default_library",
     ],
 )

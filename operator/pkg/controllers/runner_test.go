@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/fake"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 )
@@ -78,9 +78,9 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
 	for _, v := range objs {
 		switch obj := v.(type) {
-		case *proxyv1.Proxy:
+		case *proxyv1alpha1.Proxy:
 			f.RegisterProxyFixture(obj)
-		case *proxyv1.Backend:
+		case *proxyv1alpha1.Backend:
 			f.RegisterBackendFixture(obj)
 		case *etcdv1alpha1.EtcdCluster:
 			f.RegisterEtcdClusterFixture(obj)
@@ -100,29 +100,29 @@ func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
 	}
 }
 
-func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1.Proxy) {
+func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1alpha1.Proxy) {
 	f.client.Tracker().Add(p)
-	f.sharedInformerFactory.Proxy().V1().Proxies().Informer().GetIndexer().Add(p)
+	f.sharedInformerFactory.Proxy().V1alpha1().Proxies().Informer().GetIndexer().Add(p)
 }
 
-func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1.Backend) {
+func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1alpha1.Backend) {
 	for _, v := range b {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1().Backends().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha1().Backends().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1.Role) {
+func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1alpha1.Role) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1().Roles().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha1().Roles().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1.RoleBinding) {
+func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1alpha1.RoleBinding) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1().RoleBindings().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha1().RoleBindings().Informer().GetIndexer().Add(v)
 	}
 }
 
@@ -216,26 +216,26 @@ func (f *commonTestRunner) ExpectCreateEtcdCluster() {
 }
 
 func (f *commonTestRunner) ExpectUpdateProxy() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
+	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha1.Proxy{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateProxyStatus() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1.Proxy{})
+	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha1.Proxy{})
 	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateBackend() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateBackendStatus() {
-	action := core.NewUpdateAction(proxyv1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1.Backend{})
+	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
 	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
@@ -342,7 +342,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 	return f
 }
 
-func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1.Proxy) {
+func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Proxy) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)
@@ -356,7 +356,7 @@ func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1.Proxy) {
 	}
 }
 
-func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1.Proxy, expectErr error) {
+func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha1.Proxy, expectErr error) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)
@@ -390,7 +390,7 @@ func newGitHubControllerTestRunner(t *testing.T) *githubControllerTestRunner {
 	return f
 }
 
-func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1.Backend) {
+func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Backend) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)
@@ -404,7 +404,7 @@ func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1.Backend) {
 	}
 }
 
-func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1.Backend, expectErr error) {
+func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha1.Backend, expectErr error) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)

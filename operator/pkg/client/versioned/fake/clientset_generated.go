@@ -35,6 +35,8 @@ import (
 	fakemonitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1/fake"
 	proxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1"
 	fakeproxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1/fake"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
+	fakeproxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -102,4 +104,9 @@ func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 // ProxyV1 retrieves the ProxyV1Client
 func (c *Clientset) ProxyV1() proxyv1.ProxyV1Interface {
 	return &fakeproxyv1.FakeProxyV1{Fake: &c.Fake}
+}
+
+// ProxyV1alpha1 retrieves the ProxyV1alpha1Client
+func (c *Clientset) ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface {
+	return &fakeproxyv1alpha1.FakeProxyV1alpha1{Fake: &c.Fake}
 }

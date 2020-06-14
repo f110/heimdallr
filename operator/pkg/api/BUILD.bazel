@@ -5,6 +5,7 @@ k8s_code_generator(
     srcs = [
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
         "//operator/pkg/api/proxy/v1:go_default_library",
+        "//operator/pkg/api/proxy/v1alpha1:go_default_library",
         "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
     ],
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",

@@ -406,6 +406,399 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Ready
+      format: byte
+      jsonPath: .status.ready
+      name: ready
+      type: string
+    - description: Phase
+      format: byte
+      jsonPath: .status.phase
+      name: phase
+      type: string
+    - description: Backends
+      format: byte
+      jsonPath: .status.numberOfBackends
+      name: backends
+      type: string
+    - description: Age
+      format: date
+      jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Proxy is the Schema for the proxies API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProxySpec defines the desired state of Proxy
+            properties:
+              administratorUnit:
+                type: string
+              backendSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              backup:
+                properties:
+                  bucket:
+                    type: string
+                  credentialRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  endpoint:
+                    type: string
+                  intervalInSecond:
+                    format: int64
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  path:
+                    type: string
+                required:
+                - bucket
+                - credentialRef
+                - intervalInSecond
+                - path
+                type: object
+              country:
+                type: string
+              dashboardReplicas:
+                description: The number of replicas of dashboard. Default value is
+                  "3".
+                format: int32
+                type: integer
+              defragment:
+                properties:
+                  schedule:
+                    type: string
+                type: object
+              development:
+                description: Development indicates the development mode. If the proxy
+                  deployed with the development mode, then the log level of logger
+                  will be "Debug". Debug level outputs many useful logs for development.
+                  On the other hand, It is a noisy when you are an user of proxy.
+                type: boolean
+              domain:
+                type: string
+              etcdVersion:
+                type: string
+              httpPort:
+                format: int32
+                type: integer
+              identityProvider:
+                properties:
+                  clientId:
+                    type: string
+                  clientSecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  provider:
+                    type: string
+                  redirectUrl:
+                    type: string
+                required:
+                - provider
+                type: object
+              issuerRef:
+                description: ObjectReference is a reference to an object with a given
+                  name, kind and group.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              loadBalancerIP:
+                type: string
+              monitor:
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  prometheusMonitoring:
+                    description: PrometheusMonitoring is set to true, then operator
+                      creates ServiceMonitor object.
+                    type: boolean
+                type: object
+              name:
+                description: Name of proxy. if not present, uses "Heimdallr CA".
+                type: string
+              organization:
+                type: string
+              port:
+                format: int32
+                type: integer
+              proxyResources:
+                description: 'ProxyResources field is able to control the resource
+                  requirements and limits of front proxy. If it isn''t set, Use the
+                  default value. (Default Value: requirements is cpu: 100m and memory:
+                  128Mi. limits is cpu: 1 and memory: 256Mi)'
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: 'Limits describes the maximum amount of compute resources
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: 'Requests describes the minimum amount of compute
+                      resources required. If Requests is omitted for a container,
+                      it defaults to Limits if that is explicitly specified, otherwise
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                type: object
+              replicas:
+                description: The number of replicas of front proxy.
+                format: int32
+                type: integer
+              roleSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              rootUsers:
+                items:
+                  type: string
+                type: array
+              rpcPermissionSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              rpcServerResources:
+                description: 'RPCServerResources field is able tot control the resource
+                  requirements and limits of rpc server. If it isn''t set, Use the
+                  default value. (Default Value: requirements is cpu: 100m and memory:
+                  128Mi. limits is cpu: 1 and memory 256Mi)'
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: 'Limits describes the maximum amount of compute resources
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: 'Requests describes the minimum amount of compute
+                      resources required. If Requests is omitted for a container,
+                      it defaults to Limits if that is explicitly specified, otherwise
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    type: object
+                type: object
+              session:
+                properties:
+                  keySecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    type: string
+                required:
+                - type
+                type: object
+              version:
+                type: string
+            required:
+            - administratorUnit
+            - domain
+            - identityProvider
+            - issuerRef
+            - organization
+            - replicas
+            - session
+            type: object
+          status:
+            description: ProxyStatus defines the observed state of Proxy
+            properties:
+              caSecretName:
+                type: string
+              cookieSecretName:
+                type: string
+              githubWebhookSecretName:
+                type: string
+              internalTokenSecretName:
+                type: string
+              numberOfBackends:
+                type: integer
+              numberOfRoles:
+                type: integer
+              numberOfRpcPermissions:
+                type: integer
+              phase:
+                type: string
+              ready:
+                type: boolean
+              signingPrivateKeySecretName:
+                type: string
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

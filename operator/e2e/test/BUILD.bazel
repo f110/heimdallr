@@ -13,7 +13,7 @@ go_test(
         "//operator/e2e/framework:go_default_library",
         "//operator/pkg/api/etcd:go_default_library",
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
-        "//operator/pkg/api/proxy/v1:go_default_library",
+        "//operator/pkg/api/proxy/v1alpha1:go_default_library",
         "//operator/pkg/client/versioned:go_default_library",
         "//operator/pkg/controllers:go_default_library",
         "//operator/pkg/informers/externalversions:go_default_library",

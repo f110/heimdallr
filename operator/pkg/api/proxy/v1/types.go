@@ -209,7 +209,6 @@ type ProxyReference struct {
 }
 
 type WebhookConfigurationStatus struct {
-	Id         int64       `json:"id"`
 	Repository string      `json:"repository,omitempty"`
 	UpdateTime metav1.Time `json:"updateTime,omitempty"`
 }

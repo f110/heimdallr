@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 )
 
@@ -26,9 +26,9 @@ func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alph
 	})
 }
 
-func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1.Proxy, phase proxyv1.ProxyPhase, timeout time.Duration) error {
+func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha1.Proxy, phase proxyv1alpha1.ProxyPhase, timeout time.Duration) error {
 	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -41,9 +41,9 @@ func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1.Proxy, ph
 	})
 }
 
-func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1.Proxy, timeout time.Duration) error {
+func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha1.Proxy, timeout time.Duration) error {
 	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

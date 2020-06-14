@@ -28,7 +28,7 @@ spec:
     - name: "http"
       port: 80
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: hello
@@ -45,7 +45,7 @@ spec:
       locations:
         - get: /
 ---
-apiVersion: proxy.f110.dev/v1
+apiVersion: proxy.f110.dev/v1alpha1
 kind: Role
 metadata:
   name: admin
@@ -60,7 +60,7 @@ spec:
     - backendName: hello
       permission: all
 ---
-apiVersion:  proxy.f110.dev/v1
+apiVersion:  proxy.f110.dev/v1alpha1
 kind: RoleBinding
 metadata:
   name: hello-admin

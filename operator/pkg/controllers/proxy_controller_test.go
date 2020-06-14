@@ -10,40 +10,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	"go.f110.dev/heimdallr/pkg/config"
 )
 
-func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []*proxyv1.Backend, []*proxyv1.Role, []proxyv1.RpcPermission, []*proxyv1.RoleBinding, []corev1.Service) {
-	proxy := &proxyv1.Proxy{
+func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alpha1.Backend, []*proxyv1alpha1.Role, []proxyv1alpha1.RpcPermission, []*proxyv1alpha1.RoleBinding, []corev1.Service) {
+	proxy := &proxyv1alpha1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: proxyv1.ProxySpec{
+		Spec: proxyv1alpha1.ProxySpec{
 			Domain:      "test-proxy.f110.dev",
 			EtcdVersion: "v3.4.9",
-			BackendSelector: proxyv1.LabelSelector{
+			BackendSelector: proxyv1alpha1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			RoleSelector: proxyv1.LabelSelector{
+			RoleSelector: proxyv1alpha1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			RpcPermissionSelector: proxyv1.LabelSelector{
+			RpcPermissionSelector: proxyv1alpha1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			Session: proxyv1.SessionSpec{
+			Session: proxyv1alpha1.SessionSpec{
 				Type: config.SessionTypeSecureCookie,
 			},
-			IdentityProvider: proxyv1.IdentityProviderSpec{
+			IdentityProvider: proxyv1alpha1.IdentityProviderSpec{
 				Provider: "google",
-				ClientSecretRef: proxyv1.SecretSelector{
+				ClientSecretRef: proxyv1alpha1.SecretSelector{
 					Name: "client-secret",
 					Key:  "client-secret",
 				},
@@ -59,7 +59,7 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []*proxyv1.Backend, 
 		Data: map[string][]byte{"client-secret": []byte("hidden")},
 	}
 
-	backends := []*proxyv1.Backend{
+	backends := []*proxyv1alpha1.Backend{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test",
@@ -67,21 +67,21 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []*proxyv1.Backend, 
 				CreationTimestamp: metav1.Now(),
 				Labels:            map[string]string{"instance": "test"},
 			},
-			Spec: proxyv1.BackendSpec{
+			Spec: proxyv1alpha1.BackendSpec{
 				Layer: "test",
-				ServiceSelector: proxyv1.ServiceSelector{
+				ServiceSelector: proxyv1alpha1.ServiceSelector{
 					LabelSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{"app": "test"},
 					},
 				},
-				Permissions: []proxyv1.Permission{
-					{Name: "all", Locations: []proxyv1.Location{{Any: "/"}}},
+				Permissions: []proxyv1alpha1.Permission{
+					{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
 				},
 			},
 		},
 	}
 
-	roles := []*proxyv1.Role{
+	roles := []*proxyv1alpha1.Role{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test",
@@ -89,24 +89,24 @@ func newProxy(name string) (*proxyv1.Proxy, *corev1.Secret, []*proxyv1.Backend, 
 				CreationTimestamp: metav1.Now(),
 				Labels:            map[string]string{"instance": "test"},
 			},
-			Spec: proxyv1.RoleSpec{
+			Spec: proxyv1alpha1.RoleSpec{
 				Title:       "test",
 				Description: "for testing",
 			},
 		},
 	}
-	rpcPermissions := []proxyv1.RpcPermission{}
-	roleBindings := []*proxyv1.RoleBinding{
+	rpcPermissions := []proxyv1alpha1.RpcPermission{}
+	roleBindings := []*proxyv1alpha1.RoleBinding{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test-test",
 				Namespace:         metav1.NamespaceDefault,
 				CreationTimestamp: metav1.Now(),
 			},
-			Subjects: []proxyv1.Subject{
+			Subjects: []proxyv1alpha1.Subject{
 				{Kind: "Backend", Name: "test", Namespace: metav1.NamespaceDefault, Permission: "all"},
 			},
-			RoleRef: proxyv1.RoleRef{
+			RoleRef: proxyv1alpha1.RoleRef{
 				Name:      "test",
 				Namespace: metav1.NamespaceDefault,
 			},
@@ -265,7 +265,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.RunExpectError(t, p, ErrRPCServerIsNotReady)
 
-		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -361,15 +361,15 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.Run(t, p)
 
-		updatedP, err := f.client.ProxyV1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
 		assert.False(t, updatedP.Status.Ready)
-		assert.Equal(t, updatedP.Status.Phase, proxyv1.ProxyPhaseRunning)
+		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha1.ProxyPhaseRunning)
 
 		for _, backend := range backends {
-			updatedB, err := f.client.ProxyV1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
+			updatedB, err := f.client.ProxyV1alpha1().Backends(backend.Namespace).Get(backend.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
