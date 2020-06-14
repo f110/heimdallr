@@ -122,6 +122,7 @@ type Stream struct {
 	user        *database.User
 	backend     *config.Backend
 	backendConn net.Conn
+	closeCh     chan struct{}
 }
 
 type SocketProxy struct {
@@ -189,7 +190,7 @@ func (s *SocketProxy) Shutdown() {
 }
 
 func NewStream(parent *SocketProxy, conn tlsConn, host string) *Stream {
-	return &Stream{conn: conn, parent: parent, host: host}
+	return &Stream{conn: conn, parent: parent, host: host, closeCh: make(chan struct{})}
 }
 
 func (st *Stream) handshake() error {
@@ -242,7 +243,7 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 	}
 	st.user = user
 
-	// AuthenticateForSocket is already check the host parameter.
+	// AuthenticateForSocket is already check the host parameter inside AuthenticateForSocket.
 	// Thus skip error check here.
 	b, _ := st.parent.Config.General.GetBackendByHostname(st.host)
 	st.backend = b
@@ -273,7 +274,7 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 }
 
 func (st *Stream) pipe() error {
-	logger.Log.Debug("Start duplex connection")
+	logger.Log.Debug("Start duplex connection", zap.String("host", st.host), zap.String("user", st.user.Id))
 	go func() {
 		if err := st.readBackend(); err != nil {
 			logger.Log.Info("Something occurred during to read from backend", zap.Error(err))
@@ -281,6 +282,18 @@ func (st *Stream) pipe() error {
 		st.close()
 	}()
 	go st.heartbeat()
+
+	if st.backend.SocketTimeout != nil {
+		go func() {
+			select {
+			case <-st.closeCh:
+				break
+			case <-time.After(st.backend.SocketTimeout.Duration):
+				logger.Log.Info("Close a connection due to timeout", zap.String("host", st.host), zap.String("user", st.user.Id))
+				st.close()
+			}
+		}()
+	}
 
 	return st.readConn()
 }
@@ -367,6 +380,7 @@ func (st *Stream) close() {
 		if st.conn != nil {
 			st.conn.Close()
 		}
+		close(st.closeCh)
 	})
 }
 

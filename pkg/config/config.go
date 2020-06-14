@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -176,6 +177,7 @@ type Backend struct {
 	DisableAuthn  bool          `json:"disable_authn,omitempty"`
 	Insecure      bool          `json:"insecure,omitempty"`
 	AllowHttp     bool          `json:"allow_http,omitempty"`
+	SocketTimeout *Duration     `json:"socket_timeout,omitempty"`
 
 	Url           *url.URL        `json:"-"`
 	Socket        bool            `json:"-"`
@@ -235,6 +237,29 @@ type Dashboard struct {
 type Template struct {
 	Loader string `json:"loader"` // shotgun or embed
 	Dir    string `json:"dir"`
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	v := ""
+	err := json.Unmarshal(b, &v)
+	if err != nil {
+		return err
+	}
+
+	y, err := time.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	d.Duration = y
+	return nil
 }
 
 func (d *Dashboard) Inflate(dir string) error {

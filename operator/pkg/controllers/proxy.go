@@ -911,7 +911,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 				}
 			}
 		}
-		proxies = append(proxies, &config.Backend{
+		b := &config.Backend{
 			Name:          name,
 			FQDN:          v.Spec.FQDN,
 			Upstream:      upstream,
@@ -923,7 +923,11 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			DisableAuthn:  v.Spec.DisableAuthn,
 			Insecure:      v.Spec.Insecure,
 			AllowHttp:     v.Spec.AllowHttp,
-		})
+		}
+		if v.Spec.SocketTimeout != nil {
+			b.SocketTimeout = &config.Duration{Duration: v.Spec.SocketTimeout.Duration}
+		}
+		proxies = append(proxies, b)
 	}
 	sort.Slice(proxies, func(i, j int) bool {
 		return proxies[i].Name < proxies[j].Name

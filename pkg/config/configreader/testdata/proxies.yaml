@@ -21,6 +21,7 @@
         - any: /
 - name: ssh
   upstream: tcp://localhost:22
+  socket_timeout: 10s
   permissions:
     - name: all
       locations:

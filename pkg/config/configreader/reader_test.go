@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -182,6 +183,8 @@ func TestReadConfigFromFile(t *testing.T) {
 	assert.Contains(t, backends, "short")
 	assert.True(t, backends["short"].DisableAuthn)
 	assert.Equal(t, backends["short"].FQDN, "short.f110.dev")
+	assert.Contains(t, backends, "ssh")
+	assert.Equal(t, backends["ssh"].SocketTimeout.Duration, 10*time.Second)
 
 	assert.Contains(t, roles, "user")
 }

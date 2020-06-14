@@ -312,6 +312,8 @@ spec:
                   scheme:
                     type: string
                 type: object
+              socketTimeout:
+                type: string
               upstream:
                 type: string
               webhook:

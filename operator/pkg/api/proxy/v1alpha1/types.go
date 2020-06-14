@@ -151,6 +151,7 @@ type BackendSpec struct {
 	FQDN                 string                `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
 	Layer                string                `json:"layer,omitempty"`
 	Upstream             string                `json:"upstream,omitempty"`
+	SocketTimeout        *metav1.Duration      `json:"socketTimeout,omitempty"`
 	ServiceSelector      ServiceSelector       `json:"serviceSelector,omitempty"`
 	Webhook              string                `json:"webhook,omitempty"`
 	WebhookPath          []string              `json:"webhookPath,omitempty"`
