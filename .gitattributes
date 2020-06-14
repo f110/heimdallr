@@ -1,0 +1,4 @@
+operator/pkg/listers/**/* linguist-generated
+operator/pkg/informers/**/* linguist-generated
+operator/pkg/client/**/* linguist-generated
+*.deepcopy.go linguist-generated
