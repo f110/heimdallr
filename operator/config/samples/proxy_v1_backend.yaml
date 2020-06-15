@@ -12,15 +12,15 @@ spec:
       locations:
         - get: /
   webhook: "github"
-  webhookConfiguration:
-    repositories: ["f110/ops"]
-    credentialSecretName: githubapp
-    appIdKey: appid
-    installationIdKey: installationid
-    privateKeyKey: privatekey.pem
-    contentType: json
-    path: /webhook
-    events: ["push"]
+#  webhookConfiguration:
+#    repositories: ["f110/ops"]
+#    credentialSecretName: githubapp
+#    appIdKey: appid
+#    installationIdKey: installationid
+#    privateKeyKey: privatekey.pem
+#    contentType: json
+#    path: /webhook
+#    events: ["push"]
 ---
 apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend

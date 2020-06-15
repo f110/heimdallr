@@ -30,6 +30,7 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
@@ -531,13 +532,21 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 		}
 
 		if !found && !backend.CreationTimestamp.IsZero() {
-			backend.Status.DeployedBy = append(backend.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
-				Name:      lp.Name,
-				Namespace: lp.Namespace,
-				Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
-			})
+			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				updatedB, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+				if err != nil {
+					return err
+				}
 
-			_, err := c.clientset.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(backend)
+				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
+					Name:      lp.Name,
+					Namespace: lp.Namespace,
+					Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
+				})
+
+				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(updatedB)
+				return err
+			})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
