@@ -6,6 +6,39 @@ heimdallr
 
 Zero trust proxy for using in corporate.
 
+Features
+===========
+
+* Reverse proxy with identity-aware
+* Can proxy the traffic not only HTTP but also SSH or something like
+* Beyond NAT on each side of the proxy
+* Manage a user by Browser
+* Easy to deploy to Kubernetes
+
+Configuration
+=================
+
+The configuration files divide two parts.
+
+The first part is for the daemon. The second part is for RBAC.
+
+For Daemon
+------------
+
+You can control a behavior of the proxy.
+
+Upstream
+++++++++++
+
+`Sample file of the configuration of the upstream <./proxies.yaml>`_
+
+RBAC
+-----
+
+You will define the role and the permission of RPC.
+
+The role is a set of the upstream and ACL. The permission of RPC is a set of ACL.
+
 Deployment
 =============
 
