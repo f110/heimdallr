@@ -196,7 +196,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 
 	switch err {
 	case auth.ErrSessionNotFound:
-		logger.Log.Debug("Session not found", logger.WithRequestId(ctx))
+		logger.Log.Info("Session not found", logger.WithRequestId(ctx))
 		u := &url.URL{}
 		*u = *req.URL
 		u.Scheme = "https"
@@ -208,11 +208,11 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
-		logger.Log.Debug("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
+		logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	case auth.ErrHostnameNotFound:
-		logger.Log.Debug("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
+		logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
 		panic(http.ErrAbortHandler)
 	}
 
