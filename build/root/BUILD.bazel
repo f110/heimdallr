@@ -94,3 +94,13 @@ container_push(
     repository = "f110/heimdallr-ctl",
     tag = VERSION,
 )
+
+load("@dev_f110_mono//build:job.bzl", "job")
+
+job(
+    name = "test_all",
+    all_revision = True,
+    command = "test",
+    github_status = True,
+    targets = "//...",
+)
