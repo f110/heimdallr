@@ -71,12 +71,12 @@ func TestRelayLocator_Update(t *testing.T) {
 	defer clearDatabase(t)
 
 	updatedAt := time.Now().Add(-10 * time.Second)
-	r := &database.Relay{Name: "test", Addr: "127.0.0.1:10000", UpdatedAt: updatedAt}
+	r := &database.Relay{Name: t.Name(), Addr: "127.0.0.1:10000", UpdatedAt: updatedAt}
 	err = rl.Set(context.Background(), r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	relay, ok := rl.Get("test")
+	relay, ok := rl.Get(t.Name())
 	if !ok {
 		t.Fatal("should return ok")
 	}
@@ -101,10 +101,11 @@ func TestRelayLocator_Watch(t *testing.T) {
 	goneCh := rl.Gone()
 	go func() {
 		gone := <-goneCh
+		t.Logf("Got: %v", *gone)
 		gotCh <- gone
 	}()
 
-	buf, err := yaml.Marshal(&database.Relay{Name: "test"})
+	buf, err := yaml.Marshal(&database.Relay{Name: t.Name()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,28 +115,28 @@ func TestRelayLocator_Watch(t *testing.T) {
 			Kv:   &mvccpb.KeyValue{Value: buf},
 		},
 	})
-	relay, ok := rl.Get("test")
+	relay, ok := rl.Get(t.Name())
 	if !ok {
 		t.Error("Expect return ok")
 	}
-	if relay.Name != "test" {
+	if relay.Name != t.Name() {
 		t.Error("Expect Name is test")
 	}
 
 	rl.watchEvents([]*clientv3.Event{
 		{
 			Type: clientv3.EventTypeDelete,
-			Kv:   &mvccpb.KeyValue{Key: []byte("/test/127.0.0.1:10000")},
+			Kv:   &mvccpb.KeyValue{Key: []byte("/" + t.Name() + "/127.0.0.1:10000")},
 		},
 	})
-	_, ok = rl.Get("test")
+	_, ok = rl.Get(t.Name())
 	if ok {
 		t.Error("Expect return not ok")
 	}
 
 	select {
 	case got := <-gotCh:
-		if got.Name != "test" {
+		if got.Name != t.Name() {
 			t.Error("Expect Name is test")
 		}
 	case <-time.After(10 * time.Second):

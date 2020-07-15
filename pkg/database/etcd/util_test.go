@@ -76,7 +76,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	logger.Init(&config.Logger{Level: "debug"})
+	logger.Init(&config.Logger{Level: "debug", Encoding: "console"})
 
 	os.Exit(m.Run())
 }
