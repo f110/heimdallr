@@ -68,6 +68,7 @@ func TestRelayLocator_Update(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer clearDatabase(t)
 
 	updatedAt := time.Now().Add(-10 * time.Second)
 	r := &database.Relay{Name: "test", Addr: "127.0.0.1:10000", UpdatedAt: updatedAt}
@@ -94,6 +95,7 @@ func TestRelayLocator_Watch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer clearDatabase(t)
 
 	gotCh := make(chan *database.Relay)
 	goneCh := rl.Gone()
