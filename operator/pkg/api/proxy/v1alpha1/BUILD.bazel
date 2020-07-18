@@ -6,6 +6,7 @@ go_library(
         "doc.go",
         "register.go",
         "types.go",
+        "util.go",
         "zz_generated.deepcopy.go",
     ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1",

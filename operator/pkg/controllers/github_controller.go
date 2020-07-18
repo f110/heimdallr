@@ -158,12 +158,9 @@ func (c *GitHubController) syncBackend(key string) error {
 	}
 
 	updatedB := backend.DeepCopy()
-Spec:
 	for _, ownerAndRepo := range backend.Spec.WebhookConfiguration.Repositories {
-		for _, v := range backend.Status.WebhookConfigurations {
-			if v.Repository == ownerAndRepo {
-				continue Spec
-			}
+		if backend.Status.IsConfigured(ownerAndRepo) {
+			continue
 		}
 
 		s := strings.Split(ownerAndRepo, "/")
@@ -171,77 +168,17 @@ Spec:
 			continue
 		}
 		owner, repo := s[0], s[1]
-		hooks, _, err := ghClient.Repositories.ListHooks(context.Background(), owner, repo, &github.ListOptions{})
+
+		found, err := c.checkConfigured(ghClient, updatedB, owner, repo)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-
-		found := false
-		for _, h := range hooks {
-			u, err := url.Parse(h.GetURL())
-			if err != nil {
-				klog.Infof("Failed parse url: %s", h.GetURL())
-				continue
-			}
-			if backend.Spec.FQDN != "" && u.Host == backend.Spec.FQDN {
-				found = true
-				break
-			} else if strings.HasPrefix(u.Host, fmt.Sprintf("%s.%s", backend.Name, backend.Spec.Layer)) {
-				found = true
-				break
-			}
+		if found {
+			continue
 		}
 
-		if !found {
-			for _, v := range backend.Status.DeployedBy {
-				u, err := url.Parse(v.Url)
-				if err != nil {
-					klog.Infof("Failure parse url: %s", v.Url)
-					continue
-				}
-				u.Path = backend.Spec.WebhookConfiguration.Path
-				proxy, err := c.proxyLister.Proxies(v.Namespace).Get(v.Name)
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						continue
-					}
-
-					klog.Infof("fetch %s/%s error: %v", v.Namespace, v.Name, err)
-					continue
-				}
-				if proxy.Status.GithubWebhookSecretName == "" {
-					klog.V(4).Infof("%s is not ready", proxy.Name)
-					continue
-				}
-				secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						klog.Errorf("%s/%s is not found. This is a suspicious error.", proxy.Namespace, proxy.Status.GithubWebhookSecretName)
-					}
-
-					klog.Infof("fetch %s/%s error: %v", proxy.Namespace, proxy.Name, proxy.Status.GithubWebhookSecretName)
-					continue
-				}
-
-				newHook := &github.Hook{
-					Events: backend.Spec.WebhookConfiguration.Events,
-					Config: map[string]interface{}{
-						"url":          u.String(),
-						"content_type": backend.Spec.WebhookConfiguration.ContentType,
-						"secret":       string(secret.Data[githubWebhookSecretFilename]),
-					},
-				}
-				klog.V(4).Infof("Create new hook: %s/%s", owner, repo)
-				newHook, _, err = ghClient.Repositories.CreateHook(context.Background(), owner, repo, newHook)
-				if err != nil {
-					klog.Infof("Failed create hook: %v", err)
-					continue
-				}
-
-				updatedB.Status.WebhookConfigurations = append(updatedB.Status.WebhookConfigurations,
-					&proxyv1alpha1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: ownerAndRepo, UpdateTime: metav1.Now()},
-				)
-			}
+		if err := c.setWebHook(ghClient, updatedB, owner, repo); err != nil {
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -332,6 +269,82 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	return nil
+}
+
+func (c *GitHubController) checkConfigured(client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) (bool, error) {
+	hooks, _, err := client.Repositories.ListHooks(context.Background(), owner, repo, &github.ListOptions{})
+	if err != nil {
+		return false, xerrors.Errorf(": %w", err)
+	}
+
+	for _, h := range hooks {
+		u, err := url.Parse(h.GetURL())
+		if err != nil {
+			klog.Infof("Failed parse url: %s", h.GetURL())
+			continue
+		}
+		if backend.Spec.FQDN != "" && u.Host == backend.Spec.FQDN {
+			return true, nil
+		} else if strings.HasPrefix(u.Host, fmt.Sprintf("%s.%s", backend.Name, backend.Spec.Layer)) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) error {
+	for _, v := range backend.Status.DeployedBy {
+		u, err := url.Parse(v.Url)
+		if err != nil {
+			klog.Infof("Failure parse url: %s", v.Url)
+			continue
+		}
+		u.Path = backend.Spec.WebhookConfiguration.Path
+		proxy, err := c.proxyLister.Proxies(v.Namespace).Get(v.Name)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+
+			klog.Infof("fetch %s/%s error: %v", v.Namespace, v.Name, err)
+			continue
+		}
+		if proxy.Status.GithubWebhookSecretName == "" {
+			klog.V(4).Infof("%s is not ready", proxy.Name)
+			continue
+		}
+		secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				klog.Errorf("%s/%s is not found. This is a suspicious error.", proxy.Namespace, proxy.Status.GithubWebhookSecretName)
+			}
+
+			klog.Infof("fetch %s/%s error: %v", proxy.Namespace, proxy.Name, proxy.Status.GithubWebhookSecretName)
+			continue
+		}
+
+		newHook := &github.Hook{
+			Events: backend.Spec.WebhookConfiguration.Events,
+			Config: map[string]interface{}{
+				"url":          u.String(),
+				"content_type": backend.Spec.WebhookConfiguration.ContentType,
+				"secret":       string(secret.Data[githubWebhookSecretFilename]),
+			},
+		}
+		klog.V(4).Infof("Create new hook: %s/%s", owner, repo)
+		newHook, _, err = client.Repositories.CreateHook(context.Background(), owner, repo, newHook)
+		if err != nil {
+			klog.Infof("Failed create hook: %v", err)
+			continue
+		}
+
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
+			&proxyv1alpha1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: fmt.Sprintf("%s/%s", owner, repo), UpdateTime: metav1.Now()},
+		)
+	}
+
 	return nil
 }
 
