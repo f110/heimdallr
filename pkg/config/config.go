@@ -636,7 +636,12 @@ func (g *General) Load(backends []*Backend, roles []*Role, rpcPermissions []*Rpc
 				}
 				continue
 			}
-			v.FQDN = nameToBackend[v.Backend].FQDN
+
+			b, ok := nameToBackend[v.Backend]
+			if !ok {
+				continue
+			}
+			v.FQDN = b.FQDN
 		}
 		v.RPCMethodMatcher = m
 		roleNameToRole[v.Name] = v

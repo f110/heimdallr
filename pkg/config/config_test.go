@@ -23,6 +23,7 @@ func TestGeneral(t *testing.T) {
 	}
 	roles := []*Role{
 		{Name: "test"},
+		{Name: "test2", Bindings: []*Binding{{Backend: "missing"}}},
 	}
 	rpcPermissions := []*RpcPermission{
 		{Name: "test"},
