@@ -26,6 +26,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    shard_count = 1,
     srcs = [
         "ca_test.go",
         "cluster_test.go",
