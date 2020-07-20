@@ -39,7 +39,7 @@ identity_provider:
   extra_scopes: ["email"]
   redirect_url: https://local-proxy.f110.dev:4000/auth/callback
 datastore:
-  url: etcd://127.0.0.1:2379
+  url: etcd://embed
   data_dir: ./data
 frontend_proxy:
   access_log: ./access.log
