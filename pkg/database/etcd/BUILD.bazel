@@ -26,7 +26,6 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    shard_count = 1,
     srcs = [
         "ca_test.go",
         "cluster_test.go",
@@ -37,6 +36,7 @@ go_test(
         "util_test.go",
     ],
     embed = [":go_default_library"],
+    shard_count = 1,
     deps = [
         "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
