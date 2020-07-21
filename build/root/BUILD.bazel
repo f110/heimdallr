@@ -101,7 +101,7 @@ job(
     name = "test_all",
     all_revision = True,
     command = "test",
+    cpu_limit = "2000m",
     github_status = True,
     targets = "//...",
-    cpu_limit = "1000m",
 )
