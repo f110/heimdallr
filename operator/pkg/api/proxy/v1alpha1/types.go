@@ -157,6 +157,7 @@ type BackendSpec struct {
 	WebhookPath          []string              `json:"webhookPath,omitempty"`
 	AllowRootUser        bool                  `json:"allowRootUser,omitempty"`
 	Agent                bool                  `json:"agent,omitempty"`
+	Socket               bool                  `json:"socket,omitempty"`
 	DisableAuthn         bool                  `json:"disableAuthn,omitempty"`
 	Insecure             bool                  `json:"insecure,omitempty"`
 	AllowHttp            bool                  `json:"allowHttp,omitempty"`

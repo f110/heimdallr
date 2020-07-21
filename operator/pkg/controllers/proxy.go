@@ -919,6 +919,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			WebHook:       v.Spec.Webhook,
 			WebHookPath:   v.Spec.WebhookPath,
 			Agent:         v.Spec.Agent,
+			Socket:        v.Spec.Socket,
 			AllowRootUser: v.Spec.AllowRootUser,
 			DisableAuthn:  v.Spec.DisableAuthn,
 			Insecure:      v.Spec.Insecure,
