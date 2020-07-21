@@ -99,8 +99,6 @@ func TestCA(t *testing.T) {
 	if len(revokes) != 1 {
 		t.Fatalf("Expect to return 1 certificate: got %d certificates", len(revokes))
 	}
-
-	clearDatabase(t)
 }
 
 func TestCA_NewSerialNumber(t *testing.T) {
@@ -120,6 +118,4 @@ func TestCA_NewSerialNumber(t *testing.T) {
 	if serial.Cmp(newSerial) == 0 {
 		t.Error("Should generate different a number")
 	}
-
-	clearDatabase(t)
 }

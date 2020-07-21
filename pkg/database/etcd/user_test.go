@@ -28,7 +28,6 @@ func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	err = u.Set(context.Background(), &database.User{
 		Id:    Id,
@@ -96,7 +95,6 @@ func TestUserDatabase_GetAndSetAccessToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	err = u.SetAccessToken(context.Background(), &database.AccessToken{
 		UserId: "test@example.com",
@@ -136,7 +134,6 @@ func TestUserDatabase_GetAndSetState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	if _, err := u.GetState(context.Background(), ""); err == nil {
 		t.Error("Expect occurred an error")
@@ -176,7 +173,6 @@ func TestUserDatabase_Delete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	err = u.Set(context.Background(), &database.User{
 		Id:    "test@example.com",

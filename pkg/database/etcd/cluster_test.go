@@ -23,7 +23,6 @@ func TestClusterDatabase_JoinAndLeave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	if err := c.Join(context.Background()); err != nil {
 		t.Fatal(err)
@@ -59,7 +58,6 @@ func TestClusterDatabase_Alive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer clearDatabase(t)
 
 	if c.Alive() {
 		t.Fatal("should not alive because not joined yet")

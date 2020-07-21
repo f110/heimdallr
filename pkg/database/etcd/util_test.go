@@ -1,7 +1,6 @@
 package etcd
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -21,13 +20,6 @@ var (
 	etcdUrl *url.URL
 	client  *clientv3.Client
 )
-
-func clearDatabase(t *testing.T) {
-	_, err := client.Delete(context.Background(), "", clientv3.WithPrefix())
-	if err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestMain(m *testing.M) {
 	dataDir, err := ioutil.TempDir("", "")
