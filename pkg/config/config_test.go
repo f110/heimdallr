@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.etcd.io/etcd/v3/embed"
 	"go.uber.org/zap/zapcore"
 
@@ -20,6 +21,7 @@ func TestGeneral(t *testing.T) {
 	}
 	backends := []*Backend{
 		{Name: "test"},
+		{Name: "AgentAndSocket", Agent: true, Socket: true},
 	}
 	roles := []*Role{
 		{Name: "test"},
@@ -39,9 +41,7 @@ func TestGeneral(t *testing.T) {
 		if !ok {
 			t.Fatal("expect is ok")
 		}
-		if backend.Name != "test" {
-			t.Fatalf("unexpected backend: %s", backend.Name)
-		}
+		assert.Equal(t, "test", backend.Name)
 	})
 
 	t.Run("GetBackendByHost", func(t *testing.T) {

@@ -33,6 +33,13 @@
     - name: all
       locations:
         - any: /
+- name: ssh-agent
+  agent: true
+  socket: true
+  permissions:
+    - name: all
+      locations:
+        - any: /
 - name: agent
   agent: true
   permissions:

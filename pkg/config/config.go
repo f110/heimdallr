@@ -177,10 +177,10 @@ type Backend struct {
 	DisableAuthn  bool          `json:"disable_authn,omitempty"`
 	Insecure      bool          `json:"insecure,omitempty"`
 	AllowHttp     bool          `json:"allow_http,omitempty"`
+	Socket        bool          `json:"socket,omitempty"`
 	SocketTimeout *Duration     `json:"socket_timeout,omitempty"`
 
 	Url           *url.URL        `json:"-"`
-	Socket        bool            `json:"-"`
 	WebHookRouter *mux.Router     `json:"-"`
 	Transport     *http.Transport `json:"-"`
 }
