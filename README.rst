@@ -2,6 +2,8 @@
 heimdallr
 ===================
 
+`[日本語] <./README.ja.rst>`_
+
 **Currently under development**
 
 Zero trust proxy for using in corporate.
@@ -13,6 +15,7 @@ Features
 * Can proxy the traffic not only HTTP but also SSH or something like
 * Beyond NAT on each side of the proxy
 * Manage a user by Browser
+* Managing an user authority by RBAC
 * Easy to deploy to Kubernetes
 
 Configuration
@@ -164,6 +167,10 @@ All dependent libraries are included in the repository.
 Agent
 ========
 
+The agent is a sidecar of upstream server which behinds NAT.
+
+Traffic can be proxied through the agent even if it cannot be connect to the upstream server due to NAT.
+
 How to run
 ----------------
 
@@ -171,11 +178,16 @@ The agent is a client program that beside a backend like a sidecar.
 the agent will connect to the proxy and relay ingress traffic of proxy.
 Thus it can be proxying to the backend that likes behind NAT.
 
+The agent is desgined to run the same host with the backend.
+And the agent is also designed for 1:1 corresponding between the agent and the server.
+
 #. Decide the backend's name with your proxy admin
 #. Generate CSR(Certificate Signing Request) and private key by heim-agent
 #. Send CSR to the proxy admin
 #. You got signed certificate from the proxy admin
 #. Run heim-agent with signed certificate
+
+DO NOT move the private key to outside of the agent server for any reason.
 
 Generate CSR
 +++++++++++++++++
