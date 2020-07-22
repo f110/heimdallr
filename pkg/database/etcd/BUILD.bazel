@@ -37,6 +37,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     shard_count = 1,
+    tags = ["exclusive"],
     deps = [
         "//pkg/cert:go_default_library",
         "//pkg/config:go_default_library",
