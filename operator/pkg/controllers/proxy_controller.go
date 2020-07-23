@@ -462,7 +462,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 
 	if podMonitor != nil && newPM != nil {
 		if !reflect.DeepEqual(podMonitor.Labels, newPM.Labels) || !reflect.DeepEqual(podMonitor.Spec, newPM.Spec) {
-			_, err = c.monitoringClientset.MonitoringV1().PodMonitors(lp.Name).Update(newPM)
+			_, err = c.monitoringClientset.MonitoringV1().PodMonitors(lp.Namespace).Update(newPM)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
