@@ -950,7 +950,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 			if binding.RoleRef.Namespace != "" && binding.RoleRef.Namespace == role.Namespace {
 				return true
 			}
-			if binding.RoleRef.Namespace == "" && role.Namespace == metav1.NamespaceDefault {
+			if binding.RoleRef.Namespace == "" && binding.ObjectMeta.Namespace == role.Namespace {
 				return true
 			}
 
