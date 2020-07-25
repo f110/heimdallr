@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
-        "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/api/proxy/v1alpha1:go_default_library",
         "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",

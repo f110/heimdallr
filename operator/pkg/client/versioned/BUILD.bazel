@@ -11,7 +11,6 @@ go_library(
     deps = [
         "//operator/pkg/client/versioned/typed/etcd/v1alpha1:go_default_library",
         "//operator/pkg/client/versioned/typed/monitoring/v1:go_default_library",
-        "//operator/pkg/client/versioned/typed/proxy/v1:go_default_library",
         "//operator/pkg/client/versioned/typed/proxy/v1alpha1:go_default_library",
         "//vendor/k8s.io/client-go/discovery:go_default_library",
         "//vendor/k8s.io/client-go/rest:go_default_library",

@@ -13,7 +13,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/proxy/v1",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/client/versioned:go_default_library",
         "//operator/pkg/informers/externalversions/internalinterfaces:go_default_library",
         "//operator/pkg/listers/proxy/v1:go_default_library",

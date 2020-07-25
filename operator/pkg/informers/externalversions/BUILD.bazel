@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd/v1alpha1:go_default_library",
-        "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/api/proxy/v1alpha1:go_default_library",
         "//operator/pkg/client/versioned:go_default_library",
         "//operator/pkg/informers/externalversions/etcd:go_default_library",

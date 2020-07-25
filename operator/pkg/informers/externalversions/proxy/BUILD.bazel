@@ -7,7 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/informers/externalversions/internalinterfaces:go_default_library",
-        "//operator/pkg/informers/externalversions/proxy/v1:go_default_library",
         "//operator/pkg/informers/externalversions/proxy/v1alpha1:go_default_library",
     ],
 )

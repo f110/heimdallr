@@ -14,7 +14,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1/fake",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/pkg/api/proxy/v1:go_default_library",
         "//operator/pkg/client/versioned/typed/proxy/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/labels:go_default_library",

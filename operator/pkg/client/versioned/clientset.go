@@ -32,7 +32,6 @@ import (
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
-	proxyv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -43,7 +42,6 @@ type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface
 	MonitoringV1() monitoringv1.MonitoringV1Interface
-	ProxyV1() proxyv1.ProxyV1Interface
 	ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface
 }
 
@@ -53,7 +51,6 @@ type Clientset struct {
 	*discovery.DiscoveryClient
 	etcdV1alpha1  *etcdv1alpha1.EtcdV1alpha1Client
 	monitoringV1  *monitoringv1.MonitoringV1Client
-	proxyV1       *proxyv1.ProxyV1Client
 	proxyV1alpha1 *proxyv1alpha1.ProxyV1alpha1Client
 }
 
@@ -65,11 +62,6 @@ func (c *Clientset) EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface {
 // MonitoringV1 retrieves the MonitoringV1Client
 func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 	return c.monitoringV1
-}
-
-// ProxyV1 retrieves the ProxyV1Client
-func (c *Clientset) ProxyV1() proxyv1.ProxyV1Interface {
-	return c.proxyV1
 }
 
 // ProxyV1alpha1 retrieves the ProxyV1alpha1Client
@@ -106,10 +98,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.proxyV1, err = proxyv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 	cs.proxyV1alpha1, err = proxyv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -128,7 +116,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.etcdV1alpha1 = etcdv1alpha1.NewForConfigOrDie(c)
 	cs.monitoringV1 = monitoringv1.NewForConfigOrDie(c)
-	cs.proxyV1 = proxyv1.NewForConfigOrDie(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
@@ -140,7 +127,6 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.etcdV1alpha1 = etcdv1alpha1.New(c)
 	cs.monitoringV1 = monitoringv1.New(c)
-	cs.proxyV1 = proxyv1.New(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
