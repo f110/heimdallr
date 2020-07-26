@@ -6,19 +6,25 @@ spec:
   members: 3
   version: v3.4.4
   defragmentSchedule: "*/10 * * * *"
-  backup:
-    intervalInSeconds: 3600
-    maxBackups: 5
-    storage:
-      minio:
-        path: backup
-        bucket: etcdcluster
-        secure: false
-        serviceSelector:
-          name: object-storage-hl-svc
-          namespace: default
-        credentialSelector:
-          name: object-storage-token
-          namespace: default
-          accessKeyIDKey: accesskey
-          secretAccessKeyKey: secretkey
+#  backup:
+#    intervalInSeconds: 3600
+#    maxBackups: 5
+#    storage:
+#      gcs:
+#        bucket: etcd-controller-backup-test
+#        path: backup
+#        credentialSelector:
+#          name: gcp-service-account
+#          serviceAccountJSONKey: serviceaccount.json
+#      minio:
+#        path: backup
+#        bucket: etcdcluster
+#        secure: false
+#        serviceSelector:
+#          name: object-storage-hl-svc
+#          namespace: default
+#        credentialSelector:
+#          name: object-storage-token
+#          namespace: default
+#          accessKeyIDKey: accesskey
+#          secretAccessKeyKey: secretkey

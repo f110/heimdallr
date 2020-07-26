@@ -16,11 +16,13 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/minio/minio-go/v6"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/clientv3/snapshot"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
+	"google.golang.org/api/option"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1110,7 +1112,7 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		secretAccessKey := credential.Data[spec.SecretAccessKeyKey]
 		mc, err := minio.New(spec.Endpoint, string(accessKey), string(secretAccessKey), spec.Insecure)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
 		backupStatus.Path = filepath.Join(spec.Path, filename)
@@ -1118,6 +1120,38 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+
+		return nil
+	case cluster.Spec.Backup.Storage.GCS != nil:
+		spec := cluster.Spec.Backup.Storage.GCS
+		namespace := spec.CredentialSelector.Namespace
+		if namespace == "" {
+			namespace = cluster.Namespace
+		}
+		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		b, ok := credential.Data[spec.CredentialSelector.ServiceAccountJSONKey]
+		if !ok {
+			return xerrors.Errorf("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
+		}
+
+		client, err := storage.NewClient(ctx, option.WithCredentialsJSON(b))
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
+		obj := client.Bucket(spec.Bucket).Object(filepath.Join(spec.Path, filename))
+		w := obj.NewWriter(ctx)
+		if _, err := io.Copy(w, data); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		if err := w.Close(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		backupStatus.Path = filepath.Join(spec.Path, filename)
 
 		return nil
 	default:

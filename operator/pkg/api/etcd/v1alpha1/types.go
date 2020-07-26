@@ -34,6 +34,12 @@ type AWSCredentialSelector struct {
 	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
 }
 
+type GCPCredentialSelector struct {
+	Name                  string `json:"name,omitempty"`
+	Namespace             string `json:"namespace,omitempty"`
+	ServiceAccountJSONKey string `json:"serviceAccountJSONKey,omitempty"`
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
@@ -67,6 +73,7 @@ type BackupStorageSpec struct {
 	// MinIO is in-cluster MinIO config
 	MinIO *BackupStorageMinIOSpec `json:"minio,omitempty"`
 	S3    *BackupStorageS3Spec    `json:"s3,omitempty"`
+	GCS   *BackupStorageGCSSpec   `json:"gcs,omitempty"`
 }
 
 type BackupStorageMinIOSpec struct {
@@ -86,6 +93,12 @@ type BackupStorageS3Spec struct {
 	AccessKeyIDKey            string `json:"accessKeyIDKey,omitempty"`
 	SecretAccessKeyKey        string `json:"secretAccessKeyKey,omitempty"`
 	Insecure                  bool   `json:"insecure,omitempty"`
+}
+
+type BackupStorageGCSSpec struct {
+	Bucket             string                `json:"bucket,omitempty"`
+	Path               string                `json:"path,omitempty"`
+	CredentialSelector GCPCredentialSelector `json:"credentialSelector,omitempty"`
 }
 
 type EtcdClusterStatus struct {

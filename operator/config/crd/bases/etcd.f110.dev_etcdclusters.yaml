@@ -63,6 +63,22 @@ spec:
                     type: integer
                   storage:
                     properties:
+                      gcs:
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              serviceAccountJSONKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                        type: object
                       minio:
                         description: MinIO is in-cluster MinIO config
                         properties:
