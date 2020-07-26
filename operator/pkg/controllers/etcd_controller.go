@@ -1102,27 +1102,6 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		}
 
 		return nil
-	case cluster.Spec.Backup.Storage.S3 != nil:
-		spec := cluster.Spec.Backup.Storage.S3
-		credential, err := ec.secretLister.Secrets(spec.CredentialSecretNamespace).Get(spec.CredentialSecretName)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		accessKey := credential.Data[spec.AccessKeyIDKey]
-		secretAccessKey := credential.Data[spec.SecretAccessKeyKey]
-		mc, err := minio.New(spec.Endpoint, string(accessKey), string(secretAccessKey), spec.Insecure)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
-		backupStatus.Path = filepath.Join(spec.Path, filename)
-		_, err = mc.PutObjectWithContext(ctx, spec.Bucket, filepath.Join(spec.Path, filename), data, dataSize, minio.PutObjectOptions{})
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		return nil
 	case cluster.Spec.Backup.Storage.GCS != nil:
 		spec := cluster.Spec.Backup.Storage.GCS
 		namespace := spec.CredentialSelector.Namespace

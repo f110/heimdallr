@@ -107,25 +107,6 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      s3:
-                        properties:
-                          accessKeyIDKey:
-                            type: string
-                          bucket:
-                            type: string
-                          credentialSecretName:
-                            type: string
-                          credentialSecretNamespace:
-                            type: string
-                          endpoint:
-                            type: string
-                          insecure:
-                            type: boolean
-                          path:
-                            type: string
-                          secretAccessKeyKey:
-                            type: string
-                        type: object
                     type: object
                 type: object
               defragmentSchedule:

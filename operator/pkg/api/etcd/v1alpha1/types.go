@@ -72,7 +72,6 @@ type BackupSpec struct {
 type BackupStorageSpec struct {
 	// MinIO is in-cluster MinIO config
 	MinIO *BackupStorageMinIOSpec `json:"minio,omitempty"`
-	S3    *BackupStorageS3Spec    `json:"s3,omitempty"`
 	GCS   *BackupStorageGCSSpec   `json:"gcs,omitempty"`
 }
 
@@ -82,17 +81,6 @@ type BackupStorageMinIOSpec struct {
 	Bucket             string                `json:"bucket,omitempty"`
 	Path               string                `json:"path,omitempty"`
 	Secure             bool                  `json:"secure,omitempty"`
-}
-
-type BackupStorageS3Spec struct {
-	Endpoint                  string `json:"endpoint,omitempty"`
-	Bucket                    string `json:"bucket,omitempty"`
-	Path                      string `json:"path,omitempty"`
-	CredentialSecretName      string `json:"credentialSecretName,omitempty"`
-	CredentialSecretNamespace string `json:"credentialSecretNamespace,omitempty"`
-	AccessKeyIDKey            string `json:"accessKeyIDKey,omitempty"`
-	SecretAccessKeyKey        string `json:"secretAccessKeyKey,omitempty"`
-	Insecure                  bool   `json:"insecure,omitempty"`
 }
 
 type BackupStorageGCSSpec struct {
