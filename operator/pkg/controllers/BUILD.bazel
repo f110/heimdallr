@@ -43,6 +43,7 @@ go_library(
         "//vendor/go.etcd.io/etcd/v3/clientv3/snapshot:go_default_library",
         "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
         "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/google.golang.org/api/iterator:go_default_library",
         "//vendor/google.golang.org/api/option:go_default_library",
         "//vendor/k8s.io/api/apps/v1:go_default_library",
         "//vendor/k8s.io/api/batch/v1:go_default_library",

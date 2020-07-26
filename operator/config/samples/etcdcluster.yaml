@@ -6,16 +6,16 @@ spec:
   members: 3
   version: v3.4.4
   defragmentSchedule: "*/10 * * * *"
-#  backup:
-#    intervalInSeconds: 3600
-#    maxBackups: 5
-#    storage:
-#      gcs:
-#        bucket: etcd-controller-backup-test
-#        path: backup
-#        credentialSelector:
-#          name: gcp-service-account
-#          serviceAccountJSONKey: serviceaccount.json
+  backup:
+    intervalInSeconds: 60
+    maxBackups: 5
+    storage:
+      gcs:
+        bucket: etcd-controller-backup-test
+        path: backup
+        credentialSelector:
+          name: gcp-service-account
+          serviceAccountJSONKey: serviceaccount.json
 #      minio:
 #        path: backup
 #        bucket: etcdcluster

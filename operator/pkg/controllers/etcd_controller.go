@@ -22,6 +22,7 @@ import (
 	"go.etcd.io/etcd/v3/clientv3/snapshot"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -168,7 +169,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	c, err := ec.clusterLister.EtcdClusters(namespace).Get(name)
+	c, err := ec.client.EtcdV1alpha1().EtcdClusters(namespace).Get(name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		klog.V(4).Infof("%s is not found", key)
 		return nil
@@ -1195,6 +1196,53 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		for _, v := range purgeTargets {
 			if err := mc.RemoveObject(spec.Bucket, v); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+
+		return nil
+	case cluster.Spec.Backup.Storage.GCS != nil:
+		spec := cluster.Spec.Backup.Storage.GCS
+		namespace := spec.CredentialSelector.Namespace
+		if namespace == "" {
+			namespace = cluster.Namespace
+		}
+		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		b, ok := credential.Data[spec.CredentialSelector.ServiceAccountJSONKey]
+		if !ok {
+			return xerrors.Errorf("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
+		}
+		client, err := storage.NewClient(ctx, option.WithCredentialsJSON(b))
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		bh := client.Bucket(spec.Bucket)
+
+		backupFiles := make([]string, 0)
+		iter := bh.Objects(ctx, &storage.Query{Prefix: spec.Path})
+		for {
+			attr, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			backupFiles = append(backupFiles, attr.Name)
+		}
+		klog.V(4).Infof("Backup files: %v", backupFiles)
+		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
+			return nil
+		}
+		sort.Strings(backupFiles)
+		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
+		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
+		for _, v := range purgeTargets {
+			klog.V(4).Infof("Delete backup file: %s", v)
+			if err := bh.Object(v).Delete(ctx); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
