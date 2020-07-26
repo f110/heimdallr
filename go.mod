@@ -60,12 +60,11 @@ require (
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
-	k8s.io/api v0.17.3
-	k8s.io/apiextensions-apiserver v0.17.3
-	k8s.io/apimachinery v0.17.3
+	k8s.io/api v0.17.9
+	k8s.io/apiextensions-apiserver v0.17.9
+	k8s.io/apimachinery v0.17.9
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // indirect
 	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
 	sigs.k8s.io/yaml v1.2.0
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
@@ -73,5 +72,5 @@ require (
 
 replace (
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.1.0
-	k8s.io/client-go => k8s.io/client-go v0.17.3
+	k8s.io/client-go => k8s.io/client-go v0.17.9
 )
