@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["field_mask.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/protobuf/types/known/fieldmaskpb",
+    importpath = "google.golang.org/protobuf/types/known/fieldmaskpb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/google.golang.org/protobuf/reflect/protoreflect:go_default_library",
+        "//vendor/google.golang.org/protobuf/runtime/protoimpl:go_default_library",
+    ],
+)

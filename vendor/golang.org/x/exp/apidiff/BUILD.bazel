@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "apidiff.go",
+        "compatibility.go",
+        "correspondence.go",
+        "messageset.go",
+        "report.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/exp/apidiff",
+    importpath = "golang.org/x/exp/apidiff",
+    visibility = ["//visibility:public"],
+)
