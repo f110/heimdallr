@@ -1,5 +1,5 @@
 namespace: heimdallr
-bases:
+resources:
   - ../config/manager
   - ../config/crd
   - ../config/rbac
