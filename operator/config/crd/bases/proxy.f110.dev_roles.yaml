@@ -36,6 +36,8 @@ spec:
           spec:
             description: RoleSpec defines the desired state of Role
             properties:
+              allowDashboard:
+                type: boolean
               bindings:
                 items:
                   properties:

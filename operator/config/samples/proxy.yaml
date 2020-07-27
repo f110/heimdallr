@@ -40,11 +40,11 @@ spec:
   defragment:
     schedule: "18 13 * * *"
   development: true
-  backup:
-    intervalInSecond: 60
-    maxBackups: 10
-    bucket: proxy
-    path: backup
-    credentialRef:
-      name: backup-credential
-    endpoint: http://object-storage-hl-svc.default.svc.cluster.local:9000
+#  backup:
+#    intervalInSecond: 60
+#    maxBackups: 10
+#    bucket: proxy
+#    path: backup
+#    credentialRef:
+#      name: backup-credential
+#    endpoint: http://object-storage-hl-svc.default.svc.cluster.local:9000

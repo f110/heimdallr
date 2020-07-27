@@ -7,11 +7,10 @@ metadata:
 spec:
   title: administrator
   description: Proxy administrator a.k.a GOD
+  allowDashboard: true
   bindings:
     - rpcPermissionName: rpcpermission-sample
     - backendName: backend-sample
-      permission: all
-    - backendName: dashboard
       permission: all
     - backendName: backend-fqdn
       permission: all

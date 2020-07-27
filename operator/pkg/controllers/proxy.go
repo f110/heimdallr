@@ -185,30 +185,12 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 				Namespace: r.Namespace,
 			},
 			Spec: proxyv1alpha1.RoleSpec{
-				Title:       "administrator",
-				Description: fmt.Sprintf("%s administrators", r.Name),
+				Title:          "administrator",
+				Description:    fmt.Sprintf("%s administrators", r.Name),
+				AllowDashboard: true,
 				Bindings: []proxyv1alpha1.Binding{
-					{BackendName: "dashboard", Namespace: r.Namespace, Permission: "all"},
 					{RpcPermissionName: "admin"},
 				},
-			},
-		})
-		r.roleBindings = append(r.roleBindings, &proxyv1alpha1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin-dashboard",
-				Namespace: r.Namespace,
-			},
-			Subjects: []proxyv1alpha1.Subject{
-				{
-					Kind:       "Backend",
-					Name:       "dashboard",
-					Namespace:  r.Namespace,
-					Permission: "all",
-				},
-			},
-			RoleRef: proxyv1alpha1.RoleRef{
-				Name:      "admin",
-				Namespace: r.Namespace,
 			},
 		})
 	}
@@ -941,7 +923,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	roleList := r.Roles()
 	roles := make([]*config.Role, len(roleList))
 	for i, role := range roleList {
-		bindings := make([]*config.Binding, 0, len(role.Spec.Bindings))
+		bindings := make([]*config.Binding, 0)
 
 		matchedBindings := RoleBindings(r.roleBindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
 			if binding.RoleRef.Name != role.Name {
@@ -956,6 +938,17 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 
 			return false
 		})
+		if role.Spec.AllowDashboard {
+			matchedBindings = append(matchedBindings, &proxyv1alpha1.RoleBinding{
+				Subjects: []proxyv1alpha1.Subject{
+					{
+						Kind:       "Backend",
+						Name:       "dashboard",
+						Permission: "all",
+					},
+				},
+			})
+		}
 
 		for _, binding := range matchedBindings {
 			for _, subject := range binding.Subjects {

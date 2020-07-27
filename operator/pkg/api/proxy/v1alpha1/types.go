@@ -242,9 +242,10 @@ type BackendList struct {
 
 // RoleSpec defines the desired state of Role
 type RoleSpec struct {
-	Title       string    `json:"title,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Bindings    []Binding `json:"bindings,omitempty"`
+	Title          string    `json:"title,omitempty"`
+	Description    string    `json:"description,omitempty"`
+	AllowDashboard bool      `json:"allowDashboard,omitempty"`
+	Bindings       []Binding `json:"bindings,omitempty"`
 }
 
 type Binding struct {
