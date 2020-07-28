@@ -14,7 +14,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config"
 )
 
-func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alpha1.Backend, []*proxyv1alpha1.Role, []proxyv1alpha1.RpcPermission, []*proxyv1alpha1.RoleBinding, []corev1.Service) {
+func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alpha1.Backend, []*proxyv1alpha1.Role, []*proxyv1alpha1.RpcPermission, []*proxyv1alpha1.RoleBinding, []corev1.Service) {
 	proxy := &proxyv1alpha1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -95,7 +95,7 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 			},
 		},
 	}
-	rpcPermissions := []proxyv1alpha1.RpcPermission{}
+	rpcPermissions := []*proxyv1alpha1.RpcPermission{}
 	roleBindings := []*proxyv1alpha1.RoleBinding{
 		{
 			ObjectMeta: metav1.ObjectMeta{

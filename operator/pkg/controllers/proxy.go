@@ -113,7 +113,7 @@ type HeimdallrProxy struct {
 
 	backends         []*proxyv1alpha1.Backend
 	roles            []*proxyv1alpha1.Role
-	rpcPermissions   []proxyv1alpha1.RpcPermission
+	rpcPermissions   []*proxyv1alpha1.RpcPermission
 	roleBindings     []*proxyv1alpha1.RoleBinding
 	selfSignedIssuer bool
 }
@@ -124,7 +124,7 @@ type HeimdallrProxyParams struct {
 	ServiceLister     listers.ServiceLister
 	Backends          []*proxyv1alpha1.Backend
 	Roles             []*proxyv1alpha1.Role
-	RpcPermissions    []proxyv1alpha1.RpcPermission
+	RpcPermissions    []*proxyv1alpha1.RpcPermission
 	RoleBindings      []*proxyv1alpha1.RoleBinding
 }
 
@@ -200,7 +200,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		}
 	}
 	if !found {
-		r.rpcPermissions = append(r.rpcPermissions, proxyv1alpha1.RpcPermission{
+		r.rpcPermissions = append(r.rpcPermissions, &proxyv1alpha1.RpcPermission{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
@@ -329,7 +329,11 @@ func (r *HeimdallrProxy) Roles() []*proxyv1alpha1.Role {
 	return r.roles
 }
 
-func (r *HeimdallrProxy) RpcPermissions() []proxyv1alpha1.RpcPermission {
+func (r *HeimdallrProxy) RoleBindings() []*proxyv1alpha1.RoleBinding {
+	return r.roleBindings
+}
+
+func (r *HeimdallrProxy) RpcPermissions() []*proxyv1alpha1.RpcPermission {
 	return r.rpcPermissions
 }
 
@@ -838,188 +842,17 @@ func (r *HeimdallrProxy) LabelsForDefragmentJob() map[string]string {
 }
 
 func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
-	backends := r.Backends()
-
-	proxies := make([]*config.Backend, 0, len(backends))
-	backendMap := make(map[string]*proxyv1alpha1.Backend)
-	for _, v := range backends {
-		backendMap[v.Namespace+"/"+v.Name] = v
-
-		var service *corev1.Service
-		if len(v.Spec.ServiceSelector.MatchLabels) > 0 {
-			selector, err := metav1.LabelSelectorAsSelector(&v.Spec.ServiceSelector.LabelSelector)
-			if err != nil {
-				return nil, xerrors.Errorf(": %w", err)
-			}
-
-			services, err := r.serviceLister.Services(r.Spec.BackendSelector.Namespace).List(selector)
-			if err != nil {
-				return nil, xerrors.Errorf(": %w", err)
-			}
-			if len(services) == 0 {
-				continue
-			}
-
-			service = services[0]
-		}
-
-		permissions := make([]*config.Permission, len(v.Spec.Permissions))
-		for k, p := range v.Spec.Permissions {
-			locations := make([]config.Location, len(p.Locations))
-			for j, u := range p.Locations {
-				locations[j] = config.Location{
-					Any:     u.Any,
-					Get:     u.Get,
-					Post:    u.Post,
-					Put:     u.Put,
-					Delete:  u.Delete,
-					Head:    u.Head,
-					Connect: u.Connect,
-					Options: u.Options,
-					Trace:   u.Trace,
-					Patch:   u.Patch,
-				}
-			}
-			permissions[k] = &config.Permission{
-				Name:      v.Spec.Permissions[k].Name,
-				Locations: locations,
-			}
-		}
-		name := v.Name + "." + v.Spec.Layer
-		if v.Spec.Layer == "" {
-			name = v.Name
-		}
-		upstream := v.Spec.Upstream
-		if upstream == "" && service != nil {
-			for _, p := range service.Spec.Ports {
-				if p.Name == v.Spec.ServiceSelector.Port {
-					scheme := v.Spec.ServiceSelector.Scheme
-					if scheme == "" {
-						switch p.Name {
-						case "http", "https":
-							scheme = p.Name
-						}
-					}
-
-					upstream = fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, p.Port)
-					break
-				}
-			}
-		}
-		b := &config.Backend{
-			Name:          name,
-			FQDN:          v.Spec.FQDN,
-			Upstream:      upstream,
-			Permissions:   permissions,
-			WebHook:       v.Spec.Webhook,
-			WebHookPath:   v.Spec.WebhookPath,
-			Agent:         v.Spec.Agent,
-			Socket:        v.Spec.Socket,
-			AllowRootUser: v.Spec.AllowRootUser,
-			DisableAuthn:  v.Spec.DisableAuthn,
-			Insecure:      v.Spec.Insecure,
-			AllowHttp:     v.Spec.AllowHttp,
-		}
-		if v.Spec.SocketTimeout != nil {
-			b.SocketTimeout = &config.Duration{Duration: v.Spec.SocketTimeout.Duration}
-		}
-		proxies = append(proxies, b)
-	}
-	sort.Slice(proxies, func(i, j int) bool {
-		return proxies[i].Name < proxies[j].Name
-	})
-	proxyBinary, err := yaml.Marshal(proxies)
+	proxyBinary, err := ConfigConverter{}.Proxy(r.Backends(), r.serviceLister)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	roleList := r.Roles()
-	roles := make([]*config.Role, len(roleList))
-	for i, role := range roleList {
-		bindings := make([]*config.Binding, 0)
-
-		matchedBindings := RoleBindings(r.roleBindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
-			if binding.RoleRef.Name != role.Name {
-				return false
-			}
-			if binding.RoleRef.Namespace != "" && binding.RoleRef.Namespace == role.Namespace {
-				return true
-			}
-			if binding.RoleRef.Namespace == "" && binding.ObjectMeta.Namespace == role.Namespace {
-				return true
-			}
-
-			return false
-		})
-		if role.Spec.AllowDashboard {
-			matchedBindings = append(matchedBindings, &proxyv1alpha1.RoleBinding{
-				Subjects: []proxyv1alpha1.Subject{
-					{
-						Kind:       "Backend",
-						Name:       "dashboard",
-						Permission: "all",
-					},
-				},
-			})
-		}
-
-		for _, binding := range matchedBindings {
-			for _, subject := range binding.Subjects {
-				switch subject.Kind {
-				case "Backend":
-					namespace := role.Namespace
-					if subject.Namespace != "" {
-						namespace = subject.Namespace
-					}
-					backendHost := ""
-					if bn, ok := backendMap[namespace+"/"+subject.Name]; ok {
-						backendHost = bn.Name + "." + bn.Spec.Layer
-						if bn.Spec.Layer == "" {
-							backendHost = bn.Name
-						}
-					} else {
-						continue
-					}
-
-					bindings = append(bindings, &config.Binding{
-						Permission: subject.Permission,
-						Backend:    backendHost,
-					})
-				case "RpcPermission":
-					bindings = append(bindings, &config.Binding{
-						Rpc: subject.Name,
-					})
-				}
-			}
-		}
-
-		roles[i] = &config.Role{
-			Name:        role.Name,
-			Title:       role.Spec.Title,
-			Description: role.Spec.Description,
-			Bindings:    bindings,
-		}
-	}
-	sort.Slice(roles, func(i, j int) bool {
-		return roles[i].Name < roles[j].Name
-	})
-	roleBinary, err := yaml.Marshal(roles)
+	roleBinary, err := ConfigConverter{}.Role(r.Backends(), r.Roles(), r.RoleBindings())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	rpcPermissionList := r.RpcPermissions()
-	rpcPermissions := make([]*config.RpcPermission, len(rpcPermissionList))
-	for i, v := range rpcPermissionList {
-		rpcPermissions[i] = &config.RpcPermission{
-			Name:  v.Name,
-			Allow: v.Spec.Allow,
-		}
-	}
-	sort.Slice(rpcPermissions, func(i, j int) bool {
-		return rpcPermissions[i].Name < rpcPermissions[j].Name
-	})
-	rpcPermissionBinary, err := yaml.Marshal(rpcPermissions)
+	rpcPermissionBinary, err := ConfigConverter{}.RPCPermission(r.RpcPermissions())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -1035,9 +868,9 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	configMap.Data[proxyFilename] = string(proxyBinary)
 	configMap.Data[rpcPermissionFilename] = string(rpcPermissionBinary)
 
-	r.Object.Status.NumOfBackends = len(backends)
-	r.Object.Status.NumOfRoles = len(roles)
-	r.Object.Status.NumOfRpcPermissions = len(rpcPermissions)
+	r.Object.Status.NumOfBackends = len(r.Backends())
+	r.Object.Status.NumOfRoles = len(r.Roles())
+	r.Object.Status.NumOfRpcPermissions = len(r.RpcPermissions())
 	return configMap, nil
 }
 
@@ -1761,4 +1594,48 @@ func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxy
 	}
 
 	return n
+}
+
+func toConfigPermissions(in []proxyv1alpha1.Permission) []*config.Permission {
+	permissions := make([]*config.Permission, 0, len(in))
+	for _, p := range in {
+		locations := make([]config.Location, len(p.Locations))
+		for j, u := range p.Locations {
+			locations[j] = config.Location{
+				Any:     u.Any,
+				Get:     u.Get,
+				Post:    u.Post,
+				Put:     u.Put,
+				Delete:  u.Delete,
+				Head:    u.Head,
+				Connect: u.Connect,
+				Options: u.Options,
+				Trace:   u.Trace,
+				Patch:   u.Patch,
+			}
+		}
+		permissions = append(permissions, &config.Permission{
+			Name:      p.Name,
+			Locations: locations,
+		})
+	}
+
+	return permissions
+}
+
+func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector) (*corev1.Service, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&sel.LabelSelector)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	services, err := lister.Services(sel.Namespace).List(selector)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	if len(services) == 0 {
+		return nil, nil
+	}
+
+	return services[0], nil
 }

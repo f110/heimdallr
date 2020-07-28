@@ -291,7 +291,7 @@ func (c *ProxyController) syncProxy(key string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rpcPermissions, err := c.clientset.ProxyV1alpha1().RpcPermissions("").List(metav1.ListOptions{LabelSelector: selector.String()})
+	rpcPermissions, err := c.rpcPermissionLister.List(selector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -315,7 +315,7 @@ func (c *ProxyController) syncProxy(key string) error {
 		ServiceLister:     c.serviceLister,
 		Backends:          backends,
 		Roles:             roles,
-		RpcPermissions:    rpcPermissions.Items,
+		RpcPermissions:    rpcPermissions,
 		RoleBindings:      roleBindings,
 	})
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
