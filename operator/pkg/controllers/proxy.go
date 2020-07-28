@@ -188,9 +188,6 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 				Title:          "administrator",
 				Description:    fmt.Sprintf("%s administrators", r.Name),
 				AllowDashboard: true,
-				Bindings: []proxyv1alpha1.Binding{
-					{RpcPermissionName: "admin"},
-				},
 			},
 		})
 	}

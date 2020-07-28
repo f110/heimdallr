@@ -38,19 +38,6 @@ spec:
             properties:
               allowDashboard:
                 type: boolean
-              bindings:
-                items:
-                  properties:
-                    backendName:
-                      type: string
-                    namespace:
-                      type: string
-                    permission:
-                      type: string
-                    rpcPermissionName:
-                      type: string
-                  type: object
-                type: array
               description:
                 type: string
               title:
