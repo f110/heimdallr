@@ -34,6 +34,7 @@ func main() {
 	leaseLockName := ""
 	leaseLockNamespace := ""
 	clusterDomain := ""
+	probeAddr := ""
 	dev := false
 	fs := flag.NewFlagSet("heimdallrcontroller", flag.ExitOnError)
 	fs.StringVar(&id, "id", uuid.New().String(), "the holder identity name")
@@ -43,6 +44,7 @@ func main() {
 	fs.StringVar(&leaseLockName, "lease-lock-name", "", "the lease lock resource name")
 	fs.StringVar(&leaseLockNamespace, "lease-lock-namespace", "", "the lease lock resource namespace")
 	fs.StringVar(&clusterDomain, "cluster-domain", clusterDomain, "Cluster domain")
+	fs.StringVar(&probeAddr, "probe-addr", ":6000", "Listen addr that provides readiness probe")
 	fs.BoolVar(&dev, "dev", dev, "development mode")
 	klog.InitFlags(fs)
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -87,6 +89,10 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
+
+	probe := controllers.NewProbe(probeAddr)
+	go probe.Start()
+	probe.Ready()
 
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{

@@ -895,19 +895,8 @@ spec:
           spec:
             description: RoleSpec defines the desired state of Role
             properties:
-              bindings:
-                items:
-                  properties:
-                    backendName:
-                      type: string
-                    namespace:
-                      type: string
-                    permission:
-                      type: string
-                    rpcPermissionName:
-                      type: string
-                  type: object
-                type: array
+              allowDashboard:
+                type: boolean
               description:
                 type: string
               title:
@@ -1255,6 +1244,10 @@ spec:
         image: quay.io/f110/heimdallr-operator:v0.6.2
         imagePullPolicy: Always
         name: operator
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 6000
         resources:
           limits:
             cpu: 100m

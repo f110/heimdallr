@@ -29,6 +29,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          readinessProbe:
+            httpGet:
+              port: 6000
+              path: /readiness
           resources:
             limits:
               cpu: 100m
