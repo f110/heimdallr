@@ -806,19 +806,35 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 }
 
 func (r *HeimdallrProxy) LabelsForMain() map[string]string {
-	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "proxy"}
+	return map[string]string{
+		"app.kubernetes.io/name":      "heimdallr",
+		"app.kubernetes.io/instance":  r.Name,
+		"app.kubernetes.io/component": "proxy",
+	}
 }
 
 func (r *HeimdallrProxy) LabelsForDashboard() map[string]string {
-	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "dashboard"}
+	return map[string]string{
+		"app.kubernetes.io/name":      "heimdallr",
+		"app.kubernetes.io/instance":  r.Name,
+		"app.kubernetes.io/component": "dashboard",
+	}
 }
 
 func (r *HeimdallrProxy) LabelsForRPCServer() map[string]string {
-	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "rpcserver"}
+	return map[string]string{
+		"app.kubernetes.io/name":      "heimdallr",
+		"app.kubernetes.io/instance":  r.Name,
+		"app.kubernetes.io/component": "rpcserver",
+	}
 }
 
 func (r *HeimdallrProxy) LabelsForDefragmentJob() map[string]string {
-	return map[string]string{"app": "heimdallr", "proxy.f110.dev/instance": r.Name, "proxy.f110.dev/role": "job", "proxy.f110.dev/job": "defragment"}
+	return map[string]string{
+		"app.kubernetes.io/name":      "heimdallr",
+		"app.kubernetes.io/instance":  r.Name,
+		"app.kubernetes.io/component": "defragment",
+	}
 }
 
 func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
