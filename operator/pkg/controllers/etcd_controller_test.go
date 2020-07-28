@@ -80,7 +80,6 @@ func TestEtcdController(t *testing.T) {
 		f, _ := newEtcdControllerTestRunner(t)
 
 		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
-		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
@@ -88,6 +87,7 @@ func TestEtcdController(t *testing.T) {
 			f.RegisterPodFixture(v)
 		}
 		e.Spec.Version = "v3.3.0"
+		f.RegisterEtcdClusterFixture(e)
 
 		f.ExpectCreatePod()
 		f.ExpectUpdateEtcdClusterStatus()
