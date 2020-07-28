@@ -1,0 +1,7 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "manager",
+    src = "kustomization.yaml",
+    resources = ["manager.yaml"]
+)

@@ -35,6 +35,7 @@ def _kustomization_impl(ctx):
     args.add("build")
     args.add(paths.dirname(ctx.file.src.path))
     args.add("--output=%s" % out.path)
+    args.add("--load_restrictor=none")
 
     ctx.actions.run(
         executable = ctx.executable._kustomize,
