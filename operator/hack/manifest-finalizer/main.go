@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
 )
 
@@ -71,7 +72,21 @@ func editCustomResourceDefinition(v map[interface{}]interface{}) {
 }
 
 func main() {
-	if err := finalizer(os.Stdin, os.Stdout); err != nil {
+	var in, out string
+	pflag.CommandLine.StringVar(&in, "in", "", "Input file")
+	pflag.CommandLine.StringVar(&out, "out", "", "Output path")
+	pflag.Parse()
+
+	reader, err := os.Open(in)
+	if err != nil {
+		panic(err)
+	}
+	writer, err := os.Create(out)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := finalizer(reader, writer); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

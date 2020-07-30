@@ -1,0 +1,14 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "rbac",
+    src = "kustomization.yaml",
+    resources = [
+        "leader_election_role.yaml",
+        "leader_election_role_binding.yaml",
+        "role.yaml",
+        "role_binding.yaml",
+        "service_account.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)

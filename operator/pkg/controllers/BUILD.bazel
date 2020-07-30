@@ -85,6 +85,7 @@ rbac_gen(
     srcs = [":go_default_library"],
     dir = "operator/config/rbac",
     rolename = "heimdallr",
+    visibility = ["//visibility:public"],
 )
 
 go_test(

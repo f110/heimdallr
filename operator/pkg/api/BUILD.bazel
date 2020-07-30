@@ -8,7 +8,7 @@ k8s_code_generator(
         "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
     ],
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
-    crd = "operator/config/crd/bases",
+    crd = "operator/config/crd",
     header = "//operator/hack:boilerplate.go.txt",
     informerpackage = "go.f110.dev/heimdallr/operator/pkg/informers",
     listerpackage = "go.f110.dev/heimdallr/operator/pkg/listers",

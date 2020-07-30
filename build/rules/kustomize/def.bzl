@@ -1,6 +1,8 @@
 load("//build/rules/kustomize:assets.bzl", "KUSTOMIZE_ASSETS")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+Kustomization = provider()
+
 def _kustomize_binary_impl(ctx):
     os = ""
     if ctx.os.name == "linux":
@@ -37,16 +39,30 @@ def _kustomization_impl(ctx):
     args.add("--output=%s" % out.path)
     args.add("--load_restrictor=none")
 
+    srcs = []
+    for x in ctx.attr.resources:
+        if Kustomization in x:
+            srcs.extend(x[Kustomization].srcs)
+            continue
+        srcs.extend(x.files.to_list())
+
     ctx.actions.run(
         executable = ctx.executable._kustomize,
-        inputs = depset(direct = [ctx.file.src], transitive = [depset(ctx.files.resources)]),
+        inputs = depset(direct = [ctx.file.src], transitive = [depset(srcs)]),
         outputs = [out],
         arguments = [args],
     )
 
-    return DefaultInfo(
-        files = depset([out]),
-    )
+    return [
+        DefaultInfo(
+            files = depset([out]),
+        ),
+        Kustomization(
+            name = ctx.label.name,
+            generated_manifest = out,
+            srcs = [ctx.file.src] + depset(ctx.files.resources).to_list(),
+        )
+    ]
 
 kustomization = rule(
     implementation = _kustomization_impl,

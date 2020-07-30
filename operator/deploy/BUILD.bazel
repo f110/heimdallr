@@ -1,0 +1,18 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "deploy",
+    src = "kustomization.yaml",
+    resources = [
+        "//operator/config/crd",
+        "//operator/config/manager",
+        "//operator/config/rbac",
+    ],
+)
+
+load("//operator/hack/manifest-finalizer:def.bzl", "finalize_manifest")
+
+finalize_manifest(
+    name = "all-in-one",
+    src = ":deploy",
+)

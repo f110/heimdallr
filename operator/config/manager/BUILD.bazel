@@ -4,4 +4,5 @@ kustomization(
     name = "manager",
     src = "kustomization.yaml",
     resources = ["manager.yaml"],
+    visibility = ["//visibility:public"],
 )
