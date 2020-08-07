@@ -102,7 +102,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	c.f.Write(b)
 	n, err = c.f.EncodeTo(OpcodePacket, c.conn)
 	if err == nil {
-		return n - 5, nil
+		return n - 9, nil
 	}
 	return n, err
 }
