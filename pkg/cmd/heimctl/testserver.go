@@ -65,6 +65,27 @@ window.onload = function () {
 </body>
 </html>`)
 	})
+	http.HandleFunc("/multipart", func(w http.ResponseWriter, req *http.Request) {
+		io.WriteString(w, `<!DOCTYPE html>
+<html>
+<body>
+<form action="/multipart_upload" method="post" enctype="multipart/form-data">
+	<input type="file" name="file" id="file">
+	<input type="submit" name="submit">
+</form>
+</body>
+</html>`)
+	})
+	http.HandleFunc("/multipart_upload", func(w http.ResponseWriter, req *http.Request) {
+		if err := req.ParseMultipartForm(16 * 1024 * 1024); err != nil {
+			log.Print(err)
+			return
+		}
+		for k := range req.MultipartForm.File {
+			log.Print(k)
+		}
+		io.WriteString(w, "DONE")
+	})
 	fmt.Println("Listen :4501")
 	return http.ListenAndServe(":4501", nil)
 }
