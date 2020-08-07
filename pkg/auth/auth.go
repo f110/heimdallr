@@ -147,6 +147,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 		}
 	}
 
+	logger.Log.Debug("User not permitted", zap.String("user", user.Id), zap.Strings("roles", user.Roles))
 	return nil, ErrNotAllowed
 }
 
