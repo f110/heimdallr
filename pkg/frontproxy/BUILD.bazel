@@ -19,7 +19,7 @@ go_library(
         "//pkg/session:go_default_library",
         "//pkg/stat:go_default_library",
         "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
-        "//vendor/github.com/google/go-github/v29/github:go_default_library",
+        "//vendor/github.com/google/go-github/v32/github:go_default_library",
         "//vendor/github.com/gorilla/mux:go_default_library",
         "//vendor/go.uber.org/zap:go_default_library",
         "//vendor/go.uber.org/zap/zapcore:go_default_library",
