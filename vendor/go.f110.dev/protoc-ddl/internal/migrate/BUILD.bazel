@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "diff.go",
+        "migrate.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.f110.dev/protoc-ddl/internal/migrate",
+    importpath = "go.f110.dev/protoc-ddl/internal/migrate",
+    visibility = ["//vendor/go.f110.dev/protoc-ddl:__subpackages__"],
+    deps = [
+        "//vendor/github.com/deckarep/golang-set:go_default_library",
+        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/github.com/schemalex/schemalex:go_default_library",
+        "//vendor/github.com/schemalex/schemalex/format:go_default_library",
+        "//vendor/github.com/schemalex/schemalex/model:go_default_library",
+        "//vendor/go.f110.dev/protoc-ddl/internal/generator:go_default_library",
+        "//vendor/go.f110.dev/protoc-ddl/internal/schema:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+    ],
+)

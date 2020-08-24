@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bind_variables.go",
+        "event_token.go",
+        "named_result.go",
+        "plan_value.go",
+        "proto3.go",
+        "query_response.go",
+        "result.go",
+        "testing.go",
+        "type.go",
+        "value.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/vitess.io/vitess/go/sqltypes",
+    importpath = "vitess.io/vitess/go/sqltypes",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/vitess.io/vitess/go/bytes2:go_default_library",
+        "//vendor/vitess.io/vitess/go/hack:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/proto/query:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/proto/vtrpc:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/vterrors:go_default_library",
+    ],
+)

@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/v3/clientv3"
+	"go.f110.dev/protoc-ddl/probe"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -20,8 +22,16 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/configreader"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/etcd"
+	"go.f110.dev/heimdallr/pkg/database/mysql"
+	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
+	"go.f110.dev/heimdallr/pkg/database/mysql/entity"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcserver"
+)
+
+const (
+	datastoreTypeEtcd  = "etcd"
+	datastoreTypeMySQL = "mysql"
 )
 
 type mainProcess struct {
@@ -30,7 +40,9 @@ type mainProcess struct {
 	ctx    context.Context
 	server *rpcserver.Server
 
+	datastoreType   string
 	etcdClient      *clientv3.Client
+	conn            *sql.DB
 	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
 	clusterDatabase database.ClusterDatabase
@@ -57,6 +69,13 @@ func (m *mainProcess) ReadConfig(p string) error {
 	}
 	m.Config = conf
 
+	if m.Config.Datastore.Url != nil {
+		m.datastoreType = datastoreTypeEtcd
+	}
+	if m.Config.Datastore.DSN != nil {
+		m.datastoreType = datastoreTypeMySQL
+	}
+
 	return nil
 }
 
@@ -64,7 +83,8 @@ func (m *mainProcess) Setup() error {
 	if err := logger.Init(m.Config.Logger); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if m.Config.Datastore.Url != nil {
+	switch m.datastoreType {
+	case datastoreTypeEtcd:
 		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -93,7 +113,28 @@ func (m *mainProcess) Setup() error {
 				return xerrors.Errorf(": %v", err)
 			}
 		}
-	} else {
+	case datastoreTypeMySQL:
+		m.datastoreType = datastoreTypeMySQL
+		conn, err := sql.Open("mysql", m.Config.Datastore.DSN.FormatDSN())
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		m.conn = conn
+
+		repository := dao.NewRepository(conn)
+		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
+		caDatabase := mysql.NewCA(repository)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
+		m.clusterDatabase, err = mysql.NewCluster(repository)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		if m.Config.General.Enable {
+			m.tokenDatabase = mysql.NewTokenDatabase(repository)
+			m.relayLocator = mysql.NewRelayLocator(repository)
+		}
+	default:
 		return xerrors.New("cmd/rpcserver: required external datastore")
 	}
 
@@ -115,16 +156,18 @@ func (m *mainProcess) Start() error {
 		}
 	}()
 
-	c, err := etcd.NewCompactor(m.etcdClient)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
+	if m.datastoreType == datastoreTypeEtcd {
+		c, err := etcd.NewCompactor(m.etcdClient)
+		if err != nil {
+			return xerrors.Errorf(": %v", err)
+		}
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
 
-		c.Start(context.Background())
-	}()
+			c.Start(context.Background())
+		}()
+	}
 
 	return nil
 }
@@ -156,9 +199,20 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) IsReady() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.ready
+	switch m.datastoreType {
+	case datastoreTypeEtcd:
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		return m.ready
+	case datastoreTypeMySQL:
+		p := probe.NewProbe(m.conn)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancelFunc()
+
+		return p.Ready(ctx, entity.SchemaHash)
+	}
+
+	return false
 }
 
 func (m *mainProcess) watchGRPCConnState(conn *grpc.ClientConn) {

@@ -1,0 +1,51 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "mysql_proto",
+    srcs = ["schema.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+        "@dev_f110_protoc_ddl//:ddl_proto",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [],  # keep
+    embed = [
+        ":schema",
+        ":entity",
+    ],  # keep
+    importpath = "go.f110.dev/heimdallr/pkg/database/mysql/entity",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/go.f110.dev/protoc-ddl:go_default_library"],
+)
+
+load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_entity", "sql_schema", "vendor_ddl")
+
+sql_schema(
+    name = "schema",
+    importpath = "go.f110.dev/heimdallr/pkg/database/mysql/entity",
+    lang = "go",
+    proto = ":mysql_proto",
+    visibility = ["//visibility:public"],
+    with_hash = True,
+)
+
+schema_entity(
+    name = "entity",
+    lang = "go",
+    proto = ":mysql_proto",
+)
+
+vendor_ddl(
+    name = "vendor_schema",
+    src = ":schema",
+)
+
+vendor_ddl(
+    name = "vendor_entity",
+    src = ":entity",
+)

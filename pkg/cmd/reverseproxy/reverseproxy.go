@@ -3,6 +3,7 @@ package reverseproxy
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/embed"
+	"go.f110.dev/protoc-ddl/probe"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -29,6 +31,9 @@ import (
 	"go.f110.dev/heimdallr/pkg/dashboard"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/etcd"
+	"go.f110.dev/heimdallr/pkg/database/mysql"
+	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
+	"go.f110.dev/heimdallr/pkg/database/mysql/entity"
 	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -60,12 +65,19 @@ const (
 	stateFinish
 )
 
+const (
+	datastoreTypeEtcd  = "etcd"
+	datastoreTypeMySQL = "mysql"
+)
+
 type mainProcess struct {
 	ConfFile string
 
 	wg              sync.WaitGroup
 	config          *config.Config
+	datastoreType   string
 	etcdClient      *clientv3.Client
+	conn            *sql.DB
 	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
 	tokenDatabase   database.TokenDatabase
@@ -158,6 +170,12 @@ func (m *mainProcess) ReadConfig() error {
 	}
 	m.config = conf
 
+	if m.config.Datastore.Url != nil {
+		m.datastoreType = datastoreTypeEtcd
+	} else {
+		m.datastoreType = datastoreTypeMySQL
+	}
+
 	return m.NextState(stateSetup)
 }
 
@@ -223,9 +241,12 @@ func (m *mainProcess) WaitRPCServerShutdown() error {
 
 func (m *mainProcess) ShutdownRPCServer() error {
 	if m.config != nil {
-		client, _ := m.config.Datastore.GetEtcdClient(m.config.Logger)
-		if err := client.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		switch m.datastoreType {
+		case datastoreTypeEtcd:
+			client, _ := m.config.Datastore.GetEtcdClient(m.config.Logger)
+			if err := client.Close(); err != nil {
+				fmt.Fprintf(os.Stderr, "%+v\n", err)
+			}
 		}
 	}
 
@@ -283,9 +304,21 @@ func (m *mainProcess) signalHandling() {
 }
 
 func (m *mainProcess) IsReady() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.ready
+	switch m.datastoreType {
+	case datastoreTypeEtcd:
+		m.mu.Lock()
+		defer m.mu.Unlock()
+
+		return m.ready
+	case datastoreTypeMySQL:
+		p := probe.NewProbe(m.conn)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancelFunc()
+
+		return p.Ready(ctx, entity.SchemaHash)
+	}
+
+	return false
 }
 
 func (m *mainProcess) startServer() {
@@ -369,7 +402,8 @@ func (m *mainProcess) Setup() error {
 		}
 	}
 
-	if m.config.Datastore.Url != nil {
+	switch m.datastoreType {
+	case datastoreTypeEtcd:
 		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -398,6 +432,25 @@ func (m *mainProcess) Setup() error {
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
+		}
+	case datastoreTypeMySQL:
+		conn, err := m.config.Datastore.GetMySQLConn()
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		repository := dao.NewRepository(conn)
+		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
+		caDatabase := mysql.NewCA(repository)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.General.CertificateAuthority)
+		m.clusterDatabase, err = mysql.NewCluster(repository)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		if m.config.General.Enable {
+			m.tokenDatabase = mysql.NewTokenDatabase(repository)
+			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
 	}
 
@@ -479,11 +532,13 @@ func (m *mainProcess) StartRPCServer() error {
 		case <-successCh:
 		}
 
-		c, err := etcd.NewCompactor(m.etcdClient)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
+		if m.datastoreType == datastoreTypeEtcd {
+			c, err := etcd.NewCompactor(m.etcdClient)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			go c.Start(context.Background())
 		}
-		go c.Start(context.Background())
 	}
 
 	return m.NextState(stateSetupRPCConn)

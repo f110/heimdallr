@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"database/sql"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/clientv3/namespace"
@@ -138,6 +140,8 @@ type Datastore struct {
 	EtcdUrl     *url.URL        `json:"-"`
 	Certificate tls.Certificate `json:"-"`
 	CertPool    *x509.CertPool  `json:"-"`
+
+	DSN *mysql.Config
 
 	etcdClient *clientv3.Client `json:"-"`
 }
@@ -724,14 +728,24 @@ func (g *General) reloadCertificate() {
 
 func (d *Datastore) Inflate(dir string) error {
 	if d.RawUrl != "" {
-		u, err := url.Parse(d.RawUrl)
-		if err != nil {
-			return err
-		}
-		d.Url = u
+		if strings.HasPrefix(d.RawUrl, "mysql://") {
+			cfg, err := mysql.ParseDSN(d.RawUrl[8:])
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			cfg.ParseTime = true
+			cfg.Loc = time.Local
+			d.DSN = cfg
+		} else {
+			u, err := url.Parse(d.RawUrl)
+			if err != nil {
+				return err
+			}
+			d.Url = u
 
-		if u.Host == "embed" {
-			d.Embed = true
+			if u.Host == "embed" {
+				d.Embed = true
+			}
 		}
 	}
 	if d.DataDir != "" {
@@ -771,6 +785,9 @@ func (d *Datastore) Inflate(dir string) error {
 		d.Certificate = c
 	}
 
+	if d.Url == nil {
+		return nil
+	}
 	switch d.Url.Scheme {
 	case "etcd":
 		if d.Embed {
@@ -865,6 +882,14 @@ func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) 
 	client.Watcher = namespace.NewWatcher(client.Watcher, d.Namespace)
 	d.etcdClient = client
 	return client, nil
+}
+
+func (d *Datastore) GetMySQLConn() (*sql.DB, error) {
+	conn, err := sql.Open("mysql", d.DSN.FormatDSN())
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	return conn, nil
 }
 
 func (b *Backend) inflate() error {

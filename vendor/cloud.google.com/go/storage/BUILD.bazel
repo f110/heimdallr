@@ -13,6 +13,7 @@ go_library(
         "invoke.go",
         "not_go110.go",
         "notifications.go",
+        "post_policy_v4.go",
         "reader.go",
         "storage.go",
         "writer.go",
@@ -33,5 +34,6 @@ go_library(
         "//vendor/google.golang.org/api/storage/v1:go_default_library",
         "//vendor/google.golang.org/api/transport/http:go_default_library",
         "//vendor/google.golang.org/genproto/googleapis/iam/v1:go_default_library",
+        "//vendor/google.golang.org/genproto/googleapis/type/expr:go_default_library",
     ],
 )

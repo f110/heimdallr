@@ -14,6 +14,7 @@ var (
 type RelayLocator interface {
 	Get(name string) (*Relay, bool)
 	Set(ctx context.Context, relay *Relay) error
+	// TODO: Is this method used?
 	Update(ctx context.Context, relay *Relay) error
 	Delete(ctx context.Context, name, addr string) error
 	Gone() chan *Relay

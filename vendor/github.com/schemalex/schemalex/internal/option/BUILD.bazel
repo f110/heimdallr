@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["option.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/schemalex/schemalex/internal/option",
+    importpath = "github.com/schemalex/schemalex/internal/option",
+    visibility = ["//vendor/github.com/schemalex/schemalex:__subpackages__"],
+)

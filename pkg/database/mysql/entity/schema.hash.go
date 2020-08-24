@@ -1,0 +1,3 @@
+package entity
+
+const SchemaHash = "d41a4da7ee65365e3b06796ca6322d19235f52430878d0cbccfe8c54066eec7f"

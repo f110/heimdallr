@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["plugin.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/go.f110.dev/protoc-ddl/internal/schema",
+    importpath = "go.f110.dev/protoc-ddl/internal/schema",
+    visibility = ["//vendor/go.f110.dev/protoc-ddl:__subpackages__"],
+    deps = [
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/descriptor:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/plugin:go_default_library",
+        "//vendor/go.f110.dev/protoc-ddl:go_default_library",
+    ],
+)

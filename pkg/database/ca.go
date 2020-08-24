@@ -17,7 +17,7 @@ type CertificateAuthority interface {
 	// You want to get a specify SignedCertificate then also passed the serial number.
 	// You want to get all SignedCertificate then passed the nil to serialNumber.
 	GetSignedCertificate(ctx context.Context, serialNumber *big.Int) ([]*SignedCertificate, error)
-	// GetRevoedCertificate returns a list of RevokedCertificate.
+	// GetRevokedCertificate returns a list of RevokedCertificate.
 	// An interface of this method is the same as GetSignedCertificate.
 	GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) ([]*RevokedCertificate, error)
 	SetSignedCertificate(ctx context.Context, certificate *SignedCertificate) error

@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "arithmetic.go",
+        "casting.go",
+        "expressions.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/vitess.io/vitess/go/vt/vtgate/evalengine",
+    importpath = "vitess.io/vitess/go/vt/vtgate/evalengine",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/vitess.io/vitess/go/sqltypes:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/proto/query:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/proto/vtrpc:go_default_library",
+        "//vendor/vitess.io/vitess/go/vt/vterrors:go_default_library",
+    ],
+)

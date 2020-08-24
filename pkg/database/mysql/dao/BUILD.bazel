@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_dao", "vendor_ddl")
+
+schema_dao(
+    name = "dao",
+    lang = "go",
+    proto = "//pkg/database/mysql/entity:mysql_proto",
+)
+
+vendor_ddl(
+    name = "vendor_dao",
+    src = ":dao",
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "repository.go",
+        "schema.dao.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/database/mysql/dao",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database/mysql/entity:go_default_library",
+        "//vendor/golang.org/x/xerrors:go_default_library",
+    ],
+)

@@ -101,11 +101,13 @@ func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params ht
 func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
 	sess, err := s.sessionStore.GetSession(req)
 	if err != nil {
+		logger.Log.Debug("Could not get session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	unique, err := s.database.GetState(req.Context(), req.URL.Query().Get("state"))
 	if err != nil {
+		logger.Log.Debug("Could not get state", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

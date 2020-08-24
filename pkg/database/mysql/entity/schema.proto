@@ -1,0 +1,271 @@
+syntax = "proto3";
+package heimdallr.mysql.schema;
+option go_package = "go.f110.dev/heimdallr/pkg/database/mysql/entity";
+
+import "ddl.proto";
+import "google/protobuf/timestamp.proto";
+
+message User {
+    int32  id        = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string identity  = 2 [(dev.f110.ddl.column) = {unique: true}];
+    bool   admin     = 3;
+    string type      = 4;
+    string comment   = 5;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "Identity"
+            query: "select * from `:table_name:` where identity = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+    };
+}
+
+message UserState {
+    int32  id     = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string state  = 2 [(dev.f110.ddl.column) = {unique: true}];
+    string unique = 3;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "State"
+            query: "select * from `:table_name:` where state = ?"
+        };
+    };
+}
+
+message RoleBinding {
+    int32  id         = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    User   user       = 2;
+    string role       = 3;
+    bool   maintainer = 4;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+        indexes: {
+            columns: "user"
+            columns: "role"
+            unique: true
+        };
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "User"
+            query: "select * from `:table_name:` where user_id = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+        queries: {
+            name: "UserRole"
+            query: "select * from `:table_name:` where user_id = ? and role = ?"
+        };
+    };
+}
+
+message AccessToken {
+    int32  id     = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string name   = 2;
+    string value  = 3 [(dev.f110.ddl.column) = {unique: true}];
+    User   user   = 4;
+    User   issuer = 5;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "AccessToken"
+            query: "select * from `:table_name:` where value = ?"
+        };
+        queries: {
+            name: "ByUser"
+            query: "select * from `:table_name:` where user_id = ?"
+        };
+    };
+}
+
+message Token {
+    int32  id    = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string token = 2;
+    User   user  = 3;
+    google.protobuf.Timestamp issued_at = 4;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+        queries: {
+            name: "Token"
+            query: "select * from `:table_name:` where token = ?"
+        };
+    };
+}
+
+message Code {
+    int32  id               = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string code             = 2 [(dev.f110.ddl.column) = {unique: true}];
+    string challenge        = 3;
+    string challenge_method = 4;
+    User   user             = 5;
+    google.protobuf.Timestamp issued_at = 6;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "Code"
+            query: "select * from `:table_name:` where code = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        }
+    };
+}
+
+message Relay {
+    int32  id        = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string name      = 2;
+    string addr      = 3;
+    string from_addr = 4;
+    google.protobuf.Timestamp connected_at = 5;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+        indexes: {
+            columns: "name"
+            columns: "addr"
+            unique: true
+        };
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "Name"
+            query: "select * from `:table_name:` where name = ?"
+        };
+        queries: {
+            name: "Endpoint"
+            query: "select * from `:table_name:` where name = ? and addr = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+    };
+}
+
+message SerialNumber {
+    int64 id = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    bytes serial_number = 2 [(dev.f110.ddl.column) = {unique: true, size: 20}];
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "SerialNumber"
+            query: "SELECT * FROM `:table_name:` where serial_number = ?"
+        };
+    };
+}
+
+message SignedCertificate {
+    int32         id            = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    bytes         certificate   = 2;
+    SerialNumber  serial_number = 3;
+    bytes         p12           = 4;
+    bool          agent         = 5;
+    string        comment       = 6;
+    google.protobuf.Timestamp issued_at = 7;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "SerialNumber"
+            query: "SELECT * FROM `:table_name:` where serial_number_id = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+    };
+}
+
+message RevokedCertificate {
+    int32  id            = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string common_name   = 2;
+    bytes  serial_number = 3;
+    bool   agent         = 4;
+    string comment       = 5;
+    google.protobuf.Timestamp revoked_at = 6;
+    google.protobuf.Timestamp issued_at = 7;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "SerialNumber"
+            query: "select * from `:table_name:` where serial_number = ?"
+        };
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+    };
+}
+
+message Node {
+    int32  id       = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string hostname = 2;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "id"
+        with_timestamp: true
+    };
+
+    option (dev.f110.ddl.dao) = {
+        queries: {
+            name: "All"
+            query: "select * from `:table_name:`"
+        };
+        queries: {
+            name: "Hostname"
+            query: "select * from `:table_name:` where hostname = ?"
+        };
+    };
+}

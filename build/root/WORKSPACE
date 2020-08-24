@@ -37,7 +37,7 @@ http_archive(
 
 git_repository(
     name = "dev_f110_rules_extras",
-    commit = "375ebcf345681157e99ef3b5089507b87e2b937b",
+    commit = "9f2df3337bfd8eca58235285cf048fcadb8eddef",
     remote = "https://github.com/f110/rules_extras",
 )
 
@@ -45,6 +45,12 @@ git_repository(
     name = "dev_f110_mono",
     commit = "8ddd5c26208161be849a6ad98331ae25bb0f9251",
     remote = "https://github.com/f110/mono",
+)
+
+git_repository(
+    name = "dev_f110_protoc_ddl",
+    commit = "19d1c708b75b39e1b0c87eb7ba4a6eb3363afb12",
+    remote = "https://github.com/f110/protoc-ddl",
 )
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
