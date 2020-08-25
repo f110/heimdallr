@@ -58,6 +58,7 @@ type Client struct {
 	adminClient   rpc.AdminClient
 	clusterClient rpc.ClusterClient
 	caClient      rpc.CertificateAuthorityClient
+	userClient    rpc.UserClient
 	md            context.Context
 	ka            keepalive.ClientParameters
 }
@@ -96,11 +97,12 @@ func NewWithInternalToken(conn *grpc.ClientConn, token string) (*Client, error) 
 	return c, nil
 }
 
-func NewWithClient(a rpc.AdminClient, c rpc.ClusterClient, ca rpc.CertificateAuthorityClient) *Client {
+func NewWithClient(a rpc.AdminClient, c rpc.ClusterClient, ca rpc.CertificateAuthorityClient, user rpc.UserClient) *Client {
 	return &Client{
 		adminClient:   a,
 		clusterClient: c,
 		caClient:      ca,
+		userClient:    user,
 	}
 }
 
@@ -109,6 +111,7 @@ func (c *Client) setConn(conn *grpc.ClientConn) {
 	c.adminClient = rpc.NewAdminClient(conn)
 	c.clusterClient = rpc.NewClusterClient(conn)
 	c.caClient = rpc.NewCertificateAuthorityClient(conn)
+	c.userClient = rpc.NewUserClient(conn)
 }
 
 func (c *Client) Close() {
@@ -321,6 +324,28 @@ func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
 	}
 
 	return res.Item, nil
+}
+
+func (c *Client) GetSSHKey(userId string) (string, error) {
+	keys, err := c.userClient.GetSSHKey(c.md, &rpc.RequestGetSSHKey{UserId: userId})
+	if err != nil {
+		return "", err
+	}
+
+	return keys.Key, nil
+}
+
+func (c *Client) SetSSHKey(key string) error {
+	res, err := c.userClient.SetSSHKey(c.md, &rpc.RequestSetSSHKey{Key: key})
+	if err != nil {
+		return err
+	}
+
+	if !res.Ok {
+		return xerrors.New("rpcclient: Failed update ssh key")
+	}
+
+	return nil
 }
 
 func extractEndpointFromError(err error) (string, error) {

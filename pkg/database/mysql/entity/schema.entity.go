@@ -166,6 +166,74 @@ func (e *UserState) Copy() *UserState {
 	return n
 }
 
+type SSHKey struct {
+	UserId    int32
+	Key       string
+	CreatedAt time.Time
+	UpdatedAt *time.Time
+
+	User *User
+
+	mu   sync.Mutex
+	mark *SSHKey
+}
+
+func (e *SSHKey) ResetMark() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.mark = e.Copy()
+}
+
+func (e *SSHKey) IsChanged() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return e.Key != e.mark.Key ||
+		!e.CreatedAt.Equal(e.mark.CreatedAt) ||
+		((e.UpdatedAt != nil && (e.mark.UpdatedAt == nil || !e.UpdatedAt.Equal(*e.mark.UpdatedAt))) || (e.UpdatedAt == nil && e.mark.UpdatedAt != nil))
+}
+
+func (e *SSHKey) ChangedColumn() []ddl.Column {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	res := make([]ddl.Column, 0)
+	if e.Key != e.mark.Key {
+		res = append(res, ddl.Column{Name: "key", Value: e.Key})
+	}
+	if !e.CreatedAt.Equal(e.mark.CreatedAt) {
+		res = append(res, ddl.Column{Name: "created_at", Value: e.CreatedAt})
+	}
+	if (e.UpdatedAt != nil && (e.mark.UpdatedAt == nil || !e.UpdatedAt.Equal(*e.mark.UpdatedAt))) || (e.UpdatedAt == nil && e.mark.UpdatedAt != nil) {
+		if e.UpdatedAt != nil {
+			res = append(res, ddl.Column{Name: "updated_at", Value: *e.UpdatedAt})
+		} else {
+			res = append(res, ddl.Column{Name: "updated_at", Value: nil})
+		}
+	}
+
+	return res
+}
+
+func (e *SSHKey) Copy() *SSHKey {
+	n := &SSHKey{
+		UserId:    e.UserId,
+		Key:       e.Key,
+		CreatedAt: e.CreatedAt,
+	}
+	if e.UpdatedAt != nil {
+		v := *e.UpdatedAt
+		n.UpdatedAt = &v
+	}
+
+	if e.User != nil {
+		n.User = e.User.Copy()
+	}
+
+	return n
+}
+
 type RoleBinding struct {
 	Id         int32
 	UserId     int32

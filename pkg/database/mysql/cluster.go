@@ -17,6 +17,8 @@ type ClusterDatabase struct {
 	id  string
 }
 
+var _ database.ClusterDatabase = &ClusterDatabase{}
+
 func NewCluster(dao *dao.Repository) (*ClusterDatabase, error) {
 	hostname, err := netutil.GetHostname()
 	if err != nil {

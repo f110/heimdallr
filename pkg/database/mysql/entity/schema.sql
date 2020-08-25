@@ -27,6 +27,15 @@ CREATE TABLE `user_state` (
 	PRIMARY KEY(`id`)
 ) Engine=InnoDB;
 
+DROP TABLE IF EXISTS `ssh_key`;
+CREATE TABLE `ssh_key` (
+	`user_id` INTEGER NOT NULL,
+	`key` VARCHAR(255) NOT NULL,
+	`created_at` DATETIME NOT NULL,
+	`updated_at` DATETIME NULL,
+	PRIMARY KEY(`user_id`)
+) Engine=InnoDB;
+
 DROP TABLE IF EXISTS `role_binding`;
 CREATE TABLE `role_binding` (
 	`id` INTEGER NOT NULL AUTO_INCREMENT,

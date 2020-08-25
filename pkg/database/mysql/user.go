@@ -20,6 +20,8 @@ type UserDatabase struct {
 	systemUsers map[string]*database.User
 }
 
+var _ database.UserDatabase = &UserDatabase{}
+
 func NewUserDatabase(dao *dao.Repository, systemUsers ...*database.User) *UserDatabase {
 	m := make(map[string]*database.User)
 	for _, v := range systemUsers {
@@ -298,6 +300,50 @@ func (u *UserDatabase) DeleteState(ctx context.Context, state string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	err = u.dao.UserState.Delete(ctx, s.Id)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func (u *UserDatabase) GetSSHKeys(ctx context.Context, id string) (*database.SSHKeys, error) {
+	user, err := u.dao.User.SelectIdentity(ctx, id)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	key, err := u.dao.SSHKey.Select(ctx, user.Id)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return &database.SSHKeys{UserId: user.Identity, Keys: key.Key}, nil
+}
+
+func (u *UserDatabase) SetSSHKeys(ctx context.Context, keys *database.SSHKeys) error {
+	user, err := u.dao.User.SelectIdentity(ctx, keys.UserId)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	k, err := u.dao.SSHKey.Select(ctx, user.Id)
+	if err == sql.ErrNoRows {
+		k = &entity.SSHKey{UserId: user.Id, Key: keys.Keys}
+
+		_, err = u.dao.SSHKey.Create(ctx, k)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	}
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	k.Key = keys.Keys
+	err = u.dao.SSHKey.Update(ctx, k)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

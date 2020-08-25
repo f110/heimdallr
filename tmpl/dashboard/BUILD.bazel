@@ -16,6 +16,7 @@ go_embed_data(
         "//tmpl/dashboard/include:tmpl",
         "//tmpl/dashboard/service_account:tmpl",
         "//tmpl/dashboard/user:tmpl",
+        "//tmpl/dashboard/me:tmpl",
     ],
     string = True,
     visibility = ["//visibility:private"],

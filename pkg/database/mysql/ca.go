@@ -28,6 +28,8 @@ type CA struct {
 	lastWatchStatus  bool
 }
 
+var _ database.CertificateAuthority = &CA{}
+
 func NewCA(dao *dao.Repository) *CA {
 	return &CA{dao: dao}
 }

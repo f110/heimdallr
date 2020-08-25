@@ -34,7 +34,7 @@ func TestNewHttpProxy(t *testing.T) {
 	conf := &config.Config{
 		Logger: &config.Logger{},
 	}
-	c := rpcclient.NewWithClient(nil, nil, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	if p == nil {
@@ -108,7 +108,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := rpcclient.NewWithClient(nil, nil, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	t.Run("Session not found", func(t *testing.T) {

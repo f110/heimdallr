@@ -11,7 +11,8 @@ func TestNewWithClient(t *testing.T) {
 	a := rpctestutil.NewAdminClient()
 	cl := rpctestutil.NewClusterClient()
 	ca := rpctestutil.NewCertificateAuthorityClient()
-	c := NewWithClient(a, cl, ca)
+	u := rpctestutil.NewUserClient()
+	c := NewWithClient(a, cl, ca, u)
 	if c == nil {
 		t.Fatal("NewWithClient should return a value")
 	}

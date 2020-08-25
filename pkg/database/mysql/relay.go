@@ -22,6 +22,8 @@ type RelayLocator struct {
 	lastRelay     []*entity.Relay
 }
 
+var _ database.RelayLocator = &RelayLocator{}
+
 func NewRelayLocator(dao *dao.Repository) *RelayLocator {
 	return &RelayLocator{dao: dao}
 }

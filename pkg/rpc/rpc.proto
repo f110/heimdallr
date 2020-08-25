@@ -36,6 +36,11 @@ service CertificateAuthority {
     rpc WatchRevokedCert (RequestWatchRevokedCert) returns (stream ResponseWatchRevokedCert);
 }
 
+service User {
+    rpc GetSSHKey (RequestGetSSHKey) returns (ResponseGetSSHKey);
+    rpc SetSSHKey (RequestSetSSHKey) returns (ResponseSetSSHKey);
+}
+
 message RequestPing {}
 
 message ResponsePong {}
@@ -266,6 +271,23 @@ message RequestGetPublicKey {}
 
 message ResponseGetPublicKey {
     bytes public_key = 1;
+}
+
+message RequestGetSSHKey {
+    string user_id = 1;
+}
+
+message ResponseGetSSHKey {
+    string user_id = 1;
+    string key     = 2;
+}
+
+message RequestSetSSHKey {
+    string key = 1;
+}
+
+message ResponseSetSSHKey {
+    bool ok = 1;
 }
 
 message ErrorUnauthorized {

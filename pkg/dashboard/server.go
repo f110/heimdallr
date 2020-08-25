@@ -78,6 +78,8 @@ func NewServer(config *config.Config, grpcConn *grpc.ClientConn) *Server {
 	s.Post("/sa/new", s.handleCreateServiceAccount)
 	s.Get("/service_account/:id/token", s.handleServiceAccountToken)
 	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken)
+	s.Get("/me", s.handleMe)
+	s.Post("/me", s.handleUpdateProfile)
 	s.server.Handler = mux
 
 	return s
@@ -828,6 +830,38 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 	}
 
 	http.Redirect(w, req, "/agent", http.StatusFound)
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	keys, err := client.GetSSHKey("")
+	if err != nil {
+		logger.Log.Info("Failed get ssh key", zap.Error(err))
+	}
+
+	s.RenderTemplate(w, "me/index.tmpl", struct {
+		SSHKeys string
+	}{
+		SSHKeys: keys,
+	})
+}
+
+func (s *Server) handleUpdateProfile(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if err := client.SetSSHKey(req.FormValue("sshkeys")); err != nil {
+		logger.Log.Info("Failed update ssh keys", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/me", http.StatusFound)
 }
 
 func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interface{}) {

@@ -42,7 +42,7 @@ func (d *dummyHttpProxy) ServeSlackWebHook(_ context.Context, _ http.ResponseWri
 }
 
 func TestNewFrontendProxy(t *testing.T) {
-	c := rpcclient.NewWithClient(nil, nil, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 
 	v := NewFrontendProxy(&config.Config{Logger: &config.Logger{}}, nil, c)
 	if v == nil {

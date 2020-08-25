@@ -1,0 +1,15 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <h2 class="ui header">Me</h2>
+  <div class="ui divider"></div>
+  <form class="ui form" action="/me" method="POST">
+    <div class="field">
+      <label>SSH Keys</label>
+      <textarea rows="6" name="sshkeys">{{ .SSHKeys }}</textarea>
+    </div>
+    <button class="ui button primary" type="submit">Update</button>
+  </form>
+</div>
+
+{{ template "include/footer.tmpl" }}

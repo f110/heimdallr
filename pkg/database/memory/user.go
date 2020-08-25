@@ -17,6 +17,7 @@ type UserDatabase struct {
 	data      map[string]*database.User
 	tokenData map[string]*database.AccessToken
 	state     map[string]string
+	sshKeys   map[string]*database.SSHKeys
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -31,6 +32,7 @@ func NewUserDatabase(systemUsers ...*database.User) *UserDatabase {
 		data:      data,
 		tokenData: make(map[string]*database.AccessToken),
 		state:     make(map[string]string),
+		sshKeys:   make(map[string]*database.SSHKeys),
 	}
 }
 
@@ -152,5 +154,26 @@ func (u *UserDatabase) DeleteState(_ context.Context, state string) error {
 	defer u.mu.Unlock()
 
 	delete(u.state, state)
+	return nil
+}
+
+func (u *UserDatabase) GetSSHKeys(_ context.Context, id string) (*database.SSHKeys, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	v, ok := u.sshKeys[id]
+	if !ok {
+		return nil, xerrors.New("database: ssh keys not found")
+	}
+
+	return v, nil
+}
+
+func (u *UserDatabase) SetSSHKeys(_ context.Context, keys *database.SSHKeys) error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.sshKeys[keys.UserId] = keys
+
 	return nil
 }

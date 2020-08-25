@@ -38,6 +38,8 @@ type UserDatabase interface {
 	SetState(ctx context.Context, unique string) (string, error)
 	GetState(ctx context.Context, state string) (string, error)
 	DeleteState(ctx context.Context, state string) error
+	SetSSHKeys(ctx context.Context, keys *SSHKeys) error
+	GetSSHKeys(ctx context.Context, id string) (*SSHKeys, error)
 }
 
 type AccessToken struct {
@@ -46,6 +48,11 @@ type AccessToken struct {
 	UserId    string    `json:"user_id"`
 	Issuer    string    `json:"issuer"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type SSHKeys struct {
+	UserId string `json:"user_id"`
+	Keys   string `json:"keys"`
 }
 
 type User struct {

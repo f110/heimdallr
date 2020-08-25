@@ -18,6 +18,8 @@ type TokenDatabase struct {
 	dao *dao.Repository
 }
 
+var _ database.TokenDatabase = &TokenDatabase{}
+
 func NewTokenDatabase(dao *dao.Repository) *TokenDatabase {
 	return &TokenDatabase{dao: dao}
 }
