@@ -22,3 +22,18 @@ go_binary(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
+
+load("//build/rules/go:util.bzl", "multiplatform_go_binary")
+
+PLATFORMS = [
+    "linux_amd64",
+    "darwin_amd64",
+    "windows_amd64",
+]
+
+multiplatform_go_binary(
+    embed = [":go_default_library"],
+    name_prefix = "heim-agent",
+    platforms = PLATFORMS,
+    visibility = ["//visibility:public"],
+)

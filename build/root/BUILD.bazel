@@ -110,8 +110,13 @@ load("//build/rules:release.bzl", "github_release")
 
 github_release(
     name = "github_release",
-    version = VERSION,
-    repository = "f110/heimdallr",
+    assets = [
+        "//operator/deploy:all-in-one",
+        "//cmd/heim-agent:heim-agent_darwin_amd64",
+        "//cmd/heim-agent:heim-agent_linux_amd64",
+        "//cmd/heim-agent:heim-agent_windows_amd64",
+    ],
     branch = "master",
-    assets = ["//operator/deploy:all-in-one"]
+    repository = "f110/heimdallr",
+    version = VERSION,
 )
