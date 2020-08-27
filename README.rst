@@ -14,7 +14,7 @@ Features
 * Reverse proxy with identity-aware
 * Can proxy the traffic not only HTTP but also SSH or something like
 * Beyond NAT on each side of the proxy
-* Manage a user by Browser
+* Manage an user by Browser
 * Managing an user authority by RBAC
 * Easy to deploy to Kubernetes
 
@@ -89,7 +89,7 @@ We provide the manifest for the operator.
 .. code:: shell
 
     $ kubectl create namespace heimdallr
-    $ kubectl apply -f https://github.com/f110/heimdallr/blob/master/operator/deploy/all-in-one.yaml
+    $ kubectl apply -f https://github.com/f110/heimdallr/releases/download/v0.8.1/all-in-one.yaml
 
 Create Secret resource
 -------------------------
