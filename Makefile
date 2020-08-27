@@ -22,11 +22,6 @@ gen:
 	bazel run //pkg/database/mysql/entity:vendor_entity
 	bazel run //pkg/database/mysql/dao:vendor_dao
 
-generate-deploy-manifests:
-	bazel run //operator/pkg/controllers:rbac
-	bazel build //operator/deploy:all-in-one
-	cp -f ./bazel-bin/operator/deploy/all-in-one.yaml ./operator/deploy
-
 gen-operator:
 	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
 	bazel run //operator/pkg/controllers:rbac
