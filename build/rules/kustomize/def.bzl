@@ -7,7 +7,7 @@ def _kustomize_binary_impl(ctx):
     os = ""
     if ctx.os.name == "linux":
         os = "linux"
-    elif ctx.os.name == "mac_os_x":
+    elif ctx.os.name == "mac os x":
         os = "darwin"
     else:
         fail("%s is not supported" % ctx.os.name)
