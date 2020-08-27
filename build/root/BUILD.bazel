@@ -105,3 +105,13 @@ job(
     github_status = True,
     targets = "//...",
 )
+
+load("//build/rules:release.bzl", "github_release")
+
+github_release(
+    name = "github_release",
+    version = VERSION,
+    repository = "f110/heimdallr",
+    branch = "master",
+    assets = ["//operator/deploy:all-in-one.yaml"]
+)

@@ -16,3 +16,8 @@ finalize_manifest(
     name = "all-in-one",
     src = ":deploy",
 )
+
+exports_files(
+    ["all-in-one.yaml"],
+    visibility = ["//visibility:public"],
+)

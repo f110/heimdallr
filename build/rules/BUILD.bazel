@@ -3,3 +3,8 @@ filegroup(
     srcs = glob(["*.bzl"]),
     visibility = ["//visibility:public"],
 )
+
+exports_files(
+    ["release.bash"],
+    visibility = ["//visibility:public"],
+)
