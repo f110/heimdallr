@@ -11,9 +11,11 @@ kustomization(
 )
 
 load("//operator/hack/manifest-finalizer:def.bzl", "finalize_manifest")
+load("//:VERSION.bzl", "VERSION")
 
 finalize_manifest(
     name = "all-in-one",
     src = ":deploy",
+    version = VERSION,
     visibility = ["//visibility:public"],
 )

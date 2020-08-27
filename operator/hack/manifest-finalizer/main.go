@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
@@ -15,7 +16,7 @@ type basic struct {
 	Kind       string `yaml:"kind"`
 }
 
-func finalizer(in io.Reader, out io.Writer) error {
+func finalizer(in io.Reader, out io.Writer, version string) error {
 	d := yaml.NewDecoder(in)
 	e := yaml.NewEncoder(out)
 	for {
@@ -35,6 +36,8 @@ func finalizer(in io.Reader, out io.Writer) error {
 		switch kind {
 		case "CustomResourceDefinition":
 			editCustomResourceDefinition(v)
+		case "Deployment":
+			editDeployment(v, version)
 		}
 
 		if err := e.Encode(v); err != nil {
@@ -71,10 +74,25 @@ func editCustomResourceDefinition(v map[interface{}]interface{}) {
 	delete(m, "annotations")
 }
 
+func editDeployment(v map[interface{}]interface{}, version string) {
+	containers := v["spec"].(map[interface{}]interface{})["template"].(map[interface{}]interface{})["spec"].(map[interface{}]interface{})["containers"].([]interface{})
+	for _, c := range containers {
+		v := c.(map[interface{}]interface{})
+		if i, ok := v["image"]; ok {
+			image := i.(string)
+			if strings.Contains(image, "heimdallr-operator") {
+				s := strings.Split(image, ":")
+				v["image"] = s[0] + ":" + version
+			}
+		}
+	}
+}
+
 func main() {
-	var in, out string
+	var in, out, version string
 	pflag.CommandLine.StringVar(&in, "in", "", "Input file")
 	pflag.CommandLine.StringVar(&out, "out", "", "Output path")
+	pflag.CommandLine.StringVar(&version, "version", "", "Version string")
 	pflag.Parse()
 
 	reader, err := os.Open(in)
@@ -86,7 +104,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := finalizer(reader, writer); err != nil {
+	if err := finalizer(reader, writer, version); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
