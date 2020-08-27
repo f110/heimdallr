@@ -19,3 +19,13 @@ go_binary(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
+
+load("//build/rules/go:util.bzl", "multiplatform_go_binary")
+load("//:VERSION.bzl", "PLATFORMS")
+
+multiplatform_go_binary(
+    embed = [":go_default_library"],
+    name_prefix = "heim-proxy",
+    platforms = PLATFORMS,
+    visibility = ["//visibility:public"],
+)

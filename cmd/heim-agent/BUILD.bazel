@@ -24,12 +24,7 @@ go_binary(
 )
 
 load("//build/rules/go:util.bzl", "multiplatform_go_binary")
-
-PLATFORMS = [
-    "linux_amd64",
-    "darwin_amd64",
-    "windows_amd64",
-]
+load("//:VERSION.bzl", "PLATFORMS")
 
 multiplatform_go_binary(
     embed = [":go_default_library"],
