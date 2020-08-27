@@ -5,7 +5,7 @@ dashboard:
     loader: shotgun
 datastore:
   namespace: /heimdallr/
-  url: etcd://localhost:57527
+  url: etcd://127.0.0.1:2379
 general:
   certificate_authority:
     cert_file: ./ca.crt
@@ -14,3 +14,4 @@ general:
     organization_unit: dev
     country: jp
   enable: false
+  rpc_target: 127.0.0.1:4002

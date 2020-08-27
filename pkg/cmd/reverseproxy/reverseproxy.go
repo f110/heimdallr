@@ -68,6 +68,7 @@ const (
 const (
 	datastoreTypeEtcd  = "etcd"
 	datastoreTypeMySQL = "mysql"
+	datastoreNone      = "none"
 )
 
 type mainProcess struct {
@@ -172,8 +173,10 @@ func (m *mainProcess) ReadConfig() error {
 
 	if m.config.Datastore.Url != nil {
 		m.datastoreType = datastoreTypeEtcd
-	} else {
+	} else if m.config.Datastore.DSN != nil {
 		m.datastoreType = datastoreTypeMySQL
+	} else {
+		m.datastoreType = datastoreNone
 	}
 
 	return m.NextState(stateSetup)
@@ -539,6 +542,8 @@ func (m *mainProcess) StartRPCServer() error {
 			}
 			go c.Start(context.Background())
 		}
+	} else {
+		close(m.rpcServerDoneCh)
 	}
 
 	return m.NextState(stateSetupRPCConn)
