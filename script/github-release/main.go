@@ -65,14 +65,15 @@ func githubRelease(args []string) error {
 		}
 		fmt.Printf("Get commit hash %s\n", branch.Commit.GetSHA())
 
-		release, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
+		r, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
 			TagName:         github.String(version),
 			TargetCommitish: branch.Commit.SHA,
 		})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		fmt.Printf("Created release id=%d TagName=%s\n", release.GetID(), release.GetTagName())
+		fmt.Printf("Created release id=%d TagName=%s\n", r.GetID(), r.GetTagName())
+		release = r
 	}
 
 	for _, v := range attach {
