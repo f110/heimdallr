@@ -113,5 +113,5 @@ github_release(
     version = VERSION,
     repository = "f110/heimdallr",
     branch = "master",
-    assets = ["//operator/deploy:all-in-one.yaml"]
+    assets = ["//operator/deploy:all-in-one"]
 )
