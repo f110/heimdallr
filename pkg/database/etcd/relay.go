@@ -204,6 +204,7 @@ func (l *RelayLocator) watchEvents(events []*clientv3.Event) {
 			select {
 			case l.gone <- &database.Relay{Name: key[len(key)-2], Addr: key[len(key)-1]}:
 			default:
+				logger.Log.Debug("RelayLocator: gone channel is blocking")
 			}
 		}
 	}
