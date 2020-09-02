@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jarcoal/httpmock"
+	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
@@ -209,6 +210,12 @@ func (f *commonTestRunner) ExpectCreatePodDisruptionBudget() {
 
 func (f *commonTestRunner) ExpectCreateEtcdCluster() {
 	action := core.NewCreateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateCertificate() {
+	action := core.NewCreateAction(certmanagerv1alpha2.SchemeGroupVersion.WithResource("certificates"), "", &certmanagerv1alpha2.Certificate{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
