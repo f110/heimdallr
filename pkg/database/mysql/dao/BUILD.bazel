@@ -2,14 +2,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_dao", "vendor_ddl")
 
 schema_dao(
-    name = "dao",
+    name = "dao_library",
     lang = "go",
     proto = "//pkg/database/mysql/entity:mysql_proto",
 )
 
 vendor_ddl(
     name = "vendor_dao",
-    src = ":dao",
+    src = ":dao_library",
 )
 
 go_library(

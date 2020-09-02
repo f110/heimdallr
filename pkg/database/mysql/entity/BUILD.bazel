@@ -35,7 +35,7 @@ sql_schema(
 )
 
 schema_entity(
-    name = "entity",
+    name = "entity_library",
     lang = "go",
     proto = ":mysql_proto",
 )
@@ -47,5 +47,5 @@ vendor_ddl(
 
 vendor_ddl(
     name = "vendor_entity",
-    src = ":entity",
+    src = ":entity_library",
 )
