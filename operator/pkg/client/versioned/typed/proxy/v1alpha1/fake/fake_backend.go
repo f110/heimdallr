@@ -28,6 +28,8 @@ SOFTWARE.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -48,7 +50,7 @@ var backendsResource = schema.GroupVersionResource{Group: "proxy.f110.dev", Vers
 var backendsKind = schema.GroupVersionKind{Group: "proxy.f110.dev", Version: "v1alpha1", Kind: "Backend"}
 
 // Get takes name of the backend, and returns the corresponding backend object, and an error if there is any.
-func (c *FakeBackends) Get(name string, options v1.GetOptions) (result *v1alpha1.Backend, err error) {
+func (c *FakeBackends) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Backend, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(backendsResource, c.ns, name), &v1alpha1.Backend{})
 
@@ -59,7 +61,7 @@ func (c *FakeBackends) Get(name string, options v1.GetOptions) (result *v1alpha1
 }
 
 // List takes label and field selectors, and returns the list of Backends that match those selectors.
-func (c *FakeBackends) List(opts v1.ListOptions) (result *v1alpha1.BackendList, err error) {
+func (c *FakeBackends) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.BackendList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(backendsResource, backendsKind, c.ns, opts), &v1alpha1.BackendList{})
 
@@ -81,14 +83,14 @@ func (c *FakeBackends) List(opts v1.ListOptions) (result *v1alpha1.BackendList, 
 }
 
 // Watch returns a watch.Interface that watches the requested backends.
-func (c *FakeBackends) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeBackends) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(backendsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a backend and creates it.  Returns the server's representation of the backend, and an error, if there is any.
-func (c *FakeBackends) Create(backend *v1alpha1.Backend) (result *v1alpha1.Backend, err error) {
+func (c *FakeBackends) Create(ctx context.Context, backend *v1alpha1.Backend, opts v1.CreateOptions) (result *v1alpha1.Backend, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(backendsResource, c.ns, backend), &v1alpha1.Backend{})
 
@@ -99,7 +101,7 @@ func (c *FakeBackends) Create(backend *v1alpha1.Backend) (result *v1alpha1.Backe
 }
 
 // Update takes the representation of a backend and updates it. Returns the server's representation of the backend, and an error, if there is any.
-func (c *FakeBackends) Update(backend *v1alpha1.Backend) (result *v1alpha1.Backend, err error) {
+func (c *FakeBackends) Update(ctx context.Context, backend *v1alpha1.Backend, opts v1.UpdateOptions) (result *v1alpha1.Backend, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(backendsResource, c.ns, backend), &v1alpha1.Backend{})
 
@@ -111,7 +113,7 @@ func (c *FakeBackends) Update(backend *v1alpha1.Backend) (result *v1alpha1.Backe
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBackends) UpdateStatus(backend *v1alpha1.Backend) (*v1alpha1.Backend, error) {
+func (c *FakeBackends) UpdateStatus(ctx context.Context, backend *v1alpha1.Backend, opts v1.UpdateOptions) (*v1alpha1.Backend, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(backendsResource, "status", c.ns, backend), &v1alpha1.Backend{})
 
@@ -122,7 +124,7 @@ func (c *FakeBackends) UpdateStatus(backend *v1alpha1.Backend) (*v1alpha1.Backen
 }
 
 // Delete takes name of the backend and deletes it. Returns an error if one occurs.
-func (c *FakeBackends) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeBackends) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(backendsResource, c.ns, name), &v1alpha1.Backend{})
 
@@ -130,15 +132,15 @@ func (c *FakeBackends) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeBackends) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(backendsResource, c.ns, listOptions)
+func (c *FakeBackends) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(backendsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.BackendList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched backend.
-func (c *FakeBackends) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Backend, err error) {
+func (c *FakeBackends) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Backend, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(backendsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Backend{})
 

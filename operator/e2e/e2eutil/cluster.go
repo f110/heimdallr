@@ -81,7 +81,7 @@ func DeleteCluster(id string) error {
 
 func WaitForReady(ctx context.Context, client *kubernetes.Clientset) error {
 	return wait.PollImmediate(1*time.Second, 3*time.Minute, func() (done bool, err error) {
-		nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -197,7 +197,7 @@ func EnsureCertManager(cfg *rest.Config) error {
 		res := client.Post().
 			Resource(apiResource.Name).
 			Body(obj).
-			Do()
+			Do(context.TODO())
 
 		if res.Error() == nil {
 			return true, nil
@@ -287,7 +287,7 @@ func StartCertManager(cfg *rest.Config, manifest string) error {
 
 		res := req.Resource(apiResource.Name).
 			Body(obj.Object).
-			Do()
+			Do(context.TODO())
 
 		if err := res.Error(); err != nil {
 			switch {
@@ -310,7 +310,7 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 
 	createdCRD := make(map[string]struct{})
 	for _, v := range crd {
-		_, err = apiextensionsClient.CustomResourceDefinitions().Create(v)
+		_, err = apiextensionsClient.CustomResourceDefinitions().Create(context.TODO(), v, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -319,7 +319,7 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 
 	err = wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {
 		for name := range createdCRD {
-			_, err := apiextensionsClient.CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+			_, err := apiextensionsClient.CustomResourceDefinitions().Get(context.TODO(), name, metav1.GetOptions{})
 			if err == nil {
 				delete(createdCRD, name)
 			}

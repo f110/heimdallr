@@ -28,6 +28,7 @@ SOFTWARE.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
@@ -70,13 +71,13 @@ func NewFilteredEtcdClusterInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EtcdV1alpha1().EtcdClusters(namespace).List(options)
+				return client.EtcdV1alpha1().EtcdClusters(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EtcdV1alpha1().EtcdClusters(namespace).Watch(options)
+				return client.EtcdV1alpha1().EtcdClusters(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&etcdv1alpha1.EtcdCluster{},

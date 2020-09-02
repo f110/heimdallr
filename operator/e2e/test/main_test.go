@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
-	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	_ "github.com/smartystreets/goconvey/convey"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -63,16 +61,6 @@ func TestMain(m *testing.M) {
 			log.Fatalf("%v", err)
 		}
 		proxyClient, err := clientset.NewForConfig(cfg)
-		if err != nil {
-			log.Print(err)
-			os.Exit(1)
-		}
-		cmClient, err := cmClientset.NewForConfig(cfg)
-		if err != nil {
-			log.Print(err)
-			os.Exit(1)
-		}
-		mClient, err := mClientset.NewForConfig(cfg)
 		if err != nil {
 			log.Print(err)
 			os.Exit(1)
@@ -130,7 +118,7 @@ func TestMain(m *testing.M) {
 							log.Fatal(err)
 						}
 
-						c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
+						c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
 						if err != nil {
 							log.Fatal(err)
 						}

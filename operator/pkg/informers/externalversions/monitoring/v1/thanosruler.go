@@ -28,6 +28,7 @@ SOFTWARE.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -70,13 +71,13 @@ func NewFilteredThanosRulerInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1().ThanosRulers(namespace).List(options)
+				return client.MonitoringV1().ThanosRulers(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1().ThanosRulers(namespace).Watch(options)
+				return client.MonitoringV1().ThanosRulers(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&monitoringv1.ThanosRuler{},

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -17,7 +18,6 @@ import (
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +32,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -108,7 +109,7 @@ type HeimdallrProxy struct {
 	ProxyServer     *process
 	DashboardServer *process
 
-	cmClient      cmClientset.Interface
+	clientset     clientset.Interface
 	serviceLister listers.ServiceLister
 
 	backends         []*proxyv1alpha1.Backend
@@ -119,13 +120,13 @@ type HeimdallrProxy struct {
 }
 
 type HeimdallrProxyParams struct {
-	Spec              *proxyv1alpha1.Proxy
-	CertManagerClient cmClientset.Interface
-	ServiceLister     listers.ServiceLister
-	Backends          []*proxyv1alpha1.Backend
-	Roles             []*proxyv1alpha1.Role
-	RpcPermissions    []*proxyv1alpha1.RpcPermission
-	RoleBindings      []*proxyv1alpha1.RoleBinding
+	Spec           *proxyv1alpha1.Proxy
+	Clientset      clientset.Interface
+	ServiceLister  listers.ServiceLister
+	Backends       []*proxyv1alpha1.Backend
+	Roles          []*proxyv1alpha1.Role
+	RpcPermissions []*proxyv1alpha1.RpcPermission
+	RoleBindings   []*proxyv1alpha1.RoleBinding
 }
 
 func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
@@ -135,7 +136,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		Object:         opt.Spec,
 		Spec:           opt.Spec.Spec,
 		serviceLister:  opt.ServiceLister,
-		cmClient:       opt.CertManagerClient,
+		clientset:      opt.Clientset,
 		backends:       opt.Backends,
 		roles:          opt.Roles,
 		rpcPermissions: opt.RpcPermissions,
@@ -1545,13 +1546,13 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
 	case certmanager.ClusterIssuerKind:
-		ci, err := r.cmClient.CertmanagerV1alpha2().ClusterIssuers().Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.clientset.CertmanagerV1alpha2().ClusterIssuers().Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
 	case certmanager.IssuerKind:
-		ci, err := r.cmClient.CertmanagerV1alpha2().Issuers(r.Namespace).Get(r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.clientset.CertmanagerV1alpha2().Issuers(r.Namespace).Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

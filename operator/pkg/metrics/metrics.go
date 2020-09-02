@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"context"
+
 	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,7 +36,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
-	proxies, err := c.client.ProxyV1alpha1().Proxies("").List(metav1.ListOptions{LabelSelector: labels.Everything().String()})
+	proxies, err := c.client.ProxyV1alpha1().Proxies("").List(context.TODO(), metav1.ListOptions{LabelSelector: labels.Everything().String()})
 	if err != nil {
 		// controllerruntime.Log.Error(err, "Could not fetch proxy list")
 		return

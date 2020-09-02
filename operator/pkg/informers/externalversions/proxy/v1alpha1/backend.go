@@ -28,6 +28,7 @@ SOFTWARE.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
@@ -70,13 +71,13 @@ func NewFilteredBackendInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProxyV1alpha1().Backends(namespace).List(options)
+				return client.ProxyV1alpha1().Backends(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProxyV1alpha1().Backends(namespace).Watch(options)
+				return client.ProxyV1alpha1().Backends(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&proxyv1alpha1.Backend{},

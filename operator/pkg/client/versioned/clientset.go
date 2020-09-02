@@ -30,6 +30,7 @@ package versioned
 import (
 	"fmt"
 
+	certmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
@@ -40,6 +41,7 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface
 	EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface
 	MonitoringV1() monitoringv1.MonitoringV1Interface
 	ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface
@@ -49,9 +51,15 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	etcdV1alpha1  *etcdv1alpha1.EtcdV1alpha1Client
-	monitoringV1  *monitoringv1.MonitoringV1Client
-	proxyV1alpha1 *proxyv1alpha1.ProxyV1alpha1Client
+	certmanagerV1alpha2 *certmanagerv1alpha2.CertmanagerV1alpha2Client
+	etcdV1alpha1        *etcdv1alpha1.EtcdV1alpha1Client
+	monitoringV1        *monitoringv1.MonitoringV1Client
+	proxyV1alpha1       *proxyv1alpha1.ProxyV1alpha1Client
+}
+
+// CertmanagerV1alpha2 retrieves the CertmanagerV1alpha2Client
+func (c *Clientset) CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface {
+	return c.certmanagerV1alpha2
 }
 
 // EtcdV1alpha1 retrieves the EtcdV1alpha1Client
@@ -84,12 +92,16 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
 		if configShallowCopy.Burst <= 0 {
-			return nil, fmt.Errorf("Burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
+			return nil, fmt.Errorf("burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
 		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 	var cs Clientset
 	var err error
+	cs.certmanagerV1alpha2, err = certmanagerv1alpha2.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.etcdV1alpha1, err = etcdv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -114,6 +126,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.certmanagerV1alpha2 = certmanagerv1alpha2.NewForConfigOrDie(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.NewForConfigOrDie(c)
 	cs.monitoringV1 = monitoringv1.NewForConfigOrDie(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.NewForConfigOrDie(c)
@@ -125,6 +138,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.certmanagerV1alpha2 = certmanagerv1alpha2.New(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.New(c)
 	cs.monitoringV1 = monitoringv1.New(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.New(c)

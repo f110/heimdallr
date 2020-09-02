@@ -31,6 +31,7 @@ import (
 	"fmt"
 
 	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	v1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,7 +64,17 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=etcd.f110.dev, Version=v1alpha1
+	// Group=cert-manager.io, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("certificates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().Certificates().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("certificaterequests"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().CertificateRequests().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("clusterissuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().ClusterIssuers().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("issuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().Issuers().Informer()}, nil
+
+		// Group=etcd.f110.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("etcdclusters"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Etcd().V1alpha1().EtcdClusters().Informer()}, nil
 

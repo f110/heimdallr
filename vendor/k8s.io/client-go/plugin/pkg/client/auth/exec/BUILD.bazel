@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "exec",
-    srcs = ["exec.go"],
+    srcs = [
+        "exec.go",
+        "metrics.go",
+    ],
     importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/plugin/pkg/client/auth/exec",
     importpath = "k8s.io/client-go/plugin/pkg/client/auth/exec",
     visibility = ["//visibility:public"],
@@ -18,6 +21,7 @@ go_library(
         "//vendor/k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1",
         "//vendor/k8s.io/client-go/pkg/apis/clientauthentication/v1beta1",
         "//vendor/k8s.io/client-go/tools/clientcmd/api",
+        "//vendor/k8s.io/client-go/tools/metrics",
         "//vendor/k8s.io/client-go/transport",
         "//vendor/k8s.io/client-go/util/connrotation",
         "//vendor/k8s.io/klog",

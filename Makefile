@@ -30,8 +30,8 @@ push:
 	bazel query 'kind(container_push, //...)' | xargs -n1 bazel run
 
 run-e2e:
-	bazel build //operator/e2e/test:go_default_test
-	./bazel-bin/operator/e2e/test/go_default_test_/go_default_test -test.v=true -crd $(CURDIR)/operator/config/crd/bases -proxy.version v0.6.3
+	bazel build //operator/e2e/test:test_test
+	./bazel-bin/operator/e2e/test/test_test_/test_test -test.v=true -crd $(CURDIR)/operator/config/crd -proxy.version v0.8.1
 
 migrate:
 	bazel run @dev_f110_protoc_ddl//cmd/migrate -- --schema $(CURDIR)/pkg/database/mysql/entity/schema.sql --driver mysql --dsn "$(DSN)" --execute

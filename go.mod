@@ -16,7 +16,6 @@ require (
 	github.com/google/go-cmp v0.5.1
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
-	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.3
@@ -30,7 +29,6 @@ require (
 	github.com/jetstack/cert-manager v0.12.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/minio/minio-go/v6 v6.0.44
-	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
@@ -56,17 +54,16 @@ require (
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.17.9
-	k8s.io/apiextensions-apiserver v0.17.9
-	k8s.io/apimachinery v0.17.9
+	k8s.io/api v0.18.8
+	k8s.io/apiextensions-apiserver v0.18.8
+	k8s.io/apimachinery v0.18.8
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
 	sigs.k8s.io/yaml v1.2.0
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
 )
 
 replace (
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.1.0
-	k8s.io/client-go => k8s.io/client-go v0.17.9
+	k8s.io/client-go => k8s.io/client-go v0.18.8
 )

@@ -11,13 +11,13 @@ import (
 	"time"
 
 	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/smartystreets/goconvey/convey"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
-	. "go.f110.dev/heimdallr/operator/e2e/framework"
+	"go.f110.dev/heimdallr/operator/e2e/framework"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/config"
@@ -26,8 +26,8 @@ import (
 func TestProxyController(t *testing.T) {
 	t.Parallel()
 
-	Describe(t, "ProxyController", func() {
-		It("serves http request", func() {
+	framework.Describe(t, "ProxyController", func() {
+		framework.It("serves http request", func() {
 			testUserId := "e2e@f110.dev"
 			client, err := clientset.NewForConfig(RESTConfig)
 			if err != nil {
@@ -47,7 +47,7 @@ func TestProxyController(t *testing.T) {
 					"client-secret": []byte("client-secret"),
 				},
 			}
-			_, err = coreClient.CoreV1().Secrets(clientSecret.Namespace).Create(clientSecret)
+			_, err = coreClient.CoreV1().Secrets(clientSecret.Namespace).Create(context.TODO(), clientSecret, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -58,7 +58,7 @@ func TestProxyController(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: proxyv1alpha1.ProxySpec{
-					Version:     Config.ProxyVersion,
+					Version:     framework.Config.ProxyVersion,
 					EtcdVersion: "v3.4.8",
 					Domain:      "e2e.f110.dev",
 					Replicas:    3,
@@ -103,7 +103,7 @@ func TestProxyController(t *testing.T) {
 					Description: "admin",
 				},
 			}
-			role, err = client.ProxyV1alpha1().Roles(role.Namespace).Create(role)
+			role, err = client.ProxyV1alpha1().Roles(role.Namespace).Create(context.TODO(), role, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -122,12 +122,12 @@ func TestProxyController(t *testing.T) {
 					{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
 				},
 			}
-			_, err = client.ProxyV1alpha1().RoleBindings(proxy.Namespace).Create(roleBinding)
+			_, err = client.ProxyV1alpha1().RoleBindings(proxy.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Create(proxy)
+			_, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Create(context.TODO(), proxy, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -139,7 +139,7 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			proxy, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Get(proxy.Name, metav1.GetOptions{})
+			proxy, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Get(context.TODO(), proxy.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -160,7 +160,7 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			proxyService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(fmt.Sprintf("%s", proxy.Name), metav1.GetOptions{})
+			proxyService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s", proxy.Name), metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -191,8 +191,8 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			So(res.StatusCode, ShouldEqual, http.StatusOK)
-			So(res.Header.Get("Server"), ShouldContainSubstring, "nginx")
+			convey.So(res.StatusCode, convey.ShouldEqual, http.StatusOK)
+			convey.So(res.Header.Get("Server"), convey.ShouldContainSubstring, "nginx")
 
 			testReq, err = http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), nil)
 			if err != nil {

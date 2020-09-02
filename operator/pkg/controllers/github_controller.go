@@ -140,7 +140,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	if backend.DeletionTimestamp.IsZero() {
 		if !containsString(backend.Finalizers, githubControllerFinalizerName) {
 			backend.ObjectMeta.Finalizers = append(backend.ObjectMeta.Finalizers, githubControllerFinalizerName)
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(backend)
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(context.TODO(), backend, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
@@ -190,7 +190,7 @@ func (c *GitHubController) syncBackend(key string) error {
 			}
 
 			backend.Status = updatedB.Status
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(backend)
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(context.TODO(), backend, metav1.UpdateOptions{})
 			if err != nil {
 				klog.Infof("Failed update backend: %v", err)
 				return err
@@ -216,7 +216,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 			updatedB := backend.DeepCopy()
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(updatedB)
+				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(context.TODO(), updatedB, metav1.UpdateOptions{})
 				return err
 			}
 			return nil
@@ -261,7 +261,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(updatedB)
+			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(context.TODO(), updatedB, metav1.UpdateOptions{})
 			return err
 		}
 		return nil

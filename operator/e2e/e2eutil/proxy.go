@@ -35,15 +35,15 @@ import (
 
 func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1alpha1.Proxy, name string) (*proxyv1alpha1.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
-	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	backend, err = client.ProxyV1alpha1().Backends(backend.Namespace).Create(backend)
+	backend, err = client.ProxyV1alpha1().Backends(backend.Namespace).Create(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -53,17 +53,17 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 
 func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1alpha1.Proxy, name string) (*proxyv1alpha1.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
-	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(deployment)
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	_, err = coreClient.CoreV1().Services(service.Namespace).Create(service)
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	backend.Spec.DisableAuthn = true
-	backend, err = client.ProxyV1alpha1().Backends(backend.Namespace).Create(backend)
+	backend, err = client.ProxyV1alpha1().Backends(backend.Namespace).Create(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -170,7 +170,7 @@ func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) 
 }
 
 func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy, id string) (*RPCClient, error) {
-	rpcService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(fmt.Sprintf("%s-rpcserver", proxy.Name), metav1.GetOptions{})
+	rpcService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-rpcserver", proxy.Name), metav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -218,7 +218,7 @@ func NewRPCClient(proxy *proxyv1alpha1.Proxy, port uint16, caPool *x509.CertPool
 }
 
 func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy, id string) (string, error) {
-	signPrivKeyS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(proxy.Status.SigningPrivateKeySecretName, metav1.GetOptions{})
+	signPrivKeyS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.SigningPrivateKeySecretName, metav1.GetOptions{})
 	if err != nil {
 		return "", xerrors.Errorf(": %w", err)
 	}
@@ -243,7 +243,7 @@ func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy,
 }
 
 func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy) (*x509.CertPool, error) {
-	caS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(proxy.Status.CASecretName, metav1.GetOptions{})
+	caS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.CASecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -260,7 +260,7 @@ func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy) (*x
 }
 
 func ProxyCertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha1.Proxy) (*x509.CertPool, error) {
-	caCertS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(fmt.Sprintf("%s-cert", proxy.Name), metav1.GetOptions{})
+	caCertS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-cert", proxy.Name), metav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -288,7 +288,7 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 	}
 
 	selector := labels.SelectorFromSet(svc.Spec.Selector)
-	podList, err := coreClient.CoreV1().Pods(svc.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	podList, err := coreClient.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

@@ -4,6 +4,7 @@ go_library(
     name = "v1beta1",
     srcs = [
         "ingress.go",
+        "ingressclass.go",
         "interface.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/informers/networking/v1beta1",

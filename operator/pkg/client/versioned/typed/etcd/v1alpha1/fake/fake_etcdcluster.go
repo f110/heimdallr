@@ -28,6 +28,8 @@ SOFTWARE.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -48,7 +50,7 @@ var etcdclustersResource = schema.GroupVersionResource{Group: "etcd.f110.dev", V
 var etcdclustersKind = schema.GroupVersionKind{Group: "etcd.f110.dev", Version: "v1alpha1", Kind: "EtcdCluster"}
 
 // Get takes name of the etcdCluster, and returns the corresponding etcdCluster object, and an error if there is any.
-func (c *FakeEtcdClusters) Get(name string, options v1.GetOptions) (result *v1alpha1.EtcdCluster, err error) {
+func (c *FakeEtcdClusters) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.EtcdCluster, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(etcdclustersResource, c.ns, name), &v1alpha1.EtcdCluster{})
 
@@ -59,7 +61,7 @@ func (c *FakeEtcdClusters) Get(name string, options v1.GetOptions) (result *v1al
 }
 
 // List takes label and field selectors, and returns the list of EtcdClusters that match those selectors.
-func (c *FakeEtcdClusters) List(opts v1.ListOptions) (result *v1alpha1.EtcdClusterList, err error) {
+func (c *FakeEtcdClusters) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.EtcdClusterList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(etcdclustersResource, etcdclustersKind, c.ns, opts), &v1alpha1.EtcdClusterList{})
 
@@ -81,14 +83,14 @@ func (c *FakeEtcdClusters) List(opts v1.ListOptions) (result *v1alpha1.EtcdClust
 }
 
 // Watch returns a watch.Interface that watches the requested etcdClusters.
-func (c *FakeEtcdClusters) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeEtcdClusters) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(etcdclustersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a etcdCluster and creates it.  Returns the server's representation of the etcdCluster, and an error, if there is any.
-func (c *FakeEtcdClusters) Create(etcdCluster *v1alpha1.EtcdCluster) (result *v1alpha1.EtcdCluster, err error) {
+func (c *FakeEtcdClusters) Create(ctx context.Context, etcdCluster *v1alpha1.EtcdCluster, opts v1.CreateOptions) (result *v1alpha1.EtcdCluster, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(etcdclustersResource, c.ns, etcdCluster), &v1alpha1.EtcdCluster{})
 
@@ -99,7 +101,7 @@ func (c *FakeEtcdClusters) Create(etcdCluster *v1alpha1.EtcdCluster) (result *v1
 }
 
 // Update takes the representation of a etcdCluster and updates it. Returns the server's representation of the etcdCluster, and an error, if there is any.
-func (c *FakeEtcdClusters) Update(etcdCluster *v1alpha1.EtcdCluster) (result *v1alpha1.EtcdCluster, err error) {
+func (c *FakeEtcdClusters) Update(ctx context.Context, etcdCluster *v1alpha1.EtcdCluster, opts v1.UpdateOptions) (result *v1alpha1.EtcdCluster, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(etcdclustersResource, c.ns, etcdCluster), &v1alpha1.EtcdCluster{})
 
@@ -111,7 +113,7 @@ func (c *FakeEtcdClusters) Update(etcdCluster *v1alpha1.EtcdCluster) (result *v1
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeEtcdClusters) UpdateStatus(etcdCluster *v1alpha1.EtcdCluster) (*v1alpha1.EtcdCluster, error) {
+func (c *FakeEtcdClusters) UpdateStatus(ctx context.Context, etcdCluster *v1alpha1.EtcdCluster, opts v1.UpdateOptions) (*v1alpha1.EtcdCluster, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(etcdclustersResource, "status", c.ns, etcdCluster), &v1alpha1.EtcdCluster{})
 
@@ -122,7 +124,7 @@ func (c *FakeEtcdClusters) UpdateStatus(etcdCluster *v1alpha1.EtcdCluster) (*v1a
 }
 
 // Delete takes name of the etcdCluster and deletes it. Returns an error if one occurs.
-func (c *FakeEtcdClusters) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeEtcdClusters) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(etcdclustersResource, c.ns, name), &v1alpha1.EtcdCluster{})
 
@@ -130,15 +132,15 @@ func (c *FakeEtcdClusters) Delete(name string, options *v1.DeleteOptions) error 
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeEtcdClusters) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(etcdclustersResource, c.ns, listOptions)
+func (c *FakeEtcdClusters) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(etcdclustersResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.EtcdClusterList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched etcdCluster.
-func (c *FakeEtcdClusters) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.EtcdCluster, err error) {
+func (c *FakeEtcdClusters) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.EtcdCluster, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(etcdclustersResource, c.ns, name, pt, data, subresources...), &v1alpha1.EtcdCluster{})
 

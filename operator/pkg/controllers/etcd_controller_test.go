@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -37,7 +38,7 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
+		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -62,7 +63,7 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-2", e.Name), metav1.GetOptions{})
+		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-2", e.Name), metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +94,7 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(fmt.Sprintf("%s-4", e.Name), metav1.GetOptions{})
+		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-4", e.Name), metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -256,7 +257,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(cluster.Name, metav1.GetOptions{})
+		updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -377,7 +378,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	f.ExpectUpdateEtcdClusterStatus()
 	f.Run(t, e)
 
-	updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(cluster.Name, metav1.GetOptions{})
+	updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

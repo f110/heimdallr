@@ -33,6 +33,7 @@ import (
 	time "time"
 
 	versioned "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	certmanager "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager"
 	etcd "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/etcd"
 	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
 	monitoring "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/monitoring"
@@ -183,9 +184,14 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Certmanager() certmanager.Interface
 	Etcd() etcd.Interface
 	Monitoring() monitoring.Interface
 	Proxy() proxy.Interface
+}
+
+func (f *sharedInformerFactory) Certmanager() certmanager.Interface {
+	return certmanager.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Etcd() etcd.Interface {

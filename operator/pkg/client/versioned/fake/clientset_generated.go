@@ -29,6 +29,8 @@ package fake
 
 import (
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	certmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2"
+	fakecertmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2/fake"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	fakeetcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1/fake"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
@@ -88,6 +90,11 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 }
 
 var _ clientset.Interface = &Clientset{}
+
+// CertmanagerV1alpha2 retrieves the CertmanagerV1alpha2Client
+func (c *Clientset) CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface {
+	return &fakecertmanagerv1alpha2.FakeCertmanagerV1alpha2{Fake: &c.Fake}
+}
 
 // EtcdV1alpha1 retrieves the EtcdV1alpha1Client
 func (c *Clientset) EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface {

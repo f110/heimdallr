@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "certmanager",
+    srcs = ["interface.go"],
+    importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//operator/pkg/informers/externalversions/certmanager/v1alpha2",
+        "//operator/pkg/informers/externalversions/internalinterfaces",
+    ],
+)

@@ -1,6 +1,7 @@
 package e2eutil
 
 import (
+	"context"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +14,7 @@ import (
 
 func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alpha1.EtcdCluster, phase etcdv1alpha1.EtcdClusterPhase, timeout time.Duration) error {
 	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		ec, err := client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(ec.Name, metav1.GetOptions{})
+		ec, err := client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -28,7 +29,7 @@ func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alph
 
 func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha1.Proxy, phase proxyv1alpha1.ProxyPhase, timeout time.Duration) error {
 	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -43,7 +44,7 @@ func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha1.Pro
 
 func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha1.Proxy, timeout time.Duration) error {
 	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

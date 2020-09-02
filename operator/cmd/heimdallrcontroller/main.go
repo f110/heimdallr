@@ -10,9 +10,7 @@ import (
 	"sync"
 	"time"
 
-	mClientset "github.com/coreos/prometheus-operator/pkg/client/versioned"
 	"github.com/google/uuid"
-	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -79,16 +77,6 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
-	cmClient, err := cmClientset.NewForConfig(cfg)
-	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-	mClient, err := mClientset.NewForConfig(cfg)
-	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
 
 	probe := controllers.NewProbe(probeAddr)
 	go probe.Start()
@@ -115,7 +103,7 @@ func main() {
 				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
 
-				c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, cmClient, mClient)
+				c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
 				if err != nil {
 					klog.Error(err)
 					os.Exit(1)

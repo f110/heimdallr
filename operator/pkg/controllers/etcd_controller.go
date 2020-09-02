@@ -169,7 +169,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	c, err := ec.client.EtcdV1alpha1().EtcdClusters(namespace).Get(name, metav1.GetOptions{})
+	c, err := ec.client.EtcdV1alpha1().EtcdClusters(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		klog.V(4).Infof("%s is not found", key)
 		return nil
@@ -178,7 +178,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	}
 	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha1.ClusterPhasePending {
 		c.Status.Phase = etcdv1alpha1.ClusterPhaseInitializing
-		_, err = ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).UpdateStatus(c)
+		_, err = ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).UpdateStatus(context.TODO(), c, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -271,7 +271,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		klog.V(4).Info("Update EtcdCluster")
-		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(cluster.EtcdCluster)
+		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(context.TODO(), cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -294,7 +294,7 @@ func (ec *EtcdController) createNewCluster(cluster *EtcdCluster) error {
 	if members[0].CreationTimestamp.IsZero() {
 		klog.V(4).Infof("Create first member: %s", members[0].Name)
 		cluster.SetAnnotationForPod(members[0])
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(members[0])
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(context.TODO(), members[0], metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -320,7 +320,7 @@ func (ec *EtcdController) createNewClusterWithBackup(cluster *EtcdCluster) error
 		}
 		members[0].Spec.InitContainers = append([]corev1.Container{receiverContainer}, members[0].Spec.InitContainers...)
 
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(members[0])
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(context.TODO(), members[0], metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -499,7 +499,7 @@ func (ec *EtcdController) stateRestore(cluster *EtcdCluster) error {
 			break
 		}
 	}
-	_, err := ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(cluster.EtcdCluster)
+	_, err := ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(context.TODO(), cluster.EtcdCluster, metav1.UpdateOptions{})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -507,7 +507,7 @@ func (ec *EtcdController) stateRestore(cluster *EtcdCluster) error {
 	members := cluster.AllExistMembers()
 
 	for _, v := range members {
-		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(v.Name, &metav1.DeleteOptions{}); err != nil {
+		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(context.TODO(), v.Name, metav1.DeleteOptions{}); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -559,7 +559,7 @@ func (ec *EtcdController) setupCA(cluster *EtcdCluster) (*corev1.Secret, error) 
 			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		caSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(caSecret)
+		caSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(context.TODO(), caSecret, metav1.CreateOptions{})
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
@@ -579,7 +579,7 @@ func (ec *EtcdController) setupServerCert(cluster *EtcdCluster, ca *corev1.Secre
 			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(context.TODO(), certS, metav1.CreateOptions{})
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
@@ -594,7 +594,7 @@ func (ec *EtcdController) setupServerCert(cluster *EtcdCluster, ca *corev1.Secre
 			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(certS)
+		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(context.TODO(), certS, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
@@ -612,7 +612,7 @@ func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secre
 			return nil, xerrors.Errorf(": %w", err)
 		}
 
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(certS)
+		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(context.TODO(), certS, metav1.CreateOptions{})
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
@@ -677,7 +677,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 
 	if pod.CreationTimestamp.IsZero() {
 		cluster.SetAnnotationForPod(pod)
-		_, err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(resetPod(pod))
+		_, err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(context.TODO(), resetPod(pod), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -732,7 +732,7 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 		forwarder.Close()
 	}
 
-	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(pod.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -766,7 +766,7 @@ func (ec *EtcdController) ensureService(cluster *EtcdCluster) error {
 
 func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 	found := true
-	cj, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Get(cluster.DefragmentCronJobName(), metav1.GetOptions{})
+	cj, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Get(context.TODO(), cluster.DefragmentCronJobName(), metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
@@ -775,7 +775,7 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 
 	if cluster.Spec.DefragmentSchedule == "" {
 		if found {
-			err = ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Delete(cluster.DefragmentCronJobName(), &metav1.DeleteOptions{})
+			err = ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Delete(context.TODO(), cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -787,13 +787,13 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 
 	if found {
 		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
-			_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Update(cluster.DefragmentCronJob())
+			_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Update(context.TODO(), cluster.DefragmentCronJob(), metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
 	} else {
-		_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Create(cluster.DefragmentCronJob())
+		_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Create(context.TODO(), cluster.DefragmentCronJob(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -805,7 +805,7 @@ func (ec *EtcdController) setupDefragmentJob(cluster *EtcdCluster) error {
 func (ec *EtcdController) ensureDiscoveryService(cluster *EtcdCluster) error {
 	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ServerDiscoveryServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
-		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(cluster.DiscoveryService())
+		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(context.TODO(), cluster.DiscoveryService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -819,7 +819,7 @@ func (ec *EtcdController) ensureDiscoveryService(cluster *EtcdCluster) error {
 func (ec *EtcdController) ensureClientService(cluster *EtcdCluster) error {
 	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ClientServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
-		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(cluster.ClientService())
+		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(context.TODO(), cluster.ClientService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -967,7 +967,7 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 		etcd.LabelNameClusterName: cluster.Name,
 		etcd.LabelNameRole:        "defragment",
 	})
-	jobList, err := ec.coreClient.BatchV1().Jobs(cluster.Namespace).List(metav1.ListOptions{LabelSelector: s.String()})
+	jobList, err := ec.coreClient.BatchV1().Jobs(cluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: s.String()})
 	if err != nil {
 		return
 	}

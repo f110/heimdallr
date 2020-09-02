@@ -12,9 +12,7 @@ import (
 	"testing"
 	"time"
 
-	mfake "github.com/coreos/prometheus-operator/pkg/client/versioned/fake"
 	"github.com/jarcoal/httpmock"
-	cmfake "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/fake"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
@@ -308,9 +306,6 @@ type proxyControllerTestRunner struct {
 	t *testing.T
 
 	c *ProxyController
-
-	cmClient *cmfake.Clientset
-	mClient  *mfake.Clientset
 }
 
 func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
@@ -318,9 +313,6 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 		commonTestRunner: newCommonTestRunner(t),
 		t:                t,
 	}
-
-	f.cmClient = cmfake.NewSimpleClientset()
-	f.mClient = mfake.NewSimpleClientset()
 
 	f.commonTestRunner.coreClient.Resources = []*metav1.APIResourceList{
 		{
@@ -333,7 +325,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 		},
 	}
 
-	c, err := NewProxyController(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client, f.cmClient, f.mClient)
+	c, err := NewProxyController(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
 	if err != nil {
 		t.Fatal(err)
 	}
