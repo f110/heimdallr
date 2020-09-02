@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "minio-go",
     srcs = [
         "api.go",
         "api-compose-object.go",
@@ -50,14 +50,14 @@ go_library(
     importpath = "github.com/minio/minio-go/v6",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/minio/minio-go/v6/pkg/credentials:go_default_library",
-        "//vendor/github.com/minio/minio-go/v6/pkg/encrypt:go_default_library",
-        "//vendor/github.com/minio/minio-go/v6/pkg/s3signer:go_default_library",
-        "//vendor/github.com/minio/minio-go/v6/pkg/s3utils:go_default_library",
-        "//vendor/github.com/minio/minio-go/v6/pkg/set:go_default_library",
-        "//vendor/github.com/minio/sha256-simd:go_default_library",
-        "//vendor/golang.org/x/net/http/httpguts:go_default_library",
-        "//vendor/golang.org/x/net/http2:go_default_library",
-        "//vendor/golang.org/x/net/publicsuffix:go_default_library",
+        "//vendor/github.com/minio/minio-go/v6/pkg/credentials",
+        "//vendor/github.com/minio/minio-go/v6/pkg/encrypt",
+        "//vendor/github.com/minio/minio-go/v6/pkg/s3signer",
+        "//vendor/github.com/minio/minio-go/v6/pkg/s3utils",
+        "//vendor/github.com/minio/minio-go/v6/pkg/set",
+        "//vendor/github.com/minio/sha256-simd",
+        "//vendor/golang.org/x/net/http/httpguts",
+        "//vendor/golang.org/x/net/http2",
+        "//vendor/golang.org/x/net/publicsuffix",
     ],
 )

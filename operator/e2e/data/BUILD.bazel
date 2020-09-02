@@ -24,7 +24,7 @@ go_library(
 )
 
 go_library(
-    name = "go_default_library",
+    name = "data",
     srcs = [],  # keep
     embed = [":embed_crd"],  # keep
     importpath = "go.f110.dev/heimdallr/operator/e2e/data",

@@ -1,14 +1,14 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "internalinterfaces",
     srcs = ["factory_interfaces.go"],
     importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/pkg/client/versioned:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
-        "//vendor/k8s.io/client-go/tools/cache:go_default_library",
+        "//operator/pkg/client/versioned",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/client-go/tools/cache",
     ],
 )

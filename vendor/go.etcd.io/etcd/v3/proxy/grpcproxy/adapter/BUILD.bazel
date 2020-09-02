@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "adapter",
     srcs = [
         "auth_client_adapter.go",
         "chan_stream.go",
@@ -18,12 +18,12 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/proxy/grpcproxy/adapter",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3election/v3electionpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3lock/v3lockpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/google.golang.org/grpc/codes:go_default_library",
-        "//vendor/google.golang.org/grpc/metadata:go_default_library",
-        "//vendor/google.golang.org/grpc/status:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3election/v3electionpb",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3lock/v3lockpb",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/metadata",
+        "//vendor/google.golang.org/grpc/status",
     ],
 )

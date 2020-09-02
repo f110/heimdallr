@@ -1,10 +1,10 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "vtrpc",
     srcs = ["vtrpc.pb.go"],
     importmap = "go.f110.dev/heimdallr/vendor/vitess.io/vitess/go/vt/proto/vtrpc",
     importpath = "vitess.io/vitess/go/vt/proto/vtrpc",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/golang/protobuf/proto:go_default_library"],
+    deps = ["//vendor/github.com/golang/protobuf/proto"],
 )

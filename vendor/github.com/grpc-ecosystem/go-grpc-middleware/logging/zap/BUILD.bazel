@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "zap",
     srcs = [
         "client_interceptors.go",
         "context.go",
@@ -15,16 +15,16 @@ go_library(
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/golang/protobuf/jsonpb:go_default_library",
-        "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware:go_default_library",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging:go_default_library",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap:go_default_library",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/tags/zap:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/go.uber.org/zap/zapcore:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/google.golang.org/grpc/codes:go_default_library",
-        "//vendor/google.golang.org/grpc/grpclog:go_default_library",
+        "//vendor/github.com/golang/protobuf/jsonpb",
+        "//vendor/github.com/golang/protobuf/proto",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/tags/zap",
+        "//vendor/go.uber.org/zap",
+        "//vendor/go.uber.org/zap/zapcore",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/grpclog",
     ],
 )

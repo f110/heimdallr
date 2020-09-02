@@ -1,22 +1,22 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "heim-proxy_lib",
     srcs = ["main.go"],
     importpath = "go.f110.dev/heimdallr/cmd/heim-proxy",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/auth/token:go_default_library",
-        "//pkg/frontproxy:go_default_library",
-        "//pkg/version:go_default_library",
-        "//vendor/github.com/spf13/pflag:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//pkg/auth/token",
+        "//pkg/frontproxy",
+        "//pkg/version",
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/golang.org/x/xerrors",
     ],
 )
 
 go_binary(
     name = "heim-proxy",
-    embed = [":go_default_library"],
+    embed = [":heim-proxy_lib"],
     visibility = ["//visibility:public"],
 )
 
@@ -24,7 +24,7 @@ load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 load("//:VERSION.bzl", "PLATFORMS")
 
 multiplatform_go_binary(
-    embed = [":go_default_library"],
+    embed = [":heim-proxy_lib"],
     name_prefix = "heim-proxy",
     platforms = PLATFORMS,
     visibility = ["//visibility:public"],

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "leasehttp",
     srcs = [
         "doc.go",
         "http.go",
@@ -10,9 +10,9 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/lease/leasehttp",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/lease:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/lease/leasepb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/httputil:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/v3/lease",
+        "//vendor/go.etcd.io/etcd/v3/lease/leasepb",
+        "//vendor/go.etcd.io/etcd/v3/pkg/httputil",
     ],
 )

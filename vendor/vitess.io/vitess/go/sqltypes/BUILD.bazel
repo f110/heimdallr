@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "sqltypes",
     srcs = [
         "bind_variables.go",
         "event_token.go",
@@ -18,11 +18,11 @@ go_library(
     importpath = "vitess.io/vitess/go/sqltypes",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/vitess.io/vitess/go/bytes2:go_default_library",
-        "//vendor/vitess.io/vitess/go/hack:go_default_library",
-        "//vendor/vitess.io/vitess/go/vt/proto/query:go_default_library",
-        "//vendor/vitess.io/vitess/go/vt/proto/vtrpc:go_default_library",
-        "//vendor/vitess.io/vitess/go/vt/vterrors:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto",
+        "//vendor/vitess.io/vitess/go/bytes2",
+        "//vendor/vitess.io/vitess/go/hack",
+        "//vendor/vitess.io/vitess/go/vt/proto/query",
+        "//vendor/vitess.io/vitess/go/vt/proto/vtrpc",
+        "//vendor/vitess.io/vitess/go/vt/vterrors",
     ],
 )

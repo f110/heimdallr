@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "migrate",
     srcs = [
         "diff.go",
         "migrate.go",
@@ -10,14 +10,14 @@ go_library(
     importpath = "go.f110.dev/protoc-ddl/internal/migrate",
     visibility = ["//vendor/go.f110.dev/protoc-ddl:__subpackages__"],
     deps = [
-        "//vendor/github.com/deckarep/golang-set:go_default_library",
-        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
-        "//vendor/github.com/pkg/errors:go_default_library",
-        "//vendor/github.com/schemalex/schemalex:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/format:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/model:go_default_library",
-        "//vendor/go.f110.dev/protoc-ddl/internal/generator:go_default_library",
-        "//vendor/go.f110.dev/protoc-ddl/internal/schema:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/github.com/deckarep/golang-set",
+        "//vendor/github.com/go-sql-driver/mysql",
+        "//vendor/github.com/pkg/errors",
+        "//vendor/github.com/schemalex/schemalex",
+        "//vendor/github.com/schemalex/schemalex/format",
+        "//vendor/github.com/schemalex/schemalex/model",
+        "//vendor/go.f110.dev/protoc-ddl/internal/generator",
+        "//vendor/go.f110.dev/protoc-ddl/internal/schema",
+        "//vendor/golang.org/x/xerrors",
     ],
 )

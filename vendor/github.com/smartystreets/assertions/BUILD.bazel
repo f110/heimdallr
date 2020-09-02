@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "assertions",
     srcs = [
         "collections.go",
         "doc.go",
@@ -21,8 +21,8 @@ go_library(
     importpath = "github.com/smartystreets/assertions",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch:go_default_library",
-        "//vendor/github.com/smartystreets/assertions/internal/go-render/render:go_default_library",
-        "//vendor/github.com/smartystreets/assertions/internal/oglematchers:go_default_library",
+        "//vendor/github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
+        "//vendor/github.com/smartystreets/assertions/internal/go-render/render",
+        "//vendor/github.com/smartystreets/assertions/internal/oglematchers",
     ],
 )

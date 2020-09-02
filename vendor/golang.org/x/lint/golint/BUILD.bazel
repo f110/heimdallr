@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "golint_lib",
     srcs = [
         "golint.go",
         "import.go",
@@ -10,11 +10,11 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/lint/golint",
     importpath = "golang.org/x/lint/golint",
     visibility = ["//visibility:private"],
-    deps = ["//vendor/golang.org/x/lint:go_default_library"],
+    deps = ["//vendor/golang.org/x/lint"],
 )
 
 go_binary(
     name = "golint",
-    embed = [":go_default_library"],
+    embed = [":golint_lib"],
     visibility = ["//visibility:public"],
 )

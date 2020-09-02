@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "mvcc",
     srcs = [
         "doc.go",
         "index.go",
@@ -24,15 +24,15 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/mvcc",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/google/btree:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/cindex:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/lease:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/adt:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/schedule:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/traceutil:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/google/btree",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/cindex",
+        "//vendor/go.etcd.io/etcd/v3/lease",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
+        "//vendor/go.etcd.io/etcd/v3/pkg/adt",
+        "//vendor/go.etcd.io/etcd/v3/pkg/schedule",
+        "//vendor/go.etcd.io/etcd/v3/pkg/traceutil",
+        "//vendor/go.uber.org/zap",
     ],
 )

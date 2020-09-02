@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "internal_gengo",
     srcs = [
         "init.go",
         "main.go",
@@ -12,16 +12,16 @@ go_library(
     importpath = "google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/google.golang.org/protobuf/compiler/protogen:go_default_library",
-        "//vendor/google.golang.org/protobuf/encoding/protowire:go_default_library",
-        "//vendor/google.golang.org/protobuf/internal/encoding/messageset:go_default_library",
-        "//vendor/google.golang.org/protobuf/internal/encoding/tag:go_default_library",
-        "//vendor/google.golang.org/protobuf/internal/genid:go_default_library",
-        "//vendor/google.golang.org/protobuf/internal/version:go_default_library",
-        "//vendor/google.golang.org/protobuf/proto:go_default_library",
-        "//vendor/google.golang.org/protobuf/reflect/protoreflect:go_default_library",
-        "//vendor/google.golang.org/protobuf/runtime/protoimpl:go_default_library",
-        "//vendor/google.golang.org/protobuf/types/descriptorpb:go_default_library",
-        "//vendor/google.golang.org/protobuf/types/pluginpb:go_default_library",
+        "//vendor/google.golang.org/protobuf/compiler/protogen",
+        "//vendor/google.golang.org/protobuf/encoding/protowire",
+        "//vendor/google.golang.org/protobuf/internal/encoding/messageset",
+        "//vendor/google.golang.org/protobuf/internal/encoding/tag",
+        "//vendor/google.golang.org/protobuf/internal/genid",
+        "//vendor/google.golang.org/protobuf/internal/version",
+        "//vendor/google.golang.org/protobuf/proto",
+        "//vendor/google.golang.org/protobuf/reflect/protoreflect",
+        "//vendor/google.golang.org/protobuf/runtime/protoimpl",
+        "//vendor/google.golang.org/protobuf/types/descriptorpb",
+        "//vendor/google.golang.org/protobuf/types/pluginpb",
     ],
 )

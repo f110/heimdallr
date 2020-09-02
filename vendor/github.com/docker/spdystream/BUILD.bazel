@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "spdystream",
     srcs = [
         "connection.go",
         "handlers.go",
@@ -12,5 +12,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/github.com/docker/spdystream",
     importpath = "github.com/docker/spdystream",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/docker/spdystream/spdy:go_default_library"],
+    deps = ["//vendor/github.com/docker/spdystream/spdy"],
 )

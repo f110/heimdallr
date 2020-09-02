@@ -12,15 +12,15 @@ proto_library(
 )
 
 go_library(
-    name = "go_default_library",
+    name = "entity",
     srcs = [],  # keep
     embed = [
         ":schema",
-        ":entity",
+        ":entity_library",
     ],  # keep
     importpath = "go.f110.dev/heimdallr/pkg/database/mysql/entity",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/go.f110.dev/protoc-ddl:go_default_library"],
+    deps = ["//vendor/go.f110.dev/protoc-ddl"],
 )
 
 load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_entity", "sql_schema", "vendor_ddl")

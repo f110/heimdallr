@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "v2stats",
     srcs = [
         "leader.go",
         "queue.go",
@@ -12,7 +12,7 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/v2stats",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/raft:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/raft",
+        "//vendor/go.uber.org/zap",
     ],
 )

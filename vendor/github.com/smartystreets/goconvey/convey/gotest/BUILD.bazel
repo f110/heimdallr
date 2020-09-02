@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "gotest",
     srcs = ["utils.go"],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/goconvey/convey/gotest",
     importpath = "github.com/smartystreets/goconvey/convey/gotest",

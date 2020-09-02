@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "versioned",
     srcs = [
         "clientset.go",
         "doc.go",
@@ -10,9 +10,9 @@ go_library(
     importpath = "github.com/coreos/prometheus-operator/pkg/client/versioned",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1:go_default_library",
-        "//vendor/k8s.io/client-go/discovery:go_default_library",
-        "//vendor/k8s.io/client-go/rest:go_default_library",
-        "//vendor/k8s.io/client-go/util/flowcontrol:go_default_library",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1:monitoring",
+        "//vendor/k8s.io/client-go/discovery",
+        "//vendor/k8s.io/client-go/rest",
+        "//vendor/k8s.io/client-go/util/flowcontrol",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "database",
     srcs = [
         "ca.go",
         "cluster.go",
@@ -12,8 +12,8 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/sigs.k8s.io/yaml:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )

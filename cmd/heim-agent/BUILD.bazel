@@ -1,25 +1,25 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "heim-agent_lib",
     srcs = ["main.go"],
     importpath = "go.f110.dev/heimdallr/cmd/heim-agent",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/config:go_default_library",
-        "//pkg/connector:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/version:go_default_library",
-        "//vendor/github.com/spf13/pflag:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
+        "//pkg/cert",
+        "//pkg/config",
+        "//pkg/connector",
+        "//pkg/logger",
+        "//pkg/version",
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/software.sslmate.com/src/go-pkcs12",
     ],
 )
 
 go_binary(
     name = "heim-agent",
-    embed = [":go_default_library"],
+    embed = [":heim-agent_lib"],
     visibility = ["//visibility:public"],
 )
 
@@ -27,7 +27,7 @@ load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 load("//:VERSION.bzl", "PLATFORMS")
 
 multiplatform_go_binary(
-    embed = [":go_default_library"],
+    embed = [":heim-agent_lib"],
     name_prefix = "heim-agent",
     platforms = PLATFORMS,
     visibility = ["//visibility:public"],

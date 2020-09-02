@@ -1,10 +1,10 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "probe",
     srcs = ["readiness.go"],
     importmap = "go.f110.dev/heimdallr/vendor/go.f110.dev/protoc-ddl/probe",
     importpath = "go.f110.dev/protoc-ddl/probe",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/go.f110.dev/protoc-ddl/internal/migrate:go_default_library"],
+    deps = ["//vendor/go.f110.dev/protoc-ddl/internal/migrate"],
 )

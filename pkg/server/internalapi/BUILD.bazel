@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "internalapi",
     srcs = [
         "probe.go",
         "resource.go",
@@ -10,13 +10,13 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/server/internalapi",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/server:go_default_library",
-        "//pkg/stat:go_default_library",
-        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//pkg/config",
+        "//pkg/logger",
+        "//pkg/server",
+        "//pkg/stat",
+        "//vendor/github.com/julienschmidt/httprouter",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp",
+        "//vendor/go.uber.org/zap",
     ],
 )

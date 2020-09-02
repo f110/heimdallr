@@ -14,9 +14,9 @@ go_embed_data(
         "//tmpl/dashboard/agent:tmpl",
         "//tmpl/dashboard/cert:tmpl",
         "//tmpl/dashboard/include:tmpl",
+        "//tmpl/dashboard/me:tmpl",
         "//tmpl/dashboard/service_account:tmpl",
         "//tmpl/dashboard/user:tmpl",
-        "//tmpl/dashboard/me:tmpl",
     ],
     string = True,
     visibility = ["//visibility:private"],
@@ -30,7 +30,7 @@ go_library(
 )
 
 go_library(
-    name = "go_default_library",
+    name = "dashboard",
     srcs = [],  # keep
     embed = [":embed_tmpl"],  # keep
     importpath = "go.f110.dev/heimdallr/tmpl/dashboard",

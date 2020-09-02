@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "lease",
     srcs = [
         "doc.go",
         "lease_queue.go",
@@ -12,10 +12,10 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/lease",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/lease/leasepb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/v3/lease/leasepb",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/backend",
+        "//vendor/go.uber.org/zap",
     ],
 )

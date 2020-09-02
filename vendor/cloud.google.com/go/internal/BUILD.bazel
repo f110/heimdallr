@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "internal",
     srcs = [
         "annotate.go",
         "retry.go",
@@ -10,8 +10,8 @@ go_library(
     importpath = "cloud.google.com/go/internal",
     visibility = ["//vendor/cloud.google.com/go:__subpackages__"],
     deps = [
-        "//vendor/github.com/googleapis/gax-go/v2:go_default_library",
-        "//vendor/google.golang.org/api/googleapi:go_default_library",
-        "//vendor/google.golang.org/grpc/status:go_default_library",
+        "//vendor/github.com/googleapis/gax-go/v2:gax-go",
+        "//vendor/google.golang.org/api/googleapi",
+        "//vendor/google.golang.org/grpc/status",
     ],
 )

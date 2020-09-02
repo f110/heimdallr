@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "bbolt",
     srcs = [
         "bolt_386.go",
         "bolt_amd64.go",
@@ -36,10 +36,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = select({
         "@io_bazel_rules_go//go/platform:aix": [
-            "//vendor/golang.org/x/sys/unix:go_default_library",
+            "//vendor/golang.org/x/sys/unix",
         ],
         "@io_bazel_rules_go//go/platform:solaris": [
-            "//vendor/golang.org/x/sys/unix:go_default_library",
+            "//vendor/golang.org/x/sys/unix",
         ],
         "//conditions:default": [],
     }),

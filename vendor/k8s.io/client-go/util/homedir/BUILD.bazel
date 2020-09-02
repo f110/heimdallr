@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "homedir",
     srcs = ["homedir.go"],
     importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/util/homedir",
     importpath = "k8s.io/client-go/util/homedir",

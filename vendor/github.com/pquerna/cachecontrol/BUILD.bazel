@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "cachecontrol",
     srcs = [
         "api.go",
         "doc.go",
@@ -9,5 +9,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/github.com/pquerna/cachecontrol",
     importpath = "github.com/pquerna/cachecontrol",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/pquerna/cachecontrol/cacheobject:go_default_library"],
+    deps = ["//vendor/github.com/pquerna/cachecontrol/cacheobject"],
 )

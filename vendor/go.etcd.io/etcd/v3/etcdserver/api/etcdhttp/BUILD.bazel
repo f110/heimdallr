@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "etcdhttp",
     srcs = [
         "base.go",
         "doc.go",
@@ -12,19 +12,19 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/etcdhttp",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/membership:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/rafthttp:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2error:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2http/httptypes:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/lease/leasehttp:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/raft:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/version:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/membership",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/rafthttp",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2error",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2http/httptypes",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/v3/lease/leasehttp",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types",
+        "//vendor/go.etcd.io/etcd/v3/raft",
+        "//vendor/go.etcd.io/etcd/v3/version",
+        "//vendor/go.uber.org/zap",
     ],
 )

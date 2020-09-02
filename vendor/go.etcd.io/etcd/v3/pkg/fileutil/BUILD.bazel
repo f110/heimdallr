@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "fileutil",
     srcs = [
         "dir_unix.go",
         "dir_windows.go",
@@ -27,5 +27,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/fileutil",
     importpath = "go.etcd.io/etcd/v3/pkg/fileutil",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/go.uber.org/zap:go_default_library"],
+    deps = ["//vendor/go.uber.org/zap"],
 )

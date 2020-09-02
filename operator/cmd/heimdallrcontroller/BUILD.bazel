@@ -1,30 +1,30 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "heimdallrcontroller_lib",
     srcs = ["main.go"],
     importpath = "go.f110.dev/heimdallr/operator/cmd/heimdallrcontroller",
     visibility = ["//visibility:private"],
     deps = [
-        "//operator/pkg/client/versioned:go_default_library",
-        "//operator/pkg/controllers:go_default_library",
-        "//operator/pkg/informers/externalversions:go_default_library",
-        "//operator/pkg/signals:go_default_library",
-        "//vendor/github.com/coreos/prometheus-operator/pkg/client/versioned:go_default_library",
-        "//vendor/github.com/google/uuid:go_default_library",
-        "//vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
-        "//vendor/k8s.io/client-go/informers:go_default_library",
-        "//vendor/k8s.io/client-go/kubernetes:go_default_library",
-        "//vendor/k8s.io/client-go/tools/clientcmd:go_default_library",
-        "//vendor/k8s.io/client-go/tools/leaderelection:go_default_library",
-        "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock:go_default_library",
-        "//vendor/k8s.io/klog:go_default_library",
+        "//operator/pkg/client/versioned",
+        "//operator/pkg/controllers",
+        "//operator/pkg/informers/externalversions",
+        "//operator/pkg/signals",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/client/versioned",
+        "//vendor/github.com/google/uuid",
+        "//vendor/github.com/jetstack/cert-manager/pkg/client/clientset/versioned",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/client-go/informers",
+        "//vendor/k8s.io/client-go/kubernetes",
+        "//vendor/k8s.io/client-go/tools/clientcmd",
+        "//vendor/k8s.io/client-go/tools/leaderelection",
+        "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock",
+        "//vendor/k8s.io/klog",
     ],
 )
 
 go_binary(
     name = "heimdallrcontroller",
-    embed = [":go_default_library"],
+    embed = [":heimdallrcontroller_lib"],
     visibility = ["//visibility:public"],
 )

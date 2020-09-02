@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "auth",
     srcs = [
         "doc.go",
         "jwt.go",
@@ -16,18 +16,18 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/auth",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/dgrijalva/jwt-go:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/auth/authpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc/rpctypes:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/cindex:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/adt:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/golang.org/x/crypto/bcrypt:go_default_library",
-        "//vendor/google.golang.org/grpc/credentials:go_default_library",
-        "//vendor/google.golang.org/grpc/metadata:go_default_library",
-        "//vendor/google.golang.org/grpc/peer:go_default_library",
+        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/etcd/v3/auth/authpb",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v3rpc/rpctypes",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/cindex",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/v3/pkg/adt",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/crypto/bcrypt",
+        "//vendor/google.golang.org/grpc/credentials",
+        "//vendor/google.golang.org/grpc/metadata",
+        "//vendor/google.golang.org/grpc/peer",
     ],
 )

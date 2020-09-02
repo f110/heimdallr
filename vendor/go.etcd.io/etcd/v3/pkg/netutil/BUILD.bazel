@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "netutil",
     srcs = [
         "doc.go",
         "isolate_linux.go",
@@ -14,14 +14,14 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/pkg/netutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types",
+        "//vendor/go.uber.org/zap",
     ] + select({
         "@io_bazel_rules_go//go/platform:android": [
-            "//vendor/go.etcd.io/etcd/v3/pkg/cpuutil:go_default_library",
+            "//vendor/go.etcd.io/etcd/v3/pkg/cpuutil",
         ],
         "@io_bazel_rules_go//go/platform:linux": [
-            "//vendor/go.etcd.io/etcd/v3/pkg/cpuutil:go_default_library",
+            "//vendor/go.etcd.io/etcd/v3/pkg/cpuutil",
         ],
         "//conditions:default": [],
     }),

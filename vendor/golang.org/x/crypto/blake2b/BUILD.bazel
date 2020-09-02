@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "blake2b",
     srcs = [
         "blake2b.go",
         "blake2bAVX2_amd64.go",
@@ -18,7 +18,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = select({
         "@io_bazel_rules_go//go/platform:amd64": [
-            "//vendor/golang.org/x/sys/cpu:go_default_library",
+            "//vendor/golang.org/x/sys/cpu",
         ],
         "//conditions:default": [],
     }),

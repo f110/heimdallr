@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "cindex",
     srcs = [
         "cindex.go",
         "doc.go",
@@ -9,5 +9,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/etcdserver/cindex",
     importpath = "go.etcd.io/etcd/v3/etcdserver/cindex",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library"],
+    deps = ["//vendor/go.etcd.io/etcd/v3/mvcc/backend"],
 )

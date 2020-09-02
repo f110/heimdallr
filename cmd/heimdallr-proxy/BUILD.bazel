@@ -1,19 +1,19 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "heimdallr-proxy_lib",
     srcs = ["main.go"],
     importpath = "go.f110.dev/heimdallr/cmd/heimdallr-proxy",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/cmd/reverseproxy:go_default_library",
-        "//pkg/version:go_default_library",
-        "//vendor/github.com/spf13/pflag:go_default_library",
+        "//pkg/cmd/reverseproxy",
+        "//pkg/version",
+        "//vendor/github.com/spf13/pflag",
     ],
 )
 
 go_binary(
     name = "heimdallr-proxy",
-    embed = [":go_default_library"],
+    embed = [":heimdallr-proxy_lib"],
     visibility = ["//visibility:public"],
 )

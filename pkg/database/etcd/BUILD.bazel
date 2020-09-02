@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "etcd",
     srcs = [
         "ca.go",
         "cluster.go",
@@ -13,19 +13,19 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database/etcd",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/netutil:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/sigs.k8s.io/yaml:go_default_library",
+        "//pkg/cert",
+        "//pkg/database",
+        "//pkg/logger",
+        "//pkg/netutil",
+        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "etcd_test",
     srcs = [
         "ca_test.go",
         "cluster_test.go",
@@ -35,18 +35,18 @@ go_test(
         "user_test.go",
         "util_test.go",
     ],
-    embed = [":go_default_library"],
+    embed = [":etcd"],
     shard_count = 1,
     tags = ["exclusive"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/netutil:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/embed:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",
-        "//vendor/sigs.k8s.io/yaml:go_default_library",
+        "//pkg/cert",
+        "//pkg/config",
+        "//pkg/database",
+        "//pkg/logger",
+        "//pkg/netutil",
+        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.etcd.io/etcd/v3/embed",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )

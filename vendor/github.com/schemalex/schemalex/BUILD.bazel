@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "schemalex",
     srcs = [
         "errors.go",
         "interface.go",
@@ -15,8 +15,8 @@ go_library(
     importpath = "github.com/schemalex/schemalex",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/internal/errors:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/model:go_default_library",
+        "//vendor/github.com/go-sql-driver/mysql",
+        "//vendor/github.com/schemalex/schemalex/internal/errors",
+        "//vendor/github.com/schemalex/schemalex/model",
     ],
 )

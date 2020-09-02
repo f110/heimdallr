@@ -1,20 +1,20 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "dashboard",
     srcs = ["server.go"],
     importpath = "go.f110.dev/heimdallr/pkg/dashboard",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/rpc:go_default_library",
-        "//pkg/rpc/rpcclient:go_default_library",
-        "//pkg/template:go_default_library",
-        "//tmpl/dashboard:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
-        "//vendor/github.com/julienschmidt/httprouter:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
+        "//pkg/config",
+        "//pkg/logger",
+        "//pkg/rpc",
+        "//pkg/rpc/rpcclient",
+        "//pkg/template",
+        "//tmpl/dashboard",
+        "//vendor/github.com/golang/protobuf/ptypes",
+        "//vendor/github.com/julienschmidt/httprouter",
+        "//vendor/go.uber.org/zap",
+        "//vendor/google.golang.org/grpc",
     ],
 )

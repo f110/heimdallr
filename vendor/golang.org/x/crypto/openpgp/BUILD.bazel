@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "openpgp",
     srcs = [
         "canonical_text.go",
         "keys.go",
@@ -12,9 +12,9 @@ go_library(
     importpath = "golang.org/x/crypto/openpgp",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/golang.org/x/crypto/openpgp/armor:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/errors:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/packet:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/s2k:go_default_library",
+        "//vendor/golang.org/x/crypto/openpgp/armor",
+        "//vendor/golang.org/x/crypto/openpgp/errors",
+        "//vendor/golang.org/x/crypto/openpgp/packet",
+        "//vendor/golang.org/x/crypto/openpgp/s2k",
     ],
 )

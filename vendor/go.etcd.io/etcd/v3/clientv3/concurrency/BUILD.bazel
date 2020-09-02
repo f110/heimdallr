@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "concurrency",
     srcs = [
         "doc.go",
         "election.go",
@@ -14,8 +14,8 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/clientv3/concurrency",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
     ],
 )

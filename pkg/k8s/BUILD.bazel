@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "k8s",
     srcs = [
         "net.go",
         "notify.go",
@@ -9,17 +9,17 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/fsnotify/fsnotify:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/github.com/fsnotify/fsnotify",
+        "//vendor/golang.org/x/xerrors",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "k8s_test",
     srcs = [
         "net_test.go",
         "notify_test.go",
     ],
-    embed = [":go_default_library"],
-    deps = ["//vendor/github.com/fsnotify/fsnotify:go_default_library"],
+    embed = [":k8s"],
+    deps = ["//vendor/github.com/fsnotify/fsnotify"],
 )

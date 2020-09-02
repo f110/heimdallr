@@ -3,9 +3,9 @@ load("@dev_f110_rules_extras//go:gen.bzl", "k8s_code_generator")
 k8s_code_generator(
     name = "gen",
     srcs = [
-        "//operator/pkg/api/etcd/v1alpha1:go_default_library",
-        "//operator/pkg/api/proxy/v1alpha1:go_default_library",
-        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:go_default_library",
+        "//operator/pkg/api/etcd/v1alpha1",
+        "//operator/pkg/api/proxy/v1alpha1",
+        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
     ],
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
     crd = "operator/config/crd",

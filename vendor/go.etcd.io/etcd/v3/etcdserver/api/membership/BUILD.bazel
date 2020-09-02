@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "membership",
     srcs = [
         "cluster.go",
         "doc.go",
@@ -14,16 +14,16 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/etcdserver/api/membership",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/coreos/go-semver/semver:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2error:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2store:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/mvcc/backend:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/netutil:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/raft:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/raft/raftpb:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/version:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/coreos/go-semver/semver",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2error",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/api/v2store",
+        "//vendor/go.etcd.io/etcd/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/v3/pkg/netutil",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types",
+        "//vendor/go.etcd.io/etcd/v3/raft",
+        "//vendor/go.etcd.io/etcd/v3/raft/raftpb",
+        "//vendor/go.etcd.io/etcd/v3/version",
+        "//vendor/go.uber.org/zap",
     ],
 )

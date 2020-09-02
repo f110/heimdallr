@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "connector",
     srcs = [
         "agent.go",
         "conn_mgr.go",
@@ -11,15 +11,15 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/connector",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/netutil:go_default_library",
-        "//pkg/rpc/rpcclient:go_default_library",
-        "//pkg/stat:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
+        "//pkg/cert",
+        "//pkg/config",
+        "//pkg/database",
+        "//pkg/logger",
+        "//pkg/netutil",
+        "//pkg/rpc/rpcclient",
+        "//pkg/stat",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/google.golang.org/grpc",
     ],
 )

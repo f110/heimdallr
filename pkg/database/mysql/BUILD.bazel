@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "mysql",
     srcs = [
         "ca.go",
         "cluster.go",
@@ -12,11 +12,11 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database/mysql",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/database/mysql/dao:go_default_library",
-        "//pkg/database/mysql/entity:go_default_library",
-        "//pkg/netutil:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//pkg/cert",
+        "//pkg/database",
+        "//pkg/database/mysql/dao",
+        "//pkg/netutil",
+        "//vendor/golang.org/x/xerrors",
+        "//pkg/database/mysql/entity",
     ],
 )

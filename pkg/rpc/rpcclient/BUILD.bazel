@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "rpcclient",
     srcs = [
         "client.go",
         "revoked_cert.go",
@@ -9,24 +9,24 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/rpc/rpcclient",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/auth/token:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//pkg/rpc:go_default_library",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/google.golang.org/grpc/codes:go_default_library",
-        "//vendor/google.golang.org/grpc/connectivity:go_default_library",
-        "//vendor/google.golang.org/grpc/keepalive:go_default_library",
-        "//vendor/google.golang.org/grpc/metadata:go_default_library",
-        "//vendor/google.golang.org/grpc/status:go_default_library",
+        "//pkg/auth/token",
+        "//pkg/logger",
+        "//pkg/rpc",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/connectivity",
+        "//vendor/google.golang.org/grpc/keepalive",
+        "//vendor/google.golang.org/grpc/metadata",
+        "//vendor/google.golang.org/grpc/status",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "rpcclient_test",
     srcs = ["client_test.go"],
-    embed = [":go_default_library"],
-    deps = ["//pkg/rpc/rpctestutil:go_default_library"],
+    embed = [":rpcclient"],
+    deps = ["//pkg/rpc/rpctestutil"],
 )

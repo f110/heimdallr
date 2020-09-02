@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "packet",
     srcs = [
         "compressed.go",
         "config.go",
@@ -26,9 +26,9 @@ go_library(
     importpath = "golang.org/x/crypto/openpgp/packet",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/golang.org/x/crypto/cast5:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/elgamal:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/errors:go_default_library",
-        "//vendor/golang.org/x/crypto/openpgp/s2k:go_default_library",
+        "//vendor/golang.org/x/crypto/cast5",
+        "//vendor/golang.org/x/crypto/openpgp/elgamal",
+        "//vendor/golang.org/x/crypto/openpgp/errors",
+        "//vendor/golang.org/x/crypto/openpgp/s2k",
     ],
 )

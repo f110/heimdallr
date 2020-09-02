@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("//:VERSION.bzl", "VERSION")
 
 go_library(
-    name = "go_default_library",
+    name = "version",
     srcs = ["const.go"],
     importpath = "go.f110.dev/heimdallr/pkg/version",
     visibility = ["//visibility:public"],

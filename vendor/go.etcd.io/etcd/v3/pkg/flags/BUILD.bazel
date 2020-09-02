@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "flags",
     srcs = [
         "flag.go",
         "ignored.go",
@@ -15,8 +15,8 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/pkg/flags",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/spf13/pflag:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/types:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/go.etcd.io/etcd/v3/pkg/types",
+        "//vendor/go.uber.org/zap",
     ],
 )

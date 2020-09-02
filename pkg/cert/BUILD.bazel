@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "cert",
     srcs = [
         "certificate_authority.go",
         "util.go",
@@ -9,26 +9,26 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cert",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/logger:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
+        "//pkg/config",
+        "//pkg/database",
+        "//pkg/logger",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/software.sslmate.com/src/go-pkcs12",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "cert_test",
     srcs = [
         "certificate_authority_test.go",
         "util_test.go",
     ],
     data = glob(["testdata/**"]),
-    embed = [":go_default_library"],
+    embed = [":cert"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/database/memory:go_default_library",
-        "//vendor/software.sslmate.com/src/go-pkcs12:go_default_library",
+        "//pkg/config",
+        "//pkg/database",
+        "//pkg/database/memory",
+        "//vendor/software.sslmate.com/src/go-pkcs12",
     ],
 )

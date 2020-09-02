@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "storage",
     srcs = [
         "acl.go",
         "bucket.go",
@@ -22,18 +22,18 @@ go_library(
     importpath = "cloud.google.com/go/storage",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/cloud.google.com/go/iam:go_default_library",
-        "//vendor/cloud.google.com/go/internal:go_default_library",
-        "//vendor/cloud.google.com/go/internal/optional:go_default_library",
-        "//vendor/cloud.google.com/go/internal/trace:go_default_library",
-        "//vendor/cloud.google.com/go/internal/version:go_default_library",
-        "//vendor/github.com/googleapis/gax-go/v2:go_default_library",
-        "//vendor/google.golang.org/api/googleapi:go_default_library",
-        "//vendor/google.golang.org/api/iterator:go_default_library",
-        "//vendor/google.golang.org/api/option:go_default_library",
-        "//vendor/google.golang.org/api/storage/v1:go_default_library",
-        "//vendor/google.golang.org/api/transport/http:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/iam/v1:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/type/expr:go_default_library",
+        "//vendor/cloud.google.com/go/iam",
+        "//vendor/cloud.google.com/go/internal",
+        "//vendor/cloud.google.com/go/internal/optional",
+        "//vendor/cloud.google.com/go/internal/trace",
+        "//vendor/cloud.google.com/go/internal/version",
+        "//vendor/github.com/googleapis/gax-go/v2:gax-go",
+        "//vendor/google.golang.org/api/googleapi",
+        "//vendor/google.golang.org/api/iterator",
+        "//vendor/google.golang.org/api/option",
+        "//vendor/google.golang.org/api/storage/v1:storage",
+        "//vendor/google.golang.org/api/transport/http",
+        "//vendor/google.golang.org/genproto/googleapis/iam/v1:iam",
+        "//vendor/google.golang.org/genproto/googleapis/type/expr",
     ],
 )

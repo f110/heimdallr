@@ -1,25 +1,25 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "configreader",
     srcs = ["reader.go"],
     importpath = "go.f110.dev/heimdallr/pkg/config/configreader",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/sigs.k8s.io/yaml:go_default_library",
+        "//pkg/config",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "configreader_test",
     srcs = ["reader_test.go"],
     data = glob(["testdata/**"]),
-    embed = [":go_default_library"],
+    embed = [":configreader"],
     deps = [
-        "//pkg/cert:go_default_library",
-        "//pkg/config:go_default_library",
-        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+        "//pkg/cert",
+        "//pkg/config",
+        "//vendor/github.com/stretchr/testify/assert",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "memory",
     srcs = [
         "ca.go",
         "cluster.go",
@@ -12,9 +12,9 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database/memory",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config:go_default_library",
-        "//pkg/database:go_default_library",
-        "//pkg/netutil:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//pkg/config",
+        "//pkg/database",
+        "//pkg/netutil",
+        "//vendor/golang.org/x/xerrors",
     ],
 )

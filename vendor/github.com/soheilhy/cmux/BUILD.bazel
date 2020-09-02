@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "cmux",
     srcs = [
         "buffer.go",
         "cmux.go",
@@ -13,7 +13,7 @@ go_library(
     importpath = "github.com/soheilhy/cmux",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/golang.org/x/net/http2:go_default_library",
-        "//vendor/golang.org/x/net/http2/hpack:go_default_library",
+        "//vendor/golang.org/x/net/http2",
+        "//vendor/golang.org/x/net/http2/hpack",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "transport",
     srcs = [
         "doc.go",
         "keepalive_listener.go",
@@ -20,8 +20,8 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/pkg/transport",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/pkg/fileutil:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/pkg/tlsutil:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/go.etcd.io/etcd/v3/pkg/fileutil",
+        "//vendor/go.etcd.io/etcd/v3/pkg/tlsutil",
+        "//vendor/go.uber.org/zap",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "model",
     srcs = [
         "columns_gen.go",
         "database.go",
@@ -20,7 +20,7 @@ go_library(
     importpath = "github.com/schemalex/schemalex/model",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/schemalex/schemalex/internal/errors:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/internal/util:go_default_library",
+        "//vendor/github.com/schemalex/schemalex/internal/errors",
+        "//vendor/github.com/schemalex/schemalex/internal/util",
     ],
 )

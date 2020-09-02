@@ -13,7 +13,7 @@ vendor_ddl(
 )
 
 go_library(
-    name = "go_default_library",
+    name = "dao",
     srcs = [
         "repository.go",
         "schema.dao.go",
@@ -21,7 +21,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database/mysql/dao",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/database/mysql/entity:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//vendor/golang.org/x/xerrors",
+        "//pkg/database/mysql/entity",
     ],
 )

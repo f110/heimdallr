@@ -1,32 +1,32 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "config",
     srcs = ["config.go"],
     importpath = "go.f110.dev/heimdallr/pkg/config",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/k8s:go_default_library",
-        "//pkg/rpc:go_default_library",
-        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
-        "//vendor/github.com/gorilla/mux:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/clientv3:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/clientv3/namespace:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
-        "//vendor/go.uber.org/zap/zapcore:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
-        "//vendor/sigs.k8s.io/yaml:go_default_library",
+        "//pkg/k8s",
+        "//pkg/rpc",
+        "//vendor/github.com/go-sql-driver/mysql",
+        "//vendor/github.com/gorilla/mux",
+        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.etcd.io/etcd/v3/clientv3/namespace",
+        "//vendor/go.uber.org/zap",
+        "//vendor/go.uber.org/zap/zapcore",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "config_test",
     srcs = ["config_test.go"],
-    embed = [":go_default_library"],
+    embed = [":config"],
     deps = [
-        "//pkg/netutil:go_default_library",
-        "//vendor/github.com/stretchr/testify/assert:go_default_library",
-        "//vendor/go.etcd.io/etcd/v3/embed:go_default_library",
-        "//vendor/go.uber.org/zap/zapcore:go_default_library",
+        "//pkg/netutil",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/go.etcd.io/etcd/v3/embed",
+        "//vendor/go.uber.org/zap/zapcore",
     ],
 )

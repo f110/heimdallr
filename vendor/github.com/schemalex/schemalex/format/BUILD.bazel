@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "format",
     srcs = [
         "format.go",
         "option.go",
@@ -10,10 +10,10 @@ go_library(
     importpath = "github.com/schemalex/schemalex/format",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/schemalex/schemalex:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/internal/errors:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/internal/option:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/internal/util:go_default_library",
-        "//vendor/github.com/schemalex/schemalex/model:go_default_library",
+        "//vendor/github.com/schemalex/schemalex",
+        "//vendor/github.com/schemalex/schemalex/internal/errors",
+        "//vendor/github.com/schemalex/schemalex/internal/option",
+        "//vendor/github.com/schemalex/schemalex/internal/util",
+        "//vendor/github.com/schemalex/schemalex/model",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "crc",
     srcs = ["crc.go"],
     importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/v3/pkg/crc",
     importpath = "go.etcd.io/etcd/v3/pkg/crc",

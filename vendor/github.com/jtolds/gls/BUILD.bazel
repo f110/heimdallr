@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "gls",
     srcs = [
         "context.go",
         "gen_sym.go",
@@ -16,7 +16,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = select({
         "@io_bazel_rules_go//go/platform:js": [
-            "//vendor/github.com/gopherjs/gopherjs/js:go_default_library",
+            "//vendor/github.com/gopherjs/gopherjs/js",
         ],
         "//conditions:default": [],
     }),

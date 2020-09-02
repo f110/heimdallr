@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "backend",
     srcs = [
         "backend.go",
         "batch_tx.go",
@@ -17,9 +17,9 @@ go_library(
     importpath = "go.etcd.io/etcd/v3/mvcc/backend",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/dustin/go-humanize:go_default_library",
-        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
-        "//vendor/go.etcd.io/bbolt:go_default_library",
-        "//vendor/go.uber.org/zap:go_default_library",
+        "//vendor/github.com/dustin/go-humanize",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/bbolt",
+        "//vendor/go.uber.org/zap",
     ],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "reporting",
     srcs = [
         "console.go",
         "doc.go",
@@ -19,5 +19,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/github.com/smartystreets/goconvey/convey/reporting",
     importpath = "github.com/smartystreets/goconvey/convey/reporting",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/smartystreets/goconvey/convey/gotest:go_default_library"],
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey/gotest"],
 )

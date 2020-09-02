@@ -1,12 +1,12 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "rpctestutil",
     srcs = ["client.go"],
     importpath = "go.f110.dev/heimdallr/pkg/rpc/rpctestutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/rpc:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
+        "//pkg/rpc",
+        "//vendor/google.golang.org/grpc",
     ],
 )

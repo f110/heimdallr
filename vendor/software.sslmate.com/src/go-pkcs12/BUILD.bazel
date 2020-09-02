@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "go-pkcs12",
     srcs = [
         "bmp-string.go",
         "crypto.go",
@@ -14,5 +14,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/software.sslmate.com/src/go-pkcs12",
     importpath = "software.sslmate.com/src/go-pkcs12",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/software.sslmate.com/src/go-pkcs12/internal/rc2:go_default_library"],
+    deps = ["//vendor/software.sslmate.com/src/go-pkcs12/internal/rc2"],
 )

@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go_default_library",
+    name = "acme",
     srcs = ["doc.go"],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/jetstack/cert-manager/pkg/apis/acme",
     importpath = "github.com/jetstack/cert-manager/pkg/apis/acme",

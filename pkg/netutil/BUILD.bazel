@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "go_default_library",
+    name = "netutil",
     srcs = [
         "hostname.go",
         "port.go",
@@ -10,14 +10,14 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/netutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/k8s:go_default_library",
-        "//vendor/golang.org/x/xerrors:go_default_library",
+        "//pkg/k8s",
+        "//vendor/golang.org/x/xerrors",
     ],
 )
 
 go_test(
-    name = "go_default_test",
+    name = "netutil_test",
     srcs = ["hostname_test.go"],
-    embed = [":go_default_library"],
-    deps = ["//pkg/k8s:go_default_library"],
+    embed = [":netutil"],
+    deps = ["//pkg/k8s"],
 )
