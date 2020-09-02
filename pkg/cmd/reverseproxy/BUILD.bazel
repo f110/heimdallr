@@ -16,6 +16,7 @@ go_library(
         "//pkg/database/etcd",
         "//pkg/database/mysql",
         "//pkg/database/mysql/dao",
+        "//pkg/database/mysql/entity",
         "//pkg/frontproxy",
         "//pkg/logger",
         "//pkg/netutil",
@@ -37,6 +38,5 @@ go_library(
         "//vendor/google.golang.org/grpc/connectivity",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",
-        "//pkg/database/mysql/entity",
     ],
 )

@@ -15,8 +15,8 @@ go_library(
         "//pkg/cert",
         "//pkg/database",
         "//pkg/database/mysql/dao",
+        "//pkg/database/mysql/entity",
         "//pkg/netutil",
         "//vendor/golang.org/x/xerrors",
-        "//pkg/database/mysql/entity",
     ],
 )
