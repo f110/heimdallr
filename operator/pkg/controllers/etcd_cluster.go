@@ -20,13 +20,13 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"go.etcd.io/etcd/v3/clientv3"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/klog"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
@@ -84,13 +84,15 @@ type EtcdCluster struct {
 	podsOnce         sync.Once
 	expectedPods     []*corev1.Pod
 
+	log     *zap.Logger
 	mockOpt *MockOption
 }
 
-func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string, mockOpt *MockOption) *EtcdCluster {
+func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string, log *zap.Logger, mockOpt *MockOption) *EtcdCluster {
 	return &EtcdCluster{
 		EtcdCluster:   c.DeepCopy(),
 		ClusterDomain: clusterDomain,
+		log:           log,
 		mockOpt:       mockOpt,
 	}
 }
@@ -109,12 +111,12 @@ func (c *EtcdCluster) SetCASecret(ca *corev1.Secret) {
 func (c *EtcdCluster) SetServerCertSecret(cert *corev1.Secret) {
 	tlsKeyPair, err := tls.X509KeyPair(cert.Data[serverCertSecretCertName], cert.Data[serverCertSecretPrivateKeyName])
 	if err != nil {
-		klog.Warningf("Failed decode a server certificate: %s", cert.Name)
+		c.log.Warn("Failed decode a server certificate", zap.String("name", cert.Name))
 	}
 
 	serverCert, err := NewCertificate(tlsKeyPair)
 	if err != nil {
-		klog.Warningf("Failed encode a private key")
+		c.log.Warn("Failed encode a private key", zap.Error(err))
 	}
 	c.serverCertSecret = serverCert
 }
@@ -420,24 +422,24 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 	}
 
 	if pod.CreationTimestamp.IsZero() {
-		klog.V(4).Infof("%s should be updated because not created yet", pod.Name)
+		c.log.Debug("Should be updated because not created yet", zap.String("pod.name", pod.Name))
 		return true
 	}
 
 	etcdVersion := pod.Labels[etcd.LabelNameEtcdVersion]
 	if (c.Spec.Version != "" && etcdVersion != c.Spec.Version) || (c.Spec.Version == "" && etcdVersion != defaultEtcdVersion) {
-		klog.V(4).Infof("%s is older version: %s", pod.Name, etcdVersion)
+		c.log.Debug("Older version", zap.String("pod.name", pod.Name), zap.String("version", etcdVersion))
 		return true
 	}
 
 	if v, ok := pod.Annotations[etcd.AnnotationKeyServerCertificate]; ok {
 		if c.ShouldUpdateServerCertificate([]byte(v)) {
-			klog.V(4).Infof("%s's certificate is outdated", pod.Name)
+			c.log.Debug("Certificate is outdated", zap.String("pod.name", pod.Name))
 			return true
 		}
 	} else if !ok {
 		// If pod doesn't have AnnotationKeyServerCertificate, pod should be updated.
-		klog.V(4).Infof("%s doesn't have AnnotationKeyServerCertificate", pod.Name)
+		c.log.Debug("Don't have AnnotationKeyServerCertificate", zap.String("pod.name", pod.Name))
 		return true
 	}
 
@@ -448,19 +450,19 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 	b, _ := pem.Decode(certPem)
 	podCert, err := x509.ParseCertificate(b.Bytes)
 	if err != nil {
-		klog.Warningf("Could not parse a certificate")
+		c.log.Warn("Could not parse a certificate")
 		return true
 	}
 
 	expectDNSName := c.DNSNames()
 	if len(podCert.DNSNames) != len(expectDNSName) {
-		klog.V(4).Infof("cert doesn't have enough DNSNames")
+		c.log.Debug("cert doesn't have enough DNSNames")
 		return true
 	}
 
 	for i, v := range podCert.DNSNames {
 		if expectDNSName[i] != v {
-			klog.V(4).Infof("Unexpected DNSName: %s vs %s", expectDNSName[i], v)
+			c.log.Debug("Unexpected DNSName", zap.String("expect", expectDNSName[i]), zap.String("got", v))
 			return true
 		}
 	}
@@ -624,7 +626,7 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 		}
 
 		// TODO: Handle this case
-		klog.Info("TODO: Need handle this case")
+		c.log.Info("TODO: Need handle this case")
 		return InternalStateRunning
 	}
 

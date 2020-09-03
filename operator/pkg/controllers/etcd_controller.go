@@ -21,6 +21,7 @@ import (
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/clientv3/snapshot"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -41,7 +42,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
@@ -64,6 +64,7 @@ type EtcdController struct {
 	client            clientset.Interface
 	clusterDomain     string
 	runOutsideCluster bool
+	log               *zap.Logger
 
 	clusterLister       etcdlisters.EtcdClusterLister
 	clusterListerSynced cache.InformerSynced
@@ -99,8 +100,11 @@ func NewEtcdController(
 
 	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
+	log := logger.Log.Named("etcd-controller")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
+		log.Info(fmt.Sprintf(format, args...))
+	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "etcd-controller"})
 
@@ -110,6 +114,7 @@ func NewEtcdController(
 		coreClient:          coreClient,
 		clusterDomain:       clusterDomain,
 		runOutsideCluster:   runOutsideCluster,
+		log:                 log,
 		clusterLister:       etcdClusterInformer.Lister(),
 		clusterListerSynced: etcdClusterInformer.Informer().HasSynced,
 		podLister:           podInformer.Lister(),
@@ -140,14 +145,14 @@ func NewEtcdController(
 func (ec *EtcdController) Run(ctx context.Context, workers int) {
 	defer ec.queue.ShutDown()
 
-	klog.Info("Wait for informer caches to sync")
+	ec.log.Debug("Wait for informer caches to sync")
 	if !cache.WaitForCacheSync(ctx.Done(),
 		ec.clusterListerSynced,
 		ec.podListerSynced,
 		ec.serviceListerSynced,
 		ec.secretListerSynced,
 	) {
-		klog.Error("Failed to sync informer caches")
+		ec.log.Error("Failed to sync informer caches")
 		return
 	}
 
@@ -155,15 +160,15 @@ func (ec *EtcdController) Run(ctx context.Context, workers int) {
 		go wait.Until(ec.worker, time.Second, ctx.Done())
 	}
 
-	klog.V(2).Info("Start workers of EtcdController")
+	ec.log.Debug("Start workers of EtcdController")
 	<-ctx.Done()
-	klog.V(2).Info("Shutdown workers")
+	ec.log.Debug("Shutdown workers")
 }
 
 type internalStateHandleFunc func(cluster *EtcdCluster) error
 
 func (ec *EtcdController) syncEtcdCluster(key string) error {
-	klog.V(4).Info("syncEtcdCluster")
+	ec.log.Debug("syncEtcdCluster")
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -171,7 +176,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 
 	c, err := ec.client.EtcdV1alpha1().EtcdClusters(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
-		klog.V(4).Infof("%s is not found", key)
+		ec.log.Debug("EtcdCluster is not found", zap.String("key", key))
 		return nil
 	} else if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -184,7 +189,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 		}
 	}
 
-	cluster := NewEtcdCluster(c, ec.clusterDomain, ec.etcdClientMockOpt)
+	cluster := NewEtcdCluster(c, ec.clusterDomain, ec.log, ec.etcdClientMockOpt)
 	caSecret, err := ec.setupCA(cluster)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -207,7 +212,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	cluster.SetOwnedPods(pods)
 
 	var handler internalStateHandleFunc
-	klog.V(4).Infof("CurrentInternalState: %s", cluster.CurrentInternalState())
+	ec.log.Debug("Execute handler", zap.String("internalState", string(cluster.CurrentInternalState())))
 	switch cluster.CurrentInternalState() {
 	case InternalStateCreatingFirstMember:
 		handler = ec.stateCreatingFirstMember
@@ -270,7 +275,7 @@ func (ec *EtcdController) syncEtcdCluster(key string) error {
 	}
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
-		klog.V(4).Info("Update EtcdCluster")
+		ec.log.Debug("Update EtcdCluster")
 		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(context.TODO(), cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -292,7 +297,7 @@ func (ec *EtcdController) createNewCluster(cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
 	if members[0].CreationTimestamp.IsZero() {
-		klog.V(4).Infof("Create first member: %s", members[0].Name)
+		ec.log.Debug("Create first member", zap.String("name", members[0].Name))
 		cluster.SetAnnotationForPod(members[0])
 		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(context.TODO(), members[0], metav1.CreateOptions{})
 		if err != nil {
@@ -301,7 +306,7 @@ func (ec *EtcdController) createNewCluster(cluster *EtcdCluster) error {
 		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
 	} else {
 		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
-		klog.V(4).Info("Waiting for running first member")
+		ec.log.Debug("Waiting for running first member", zap.String("name", members[0].Name))
 	}
 
 	return nil
@@ -310,7 +315,7 @@ func (ec *EtcdController) createNewCluster(cluster *EtcdCluster) error {
 func (ec *EtcdController) createNewClusterWithBackup(cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 	if members[0].CreationTimestamp.IsZero() {
-		klog.V(4).Infof("Create first member: %s", members[0].Name)
+		ec.log.Debug("Create first member", zap.String("name", members[0].Name))
 		cluster.SetAnnotationForPod(members[0])
 		receiverContainer := corev1.Container{
 			Name:         "receive-backup-file",
@@ -347,7 +352,7 @@ func (ec *EtcdController) createNewClusterWithBackup(cluster *EtcdCluster) error
 	}
 
 	ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
-	klog.V(4).Info("Waiting for running first member")
+	ec.log.Debug("Waiting for running first member", zap.String("name", members[0].Name))
 
 	return nil
 }
@@ -438,7 +443,7 @@ func (ec *EtcdController) statePreparingUpdate(cluster *EtcdCluster) error {
 		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
 	} else if !cluster.IsPodReady(temporaryMember) {
 		ec.recorder.Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running temporary member")
-		klog.V(4).Info("Waiting for running temporary member")
+		ec.log.Debug("Waiting for running temporary member", zap.String("name", temporaryMember.Name))
 	}
 
 	return nil
@@ -476,7 +481,7 @@ func (ec *EtcdController) stateUpdatingMember(cluster *EtcdCluster) error {
 			return xerrors.Errorf(": %w", err)
 		}
 	} else {
-		klog.V(4).Infof("%s is waiting update", targetMember.Name)
+		ec.log.Debug("Waiting update", zap.String("name", targetMember.Name))
 	}
 
 	return nil
@@ -517,7 +522,7 @@ func (ec *EtcdController) stateRestore(cluster *EtcdCluster) error {
 }
 
 func (ec *EtcdController) sendBackupToContainer(cluster *EtcdCluster, pod *corev1.Pod, backupPath string) error {
-	klog.V(4).Infof("Send to a backup file to %s: %s", pod.Name, backupPath)
+	ec.log.Debug("Send to a backup file", zap.String("pod.name", pod.Name), zap.String("path", backupPath))
 	backupFile, forwarder, err := ec.getBackupFile(cluster, backupPath)
 	if forwarder != nil {
 		defer forwarder.Close()
@@ -625,7 +630,7 @@ func (ec *EtcdController) setupClientCert(cluster *EtcdCluster, ca *corev1.Secre
 }
 
 func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod) error {
-	klog.V(4).Infof("Create %s", pod.Name)
+	ec.log.Debug("Start member", zap.String("pod.name", pod.Name))
 
 	eClient, forwarder, err := ec.etcdClient(cluster)
 	if forwarder != nil {
@@ -647,9 +652,8 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 
 	isExistAsMember := false
 	for _, v := range mList.Members {
-		klog.V(4).Infof("member: %+v", v)
 		if len(v.PeerURLs) == 0 {
-			klog.Warningf("Found the member that hasn't peer URL. probably a bug of controller")
+			ec.log.Warn("Found the member that hasn't peer URL. probably a bug of controller")
 			continue
 		}
 		if strings.HasPrefix(v.PeerURLs[0], "https://"+pod.Name) {
@@ -658,7 +662,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 	}
 
 	if !isExistAsMember {
-		klog.V(4).Infof("MemberAdd: %s", pod.Name)
+		ec.log.Debug("Member add", zap.String("pod.name", pod.Name))
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		res, err := eClient.MemberAdd(
 			ctx,
@@ -668,7 +672,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 			return xerrors.Errorf(": %w", err)
 		}
 		cancelFunc()
-		klog.V(4).Infof("Added a new member: %+v", res.Member)
+		ec.log.Debug("Added the new member", zap.Any("member", res.Member))
 	}
 
 	if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
@@ -688,7 +692,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 }
 
 func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) error {
-	klog.V(4).Infof("Delete a member: %s", pod.Name)
+	ec.log.Debug("Delete the member", zap.String("pod.name", pod.Name))
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
 	eClient, forwarder, err := ec.etcdClient(cluster)
@@ -698,6 +702,12 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	defer func() {
+		if eClient != nil {
+			eClient.Close()
+		}
+	}()
+
 	mList, err := eClient.MemberList(ctx)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -706,7 +716,7 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 	var member *etcdserverpb.Member
 	for _, v := range mList.Members {
 		if len(v.PeerURLs) == 0 {
-			klog.Warningf("The member hasn't any peer url: %d", v.ID)
+			ec.log.Warn("The member hasn't any peer url", zap.Uint64("id", v.ID), zap.String("name", v.Name))
 			continue
 		}
 		if strings.HasPrefix(v.PeerURLs[0], "https://"+pod.Name) {
@@ -720,7 +730,7 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		klog.V(4).Infof("Remove a member: %+v", member)
+		ec.log.Debug("Remove the member from cluster", zap.String("name", member.Name))
 	}
 
 	if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
@@ -740,7 +750,7 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 }
 
 func (ec *EtcdController) updateMember(cluster *EtcdCluster, pod *corev1.Pod) error {
-	klog.V(4).Infof("Delete and start %s", pod.Name)
+	ec.log.Debug("Delete and start", zap.String("pod.name", pod.Name))
 
 	if !pod.CreationTimestamp.IsZero() && cluster.ShouldUpdate(pod) {
 		if err := ec.deleteMember(cluster, pod); err != nil {
@@ -859,7 +869,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 
 			pf, port, err := ec.portForward(v, EtcdClientPort)
 			if err != nil {
-				klog.Info(err)
+				ec.log.Info("Failed port forward", zap.Error(err))
 				continue
 			}
 			forwarder = append(forwarder, pf)
@@ -872,7 +882,7 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 	}
 	if len(forwarder) > 0 {
 		defer func() {
-			klog.V(4).Info("Close all port forwarders")
+			ec.log.Debug("Close all port forwarders")
 			for _, v := range forwarder {
 				v.Close()
 			}
@@ -888,6 +898,12 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 	if err != nil {
 		return nil
 	}
+	defer func() {
+		if err := etcdClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
+			ec.log.Info("Failed close etcd client", zap.Error(err))
+		}
+	}()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	memberList, err := etcdClient.MemberList(ctx)
 	if err != nil {
@@ -903,17 +919,12 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 		}
 		st, err := etcdClient.Status(ctx, u.Host)
 		if err != nil {
-			klog.Info(err)
+			ec.log.Info("Failed get status", zap.Error(err))
 			continue
 		}
 		etcdPods[i].StatusResponse = st
 	}
 	cancel()
-
-	if err := etcdClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
-		klog.Error(err)
-		return xerrors.Errorf(": %w", err)
-	}
 
 	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
 	for _, v := range etcdPods {
@@ -958,7 +969,7 @@ func (ec *EtcdController) updateStatus(cluster *EtcdCluster) {
 	default:
 		cluster.Status.Ready = false
 	}
-	klog.V(4).Infof("Phase: %v", cluster.Status.Phase)
+	ec.log.Debug("Current Phase", zap.String("phase", string(cluster.Status.Phase)), zap.String("cluster.name", cluster.Name))
 
 	cluster.Status.ClientCertSecretName = cluster.ClientCertSecretName()
 	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:%d", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain, EtcdClientPort)
@@ -1037,6 +1048,11 @@ func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) er
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	defer func() {
+		if client != nil {
+			client.Close()
+		}
+	}()
 
 	tmpFile, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -1166,7 +1182,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 				backupFiles = append(backupFiles, obj.Key)
 			}
 		}
-		klog.V(4).Infof("Backup files: %v", backupFiles)
+		ec.log.Debug("Backup files", zap.Strings("files", backupFiles))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
@@ -1212,7 +1228,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 			}
 			backupFiles = append(backupFiles, attr.Name)
 		}
-		klog.V(4).Infof("Backup files: %v", backupFiles)
+		ec.log.Debug("Backup files", zap.Strings("files", backupFiles))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
@@ -1220,7 +1236,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		for _, v := range purgeTargets {
-			klog.V(4).Infof("Delete backup file: %s", v)
+			ec.log.Debug("Delete backup file", zap.String("target", v))
 			if err := bh.Object(v).Delete(ctx); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -1317,7 +1333,7 @@ func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *p
 				forwarder = f
 
 				endpoints = []string{fmt.Sprintf("https://127.0.0.1:%d", port)}
-				klog.V(4).Infof("Port forward to %s", v.Name)
+				ec.log.Debug("Port forward", zap.String("to", v.Name))
 				break
 			}
 		}
@@ -1349,9 +1365,9 @@ func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.P
 		if err != nil {
 			switch v := err.(type) {
 			case *apierrors.StatusError:
-				klog.Info(v)
+				ec.log.Info("Failed get forwarded ports", zap.Error(v))
 			}
-			klog.Error(err)
+			ec.log.Info("Failed get forwarded ports", zap.Error(err))
 		}
 	}()
 
@@ -1370,20 +1386,20 @@ func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.P
 }
 
 func (ec *EtcdController) worker() {
-	defer klog.V(4).Info("Finish worker")
+	defer ec.log.Info("Finish worker")
 
 	for ec.processNextItem() {
 	}
 }
 
 func (ec *EtcdController) processNextItem() bool {
-	defer klog.V(4).Info("Finish processNextItem")
+	defer ec.log.Debug("Finish processNextItem")
 
 	obj, shutdown := ec.queue.Get()
 	if shutdown {
 		return false
 	}
-	klog.V(4).Infof("Get next queue: %s", obj)
+	ec.log.Info("Get next queue", zap.Any("key", obj))
 
 	err := func(obj interface{}) error {
 		defer ec.queue.Done(obj)
@@ -1398,7 +1414,7 @@ func (ec *EtcdController) processNextItem() bool {
 		return nil
 	}(obj)
 	if err != nil {
-		klog.Infof("%+v", err)
+		ec.log.Info("Failed sync", zap.Error(err))
 		return true
 	}
 
@@ -1463,37 +1479,37 @@ func (ec *EtcdController) updatePod(old, cur interface{}) {
 	}
 
 	if v, ok := curPod.Labels[etcd.LabelNameClusterName]; !ok || v == "" {
-		klog.V(5).Infof("Pod doesn't have label: %v", curPod.Labels)
+		ec.log.Debug("Pod doesn't have label", zap.String("pod.name", curPod.Name))
 		return
 	}
 
-	klog.V(4).Infof("Enqueue: %s/%s for update pod", curPod.Namespace, curPod.Labels[etcd.LabelNameClusterName])
+	ec.log.Debug("Enqueue for update pod", zap.String("key", curPod.Namespace+"/"+curPod.Labels[etcd.LabelNameClusterName]))
 	for _, v := range curPod.OwnerReferences {
 		ec.queue.Add(curPod.Namespace + "/" + v.Name)
 	}
 }
 
 func (ec *EtcdController) deletePod(obj interface{}) {
-	klog.Info("Delete pod")
+	ec.log.Debug("Delete pod")
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			klog.V(4).Info("Object is not DeletedFinalStateUnknown")
+			ec.log.Debug("Object is not DeletedFinalStateUnknown")
 			return
 		}
 		pod, ok = tombstone.Obj.(*corev1.Pod)
 		if !ok {
-			klog.V(4).Info("Object is DeletedFinalStateUnknown but Obj is not Pod")
+			ec.log.Debug("Object is DeletedFinalStateUnknown but Obj is not Pod")
 			return
 		}
 	}
 	if v, ok := pod.Labels[etcd.LabelNameClusterName]; !ok || v == "" {
-		klog.V(5).Infof("Pod doesn't have label: %v", pod.Labels)
+		ec.log.Debug("Pod doesn't have label", zap.String("pod.name", pod.Name))
 		return
 	}
 
-	klog.V(4).Infof("Enqueue: %s/%s for delete pod", pod.Namespace, pod.Labels[etcd.LabelNameClusterName])
+	ec.log.Debug("Enqueue for delete pod", zap.String("key", pod.Namespace+"/"+pod.Labels[etcd.LabelNameClusterName]))
 	for _, v := range pod.OwnerReferences {
 		ec.queue.Add(pod.Namespace + "/" + v.Name)
 	}

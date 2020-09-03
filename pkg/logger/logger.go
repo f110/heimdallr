@@ -2,9 +2,11 @@ package logger
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/config"
 )
@@ -14,14 +16,23 @@ var (
 	LogConfig *zap.Config
 	Audit     *zap.Logger
 )
+var initOnce = &sync.Once{}
 
 func Init(conf *config.Logger) error {
-	if err := initLogger(conf); err != nil {
-		return err
-	}
+	var err error
+	initOnce.Do(func() {
+		if e := initLogger(conf); e != nil {
+			err = e
+			return
+		}
 
-	if err := initAuditLogger(conf); err != nil {
-		return err
+		if e := initAuditLogger(conf); e != nil {
+			err = e
+			return
+		}
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil

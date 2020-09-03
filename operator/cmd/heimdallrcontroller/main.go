@@ -23,6 +23,8 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	"go.f110.dev/heimdallr/operator/pkg/signals"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 func main() {
@@ -33,6 +35,8 @@ func main() {
 	leaseLockNamespace := ""
 	clusterDomain := ""
 	probeAddr := ""
+	logLevel := "info"
+	logEncoding := "console"
 	dev := false
 	fs := flag.NewFlagSet("heimdallrcontroller", flag.ExitOnError)
 	fs.StringVar(&id, "id", uuid.New().String(), "the holder identity name")
@@ -44,8 +48,14 @@ func main() {
 	fs.StringVar(&clusterDomain, "cluster-domain", clusterDomain, "Cluster domain")
 	fs.StringVar(&probeAddr, "probe-addr", ":6000", "Listen addr that provides readiness probe")
 	fs.BoolVar(&dev, "dev", dev, "development mode")
+	fs.StringVar(&logLevel, "log-level", logLevel, "Log level")
+	fs.StringVar(&logEncoding, "log-encoding", logEncoding, "Log encoding")
 	klog.InitFlags(fs)
 	if err := fs.Parse(os.Args[1:]); err != nil {
+		panic(err)
+	}
+
+	if err := logger.OverrideKlog(&config.Logger{Level: logLevel, Encoding: logEncoding}); err != nil {
 		panic(err)
 	}
 

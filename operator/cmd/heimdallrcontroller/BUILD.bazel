@@ -10,6 +10,8 @@ go_library(
         "//operator/pkg/controllers",
         "//operator/pkg/informers/externalversions",
         "//operator/pkg/signals",
+        "//pkg/config",
+        "//pkg/logger",
         "//vendor/github.com/google/uuid",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/informers",

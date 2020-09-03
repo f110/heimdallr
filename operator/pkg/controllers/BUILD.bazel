@@ -41,6 +41,7 @@ go_library(
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.etcd.io/etcd/v3/clientv3/snapshot",
         "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
+        "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/api/iterator",
         "//vendor/google.golang.org/api/option",
@@ -70,7 +71,6 @@ go_library(
         "//vendor/k8s.io/client-go/transport/spdy",
         "//vendor/k8s.io/client-go/util/retry",
         "//vendor/k8s.io/client-go/util/workqueue",
-        "//vendor/k8s.io/klog",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )
@@ -90,6 +90,7 @@ go_test(
     srcs = [
         "etcd_controller_test.go",
         "github_controller_test.go",
+        "main_test.go",
         "proxy_controller_test.go",
         "runner_test.go",
     ],
@@ -102,7 +103,9 @@ go_test(
         "//operator/pkg/client/versioned/fake",
         "//operator/pkg/informers/externalversions",
         "//pkg/config",
+        "//pkg/logger",
         "//vendor/github.com/jarcoal/httpmock",
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",

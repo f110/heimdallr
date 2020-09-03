@@ -10,6 +10,7 @@ import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/google/go-cmp/cmp"
 	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +29,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
@@ -38,6 +38,7 @@ import (
 	etcdListers "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
 	mListers "go.f110.dev/heimdallr/operator/pkg/listers/monitoring/v1"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 var (
@@ -80,6 +81,7 @@ type ProxyController struct {
 
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
+	log      *zap.Logger
 
 	clientset clientset.Interface
 }
@@ -103,8 +105,11 @@ func NewProxyController(
 	configMapInformer := coreSharedInformerFactory.Core().V1().ConfigMaps()
 	deploymentInformer := coreSharedInformerFactory.Apps().V1().Deployments()
 
+	log := logger.Log.Named("proxy-controller")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
+		log.Info(fmt.Sprintf(format, args...))
+	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: client.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "proxy-controller"})
 
@@ -123,6 +128,7 @@ func NewProxyController(
 		coreSharedInformer:     coreSharedInformerFactory,
 		queue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 		recorder:               recorder,
+		log:                    log,
 	}
 
 	_, apiList, err := client.Discovery().ServerGroupsAndResources()
@@ -238,7 +244,7 @@ func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResour
 }
 
 func (c *ProxyController) syncProxy(key string) error {
-	klog.V(4).Info("syncProxy")
+	c.log.Debug("syncProxy", zap.String("key", key))
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -746,7 +752,7 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap 
 	newCM.Data = configMap.Data
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
-		klog.V(4).Infof("Will update ConfigMap: diff\n%s", cmp.Diff(cm.Data, newCM.Data))
+		c.log.Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
 		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(context.TODO(), newCM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -843,13 +849,13 @@ func (c *ProxyController) worker() {
 }
 
 func (c *ProxyController) processNextItem() bool {
-	defer klog.V(4).Info("Finish processNextItem")
+	defer c.log.Debug("Finish processNextItem")
 
 	obj, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
-	klog.V(4).Infof("Get next queue: %s", obj)
+	c.log.Debug("Get next queue", zap.Any("key", obj))
 
 	err := func(obj interface{}) error {
 		defer c.queue.Done(obj)
@@ -857,7 +863,7 @@ func (c *ProxyController) processNextItem() bool {
 		err := c.syncProxy(obj.(string))
 		if err != nil {
 			if errors.Is(err, &RetryError{}) {
-				klog.V(4).Infof("Retrying %v", err)
+				c.log.Debug("Retrying", zap.Error(err))
 				c.queue.AddRateLimited(obj)
 				return nil
 			}
@@ -869,7 +875,7 @@ func (c *ProxyController) processNextItem() bool {
 		return nil
 	}(obj)
 	if err != nil {
-		klog.Infof("%+v", err)
+		c.log.Info("Failed sync", zap.Error(err))
 		return true
 	}
 

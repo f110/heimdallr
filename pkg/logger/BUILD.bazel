@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "logger",
     srcs = [
+        "klog.go",
         "log.go",
         "logger.go",
     ],
@@ -12,5 +13,7 @@ go_library(
         "//pkg/config",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/klog",
     ],
 )

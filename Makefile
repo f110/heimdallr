@@ -8,7 +8,7 @@ run:
 	bazel run //cmd/heimdallr-proxy -- -c $(CURDIR)/config_debug.yaml
 
 run-operator:
-	bazel run //operator/cmd/heimdallrcontroller -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4
+	bazel run //operator/cmd/heimdallrcontroller -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4 -logtostderr=false -log-level=debug
 
 test:
 	bazel test //...

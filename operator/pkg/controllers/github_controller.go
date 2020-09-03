@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,13 +28,13 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (
@@ -56,6 +56,7 @@ type GitHubController struct {
 
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
+	log      *zap.Logger
 
 	transport http.RoundTripper
 }
@@ -72,8 +73,11 @@ func NewGitHubController(
 
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
+	log := logger.Log.Named("github-controller")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
+		log.Info(fmt.Sprintf(format, args...))
+	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "github-controller"})
 
@@ -88,6 +92,7 @@ func NewGitHubController(
 		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "backend"),
 		recorder:            recorder,
 		transport:           transport,
+		log:                 log,
 	}
 
 	backendInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -118,7 +123,7 @@ func (c *GitHubController) Run(ctx context.Context, workers int) {
 }
 
 func (c *GitHubController) syncBackend(key string) error {
-	klog.V(4).Info("syncBackend")
+	c.log.Debug("syncBackend")
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -129,11 +134,11 @@ func (c *GitHubController) syncBackend(key string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	if backend.Spec.Webhook != "github" {
-		klog.V(4).Infof("%s is not set Webhook or Webhook is not github", backend.Name)
+		c.log.Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
 		return nil
 	}
 	if backend.Spec.WebhookConfiguration == nil {
-		klog.V(4).Infof("not set WebhookConfiguration")
+		c.log.Debug("not set WebhookConfiguration")
 		return nil
 	}
 
@@ -192,7 +197,7 @@ func (c *GitHubController) syncBackend(key string) error {
 			backend.Status = updatedB.Status
 			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(context.TODO(), backend, metav1.UpdateOptions{})
 			if err != nil {
-				klog.Infof("Failed update backend: %v", err)
+				c.log.Debug("Failed update backend", zap.Error(err))
 				return err
 			}
 			return nil
@@ -240,11 +245,10 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 		s := strings.SplitN(v.Repository, "/", 2)
 		owner, repo := s[0], s[1]
 
-		klog.V(4).Infof("Delete hook: %s/%s/%d", owner, repo, v.Id)
+		c.log.Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
 		_, err := ghClient.Repositories.DeleteHook(context.Background(), owner, repo, v.Id)
 		if err != nil {
-			log.Print(err)
-			klog.V(4).Infof("Failed delete hook: %v", err)
+			c.log.Debug("Failed delete hook", zap.Error(err))
 			webhookConfigurations = append(webhookConfigurations, v)
 		}
 	}
@@ -281,7 +285,7 @@ func (c *GitHubController) checkConfigured(client *github.Client, backend *proxy
 	for _, h := range hooks {
 		u, err := url.Parse(h.GetURL())
 		if err != nil {
-			klog.Infof("Failed parse url: %s", h.GetURL())
+			c.log.Debug("Failed parse url", zap.Error(err), zap.String("url", h.GetURL()))
 			continue
 		}
 		if backend.Spec.FQDN != "" && u.Host == backend.Spec.FQDN {
@@ -298,7 +302,7 @@ func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alp
 	for _, v := range backend.Status.DeployedBy {
 		u, err := url.Parse(v.Url)
 		if err != nil {
-			klog.Infof("Failure parse url: %s", v.Url)
+			c.log.Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
 			continue
 		}
 		u.Path = backend.Spec.WebhookConfiguration.Path
@@ -308,20 +312,19 @@ func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alp
 				continue
 			}
 
-			klog.Infof("fetch %s/%s error: %v", v.Namespace, v.Name, err)
+			c.log.Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
 			continue
 		}
 		if proxy.Status.GithubWebhookSecretName == "" {
-			klog.V(4).Infof("%s is not ready", proxy.Name)
+			c.log.Debug("Is not ready", zap.String("name", proxy.Name))
 			continue
 		}
 		secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				klog.Errorf("%s/%s is not found. This is a suspicious error.", proxy.Namespace, proxy.Status.GithubWebhookSecretName)
+				c.log.Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
 			}
 
-			klog.Infof("fetch %s/%s error: %v", proxy.Namespace, proxy.Name, proxy.Status.GithubWebhookSecretName)
 			continue
 		}
 
@@ -333,10 +336,10 @@ func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alp
 				"secret":       string(secret.Data[githubWebhookSecretFilename]),
 			},
 		}
-		klog.V(4).Infof("Create new hook: %s/%s", owner, repo)
+		c.log.Debug("Create new hook", zap.String("repo", owner+"/"+repo))
 		newHook, _, err = client.Repositories.CreateHook(context.Background(), owner, repo, newHook)
 		if err != nil {
-			klog.Infof("Failed create hook: %v", err)
+			c.log.Info("Failed create hook", zap.Error(err))
 			continue
 		}
 
@@ -378,19 +381,19 @@ func (c *GitHubController) newGithubClient(backend *proxyv1alpha1.Backend) (*git
 }
 
 func (c *GitHubController) worker() {
-	klog.V(4).Info("Start worker")
+	c.log.Debug("Start worker")
 	for c.processNextItem() {
 	}
 }
 
 func (c *GitHubController) processNextItem() bool {
-	defer klog.V(4).Info("Finish processNextItem")
+	defer c.log.Debug("Finish processNextItem")
 
 	obj, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
-	klog.V(4).Infof("Get next queue: %s", obj)
+	c.log.Debug("Get next queue", zap.Any("key", obj))
 
 	err := func(obj interface{}) error {
 		defer c.queue.Done(obj)
@@ -398,7 +401,7 @@ func (c *GitHubController) processNextItem() bool {
 		err := c.syncBackend(obj.(string))
 		if err != nil {
 			if errors.Is(err, &RetryError{}) {
-				klog.V(4).Infof("Retrying %v", err)
+				c.log.Debug("Retrying", zap.Error(err))
 				c.queue.AddRateLimited(obj)
 				return nil
 			}
@@ -410,7 +413,7 @@ func (c *GitHubController) processNextItem() bool {
 		return nil
 	}(obj)
 	if err != nil {
-		klog.Infof("%+v", err)
+		c.log.Info("Failed sync", zap.Error(err))
 		return true
 	}
 
@@ -456,10 +459,9 @@ func (c *GitHubController) deleteBackend(obj interface{}) {
 
 func (c *GitHubController) enqueue(backend *proxyv1alpha1.Backend) {
 	if key, err := cache.MetaNamespaceKeyFunc(backend); err != nil {
-		klog.Info(err)
 		return
 	} else {
-		klog.V(4).Infof("Enqueue: %s", key)
+		c.log.Debug("Enqueue", zap.String("key", key))
 		c.queue.Add(key)
 	}
 }

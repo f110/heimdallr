@@ -14,6 +14,7 @@ import (
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 func TestEtcdController(t *testing.T) {
@@ -53,7 +54,7 @@ func TestEtcdController(t *testing.T) {
 
 		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseCreating)
 		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		member := cluster.AllMembers()[0]
 		podIsReady(member)
@@ -81,7 +82,7 @@ func TestEtcdController(t *testing.T) {
 		f, _ := newEtcdControllerTestRunner(t)
 
 		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
 			podIsReady(v)
@@ -112,7 +113,7 @@ func TestEtcdController(t *testing.T) {
 
 			e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
 			f.RegisterEtcdClusterFixture(e)
-			cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers() {
 				v.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
@@ -139,7 +140,7 @@ func TestEtcdController(t *testing.T) {
 
 			e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseUpdating)
 			f.RegisterEtcdClusterFixture(e)
-			cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers()[1:] {
 				v.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
@@ -167,7 +168,7 @@ func TestEtcdController(t *testing.T) {
 
 		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseUpdating)
 		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
 			podIsReady(v)
@@ -193,7 +194,7 @@ func TestEtcdController(t *testing.T) {
 
 		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
 		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		cluster.AllMembers()[0].Status.Phase = corev1.PodSucceeded
 		for _, v := range cluster.AllMembers()[1:] {
@@ -235,7 +236,7 @@ func TestEtcdController_Backup(t *testing.T) {
 			MaxBackups: 0,
 		}
 		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
 			podIsReady(v)
@@ -295,7 +296,7 @@ func TestEtcdController_Backup(t *testing.T) {
 			MaxBackups: 5,
 		}
 		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
 			podIsReady(v)
@@ -350,7 +351,7 @@ func TestEtcdController_Restore(t *testing.T) {
 		},
 	}
 	f.RegisterEtcdClusterFixture(e)
-	cluster := NewEtcdCluster(e, f.c.clusterDomain, nil)
+	cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 	cluster.registerBasicObjectOfEtcdCluster(f)
 	for _, v := range cluster.AllMembers() {
 		v.Status.Phase = corev1.PodSucceeded
