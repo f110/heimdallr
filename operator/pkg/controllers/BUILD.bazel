@@ -75,7 +75,7 @@ go_library(
     ],
 )
 
-load("@dev_f110_rules_extras//go:gen.bzl", "rbac_gen")
+load("@dev_f110_rules_k8s_controller//k8s:def.bzl", "rbac_gen")
 
 rbac_gen(
     name = "rbac",

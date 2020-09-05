@@ -1,4 +1,4 @@
-load("@dev_f110_rules_extras//go:gen.bzl", "k8s_code_generator")
+load("@dev_f110_rules_k8s_controller//k8s:def.bzl", "k8s_code_generator")
 
 k8s_code_generator(
     name = "gen",
