@@ -33,7 +33,7 @@ import (
 	"go.f110.dev/heimdallr/operator/e2e/data"
 )
 
-func CreateCluster(id string) (string, error) {
+func CreateCluster(id, clusterVersion string) (string, error) {
 	_, err := exec.LookPath("kind")
 	if err != nil {
 		return "", err
@@ -43,7 +43,13 @@ func CreateCluster(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.CommandContext(context.TODO(), "kind", "create", "cluster", "--name", fmt.Sprintf("e2e-%s", id), "--kubeconfig", f.Name())
+	cmd := exec.CommandContext(
+		context.TODO(),
+		"kind", "create", "cluster",
+		"--name", fmt.Sprintf("e2e-%s", id),
+		"--kubeconfig", f.Name(),
+		"--image", "kindest/node:"+clusterVersion,
+	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

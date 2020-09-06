@@ -37,7 +37,7 @@ push:
 
 run-e2e:
 	bazel build //operator/e2e/test:test_test
-	./bazel-bin/operator/e2e/test/test_test_/test_test -test.v=true -crd $(CURDIR)/operator/config/crd -proxy.version latest
+	./bazel-bin/operator/e2e/test/test_test_/test_test -test.v=true -crd $(CURDIR)/operator/config/crd -proxy.version latest -cluster-version v1.19.0
 
 migrate:
 	bazel run @dev_f110_protoc_ddl//cmd/migrate -- --schema $(CURDIR)/pkg/database/mysql/entity/schema.sql --driver mysql --dsn "$(DSN)" --execute
