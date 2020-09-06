@@ -28,14 +28,23 @@ SOFTWARE.
 package certmanager
 
 import (
+	v1 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager/v1"
 	v1alpha2 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager/v1alpha2"
+	v1alpha3 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager/v1alpha3"
+	v1beta1 "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager/v1beta1"
 	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.
 type Interface interface {
+	// V1 provides access to shared informers for resources in V1.
+	V1() v1.Interface
 	// V1alpha2 provides access to shared informers for resources in V1alpha2.
 	V1alpha2() v1alpha2.Interface
+	// V1alpha3 provides access to shared informers for resources in V1alpha3.
+	V1alpha3() v1alpha3.Interface
+	// V1beta1 provides access to shared informers for resources in V1beta1.
+	V1beta1() v1beta1.Interface
 }
 
 type group struct {
@@ -49,7 +58,22 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// V1 returns a new v1.Interface.
+func (g *group) V1() v1.Interface {
+	return v1.New(g.factory, g.namespace, g.tweakListOptions)
+}
+
 // V1alpha2 returns a new v1alpha2.Interface.
 func (g *group) V1alpha2() v1alpha2.Interface {
 	return v1alpha2.New(g.factory, g.namespace, g.tweakListOptions)
+}
+
+// V1alpha3 returns a new v1alpha3.Interface.
+func (g *group) V1alpha3() v1alpha3.Interface {
+	return v1alpha3.New(g.factory, g.namespace, g.tweakListOptions)
+}
+
+// V1beta1 returns a new v1beta1.Interface.
+func (g *group) V1beta1() v1beta1.Interface {
+	return v1beta1.New(g.factory, g.namespace, g.tweakListOptions)
 }

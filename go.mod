@@ -22,13 +22,10 @@ require (
 	github.com/gorilla/websocket v1.4.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jarcoal/httpmock v1.0.5
-	github.com/jetstack/cert-manager v0.12.0
+	github.com/jetstack/cert-manager v1.0.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/minio/minio-go/v6 v6.0.44
-	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/client_model v0.2.0
@@ -36,7 +33,7 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200518175753-732df43cf85b
 	go.f110.dev/protoc-ddl v0.0.0-20200823082125-88eabc7ca14c
 	go.opencensus.io v0.22.4 // indirect
@@ -49,15 +46,14 @@ require (
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
-	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver v0.19.0
 	k8s.io/apimachinery v0.19.0
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog/v2 v2.2.0
+	k8s.io/klog/v2 v2.3.0
 	sigs.k8s.io/yaml v1.2.0
-	software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
+	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc
 )
 
 replace k8s.io/client-go => k8s.io/client-go v0.19.0

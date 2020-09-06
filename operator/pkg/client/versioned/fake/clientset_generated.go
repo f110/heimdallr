@@ -29,8 +29,14 @@ package fake
 
 import (
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	certmanagerv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1"
+	fakecertmanagerv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1/fake"
 	certmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2"
 	fakecertmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2/fake"
+	certmanagerv1alpha3 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha3"
+	fakecertmanagerv1alpha3 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha3/fake"
+	certmanagerv1beta1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1beta1"
+	fakecertmanagerv1beta1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1beta1/fake"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	fakeetcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1/fake"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
@@ -91,9 +97,24 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 
 var _ clientset.Interface = &Clientset{}
 
+// CertmanagerV1 retrieves the CertmanagerV1Client
+func (c *Clientset) CertmanagerV1() certmanagerv1.CertmanagerV1Interface {
+	return &fakecertmanagerv1.FakeCertmanagerV1{Fake: &c.Fake}
+}
+
 // CertmanagerV1alpha2 retrieves the CertmanagerV1alpha2Client
 func (c *Clientset) CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface {
 	return &fakecertmanagerv1alpha2.FakeCertmanagerV1alpha2{Fake: &c.Fake}
+}
+
+// CertmanagerV1alpha3 retrieves the CertmanagerV1alpha3Client
+func (c *Clientset) CertmanagerV1alpha3() certmanagerv1alpha3.CertmanagerV1alpha3Interface {
+	return &fakecertmanagerv1alpha3.FakeCertmanagerV1alpha3{Fake: &c.Fake}
+}
+
+// CertmanagerV1beta1 retrieves the CertmanagerV1beta1Client
+func (c *Clientset) CertmanagerV1beta1() certmanagerv1beta1.CertmanagerV1beta1Interface {
+	return &fakecertmanagerv1beta1.FakeCertmanagerV1beta1{Fake: &c.Fake}
 }
 
 // EtcdV1alpha1 retrieves the EtcdV1alpha1Client

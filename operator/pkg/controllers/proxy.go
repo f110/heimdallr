@@ -17,7 +17,10 @@ import (
 	"sort"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
+	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
+	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -91,7 +94,7 @@ type process struct {
 	PodDisruptionBudget *policyv1beta1.PodDisruptionBudget
 	Service             []*corev1.Service
 	ConfigMaps          []*corev1.ConfigMap
-	Certificate         *certmanager.Certificate
+	Certificate         runtime.Object
 	ServiceMonitors     []*monitoringv1.ServiceMonitor
 }
 
@@ -114,35 +117,38 @@ type HeimdallrProxy struct {
 	clientset     clientset.Interface
 	serviceLister listers.ServiceLister
 
-	backends         []*proxyv1alpha1.Backend
-	roles            []*proxyv1alpha1.Role
-	rpcPermissions   []*proxyv1alpha1.RpcPermission
-	roleBindings     []*proxyv1alpha1.RoleBinding
-	selfSignedIssuer bool
+	backends           []*proxyv1alpha1.Backend
+	roles              []*proxyv1alpha1.Role
+	rpcPermissions     []*proxyv1alpha1.RpcPermission
+	roleBindings       []*proxyv1alpha1.RoleBinding
+	selfSignedIssuer   bool
+	certManagerVersion string
 }
 
 type HeimdallrProxyParams struct {
-	Spec           *proxyv1alpha1.Proxy
-	Clientset      clientset.Interface
-	ServiceLister  listers.ServiceLister
-	Backends       []*proxyv1alpha1.Backend
-	Roles          []*proxyv1alpha1.Role
-	RpcPermissions []*proxyv1alpha1.RpcPermission
-	RoleBindings   []*proxyv1alpha1.RoleBinding
+	Spec               *proxyv1alpha1.Proxy
+	Clientset          clientset.Interface
+	ServiceLister      listers.ServiceLister
+	Backends           []*proxyv1alpha1.Backend
+	Roles              []*proxyv1alpha1.Role
+	RpcPermissions     []*proxyv1alpha1.RpcPermission
+	RoleBindings       []*proxyv1alpha1.RoleBinding
+	CertManagerVersion string
 }
 
 func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	r := &HeimdallrProxy{
-		Name:           opt.Spec.Name,
-		Namespace:      opt.Spec.Namespace,
-		Object:         opt.Spec,
-		Spec:           opt.Spec.Spec,
-		serviceLister:  opt.ServiceLister,
-		clientset:      opt.Clientset,
-		backends:       opt.Backends,
-		roles:          opt.Roles,
-		rpcPermissions: opt.RpcPermissions,
-		roleBindings:   opt.RoleBindings,
+		Name:               opt.Spec.Name,
+		Namespace:          opt.Spec.Namespace,
+		Object:             opt.Spec,
+		Spec:               opt.Spec.Spec,
+		serviceLister:      opt.ServiceLister,
+		clientset:          opt.Clientset,
+		backends:           opt.Backends,
+		roles:              opt.Roles,
+		rpcPermissions:     opt.RpcPermissions,
+		roleBindings:       opt.RoleBindings,
+		certManagerVersion: opt.CertManagerVersion,
 	}
 
 	found := false
@@ -340,7 +346,7 @@ func (r *HeimdallrProxy) RpcPermissions() []*proxyv1alpha1.RpcPermission {
 	return r.rpcPermissions
 }
 
-func (r *HeimdallrProxy) Certificate() *certmanager.Certificate {
+func (r *HeimdallrProxy) Certificate() runtime.Object {
 	backends := r.Backends()
 	layers := make(map[string]struct{})
 	fqdn := make([]string, 0)
@@ -364,15 +370,50 @@ func (r *HeimdallrProxy) Certificate() *certmanager.Certificate {
 	}
 	sort.Strings(domains)
 
-	return &certmanager.Certificate{
-		ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
-		Spec: certmanager.CertificateSpec{
-			SecretName: r.CertificateSecretName(),
-			IssuerRef:  r.Spec.IssuerRef,
-			CommonName: r.Spec.Domain,
-			DNSNames:   domains,
-		},
+	switch r.certManagerVersion {
+	case "v1alpha2":
+		return &certmanagerv1alpha2.Certificate{
+			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
+			Spec: certmanagerv1alpha2.CertificateSpec{
+				SecretName: r.CertificateSecretName(),
+				IssuerRef:  r.Spec.IssuerRef,
+				CommonName: r.Spec.Domain,
+				DNSNames:   domains,
+			},
+		}
+	case "v1alpha3":
+		return &certmanagerv1alpha3.Certificate{
+			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
+			Spec: certmanagerv1alpha3.CertificateSpec{
+				SecretName: r.CertificateSecretName(),
+				IssuerRef:  r.Spec.IssuerRef,
+				CommonName: r.Spec.Domain,
+				DNSNames:   domains,
+			},
+		}
+	case "v1beta1":
+		return &certmanagerv1beta1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
+			Spec: certmanagerv1beta1.CertificateSpec{
+				SecretName: r.CertificateSecretName(),
+				IssuerRef:  r.Spec.IssuerRef,
+				CommonName: r.Spec.Domain,
+				DNSNames:   domains,
+			},
+		}
+	case "v1":
+		return &certmanagerv1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
+			Spec: certmanagerv1.CertificateSpec{
+				SecretName: r.CertificateSecretName(),
+				IssuerRef:  r.Spec.IssuerRef,
+				CommonName: r.Spec.Domain,
+				DNSNames:   domains,
+			},
+		}
 	}
+
+	return nil
 }
 
 func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
@@ -1547,13 +1588,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
-	case certmanager.ClusterIssuerKind:
+	case certmanagerv1alpha2.ClusterIssuerKind:
 		ci, err := r.clientset.CertmanagerV1alpha2().ClusterIssuers().Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
-	case certmanager.IssuerKind:
+	case certmanagerv1alpha2.IssuerKind:
 		ci, err := r.clientset.CertmanagerV1alpha2().Issuers(r.Namespace).Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -1562,14 +1603,14 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	}
 
 	switch v := issuerObj.(type) {
-	case *certmanager.ClusterIssuer:
+	case *certmanagerv1alpha2.ClusterIssuer:
 		if v.Spec.SelfSigned != nil {
 			r.selfSignedIssuer = true
 		}
 		if v.Spec.CA != nil {
 			return errors.New("controllers: ClusterIssuer.Spec.NewCA is not supported")
 		}
-	case *certmanager.Issuer:
+	case *certmanagerv1alpha2.Issuer:
 		if v.Spec.SelfSigned != nil {
 			r.selfSignedIssuer = true
 		}

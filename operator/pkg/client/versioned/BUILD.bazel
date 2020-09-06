@@ -9,7 +9,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/client/versioned",
     visibility = ["//visibility:public"],
     deps = [
+        "//operator/pkg/client/versioned/typed/certmanager/v1:certmanager",
         "//operator/pkg/client/versioned/typed/certmanager/v1alpha2",
+        "//operator/pkg/client/versioned/typed/certmanager/v1alpha3",
+        "//operator/pkg/client/versioned/typed/certmanager/v1beta1",
         "//operator/pkg/client/versioned/typed/etcd/v1alpha1",
         "//operator/pkg/client/versioned/typed/monitoring/v1:monitoring",
         "//operator/pkg/client/versioned/typed/proxy/v1alpha1",

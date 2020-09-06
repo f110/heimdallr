@@ -16,19 +16,39 @@ limitations under the License.
 
 package v1alpha2
 
-// Annotation names for Secrets
+// Common annotation keys added to resources.
 const (
-	AltNamesAnnotationKey    = "cert-manager.io/alt-names"
-	IPSANAnnotationKey       = "cert-manager.io/ip-sans"
-	URISANAnnotationKey      = "cert-manager.io/uri-sans"
-	CommonNameAnnotationKey  = "cert-manager.io/common-name"
-	IssuerNameAnnotationKey  = "cert-manager.io/issuer-name"
-	IssuerKindAnnotationKey  = "cert-manager.io/issuer-kind"
+	// Annotation key for DNS subjectAltNames.
+	AltNamesAnnotationKey = "cert-manager.io/alt-names"
+
+	// Annotation key for IP subjectAltNames.
+	IPSANAnnotationKey = "cert-manager.io/ip-sans"
+
+	// Annotation key for URI subjectAltNames.
+	URISANAnnotationKey = "cert-manager.io/uri-sans"
+
+	// Annotation key for certificate common name.
+	CommonNameAnnotationKey = "cert-manager.io/common-name"
+
+	// Annotation key the 'name' of the Issuer resource.
+	IssuerNameAnnotationKey = "cert-manager.io/issuer-name"
+
+	// Annotation key for the 'kind' of the Issuer resource.
+	IssuerKindAnnotationKey = "cert-manager.io/issuer-kind"
+
+	// Annotation key for the 'group' of the Issuer resource.
 	IssuerGroupAnnotationKey = "cert-manager.io/issuer-group"
-	CertificateNameKey       = "cert-manager.io/certificate-name"
+
+	// Annotation key for the name of the certificate that a resource is related to.
+	CertificateNameKey = "cert-manager.io/certificate-name"
+
+	// Annotation key used to denote whether a Secret is named on a Certificate
+	// as a 'next private key' Secret resource.
+	IsNextPrivateKeySecretLabelKey = "cert-manager.io/next-private-key"
 )
 
 // Deprecated annotation names for Secrets
+// These will be removed in a future release.
 const (
 	DeprecatedIssuerNameAnnotationKey = "certmanager.k8s.io/issuer-name"
 	DeprecatedIssuerKindAnnotationKey = "certmanager.k8s.io/issuer-kind"
@@ -46,7 +66,7 @@ const (
 	// if the challenge type is set to http01
 	IngressACMEIssuerHTTP01IngressClassAnnotationKey = "acme.cert-manager.io/http01-ingress-class"
 
-	// IngessClassAnnotationKey picks a specific "class" for the Ingress. The
+	// IngressClassAnnotationKey picks a specific "class" for the Ingress. The
 	// controller only processes Ingresses with this annotation either unset, or
 	// set to either the configured value or the empty string.
 	IngressClassAnnotationKey = "kubernetes.io/ingress.class"
@@ -54,7 +74,15 @@ const (
 
 // Annotation names for CertificateRequests
 const (
-	CRPrivateKeyAnnotationKey = "cert-manager.io/private-key-secret-name"
+	// Annotation added to CertificateRequest resources to denote the name of
+	// a Secret resource containing the private key used to sign the CSR stored
+	// on the resource.
+	// This annotation *may* not be present, and is used by the 'self signing'
+	// issuer type to self-sign certificates.
+	CertificateRequestPrivateKeyAnnotationKey = "cert-manager.io/private-key-secret-name"
+
+	// Annotation to declare the CertificateRequest "revision", belonging to a Certificate Resource
+	CertificateRequestRevisionAnnotationKey = "cert-manager.io/certificate-revision"
 )
 
 const (
@@ -66,6 +94,7 @@ const (
 	IssueTemporaryCertificateAnnotation = "cert-manager.io/issue-temporary-certificate"
 )
 
+// Common/known resource kinds.
 const (
 	ClusterIssuerKind      = "ClusterIssuer"
 	IssuerKind             = "Issuer"
@@ -76,7 +105,7 @@ const (
 const (
 	// WantInjectAnnotation is the annotation that specifies that a particular
 	// object wants injection of CAs.  It takes the form of a reference to a certificate
-	// as namespace/name.  The certificate is expected to have the is-serving-for annotations.
+	// as namespace/name.
 	WantInjectAnnotation = "cert-manager.io/inject-ca-from"
 
 	// WantInjectAPIServerCAAnnotation, if set to "true", will make the cainjector
@@ -86,7 +115,7 @@ const (
 	WantInjectAPIServerCAAnnotation = "cert-manager.io/inject-apiserver-ca"
 
 	// WantInjectFromSecretAnnotation is the annotation that specifies that a particular
-	// object wants injection of CAs.  It takes the form of a reference to a Secret
+	// object wants injection of CAs. It takes the form of a reference to a Secret
 	// as namespace/name.
 	WantInjectFromSecretAnnotation = "cert-manager.io/inject-ca-from-secret"
 
@@ -96,6 +125,15 @@ const (
 	// If an injectable references a Secret that does NOT have this annotation,
 	// the cainjector will refuse to inject the secret.
 	AllowsInjectionFromSecretAnnotation = "cert-manager.io/allow-direct-injection"
+)
+
+// Issuer specific Annotations
+const (
+	// VenafiCustomFieldsAnnotationKey is the annotation that passes on JSON encoded custom fields to the Venafi issuer
+	// This will only work with Venafi TPP v19.3 and higher
+	// The value is an array with objects containing the name and value keys
+	// for example: `[{"name": "custom-field", "value": "custom-value"}]`
+	VenafiCustomFieldsAnnotationKey = "venafi.cert-manager.io/custom-fields"
 )
 
 // KeyUsage specifies valid usage contexts for keys.
@@ -151,12 +189,15 @@ const (
 	UsageTimestamping       KeyUsage = "timestamping"
 	UsageOCSPSigning        KeyUsage = "ocsp signing"
 	UsageMicrosoftSGC       KeyUsage = "microsoft sgc"
-	UsageNetscapSGC         KeyUsage = "netscape sgc"
+	UsageNetscapeSGC        KeyUsage = "netscape sgc"
 )
 
 // DefaultKeyUsages contains the default list of key usages
 func DefaultKeyUsages() []KeyUsage {
 	// The serverAuth EKU is required as of Mac OS Catalina: https://support.apple.com/en-us/HT210176
 	// Without this usage, certificates will _always_ flag a warning in newer Mac OS browsers.
-	return []KeyUsage{UsageDigitalSignature, UsageKeyEncipherment, UsageServerAuth}
+	// We don't explicitly add it here as it leads to strange behaviour when a user sets isCA: true
+	// (in which case, 'serverAuth' on the CA can break a lot of clients).
+	// CAs can (and often do) opt to automatically add usages.
+	return []KeyUsage{UsageDigitalSignature, UsageKeyEncipherment}
 }

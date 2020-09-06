@@ -6,7 +6,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/certmanager",
     visibility = ["//visibility:public"],
     deps = [
+        "//operator/pkg/informers/externalversions/certmanager/v1:certmanager",
         "//operator/pkg/informers/externalversions/certmanager/v1alpha2",
+        "//operator/pkg/informers/externalversions/certmanager/v1alpha3",
+        "//operator/pkg/informers/externalversions/certmanager/v1beta1",
         "//operator/pkg/informers/externalversions/internalinterfaces",
     ],
 )

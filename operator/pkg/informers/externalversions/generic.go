@@ -30,8 +30,11 @@ package externalversions
 import (
 	"fmt"
 
-	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	v1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	v1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	v1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
+	v1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	v1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -64,7 +67,17 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=cert-manager.io, Version=v1alpha2
+	// Group=cert-manager.io, Version=v1
+	case v1.SchemeGroupVersion.WithResource("certificates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1().Certificates().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("certificaterequests"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1().CertificateRequests().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("clusterissuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1().ClusterIssuers().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("issuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1().Issuers().Informer()}, nil
+
+		// Group=cert-manager.io, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("certificates"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().Certificates().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("certificaterequests"):
@@ -74,22 +87,42 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1alpha2.SchemeGroupVersion.WithResource("issuers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha2().Issuers().Informer()}, nil
 
+		// Group=cert-manager.io, Version=v1alpha3
+	case v1alpha3.SchemeGroupVersion.WithResource("certificates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha3().Certificates().Informer()}, nil
+	case v1alpha3.SchemeGroupVersion.WithResource("certificaterequests"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha3().CertificateRequests().Informer()}, nil
+	case v1alpha3.SchemeGroupVersion.WithResource("clusterissuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha3().ClusterIssuers().Informer()}, nil
+	case v1alpha3.SchemeGroupVersion.WithResource("issuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1alpha3().Issuers().Informer()}, nil
+
+		// Group=cert-manager.io, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("certificates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1beta1().Certificates().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("certificaterequests"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1beta1().CertificateRequests().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("clusterissuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1beta1().ClusterIssuers().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("issuers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Certmanager().V1beta1().Issuers().Informer()}, nil
+
 		// Group=etcd.f110.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("etcdclusters"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Etcd().V1alpha1().EtcdClusters().Informer()}, nil
 
 		// Group=monitoring.coreos.com, Version=v1
-	case v1.SchemeGroupVersion.WithResource("alertmanagers"):
+	case monitoringv1.SchemeGroupVersion.WithResource("alertmanagers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().Alertmanagers().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("podmonitors"):
+	case monitoringv1.SchemeGroupVersion.WithResource("podmonitors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().PodMonitors().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("prometheuses"):
+	case monitoringv1.SchemeGroupVersion.WithResource("prometheuses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().Prometheuses().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("prometheusrules"):
+	case monitoringv1.SchemeGroupVersion.WithResource("prometheusrules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().PrometheusRules().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("servicemonitors"):
+	case monitoringv1.SchemeGroupVersion.WithResource("servicemonitors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().ServiceMonitors().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("thanosrulers"):
+	case monitoringv1.SchemeGroupVersion.WithResource("thanosrulers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1().ThanosRulers().Informer()}, nil
 
 		// Group=proxy.f110.dev, Version=v1alpha1

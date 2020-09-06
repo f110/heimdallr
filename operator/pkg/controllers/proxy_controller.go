@@ -9,7 +9,11 @@ import (
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/google/go-cmp/cmp"
-	certmanager "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
+	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
+	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
+	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -45,6 +50,8 @@ var (
 	ErrEtcdClusterIsNotReady = errors.New("EtcdCluster is not ready yet")
 	ErrRPCServerIsNotReady   = errors.New("rpc server is not ready")
 )
+
+var certManagerGroupVersionOrder = []string{"v1", "v1beta1", "v1alpha3", "v1alpha2"}
 
 type ProxyController struct {
 	schema.GroupVersionKind
@@ -77,6 +84,7 @@ type ProxyController struct {
 	pmLister       mListers.PodMonitorLister
 	pmListerSynced cache.InformerSynced
 
+	certManagerVersion       string
 	enablePrometheusOperator bool
 
 	queue    workqueue.RateLimitingInterface
@@ -129,14 +137,18 @@ func NewProxyController(
 		queue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Etcd"),
 		recorder:               recorder,
 		log:                    log,
+		certManagerVersion:     certManagerGroupVersionOrder[len(certManagerGroupVersionOrder)-1],
 	}
 
-	_, apiList, err := client.Discovery().ServerGroupsAndResources()
+	groups, apiList, err := client.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return nil, err
 	}
-	if err := c.checkCustomResource(apiList, "cert-manager.io/v1alpha2", "Certificate"); err != nil {
+	if cmV, err := c.checkCertManagerVersion(groups); err != nil {
 		return nil, err
+	} else {
+		logger.Log.Debug("Found cert-manager.io", zap.String("GroupVersion", cmV))
+		c.certManagerVersion = cmV
 	}
 	c.discoverPrometheusOperator(apiList)
 
@@ -220,18 +232,23 @@ func (c *ProxyController) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (c *ProxyController) checkCustomResource(apiList []*metav1.APIResourceList, groupVersion, kind string) error {
-	for _, v := range apiList {
-		if v.GroupVersion == groupVersion {
-			for _, v := range v.APIResources {
-				if v.Kind == kind {
-					return nil
+func (c *ProxyController) checkCertManagerVersion(groups []*metav1.APIGroup) (string, error) {
+	for _, v := range groups {
+		if v.Name == certmanager.GroupName {
+			m := make(map[string]struct{})
+			for _, gv := range v.Versions {
+				m[gv.Version] = struct{}{}
+			}
+
+			for _, k := range certManagerGroupVersionOrder {
+				if _, ok := m[k]; ok {
+					return k, nil
 				}
 			}
 		}
 	}
 
-	return fmt.Errorf("controllers: %s/%s not found", groupVersion, kind)
+	return "", fmt.Errorf("controllers: cert-manager.io or compatible GroupVersion not found")
 }
 
 func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResourceList) {
@@ -304,13 +321,14 @@ func (c *ProxyController) syncProxy(key string) error {
 	})
 
 	lp := NewHeimdallrProxy(HeimdallrProxyParams{
-		Spec:           proxy,
-		Clientset:      c.clientset,
-		ServiceLister:  c.serviceLister,
-		Backends:       backends,
-		Roles:          roles,
-		RpcPermissions: rpcPermissions,
-		RoleBindings:   roleBindings,
+		Spec:               proxy,
+		Clientset:          c.clientset,
+		ServiceLister:      c.serviceLister,
+		Backends:           backends,
+		Roles:              roles,
+		RpcPermissions:     rpcPermissions,
+		RoleBindings:       roleBindings,
+		CertManagerVersion: c.certManagerVersion,
 	})
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -762,28 +780,103 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap 
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, certificate *certmanager.Certificate) error {
-	crt, err := c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(certificate)
+func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runtime.Object) error {
+	switch certificate := obj.(type) {
+	case *certmanagerv1alpha2.Certificate:
+		crt, err := c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			lp.ControlObject(certificate)
 
-		_, err = c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
-		if err != nil {
+			_, err = c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			return nil
+		} else if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 
-		return nil
-	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
+		newCRT := crt.DeepCopy()
+		newCRT.Spec = certificate.Spec
 
-	newCRT := crt.DeepCopy()
-	newCRT.Spec = certificate.Spec
+		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
+			_, err = c.clientset.CertmanagerV1alpha2().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	case *certmanagerv1alpha3.Certificate:
+		crt, err := c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			lp.ControlObject(certificate)
 
-	if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-		_, err = c.clientset.CertmanagerV1alpha2().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
-		if err != nil {
+			_, err = c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			return nil
+		} else if err != nil {
 			return xerrors.Errorf(": %w", err)
+		}
+
+		newCRT := crt.DeepCopy()
+		newCRT.Spec = certificate.Spec
+
+		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
+			_, err = c.clientset.CertmanagerV1alpha3().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	case *certmanagerv1beta1.Certificate:
+		crt, err := c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			lp.ControlObject(certificate)
+
+			_, err = c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			return nil
+		} else if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		newCRT := crt.DeepCopy()
+		newCRT.Spec = certificate.Spec
+
+		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
+			_, err = c.clientset.CertmanagerV1beta1().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	case *certmanagerv1.Certificate:
+		crt, err := c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			lp.ControlObject(certificate)
+
+			_, err = c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			return nil
+		} else if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		newCRT := crt.DeepCopy()
+		newCRT.Spec = certificate.Spec
+
+		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
+			_, err = c.clientset.CertmanagerV1().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
 		}
 	}
 

@@ -30,7 +30,10 @@ package versioned
 import (
 	"fmt"
 
+	certmanagerv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1"
 	certmanagerv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha2"
+	certmanagerv1alpha3 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha3"
+	certmanagerv1beta1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1beta1"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
@@ -41,7 +44,10 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	CertmanagerV1() certmanagerv1.CertmanagerV1Interface
 	CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface
+	CertmanagerV1alpha3() certmanagerv1alpha3.CertmanagerV1alpha3Interface
+	CertmanagerV1beta1() certmanagerv1beta1.CertmanagerV1beta1Interface
 	EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface
 	MonitoringV1() monitoringv1.MonitoringV1Interface
 	ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface
@@ -51,15 +57,33 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
+	certmanagerV1       *certmanagerv1.CertmanagerV1Client
 	certmanagerV1alpha2 *certmanagerv1alpha2.CertmanagerV1alpha2Client
+	certmanagerV1alpha3 *certmanagerv1alpha3.CertmanagerV1alpha3Client
+	certmanagerV1beta1  *certmanagerv1beta1.CertmanagerV1beta1Client
 	etcdV1alpha1        *etcdv1alpha1.EtcdV1alpha1Client
 	monitoringV1        *monitoringv1.MonitoringV1Client
 	proxyV1alpha1       *proxyv1alpha1.ProxyV1alpha1Client
 }
 
+// CertmanagerV1 retrieves the CertmanagerV1Client
+func (c *Clientset) CertmanagerV1() certmanagerv1.CertmanagerV1Interface {
+	return c.certmanagerV1
+}
+
 // CertmanagerV1alpha2 retrieves the CertmanagerV1alpha2Client
 func (c *Clientset) CertmanagerV1alpha2() certmanagerv1alpha2.CertmanagerV1alpha2Interface {
 	return c.certmanagerV1alpha2
+}
+
+// CertmanagerV1alpha3 retrieves the CertmanagerV1alpha3Client
+func (c *Clientset) CertmanagerV1alpha3() certmanagerv1alpha3.CertmanagerV1alpha3Interface {
+	return c.certmanagerV1alpha3
+}
+
+// CertmanagerV1beta1 retrieves the CertmanagerV1beta1Client
+func (c *Clientset) CertmanagerV1beta1() certmanagerv1beta1.CertmanagerV1beta1Interface {
+	return c.certmanagerV1beta1
 }
 
 // EtcdV1alpha1 retrieves the EtcdV1alpha1Client
@@ -98,7 +122,19 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
+	cs.certmanagerV1, err = certmanagerv1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.certmanagerV1alpha2, err = certmanagerv1alpha2.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+	cs.certmanagerV1alpha3, err = certmanagerv1alpha3.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+	cs.certmanagerV1beta1, err = certmanagerv1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +162,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.certmanagerV1 = certmanagerv1.NewForConfigOrDie(c)
 	cs.certmanagerV1alpha2 = certmanagerv1alpha2.NewForConfigOrDie(c)
+	cs.certmanagerV1alpha3 = certmanagerv1alpha3.NewForConfigOrDie(c)
+	cs.certmanagerV1beta1 = certmanagerv1beta1.NewForConfigOrDie(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.NewForConfigOrDie(c)
 	cs.monitoringV1 = monitoringv1.NewForConfigOrDie(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.NewForConfigOrDie(c)
@@ -138,7 +177,10 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.certmanagerV1 = certmanagerv1.New(c)
 	cs.certmanagerV1alpha2 = certmanagerv1alpha2.New(c)
+	cs.certmanagerV1alpha3 = certmanagerv1alpha3.New(c)
+	cs.certmanagerV1beta1 = certmanagerv1beta1.New(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.New(c)
 	cs.monitoringV1 = monitoringv1.New(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.New(c)
