@@ -6,5 +6,5 @@ go_library(
     importmap = "go.f110.dev/heimdallr/vendor/k8s.io/utils/trace",
     importpath = "k8s.io/utils/trace",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/k8s.io/klog"],
+    deps = ["//vendor/k8s.io/klog/v2:klog"],
 )

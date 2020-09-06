@@ -1,10 +1,10 @@
 package test
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -20,12 +20,15 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog"
+	klogv2 "k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
+	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 func init() {
@@ -38,6 +41,23 @@ func TestMain(m *testing.M) {
 	rand.Seed(framework.Config.RandomSeed)
 	id := e2eutil.MakeId()
 	kubeConfig := ""
+
+	if err := logger.OverrideKlog(&config.Logger{Level: "fatal"}); err != nil {
+		panic(err)
+		return
+	}
+	fs := flag.NewFlagSet("e2e", flag.ContinueOnError)
+	klog.InitFlags(fs)
+	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
+		log.Fatal(err)
+	}
+	fs = flag.NewFlagSet("e2e", flag.ContinueOnError)
+	klogv2.InitFlags(fs)
+	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
+		log.Fatal(err)
+	}
+	klog.SetOutput(ioutil.Discard)
+	klogv2.SetOutput(ioutil.Discard)
 
 	framework.BeforeSuite(func() {
 		crd, err := e2eutil.ReadCRDFiles(framework.Config.CRDDir)
@@ -152,13 +172,6 @@ func TestMain(m *testing.M) {
 				},
 			})
 		}()
-
-		fs := flag.NewFlagSet("e2e", flag.ContinueOnError)
-		klog.InitFlags(fs)
-		if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
-			log.Fatal(err)
-		}
-		klog.SetOutput(new(bytes.Buffer))
 	})
 
 	framework.AfterSuite(func() {

@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"k8s.io/klog"
+	klogv2 "k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/pkg/config"
 )
@@ -30,5 +31,10 @@ func OverrideKlog(conf *config.Logger) error {
 	klog.SetOutputBySeverity("WARNING", &levelWriter{fn: l.Warn})
 	klog.SetOutputBySeverity("ERROR", &levelWriter{fn: l.Error})
 	klog.SetOutputBySeverity("FATAL", &levelWriter{fn: l.Fatal})
+
+	klogv2.SetOutputBySeverity("INFO", &levelWriter{fn: l.Info})
+	klogv2.SetOutputBySeverity("WARNING", &levelWriter{fn: l.Warn})
+	klogv2.SetOutputBySeverity("ERROR", &levelWriter{fn: l.Error})
+	klogv2.SetOutputBySeverity("FATAL", &levelWriter{fn: l.Fatal})
 	return nil
 }

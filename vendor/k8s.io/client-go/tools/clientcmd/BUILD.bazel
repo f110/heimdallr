@@ -30,6 +30,6 @@ go_library(
         "//vendor/k8s.io/client-go/tools/clientcmd/api",
         "//vendor/k8s.io/client-go/tools/clientcmd/api/latest",
         "//vendor/k8s.io/client-go/util/homedir",
-        "//vendor/k8s.io/klog",
+        "//vendor/k8s.io/klog/v2:klog",
     ],
 )

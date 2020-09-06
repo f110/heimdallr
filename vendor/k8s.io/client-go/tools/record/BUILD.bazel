@@ -26,6 +26,6 @@ go_library(
         "//vendor/k8s.io/client-go/tools/record/util",
         "//vendor/k8s.io/client-go/tools/reference",
         "//vendor/k8s.io/client-go/util/flowcontrol",
-        "//vendor/k8s.io/klog",
+        "//vendor/k8s.io/klog/v2:klog",
     ],
 )

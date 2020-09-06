@@ -991,6 +991,10 @@ func (l *Logger) ZapConfig(encoder zapcore.EncoderConfig) *zap.Config {
 		level = zap.WarnLevel
 	case "error":
 		level = zap.ErrorLevel
+	case "panic":
+		level = zap.PanicLevel
+	case "fatal":
+		level = zap.FatalLevel
 	}
 	encoding := "json"
 	if l.Encoding != "" {

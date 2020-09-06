@@ -35,8 +35,10 @@ import (
 )
 
 // RpcPermissionLister helps list RpcPermissions.
+// All objects returned here must be treated as read-only.
 type RpcPermissionLister interface {
 	// List lists all RpcPermissions in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.RpcPermission, err error)
 	// RpcPermissions returns an object that can list and get RpcPermissions.
 	RpcPermissions(namespace string) RpcPermissionNamespaceLister
@@ -67,10 +69,13 @@ func (s *rpcPermissionLister) RpcPermissions(namespace string) RpcPermissionName
 }
 
 // RpcPermissionNamespaceLister helps list and get RpcPermissions.
+// All objects returned here must be treated as read-only.
 type RpcPermissionNamespaceLister interface {
 	// List lists all RpcPermissions in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.RpcPermission, err error)
 	// Get retrieves the RpcPermission from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.RpcPermission, error)
 	RpcPermissionNamespaceListerExpansion
 }

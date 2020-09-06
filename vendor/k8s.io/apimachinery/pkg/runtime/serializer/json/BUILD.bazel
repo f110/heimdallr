@@ -17,7 +17,7 @@ go_library(
         "//vendor/k8s.io/apimachinery/pkg/runtime/serializer/recognizer",
         "//vendor/k8s.io/apimachinery/pkg/util/framer",
         "//vendor/k8s.io/apimachinery/pkg/util/yaml",
-        "//vendor/k8s.io/klog",
+        "//vendor/k8s.io/klog/v2:klog",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

@@ -30,6 +30,7 @@ go_library(
         "node.go",
         "page.go",
         "tx.go",
+        "unsafe.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/bbolt",
     importpath = "go.etcd.io/bbolt",

@@ -35,8 +35,10 @@ import (
 )
 
 // EtcdClusterLister helps list EtcdClusters.
+// All objects returned here must be treated as read-only.
 type EtcdClusterLister interface {
 	// List lists all EtcdClusters in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.EtcdCluster, err error)
 	// EtcdClusters returns an object that can list and get EtcdClusters.
 	EtcdClusters(namespace string) EtcdClusterNamespaceLister
@@ -67,10 +69,13 @@ func (s *etcdClusterLister) EtcdClusters(namespace string) EtcdClusterNamespaceL
 }
 
 // EtcdClusterNamespaceLister helps list and get EtcdClusters.
+// All objects returned here must be treated as read-only.
 type EtcdClusterNamespaceLister interface {
 	// List lists all EtcdClusters in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.EtcdCluster, err error)
 	// Get retrieves the EtcdCluster from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.EtcdCluster, error)
 	EtcdClusterNamespaceListerExpansion
 }
