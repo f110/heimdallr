@@ -44,8 +44,10 @@ const (
 	imageRepository            = "quay.io/f110/heimdallr-proxy"
 	defaultImageTag            = "latest"
 	rpcServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
+	dashboardImageRepository   = "quay.io/f110/heimdallr-dashboard"
 	defaultCommand             = "/usr/local/bin/heimdallr-proxy"
 	rpcServerCommand           = "/usr/local/bin/heim-rpcserver"
+	dashboardCommand           = "/usr/local/bin/heim-dashboard"
 	ctlCommand                 = "/usr/local/bin/heimctl"
 	proxyPort                  = 4000
 	proxyHttpPort              = 4002
@@ -1235,9 +1237,9 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:            "proxy",
-							Image:           fmt.Sprintf("%s:%s", imageRepository, r.Version()),
+							Image:           fmt.Sprintf("%s:%s", dashboardImageRepository, r.Version()),
 							ImagePullPolicy: corev1.PullAlways,
-							Command:         []string{defaultCommand},
+							Command:         []string{dashboardCommand},
 							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
