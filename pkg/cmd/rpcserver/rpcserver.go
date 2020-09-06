@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"go.etcd.io/etcd/v3/clientv3"
@@ -18,6 +16,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configreader"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -34,10 +33,19 @@ const (
 	datastoreTypeMySQL = "mysql"
 )
 
-type mainProcess struct {
-	Config *config.Config
+const (
+	stateInit cmd.State = iota
+	stateSetup
+	stateStart
+	stateShutdown
+)
 
-	ctx    context.Context
+type mainProcess struct {
+	*cmd.FSM
+
+	ConfFile string
+	Config   *config.Config
+
 	server *rpcserver.Server
 
 	datastoreType   string
@@ -49,23 +57,30 @@ type mainProcess struct {
 	tokenDatabase   database.TokenDatabase
 	relayLocator    database.RelayLocator
 
-	Stop context.CancelFunc
-	wg   sync.WaitGroup
-	Err  error
-
 	mu    sync.Mutex
 	ready bool
 }
 
 func New() *mainProcess {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	return &mainProcess{ctx: ctx, Stop: cancelFunc}
+	m := &mainProcess{}
+	m.FSM = cmd.NewFSM(
+		map[cmd.State]cmd.StateFunc{
+			stateInit:     m.init,
+			stateSetup:    m.setup,
+			stateStart:    m.start,
+			stateShutdown: m.shutdown,
+		},
+		stateInit,
+		stateShutdown,
+	)
+
+	return m
 }
 
-func (m *mainProcess) ReadConfig(p string) error {
-	conf, err := configreader.ReadConfig(p)
+func (m *mainProcess) init() (cmd.State, error) {
+	conf, err := configreader.ReadConfig(m.ConfFile)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %v", err)
 	}
 	m.Config = conf
 
@@ -76,48 +91,48 @@ func (m *mainProcess) ReadConfig(p string) error {
 		m.datastoreType = datastoreTypeMySQL
 	}
 
-	return nil
+	return stateSetup, nil
 }
 
-func (m *mainProcess) Setup() error {
+func (m *mainProcess) setup() (cmd.State, error) {
 	if err := logger.Init(m.Config.Logger); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %v", err)
 	}
 	switch m.datastoreType {
 	case datastoreTypeEtcd:
 		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		go m.watchGRPCConnState(client.ActiveConnection())
 		m.etcdClient = client
 
 		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		caDatabase, err := etcd.NewCA(context.Background(), client)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 
 		if m.Config.General.Enable {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return cmd.UnknownState, xerrors.Errorf(": %v", err)
 			}
 		}
 	case datastoreTypeMySQL:
 		m.datastoreType = datastoreTypeMySQL
 		conn, err := sql.Open("mysql", m.Config.Datastore.DSN.FormatDSN())
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		m.conn = conn
 
@@ -127,7 +142,7 @@ func (m *mainProcess) Setup() error {
 		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
 		if m.Config.General.Enable {
@@ -135,67 +150,45 @@ func (m *mainProcess) Setup() error {
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
 	default:
-		return xerrors.New("cmd/rpcserver: required external datastore")
+		return cmd.UnknownState, xerrors.New("cmd/rpcserver: required external datastore")
 	}
 
 	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
 
 	auth.InitInterceptor(m.Config, m.userDatabase, m.tokenDatabase)
-	return nil
+	return stateStart, nil
 }
 
-func (m *mainProcess) Start() error {
-	m.wg.Add(1)
+func (m *mainProcess) start() (cmd.State, error) {
 	go func() {
-		defer m.wg.Done()
-
 		if err := m.server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
-			m.Err = err
-			m.Stop()
 		}
 	}()
 
 	if m.datastoreType == datastoreTypeEtcd {
 		c, err := etcd.NewCompactor(m.etcdClient)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
-		m.wg.Add(1)
-		go func() {
-			defer m.wg.Done()
 
+		go func() {
 			c.Start(context.Background())
 		}()
 	}
 
-	return nil
+	return cmd.WaitState, nil
 }
 
-func (m *mainProcess) Wait() {
-	m.wg.Wait()
-}
+func (m *mainProcess) shutdown() (cmd.State, error) {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
 
-func (m *mainProcess) Shutdown(ctx context.Context) {
 	if err := m.server.Shutdown(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
-}
 
-func (m *mainProcess) signalHandling() {
-	signalCh := make(chan os.Signal)
-	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT)
-
-	for sig := range signalCh {
-		switch sig {
-		case syscall.SIGTERM, os.Interrupt:
-			m.Stop()
-			ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-			m.Shutdown(ctx)
-			cancelFunc()
-			return
-		}
-	}
+	return cmd.CloseState, nil
 }
 
 func (m *mainProcess) IsReady() bool {

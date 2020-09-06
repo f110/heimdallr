@@ -10,6 +10,9 @@ run:
 run-dashboard:
 	bazel run //cmd/heim-dashboard -- -c $(CURDIR)/dashboard_config_debug.yaml
 
+run-rpcserver:
+	bazel run //cmd/heim-rpcserver -- -c $(CURDIR)/rpcserver_config_debug.yaml
+
 run-operator:
 	bazel run //operator/cmd/heimdallrcontroller -- -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4 -logtostderr=false -log-level=debug
 

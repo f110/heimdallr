@@ -1,0 +1,28 @@
+dashboard:
+  enable: false
+datastore:
+  namespace: /heimdallr/
+  url: etcd://127.0.0.1:40473
+general:
+  enable: true
+  certificate_authority:
+    cert_file: ./ca.crt
+    key_file: ./ca.key
+    country: jp
+    organization: test
+    organization_unit: dev
+  internal_token_file: ./internal_token
+  proxy_file: ./proxies.yaml
+  role_file: ./roles.yaml
+  root_users:
+    - fmhrit@gmail.com
+  rpc_permission_file: ./rpc_permissions.yaml
+  server_name: local-proxy.f110.dev:4000
+  signing_private_key_file: ./privatekey.pem
+logger:
+  encoding: console
+  level: info
+rpc_server:
+  enable: true
+  bind: :4102
+  metrics_bind: :4103

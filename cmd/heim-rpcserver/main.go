@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"syscall"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
@@ -33,18 +34,13 @@ func rpcServer(args []string) error {
 	}
 
 	process := rpcserver.New()
-	if err := process.ReadConfig(confFile); err != nil {
-		return xerrors.Errorf(": %v", err)
+	process.ConfFile = confFile
+	go process.SignalHandling(syscall.SIGTERM, syscall.SIGINT)
+	if err := process.Loop(); err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
-	if err := process.Setup(); err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	if err := process.Start(); err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	process.Wait()
 
-	return process.Err
+	return nil
 }
 
 func main() {
