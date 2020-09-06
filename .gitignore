@@ -1,7 +1,9 @@
 /data
 /ca.*
 /tls.*
-/privatekey.pem
+/*.p12
+/*.crt
+/*.pem
 /cookie_secret
 /client_secret
 /github_webhook_secret
