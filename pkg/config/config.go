@@ -141,7 +141,7 @@ type Datastore struct {
 	Certificate tls.Certificate `json:"-"`
 	CertPool    *x509.CertPool  `json:"-"`
 
-	DSN *mysql.Config
+	DSN *mysql.Config `json:"-"`
 
 	etcdClient *clientv3.Client `json:"-"`
 }
