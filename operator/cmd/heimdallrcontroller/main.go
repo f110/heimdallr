@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
@@ -115,7 +116,7 @@ func main() {
 
 				c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
 				if err != nil {
-					klog.Error(err)
+					logger.Log.Error("Failed start proxy controller", zap.Error(err))
 					os.Exit(1)
 				}
 
@@ -131,13 +132,13 @@ func main() {
 					nil,
 				)
 				if err != nil {
-					klog.Error(err)
+					logger.Log.Error("Failed start etcd controller", zap.Error(err))
 					os.Exit(1)
 				}
 
 				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, http.DefaultTransport)
 				if err != nil {
-					klog.Error(err)
+					logger.Log.Error("Failed start github controller", zap.Error(err))
 					os.Exit(1)
 				}
 
@@ -169,14 +170,14 @@ func main() {
 				wg.Wait()
 			},
 			OnStoppedLeading: func() {
-				klog.Infof("leader lost: %s", id)
+				logger.Log.Debug("Leader lost", zap.String("id", id))
 				os.Exit(0)
 			},
 			OnNewLeader: func(identity string) {
 				if identity == id {
 					return
 				}
-				klog.Infof("new leader elected: %s", identity)
+				logger.Log.Debug("New leader elected", zap.String("id", identity))
 			},
 		},
 	})

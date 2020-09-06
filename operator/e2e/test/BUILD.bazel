@@ -29,7 +29,6 @@ go_test(
         "//vendor/k8s.io/client-go/tools/clientcmd",
         "//vendor/k8s.io/client-go/tools/leaderelection",
         "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock",
-        "//vendor/k8s.io/klog",
         "//vendor/k8s.io/klog/v2:klog",
     ],
 )

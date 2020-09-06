@@ -13,13 +13,14 @@ go_library(
         "//pkg/config",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",
+        "//vendor/go.uber.org/zap",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/informers",
         "//vendor/k8s.io/client-go/kubernetes",
         "//vendor/k8s.io/client-go/tools/clientcmd",
         "//vendor/k8s.io/client-go/tools/leaderelection",
         "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock",
-        "//vendor/k8s.io/klog",
+        "//vendor/k8s.io/klog/v2:klog",
     ],
 )
 

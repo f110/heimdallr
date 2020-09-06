@@ -19,8 +19,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/klog"
-	klogv2 "k8s.io/klog/v2"
+	"k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
@@ -51,13 +50,7 @@ func TestMain(m *testing.M) {
 	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
 		log.Fatal(err)
 	}
-	fs = flag.NewFlagSet("e2e", flag.ContinueOnError)
-	klogv2.InitFlags(fs)
-	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
-		log.Fatal(err)
-	}
 	klog.SetOutput(ioutil.Discard)
-	klogv2.SetOutput(ioutil.Discard)
 
 	framework.BeforeSuite(func() {
 		crd, err := e2eutil.ReadCRDFiles(framework.Config.CRDDir)

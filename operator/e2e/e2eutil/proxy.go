@@ -12,6 +12,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,11 +26,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	"k8s.io/klog"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
@@ -320,7 +321,7 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 		if err != nil {
 			switch v := err.(type) {
 			case *apierrors.StatusError:
-				klog.Info(v)
+				logger.Log.Debug("Status error", zap.Any("err", v))
 			}
 		}
 	}()

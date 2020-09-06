@@ -17,9 +17,11 @@ go_library(
         "//operator/pkg/api/proxy/v1alpha1",
         "//operator/pkg/client/versioned",
         "//pkg/cert",
+        "//pkg/logger",
         "//pkg/rpc/rpcclient",
         "//vendor/github.com/dgrijalva/jwt-go",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
+        "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
@@ -43,6 +45,5 @@ go_library(
         "//vendor/k8s.io/client-go/rest",
         "//vendor/k8s.io/client-go/tools/portforward",
         "//vendor/k8s.io/client-go/transport/spdy",
-        "//vendor/k8s.io/klog",
     ],
 )
