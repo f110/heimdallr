@@ -5,7 +5,7 @@ dashboard:
     loader: shotgun
 datastore:
   namespace: /heimdallr/
-  url: etcd://127.0.0.1:2379
+  url: etcd://127.0.0.1:40473
 general:
   certificate_authority:
     cert_file: ./ca.crt

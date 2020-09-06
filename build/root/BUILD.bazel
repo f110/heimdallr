@@ -73,6 +73,31 @@ container_push(
 )
 
 pkg_tar(
+    name = "bin_dashboard",
+    srcs = [
+        "//cmd/heim-dashboard",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_dashboard",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heim-dashboard"],
+    tars = [":bin_dashboard"],
+)
+
+container_push(
+    name = "push_dashboard",
+    format = "Docker",
+    image = ":image_dashboard",
+    registry = "quay.io",
+    repository = "f110/heimdallr-dashboard",
+    tag = VERSION,
+)
+
+pkg_tar(
     name = "bin_ctl",
     srcs = ["//cmd/heimctl"],
     mode = "0755",

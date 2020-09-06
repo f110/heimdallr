@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dashboard",
+    srcs = ["dashboard.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/dashboard",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/cmd",
+        "//pkg/config",
+        "//pkg/config/configreader",
+        "//pkg/dashboard",
+        "//pkg/logger",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/credentials",
+        "//vendor/google.golang.org/grpc/keepalive",
+    ],
+)
