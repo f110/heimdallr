@@ -112,6 +112,9 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 			})
 		}
 
+		sort.Slice(matchedBindings, func(i, j int) bool {
+			return matchedBindings[i].Name < matchedBindings[j].Name
+		})
 		for _, binding := range matchedBindings {
 			for _, subject := range binding.Subjects {
 				switch subject.Kind {
