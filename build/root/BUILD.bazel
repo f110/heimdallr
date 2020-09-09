@@ -112,6 +112,6 @@ github_release(
     name = "github_release",
     version = VERSION,
     repository = "f110/heimdallr",
-    branch = "master",
+    branch = "release-v0.8",
     assets = ["//operator/deploy:all-in-one"]
 )
