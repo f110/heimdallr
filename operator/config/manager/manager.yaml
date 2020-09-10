@@ -23,7 +23,6 @@ spec:
             - -lease-lock-name=operator
             - -lease-lock-namespace=$(MY_NAMESPACE)
             - -cluster-domain=cluster.local
-            - -v=4
           env:
             - name: MY_NAMESPACE
               valueFrom:
