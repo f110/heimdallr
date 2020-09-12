@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "access_token.go",
         "auth.go",
+        "claim.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/auth",
     visibility = ["//visibility:public"],

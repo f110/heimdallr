@@ -335,10 +335,13 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 	req.Header.Set("X-Forwarded-Proto", "https")
 
 	if user.Id != "" {
-		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-			Id:        user.Id,
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
+		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &auth.TokenClaims{
+			StandardClaims: jwt.StandardClaims{
+				Id:        user.Id,
+				IssuedAt:  time.Now().Unix(),
+				ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
+			},
+			Roles: user.Roles,
 		})
 		token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
 		if err != nil {

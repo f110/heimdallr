@@ -1,18 +1,44 @@
 package heimctl
 
 import (
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
+
+	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/frontproxy"
 )
 
-func testServer() error {
+func testServer(publicKeyFile string) error {
+	fBuf, err := ioutil.ReadFile(publicKeyFile)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	block, rest := pem.Decode(fBuf)
+	if len(rest) != 0 {
+		return xerrors.New("heimctl: invalid pem file")
+	}
+	if block.Type != "PUBLIC KEY" {
+		return xerrors.Errorf("heimctl: PEM file type is not PUBLIC KEY: %s", block.Type)
+	}
+
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.HandleFunc("/env", func(w http.ResponseWriter, req *http.Request) {
 		b, _ := httputil.DumpRequest(req, true)
@@ -20,9 +46,41 @@ func testServer() error {
 
 		w.Write(b)
 	})
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(5 * time.Millisecond)
-		io.WriteString(w, "It's working!")
+	http.HandleFunc("/jwt", func(w http.ResponseWriter, req *http.Request) {
+		if publicKey == nil {
+			fmt.Println("Public key not provided")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		token := req.Header.Get(frontproxy.TokenHeaderName)
+		if token == "" {
+			fmt.Printf("%s is empty\n", frontproxy.TokenHeaderName)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		claim := &auth.TokenClaims{}
+		_, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (interface{}, error) {
+			if t.Method != jwt.SigningMethodES256 {
+				return nil, xerrors.New("heimctl: invalid signing method")
+			}
+			return publicKey, nil
+		})
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if err := claim.Valid(); err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(claim); err != nil {
+			fmt.Println(err)
+		}
 	})
 	http.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
 		upgrader := &websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
@@ -86,18 +144,25 @@ window.onload = function () {
 		}
 		io.WriteString(w, "DONE")
 	})
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		time.Sleep(5 * time.Millisecond)
+		io.WriteString(w, "It's working!")
+	})
 	fmt.Println("Listen :4501")
 	return http.ListenAndServe(":4501", nil)
 }
 
 func TestServer(rootCmd *cobra.Command) {
+	publicKeyFile := ""
+
 	testServerCmd := &cobra.Command{
 		Use:   "testserver",
 		Short: "Start a http server for testing",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return testServer()
+			return testServer(publicKeyFile)
 		},
 	}
+	testServerCmd.Flags().StringVar(&publicKeyFile, "public-key", publicKeyFile, "public key file")
 
 	rootCmd.AddCommand(testServerCmd)
 }

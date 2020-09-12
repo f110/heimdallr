@@ -360,7 +360,7 @@ func (a *authInterceptor) authenticateByMetadata(ctx context.Context, md metadat
 	} else if len(md.Get(rpc.JwtTokenMetadataKey)) > 0 {
 		logger.Log.Debug("Found jwt token", zap.String("token", md.Get(rpc.JwtTokenMetadataKey)[0]))
 		j := md.Get(rpc.JwtTokenMetadataKey)[0]
-		claims := &jwt.StandardClaims{}
+		claims := &TokenClaims{}
 		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i interface{}, e error) {
 			if token.Method != jwt.SigningMethodES256 {
 				return nil, xerrors.New("auth: invalid signing method")
