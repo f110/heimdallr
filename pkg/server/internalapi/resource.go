@@ -36,6 +36,6 @@ func (r *ResourceServer) Route(mux *httprouter.Router) {
 		}
 
 		w.Header().Set("Content-Type", "application/x-pem-file")
-		w.Write(b)
+		w.Write(buf.Bytes())
 	})
 }
