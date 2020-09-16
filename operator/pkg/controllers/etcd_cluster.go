@@ -52,11 +52,19 @@ const (
 	EtcdMetricsPort = 2381
 )
 
-const waitDNSPropagationScript = `while ( ! nslookup {{ .Host }} )
+const waitDNSPropagationScript = `IP=$MY_POD_IP
+while ( ! nslookup ${IP//./-}{{ .DomainSuffix }} )
 do
 	echo "Waiting for DNS propagation..."
 	sleep 1
-done`
+done
+
+while ( ! nslookup {{ .DiscoveryServiceDomain }} | grep -q ${IP} )
+do
+	echo "[Discovery] Waiting for DNS propagation..."
+	sleep 1
+done
+`
 
 const (
 	caSecretCertName               = "ca.crt"
@@ -182,11 +190,11 @@ func (c *EtcdCluster) ServerCert(ca *corev1.Secret) (Certificate, error) {
 
 func (c *EtcdCluster) DNSNames() []string {
 	dnsNames := make([]string, 0)
-	for i := 1; i <= c.Spec.Members+1; i++ {
-		dnsNames = append(dnsNames, fmt.Sprintf("%s-%d.%s.%s.svc.%s", c.Name, i, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain))
-	}
-	dnsNames = append(dnsNames, fmt.Sprintf("%s.%s.%s.svc.%s", c.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain))
-	dnsNames = append(dnsNames, fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain))
+	dnsNames = append(dnsNames,
+		fmt.Sprintf("%s.%s.svc.%s", c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
+		fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
+		fmt.Sprintf("*.%s.pod.%s", c.Namespace, c.ClusterDomain),
+	)
 
 	return dnsNames
 }
@@ -342,48 +350,52 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		}
 
 		var initialClusters []string
-		pods := make(map[string]*corev1.Pod)
+		var updating bool
+		result := make([]*corev1.Pod, 0)
 		for _, v := range c.ownedPods {
-			pods[v.Name] = v
+			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+				updating = true
+			}
+
+			result = append(result, v)
 			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodRunning {
-				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", v.Name, v.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort))
+				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.pod.%s:%d", v.Name, strings.Replace(v.Status.PodIP, ".", "-", -1), c.Namespace, c.ClusterDomain, EtcdPeerPort))
 			}
 		}
 
-		result := make([]*corev1.Pod, 0)
-		for i := 1; i <= c.Spec.Members; i++ {
-			name := fmt.Sprintf("%s-%d", c.Name, i)
-			if _, ok := pods[name]; !ok {
-				clusterState := "existing"
-				if i == 1 && c.CurrentInternalState() == InternalStateCreatingFirstMember {
-					clusterState = "new"
-					initialClusters = []string{}
-				}
-
-				pods[name] = c.newEtcdPod(
-					i,
-					etcdVersion,
-					clusterState,
-					append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort)),
-				)
-				result = append(result, pods[name])
-				continue
+		expectMemberCount := c.Spec.Members
+		if updating {
+			expectMemberCount++
+		}
+		for i := 0; i < expectMemberCount-len(c.ownedPods); i++ {
+			clusterState := "existing"
+			if i == 0 && c.CurrentInternalState() == InternalStateCreatingFirstMember {
+				clusterState = "new"
+				initialClusters = []string{}
 			}
 
-			pods[name].Spec = c.etcdPodSpec(i, etcdVersion, "existing", initialClusters)
-			result = append(result, pods[name])
+			newPod := c.newEtcdPod(
+				etcdVersion,
+				clusterState,
+				append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
+			)
+			result = append(result, newPod)
 		}
 
 		switch c.CurrentInternalState() {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
-			name := fmt.Sprintf("%s-%d", c.Name, c.Spec.Members+1)
-			if _, ok := pods[name]; !ok {
-				pods[name] = c.newTemporaryMemberPodSpec(name, etcdVersion, initialClusters)
+			if !c.HasTemporaryMember() {
+				result = append(result, c.newTemporaryMemberPodSpec(etcdVersion, initialClusters))
 			}
-
-			result = append(result, pods[name])
 		}
 
+		sort.Slice(result, func(i, j int) bool {
+			if result[i].CreationTimestamp.IsZero() {
+				return false
+			}
+
+			return result[i].Name < result[j].Name
+		})
 		c.expectedPods = result
 	})
 
@@ -410,6 +422,10 @@ func (c *EtcdCluster) TemporaryMember() *corev1.Pod {
 	}
 
 	return nil
+}
+
+func (c *EtcdCluster) HasTemporaryMember() bool {
+	return c.TemporaryMember() != nil
 }
 
 func (c *EtcdCluster) AllExistMembers() []*corev1.Pod {
@@ -471,8 +487,20 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 }
 
 func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
+	onceRunning := false
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			onceRunning = true
+			break
+		}
+	}
+	// If the Pod has never been running once, There is no need to repair it.
+	if !onceRunning && pod.Status.Phase != corev1.PodFailed {
+		return false
+	}
+
 	switch pod.Status.Phase {
-	case corev1.PodUnknown, corev1.PodFailed, corev1.PodSucceeded:
+	case corev1.PodFailed, corev1.PodSucceeded:
 		return true
 	default:
 		return false
@@ -531,8 +559,7 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:                     corev1.ServiceTypeClusterIP,
-			PublishNotReadyAddresses: true,
+			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
 			},
@@ -560,16 +587,18 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 		if c.Status.LastReadyTransitionTime.IsZero() {
 			return etcdv1alpha1.ClusterPhaseCreating
 		} else {
+			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", zap.Int("ownedPods.len", len(c.ownedPods)))
 			return etcdv1alpha1.ClusterPhaseDegrading
 		}
 	}
 
-	for _, pod := range c.ownedPods {
-		if metav1.HasAnnotation(pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
-			return etcdv1alpha1.ClusterPhaseUpdating
-		}
+	if c.HasTemporaryMember() {
+		return etcdv1alpha1.ClusterPhaseUpdating
+	}
 
+	for _, pod := range c.ownedPods {
 		if c.NeedRepair(pod) {
+			c.log.Debug("Need repair pod", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
 			return etcdv1alpha1.ClusterPhaseDegrading
 		}
 
@@ -577,6 +606,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 			if c.Status.LastReadyTransitionTime.IsZero() {
 				return etcdv1alpha1.ClusterPhaseCreating
 			} else {
+				c.log.Debug("Pod is not ready", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
 				return etcdv1alpha1.ClusterPhaseDegrading
 			}
 		}
@@ -586,7 +616,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
 }
 
 func (c *EtcdCluster) CurrentInternalState() InternalState {
-	if len(c.ownedPods) < c.Spec.Members && c.Status.LastReadyTransitionTime.IsZero() {
+	if c.Status.LastReadyTransitionTime.IsZero() {
 		return c.currentInternalStateCreating()
 	}
 
@@ -631,13 +661,13 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 	}
 
 	// Cluster updating works in progress
-	if metav1.HasAnnotation(c.ownedPods[len(c.ownedPods)-1].ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+	if c.HasTemporaryMember() {
 		return c.currentInternalStateUpdating()
 	}
 
 	for _, p := range c.ownedPods {
 		if !c.IsPodReady(p) {
-			if c.Status.LastReadyTransitionTime.IsZero() {
+			if c.Status.LastReadyTransitionTime.IsZero() || !c.HasTemporaryMember() {
 				return InternalStateCreatingMembers
 			} else {
 				return InternalStateUpdatingMember
@@ -681,12 +711,15 @@ func (c *EtcdCluster) currentInternalStateCreating() InternalState {
 
 func (c *EtcdCluster) currentInternalStateUpdating() InternalState {
 	// If a temporary member is deleting then InternalState is TeardownUpdating.
-	if !c.ownedPods[len(c.ownedPods)-1].DeletionTimestamp.IsZero() {
-		return InternalStateTeardownUpdating
-	}
+	// If a temporary member is not ready, then InternalState is still PreparingUpdate
+	if v := c.TemporaryMember(); v != nil {
+		if !v.DeletionTimestamp.IsZero() {
+			return InternalStateTeardownUpdating
+		}
 
-	if !c.IsPodReady(c.ownedPods[len(c.ownedPods)-1]) {
-		return InternalStatePreparingUpdate
+		if !c.IsPodReady(v) {
+			return InternalStatePreparingUpdate
+		}
 	}
 
 	if len(c.ownedPods) != c.Spec.Members+1 {
@@ -733,7 +766,7 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 			Certificates: []tls.Certificate{c.serverCertSecret.Certificate},
 			RootCAs:      certPool,
 			ClientCAs:    certPool,
-			ServerName:   fmt.Sprintf("%s.%s.%s.svc.%s", c.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
+			ServerName:   fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
 		},
 	}
 	client, err := clientv3.New(cfg)
@@ -777,23 +810,22 @@ func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate()))
 }
 
-func (c *EtcdCluster) newTemporaryMemberPodSpec(name, etcdVersion string, initialClusters []string) *corev1.Pod {
+func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClusters []string) *corev1.Pod {
 	pod := c.newEtcdPod(
-		c.Spec.Members+1,
 		etcdVersion,
 		"existing",
-		append(initialClusters, fmt.Sprintf("%s=https://%s.%s.%s.svc.%s:%d", name, name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, EtcdPeerPort)),
+		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 	)
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
 
 	return pod
 }
 
-func (c *EtcdCluster) newEtcdPod(num int, etcdVersion string, clusterState string, initialCluster []string) *corev1.Pod {
+func (c *EtcdCluster) newEtcdPod(etcdVersion string, clusterState string, initialCluster []string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d", c.Name, num),
-			Namespace: c.Namespace,
+			GenerateName: c.Name + "-",
+			Namespace:    c.Namespace,
 			Labels: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
 				etcd.LabelNameEtcdVersion: etcdVersion,
@@ -804,55 +836,105 @@ func (c *EtcdCluster) newEtcdPod(num int, etcdVersion string, clusterState strin
 			},
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
-		Spec: c.etcdPodSpec(num, etcdVersion, clusterState, initialCluster),
+		Spec: c.etcdPodSpec(etcdVersion, clusterState, initialCluster),
 	}
 }
 
-func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, initialCluster []string) corev1.PodSpec {
+func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialCluster []string) corev1.PodSpec {
 	initContainers := make([]corev1.Container, 0)
-	dnsPropagationScript, err := template.New("").Parse(waitDNSPropagationScript)
-	if err != nil {
-		panic(err)
-	}
+	dnsPropagationScript := template.Must(template.New("").Parse(waitDNSPropagationScript))
 
 	dnsPropagationScriptBuf := new(bytes.Buffer)
-	err = dnsPropagationScript.Execute(dnsPropagationScriptBuf, struct {
-		Host string
+	err := dnsPropagationScript.Execute(dnsPropagationScriptBuf, struct {
+		DomainSuffix           string
+		DiscoveryServiceDomain string
 	}{
-		Host: fmt.Sprintf("%s-%d.%s.%s.svc.%s", c.Name, num, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
+		DomainSuffix:           fmt.Sprintf(".%s.pod.%s", c.Namespace, c.ClusterDomain),
+		DiscoveryServiceDomain: c.ServerDiscoveryServiceName(),
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	initContainers = append(initContainers, corev1.Container{
-		Name:    "wait-dns",
-		Image:   "busybox:latest",
-		Command: []string{"/bin/sh", "-c", dnsPropagationScriptBuf.String()},
-	})
-
 	// We have to wait for cache invalidation of kube-dns.
-	// Etcd will check the client's IP address by reverse lookup.
+	// Etcd will check the client's IP address by accepted node.
 	// I'm not sure why they are doing that.
 	// If we don't wait for cache invalidation, then they can't authenticate client certificates.
 	// As a result, newer member of etcd cluster could not join the cluster
 	// because current members closes connection.
-	if clusterState == "existing" {
-		initContainers = append(initContainers, corev1.Container{
-			Name:    "wait-dns-ptr",
+	initContainers = append(initContainers,
+		corev1.Container{
+			Name:    "wait-dns",
 			Image:   "busybox:latest",
-			Command: []string{"/bin/sh", "-c", "sleep 60"},
-		})
+			Command: []string{"/bin/sh", "-c", dnsPropagationScriptBuf.String()},
+			Env: []corev1.EnvVar{
+				{
+					Name: "MY_POD_IP",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "status.podIP",
+						},
+					},
+				},
+			},
+		},
+	)
+	if clusterState == "existing" {
+		// If Pod is not scheduled, The name will not be determined.
+		// Therefore, Can not add the member by controller.
+		// Add cluster member will execute init container.
+		initContainers = append(initContainers,
+			corev1.Container{
+				Name:    "add-member",
+				Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
+				Command: []string{"/bin/sh"},
+				Args: []string{
+					"-c",
+					strings.Join([]string{
+						"/usr/local/bin/etcdctl",
+						"--cacert=/etc/etcd-cert/" + clientCertSecretCACertName,
+						"--cert=/etc/etcd-cert/" + clientCertSecretCertName,
+						"--key=/etc/etcd-cert/" + clientCertSecretPrivateKeyName,
+						fmt.Sprintf("--endpoints=%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
+						"member", "add",
+						"$(MY_POD_NAME)", // The name of the member
+						fmt.Sprintf("--peer-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+					}, " "),
+				},
+				Env: []corev1.EnvVar{
+					{
+						Name: "MY_POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+					{
+						Name: "MY_POD_IP",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "status.podIP",
+							},
+						},
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "client-cert",
+						MountPath: "/etc/etcd-cert",
+					},
+				},
+			},
+		)
 	}
 
-	name := fmt.Sprintf("%s-%d", c.Name, num)
-	discoveryService := fmt.Sprintf("%s.%s.svc.%s", c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)
-	args := []string{
-		fmt.Sprintf("--name=%s", name),
-		fmt.Sprintf("--data-dir=/var/%s.etcd", name),
+	etcdArgs := []string{
+		"--name=$(MY_POD_NAME)",
+		"--data-dir=/var/$(MY_POD_NAME).etcd",
 		fmt.Sprintf("--initial-cluster-state=%s", clusterState),
-		fmt.Sprintf("--initial-advertise-peer-urls=https://%s.%s:%d", name, discoveryService, EtcdPeerPort),
-		fmt.Sprintf("--advertise-client-urls=https://%s.%s:%d", name, discoveryService, EtcdClientPort),
+		fmt.Sprintf("--initial-advertise-peer-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+		fmt.Sprintf("--advertise-client-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdClientPort),
 		fmt.Sprintf("--listen-client-urls=https://0.0.0.0:%d", EtcdClientPort),
 		fmt.Sprintf("--listen-peer-urls=https://0.0.0.0:%d", EtcdPeerPort),
 		fmt.Sprintf("--listen-metrics-urls=http://0.0.0.0:%d", EtcdMetricsPort),
@@ -866,11 +948,14 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 		"--peer-client-cert-auth",
 	}
 	if initialCluster != nil && len(initialCluster) > 0 {
-		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
+		etcdArgs = append(etcdArgs, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
+	}
+	args := []string{
+		"-c",
+		"/usr/local/bin/etcd " + strings.Join(etcdArgs, " "),
 	}
 
 	return corev1.PodSpec{
-		Hostname:       fmt.Sprintf("%s-%d", c.Name, num),
 		Subdomain:      c.ServerDiscoveryServiceName(),
 		RestartPolicy:  corev1.RestartPolicyNever,
 		InitContainers: initContainers,
@@ -878,8 +963,17 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 			{
 				Name:    "etcd",
 				Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
-				Command: append([]string{"/usr/local/bin/etcd"}, args...),
+				Command: []string{"/bin/sh"},
+				Args:    args,
 				Env: []corev1.EnvVar{
+					{
+						Name: "MY_POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
 					{
 						Name: "MY_POD_IP",
 						ValueFrom: &corev1.EnvVarSource{
@@ -922,6 +1016,14 @@ func (c *EtcdCluster) etcdPodSpec(num int, etcdVersion, clusterState string, ini
 			},
 		},
 		Volumes: []corev1.Volume{
+			{
+				Name: "client-cert",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: c.ClientCertSecretName(),
+					},
+				},
+			},
 			{
 				Name: "cert",
 				VolumeSource: corev1.VolumeSource{

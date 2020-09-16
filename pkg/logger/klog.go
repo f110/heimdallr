@@ -27,8 +27,8 @@ func OverrideKlog(conf *config.Logger) error {
 
 	l := Log.Named("klog").WithOptions(zap.AddCallerSkip(5))
 	klog.SetOutputBySeverity("INFO", &levelWriter{fn: l.Info})
-	klog.SetOutputBySeverity("WARNING", &levelWriter{fn: l.Warn})
-	klog.SetOutputBySeverity("ERROR", &levelWriter{fn: l.Error})
-	klog.SetOutputBySeverity("FATAL", &levelWriter{fn: l.Fatal})
+	klog.SetOutputBySeverity("WARNING", &levelWriter{fn: l.Info})
+	klog.SetOutputBySeverity("ERROR", &levelWriter{fn: l.Info})
+	klog.SetOutputBySeverity("FATAL", &levelWriter{fn: l.Info})
 	return nil
 }

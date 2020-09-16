@@ -120,11 +120,7 @@ func TestEtcdController(t *testing.T) {
 				podIsReady(v)
 				f.RegisterPodFixture(v)
 			}
-			tempMemberPod := cluster.newTemporaryMemberPodSpec(
-				fmt.Sprintf("%s-%d", cluster.Name, cluster.Spec.Members+1),
-				defaultEtcdVersion,
-				[]string{},
-			)
+			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			podIsReady(tempMemberPod)
 			f.RegisterPodFixture(tempMemberPod)
 
@@ -147,11 +143,7 @@ func TestEtcdController(t *testing.T) {
 				podIsReady(v)
 				f.RegisterPodFixture(v)
 			}
-			tempMemberPod := cluster.newTemporaryMemberPodSpec(
-				fmt.Sprintf("%s-%d", cluster.Name, cluster.Spec.Members+1),
-				defaultEtcdVersion,
-				[]string{},
-			)
+			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			podIsReady(tempMemberPod)
 			f.RegisterPodFixture(tempMemberPod)
 
@@ -174,11 +166,7 @@ func TestEtcdController(t *testing.T) {
 			podIsReady(v)
 			f.RegisterPodFixture(v)
 		}
-		tempMemberPod := cluster.newTemporaryMemberPodSpec(
-			fmt.Sprintf("%s-%d", cluster.Name, cluster.Spec.Members+1),
-			defaultEtcdVersion,
-			[]string{},
-		)
+		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 		podIsReady(tempMemberPod)
 		f.RegisterPodFixture(tempMemberPod)
 

@@ -3,19 +3,22 @@
   <component name="KubernetesSettings">
     <specSources>
       <SpecSource>
-        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_backends.yaml" />
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/proxy.f110.dev_proxies.yaml" />
       </SpecSource>
       <SpecSource>
-        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_proxies.yaml" />
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/proxy.f110.dev_backends.yaml" />
       </SpecSource>
       <SpecSource>
-        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_roles.yaml" />
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/etcd.f110.dev_etcdclusters.yaml" />
       </SpecSource>
       <SpecSource>
-        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/etcd.f110.dev_etcdclusters.yaml" />
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/proxy.f110.dev_roles.yaml" />
       </SpecSource>
       <SpecSource>
-        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/bases/proxy.f110.dev_rolebindings.yaml" />
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/proxy.f110.dev_rolebindings.yaml" />
+      </SpecSource>
+      <SpecSource>
+        <option name="pathOrUrl" value="$PROJECT_DIR$/operator/config/crd/proxy.f110.dev_rpcpermissions.yaml" />
       </SpecSource>
     </specSources>
   </component>
