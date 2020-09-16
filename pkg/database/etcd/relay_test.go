@@ -101,6 +101,7 @@ func TestRelayLocator_Watch(t *testing.T) {
 		t.Logf("Got: %v", *gone)
 		gotCh <- gone
 	}()
+	time.Sleep(10 * time.Millisecond)
 
 	buf, err := yaml.Marshal(&database.Relay{Name: t.Name()})
 	if err != nil {
