@@ -37,7 +37,7 @@ http_archive(
 
 git_repository(
     name = "dev_f110_mono",
-    commit = "8ddd5c26208161be849a6ad98331ae25bb0f9251",
+    commit = "7aecc326ef8492259edd401418762a60d6d863fd",
     remote = "https://github.com/f110/mono",
 )
 
