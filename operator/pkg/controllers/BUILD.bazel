@@ -111,6 +111,7 @@ go_test(
         "//vendor/github.com/jarcoal/httpmock",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",
         "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
         "//vendor/golang.org/x/xerrors",

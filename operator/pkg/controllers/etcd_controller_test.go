@@ -3,12 +3,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -24,7 +26,7 @@ func TestEtcdController(t *testing.T) {
 		// In this case, we don't need mocking etcd client.
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhasePending)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhasePending)
 		f.RegisterEtcdClusterFixture(e)
 
 		// Setup
@@ -39,12 +41,11 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		require.NoError(t, err)
+		assert.Len(t, pods.Items, 1)
 
-		assert.Contains(t, member.Spec.Containers[0].Command, "--initial-cluster-state=new")
+		assert.Contains(t, pods.Items[0].Spec.Containers[0].Args[1], "--initial-cluster-state=new")
 	})
 
 	t.Run("CreatingMember", func(t *testing.T) {
@@ -52,7 +53,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseCreating)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseCreating)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
@@ -64,11 +65,24 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-2", e.Name), metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
+		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		require.NoError(t, err)
+		assert.Len(t, pods.Items, 2)
+
+		found := false
+		for _, v := range pods.Items {
+			if strings.Contains(v.Spec.Containers[0].Args[1], "--initial-cluster-state=existing") {
+				if found {
+					assert.Fail(t, "Both nodes has initial-cluster-state=existing")
+				}
+
+				found = true
+			}
 		}
-		assert.Contains(t, member.Spec.Containers[0].Command, "--initial-cluster-state=existing")
+		if !found {
+			assert.Fail(t, "Both nodes has initial-cluster-state=new")
+		}
+
 		portNames := make([]string, 0)
 		for _, v := range member.Spec.Containers[0].Ports {
 			portNames = append(portNames, v.Name)
@@ -81,7 +95,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
@@ -95,12 +109,20 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		member, err := f.coreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-4", e.Name), metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
+		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		require.NoError(t, err)
+		require.Len(t, pods.Items, 4)
+
+		var temporaryMember *corev1.Pod
+		for _, v := range pods.Items {
+			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+				temporaryMember = &v
+				break
+			}
 		}
-		assert.Contains(t, member.Spec.Containers[0].Command, "--initial-cluster-state=existing")
-		assert.Contains(t, member.Annotations, etcd.AnnotationKeyTemporaryMember)
+		require.NotNil(t, temporaryMember, "Could not find temporary member")
+		assert.Contains(t, temporaryMember.Spec.Containers[0].Args[1], "--initial-cluster-state=existing")
+		assert.Contains(t, temporaryMember.Annotations, etcd.AnnotationKeyTemporaryMember)
 	})
 
 	t.Run("UpdatingMember", func(t *testing.T) {
@@ -111,7 +133,7 @@ func TestEtcdController(t *testing.T) {
 
 			f, _ := newEtcdControllerTestRunner(t)
 
-			e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+			e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
 			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
@@ -134,7 +156,7 @@ func TestEtcdController(t *testing.T) {
 
 			f, _ := newEtcdControllerTestRunner(t)
 
-			e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseUpdating)
+			e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseUpdating, etcdClusterReady)
 			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
@@ -158,7 +180,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseUpdating)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseUpdating, etcdClusterReady)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
@@ -180,13 +202,16 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
-		cluster.AllMembers()[0].Status.Phase = corev1.PodSucceeded
-		for _, v := range cluster.AllMembers()[1:] {
+		for i, v := range cluster.AllMembers() {
 			podIsReady(v)
+
+			if i == 0 {
+				v.Status.Phase = corev1.PodSucceeded
+			}
 		}
 		f.RegisterPodFixture(cluster.AllMembers()...)
 
@@ -205,7 +230,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
 		e.Spec.Backup = &etcdv1alpha1.BackupSpec{
 			IntervalInSecond: 30,
 			Storage: etcdv1alpha1.BackupStorageSpec{
@@ -265,7 +290,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
 
-		e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
 		e.Spec.Backup = &etcdv1alpha1.BackupSpec{
 			IntervalInSecond: 30,
 			Storage: etcdv1alpha1.BackupStorageSpec{
@@ -311,7 +336,7 @@ func TestEtcdController_Backup(t *testing.T) {
 func TestEtcdController_Restore(t *testing.T) {
 	f, _ := newEtcdControllerTestRunner(t)
 
-	e := etcdControllerFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
+	e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
 	e.Spec.Backup = &etcdv1alpha1.BackupSpec{
 		IntervalInSecond: 30,
 		Storage: etcdv1alpha1.BackupStorageSpec{
@@ -342,6 +367,8 @@ func TestEtcdController_Restore(t *testing.T) {
 	cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 	cluster.registerBasicObjectOfEtcdCluster(f)
 	for _, v := range cluster.AllMembers() {
+		podIsReady(v)
+
 		v.Status.Phase = corev1.PodSucceeded
 		f.RegisterPodFixture(v)
 	}
@@ -375,8 +402,10 @@ func TestEtcdController_Restore(t *testing.T) {
 	assert.Equal(t, "backup/latest", updatedEC.Status.RestoreFrom)
 }
 
-func etcdControllerFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase) *etcdv1alpha1.EtcdCluster {
-	return &etcdv1alpha1.EtcdCluster{
+type etcdClusterOpt func(e *etcdv1alpha1.EtcdCluster)
+
+func etcdClusterFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase, opt ...etcdClusterOpt) *etcdv1alpha1.EtcdCluster {
+	ec := &etcdv1alpha1.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      normalizeName(t.Name()),
 			Namespace: metav1.NamespaceDefault,
@@ -388,6 +417,11 @@ func etcdControllerFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase) *
 			Phase: phase,
 		},
 	}
+	for _, v := range opt {
+		v(ec)
+	}
+
+	return ec
 }
 
 func minIOFixtures() (*corev1.Service, *corev1.Secret) {
@@ -417,9 +451,13 @@ func minIOFixtures() (*corev1.Service, *corev1.Secret) {
 }
 
 func podIsReady(pod *corev1.Pod) {
+	if pod.GenerateName != "" && pod.Name == "" {
+		pod.Name = pod.GenerateName + randomString(5)
+	}
 	pod.CreationTimestamp = metav1.Now()
 	pod.Status.Phase = corev1.PodRunning
 	pod.Status.ContainerStatuses = []corev1.ContainerStatus{{Name: "etcd", Ready: true}}
+	pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue})
 }
 
 func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunner) {
@@ -433,4 +471,20 @@ func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunn
 	f.RegisterSecretFixture(clientS)
 	f.RegisterServiceFixture(c.DiscoveryService())
 	f.RegisterServiceFixture(c.ClientService())
+}
+
+func etcdClusterReady(e *etcdv1alpha1.EtcdCluster) {
+	now := metav1.Now()
+	e.Status.LastReadyTransitionTime = &now
+}
+
+var charset = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+
+func randomString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+
+	return string(b)
 }
