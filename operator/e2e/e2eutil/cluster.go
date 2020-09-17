@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -33,9 +34,49 @@ import (
 	"go.f110.dev/heimdallr/operator/e2e/data"
 )
 
+var kindImages = map[string]string{
+	"v1.19.1":  "98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600",
+	"v1.19.0":  "3b0289b2d1bab2cb9108645a006939d2f447a10ad2bb21919c332d06b548bbc6",
+	"v1.18.8":  "f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb",
+	"v1.17.11": "5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555",
+}
+
+type kindConfigBinding struct {
+	ClusterVersion string
+	ImageHash      string
+}
+
+const kindConfigTemplate = `apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+nodes:
+  - role: control-plane
+    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
+  - role: worker
+    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
+  - role: worker
+    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
+`
+
 func CreateCluster(id, clusterVersion string) (string, error) {
 	_, err := exec.LookPath("kind")
 	if err != nil {
+		return "", err
+	}
+
+	imageHash, ok := kindImages[clusterVersion]
+	if !ok {
+		return "", xerrors.Errorf("%s is not supported", clusterVersion)
+	}
+
+	kf, err := ioutil.TempFile("", "kind.yaml")
+	if err != nil {
+		return "", err
+	}
+	t := template.Must(template.New("").Parse(kindConfigTemplate))
+	if err := t.Execute(kf, kindConfigBinding{
+		ClusterVersion: clusterVersion,
+		ImageHash:      imageHash,
+	}); err != nil {
 		return "", err
 	}
 
@@ -48,7 +89,7 @@ func CreateCluster(id, clusterVersion string) (string, error) {
 		"kind", "create", "cluster",
 		"--name", fmt.Sprintf("e2e-%s", id),
 		"--kubeconfig", f.Name(),
-		"--image", "kindest/node:"+clusterVersion,
+		"--config", kf.Name(),
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
