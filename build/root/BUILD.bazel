@@ -129,6 +129,7 @@ job(
     cpu_limit = "2000m",
     github_status = True,
     targets = "//...",
+    config_name = "ci",
 )
 
 load("//build/rules:release.bzl", "github_release")
