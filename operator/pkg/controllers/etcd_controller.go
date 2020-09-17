@@ -896,22 +896,22 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 	cancel()
 
 	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
-	for _, v := range etcdPods {
+	for _, m := range memberList.Members {
 		ms := etcdv1alpha1.MemberStatus{
-			PodName: v.Name,
+			Name: m.Name,
 		}
-		if v.StatusResponse != nil {
-			ms.Id = int64(v.StatusResponse.Header.MemberId)
-			ms.Version = "v" + v.StatusResponse.Version
 
-			for _, m := range memberList.Members {
-				if m.ID == v.StatusResponse.Header.MemberId {
-					ms.Name = m.Name
-					break
-				}
+		for _, p := range etcdPods {
+			if m.ID != p.StatusResponse.Header.MemberId {
+				continue
+			}
+			if p.StatusResponse == nil {
+				continue
 			}
 
-			if v.StatusResponse.Leader == v.StatusResponse.Header.MemberId {
+			ms.Id = int64(p.StatusResponse.Header.MemberId)
+			ms.Version = "v" + p.StatusResponse.Version
+			if p.StatusResponse.Leader == p.StatusResponse.Header.MemberId {
 				ms.Leader = true
 			}
 		}
