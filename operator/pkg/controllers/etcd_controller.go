@@ -902,10 +902,10 @@ func (ec *EtcdController) checkClusterStatus(cluster *EtcdCluster) error {
 		}
 
 		for _, p := range etcdPods {
-			if m.ID != p.StatusResponse.Header.MemberId {
+			if p.StatusResponse == nil {
 				continue
 			}
-			if p.StatusResponse == nil {
+			if m.ID != p.StatusResponse.Header.MemberId {
 				continue
 			}
 
