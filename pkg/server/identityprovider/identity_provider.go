@@ -43,6 +43,8 @@ func NewServer(conf *config.Config, database database.UserDatabase, store sessio
 		issuer = "https://" + conf.IdentityProvider.Domain + ".okta.com"
 	case "azure":
 		issuer = "https://login.microsoftonline.com/" + conf.IdentityProvider.Domain + "/v2.0"
+	case "custom":
+		issuer = conf.IdentityProvider.Issuer
 	default:
 		return nil, xerrors.Errorf("unknown provider: %s", conf.IdentityProvider.Provider)
 	}

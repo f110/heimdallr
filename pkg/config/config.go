@@ -117,7 +117,8 @@ type RPCServer struct {
 }
 
 type IdentityProvider struct {
-	Provider         string   `json:"provider"` // "google", "okta" or "azure"
+	Provider         string   `json:"provider"` // "google", "okta", "azure" or "custom"
+	Issuer           string   `json:"issuer"`   // for "custom"
 	ClientId         string   `json:"client_id"`
 	ClientSecretFile string   `json:"client_secret_file"`
 	ExtraScopes      []string `json:"extra_scopes"`
