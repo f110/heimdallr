@@ -57,6 +57,16 @@ message SSHKey {
     };
 }
 
+message GPGKey {
+    User   user = 1;
+    string key  = 2;
+
+    option (dev.f110.ddl.table) = {
+        primary_key: "user"
+        with_timestamp: true
+    };
+}
+
 message RoleBinding {
     int32  id         = 1 [(dev.f110.ddl.column) = {sequence: true}];
     User   user       = 2;

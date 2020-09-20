@@ -40,6 +40,8 @@ type UserDatabase interface {
 	DeleteState(ctx context.Context, state string) error
 	SetSSHKeys(ctx context.Context, keys *SSHKeys) error
 	GetSSHKeys(ctx context.Context, id string) (*SSHKeys, error)
+	SetGPGKey(ctx context.Context, key *GPGKey) error
+	GetGPGKey(ctx context.Context, id string) (*GPGKey, error)
 }
 
 type AccessToken struct {
@@ -53,6 +55,11 @@ type AccessToken struct {
 type SSHKeys struct {
 	UserId string `json:"user_id"`
 	Keys   string `json:"keys"`
+}
+
+type GPGKey struct {
+	UserId string `json:"user_id"`
+	Key    string `json:"key"`
 }
 
 type User struct {

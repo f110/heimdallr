@@ -36,6 +36,15 @@ CREATE TABLE `ssh_key` (
 	PRIMARY KEY(`user_id`)
 ) Engine=InnoDB;
 
+DROP TABLE IF EXISTS `gpg_key`;
+CREATE TABLE `gpg_key` (
+	`user_id` INTEGER NOT NULL,
+	`key` VARCHAR(255) NOT NULL,
+	`created_at` DATETIME NOT NULL,
+	`updated_at` DATETIME NULL,
+	PRIMARY KEY(`user_id`)
+) Engine=InnoDB;
+
 DROP TABLE IF EXISTS `role_binding`;
 CREATE TABLE `role_binding` (
 	`id` INTEGER NOT NULL AUTO_INCREMENT,

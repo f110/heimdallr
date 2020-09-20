@@ -544,6 +544,150 @@ func (d *SSHKey) Update(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 	return nil
 }
 
+type GPGKey struct {
+	conn *sql.DB
+
+	user *User
+}
+
+func NewGPGKey(conn *sql.DB) *GPGKey {
+	return &GPGKey{
+		conn: conn,
+		user: NewUser(conn),
+	}
+}
+
+func (d *GPGKey) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	tx, err := d.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := fn(tx); err != nil {
+		rErr := tx.Rollback()
+		return xerrors.Errorf("%v: %w", rErr, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	return nil
+}
+
+func (d *GPGKey) Select(ctx context.Context, userId int32) (*entity.GPGKey, error) {
+	row := d.conn.QueryRowContext(ctx, "SELECT * FROM `gpg_key` WHERE `user_id` = ?", userId)
+
+	v := &entity.GPGKey{}
+	if err := row.Scan(&v.UserId, &v.Key, &v.CreatedAt, &v.UpdatedAt); err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	{
+		rel, err := d.user.Select(ctx, v.UserId)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		v.User = rel
+	}
+
+	v.ResetMark()
+	return v, nil
+}
+
+func (d *GPGKey) Create(ctx context.Context, v *entity.GPGKey, opt ...ExecOption) (*entity.GPGKey, error) {
+	execOpts := newExecOpt(opt...)
+	var conn execConn
+	if execOpts.tx != nil {
+		conn = execOpts.tx
+	} else {
+		conn = d.conn
+	}
+
+	res, err := conn.ExecContext(
+		ctx,
+		"INSERT INTO `gpg_key` (`user_id`, `key`, `created_at`) VALUES (?, ?, ?)", v.UserId, v.Key, time.Now(),
+	)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	if n, err := res.RowsAffected(); err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	} else if n == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	v = v.Copy()
+
+	v.ResetMark()
+	return v, nil
+}
+
+func (d *GPGKey) Delete(ctx context.Context, userId int32, opt ...ExecOption) error {
+	execOpts := newExecOpt(opt...)
+	var conn execConn
+	if execOpts.tx != nil {
+		conn = execOpts.tx
+	} else {
+		conn = d.conn
+	}
+
+	res, err := conn.ExecContext(ctx, "DELETE FROM `gpg_key` WHERE `user_id` = ?", userId)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	if n, err := res.RowsAffected(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	} else if n == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func (d *GPGKey) Update(ctx context.Context, v *entity.GPGKey, opt ...ExecOption) error {
+	if !v.IsChanged() {
+		return nil
+	}
+
+	execOpts := newExecOpt(opt...)
+	var conn execConn
+	if execOpts.tx != nil {
+		conn = execOpts.tx
+	} else {
+		conn = d.conn
+	}
+
+	changedColumn := v.ChangedColumn()
+	cols := make([]string, len(changedColumn)+1)
+	values := make([]interface{}, len(changedColumn)+1)
+	for i := range changedColumn {
+		cols[i] = "`" + changedColumn[i].Name + "` = ?"
+		values[i] = changedColumn[i].Value
+	}
+	cols[len(cols)-1] = "`updated_at` = ?"
+	values[len(values)-1] = time.Now()
+
+	query := fmt.Sprintf("UPDATE `gpg_key` SET %s WHERE `user_id` = ?", strings.Join(cols, ", "))
+	res, err := conn.ExecContext(
+		ctx,
+		query,
+		append(values, v.UserId)...,
+	)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	} else if n == 0 {
+		return sql.ErrNoRows
+	}
+
+	v.ResetMark()
+	return nil
+}
+
 type RoleBinding struct {
 	conn *sql.DB
 

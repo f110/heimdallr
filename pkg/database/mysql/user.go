@@ -350,3 +350,47 @@ func (u *UserDatabase) SetSSHKeys(ctx context.Context, keys *database.SSHKeys) e
 
 	return nil
 }
+
+func (u *UserDatabase) GetGPGKey(ctx context.Context, id string) (*database.GPGKey, error) {
+	user, err := u.dao.User.SelectIdentity(ctx, id)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	key, err := u.dao.GPGKey.Select(ctx, user.Id)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return &database.GPGKey{UserId: user.Identity, Key: key.Key}, nil
+}
+
+func (u *UserDatabase) SetGPGKey(ctx context.Context, key *database.GPGKey) error {
+	user, err := u.dao.User.SelectIdentity(ctx, key.UserId)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	k, err := u.dao.GPGKey.Select(ctx, user.Id)
+	if err == sql.ErrNoRows {
+		k = &entity.GPGKey{UserId: user.Id, Key: key.Key}
+
+		_, err = u.dao.GPGKey.Create(ctx, k)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	}
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	k.Key = key.Key
+	err = u.dao.GPGKey.Update(ctx, k)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
