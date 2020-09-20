@@ -106,8 +106,7 @@ type mainProcess struct {
 
 func New() *mainProcess {
 	m := &mainProcess{
-		stateCh:         make(chan state),
-		rpcServerDoneCh: make(chan struct{}),
+		stateCh: make(chan state),
 	}
 
 	m.signalHandling()
@@ -238,7 +237,9 @@ func (m *mainProcess) WaitShutdown() error {
 }
 
 func (m *mainProcess) WaitRPCServerShutdown() error {
-	<-m.rpcServerDoneCh
+	if m.rpcServerDoneCh != nil {
+		<-m.rpcServerDoneCh
+	}
 	return m.NextState(stateEmbedEtcdShutdown)
 }
 
@@ -507,6 +508,7 @@ func (m *mainProcess) StartRPCServer() error {
 	if m.config.RPCServer.Enable {
 		errCh := make(chan error)
 
+		m.rpcServerDoneCh = make(chan struct{})
 		go func() {
 			defer func() {
 				close(errCh)
@@ -542,8 +544,6 @@ func (m *mainProcess) StartRPCServer() error {
 			}
 			go c.Start(context.Background())
 		}
-	} else {
-		close(m.rpcServerDoneCh)
 	}
 
 	return m.NextState(stateSetupRPCConn)
