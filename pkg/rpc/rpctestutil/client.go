@@ -221,11 +221,15 @@ type UserClient struct {
 
 	GetSSHKeyCall int
 	SetSSHKeyCall int
+	GetGPGKeyCall int
+	SetGPGKeyCall int
 }
 
 func NewUserClient() *UserClient {
 	return &UserClient{}
 }
+
+var _ rpc.UserClient = &UserClient{}
 
 func (u *UserClient) GetSSHKey(ctx context.Context, in *rpc.RequestGetSSHKey, opts ...grpc.CallOption) (*rpc.ResponseGetSSHKey, error) {
 	u.Lock()
@@ -241,4 +245,20 @@ func (u *UserClient) SetSSHKey(ctx context.Context, in *rpc.RequestSetSSHKey, op
 	u.SetSSHKeyCall++
 
 	return &rpc.ResponseSetSSHKey{}, nil
+}
+
+func (u *UserClient) GetGPGKey(_ context.Context, _ *rpc.RequestGetGPGKey, _ ...grpc.CallOption) (*rpc.ResponseGetGPGKey, error) {
+	u.Lock()
+	defer u.Unlock()
+	u.GetGPGKeyCall++
+
+	return &rpc.ResponseGetGPGKey{}, nil
+}
+
+func (u *UserClient) SetGPGKey(_ context.Context, _ *rpc.RequestSetGPGKey, _ ...grpc.CallOption) (*rpc.ResponseSetGPGKey, error) {
+	u.Lock()
+	defer u.Unlock()
+	u.SetGPGKeyCall++
+
+	return &rpc.ResponseSetGPGKey{}, nil
 }
