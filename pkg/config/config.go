@@ -184,6 +184,9 @@ type Backend struct {
 	AllowHttp     bool          `json:"allow_http,omitempty"`
 	Socket        bool          `json:"socket,omitempty"`
 	SocketTimeout *Duration     `json:"socket_timeout,omitempty"`
+	// MaxSessionDuration is a maximum duration before session expire for specify backend.
+	// When MaxSessionDuration is not empty, OIDC authentication is required even if the user submits a client certificate.
+	MaxSessionDuration *Duration `json:"max_session_duration,omitempty"`
 
 	Url           *url.URL        `json:"-"`
 	WebHookRouter *mux.Router     `json:"-"`

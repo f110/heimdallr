@@ -69,6 +69,13 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 					},
 				},
 				{
+					Name:               "topsecret",
+					MaxSessionDuration: &config.Duration{Duration: 1 * time.Minute},
+					Permissions: []*config.Permission{
+						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+					},
+				},
+				{
 					Name:          "root",
 					AllowRootUser: true,
 					Permissions: []*config.Permission{
@@ -88,9 +95,13 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				},
 			},
 			Roles: []*config.Role{
-				{Name: "test", Bindings: []*config.Binding{
-					{Backend: "test", Permission: "ok"},
-				}},
+				{
+					Name: "test",
+					Bindings: []*config.Binding{
+						{Backend: "test", Permission: "ok"},
+						{Backend: "topsecret", Permission: "ok"},
+					},
+				},
 			},
 			CertificateAuthority: &config.CertificateAuthority{
 				Certificate: caCert,
@@ -265,10 +276,8 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	t.Run("client certificate auth", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("normal", func(t *testing.T) {
-			t.Parallel()
-
-			subject := pkix.Name{CommonName: "foobar@example.com"}
+		newClientCert := func(t *testing.T, id string) *x509.Certificate {
+			subject := pkix.Name{CommonName: id}
 			pemEncodedCSRBytes, _, err := cert.CreateCertificateRequest(subject, []string{})
 			if err != nil {
 				t.Fatal(err)
@@ -282,9 +291,16 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			return clientCert
+		}
+
+		t.Run("normal", func(t *testing.T) {
+			t.Parallel()
+
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.TLS = &tls.ConnectionState{
-				PeerCertificates: []*x509.Certificate{clientCert},
+				PeerCertificates: []*x509.Certificate{newClientCert(t, "foobar@example.com")},
 			}
 			user, err := a.Authenticate(context.TODO(), req)
 			if err != nil {
@@ -295,24 +311,12 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			}
 		})
 
-		t.Run("normal via client certificate auth", func(t *testing.T) {
+		t.Run("normal with revoked certificate", func(t *testing.T) {
 			t.Parallel()
 
-			subject := pkix.Name{CommonName: "foobar@example.com"}
-			pemEncodedCSRBytes, _, err := cert.CreateCertificateRequest(subject, []string{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			block, _ := pem.Decode(pemEncodedCSRBytes)
-			csr, err := x509.ParseCertificateRequest(block.Bytes)
-			if err != nil {
-				t.Fatal(err)
-			}
-			clientCert, err := cert.SigningCertificateRequest(csr, a.Config.CertificateAuthority)
-			if err != nil {
-				t.Fatal(err)
-			}
+			clientCert := newClientCert(t, "foobar@example.com")
 			rc.revokedCert = append(rc.revokedCert, &rpcclient.RevokedCert{SerialNumber: clientCert.SerialNumber})
+
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.TLS = &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{clientCert},
@@ -323,6 +327,68 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			}
 			if err != ErrInvalidCertificate {
 				t.Fatalf("expected ErrInvalidCertificate: %v", err)
+			}
+		})
+
+		t.Run("access to Secure backend which is configured MaxSessionDuration", func(t *testing.T) {
+			t.Parallel()
+
+			clientCert := newClientCert(t, "foobar@example.com")
+			req := httptest.NewRequest(http.MethodGet, "http://topsecret.proxy.example.com/ok", nil)
+			req.TLS = &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{clientCert},
+			}
+			_, err = a.Authenticate(context.TODO(), req)
+			if err == nil {
+				t.Fatal("expected to occurred error but not")
+			}
+			if err != ErrSessionNotFound {
+				t.Fatalf("expected ErrSessionNotFound: %v", err)
+			}
+		})
+
+		t.Run("access to Secure backend with Cookie", func(t *testing.T) {
+			t.Parallel()
+
+			clientCert := newClientCert(t, "foobar@example.com")
+			req := httptest.NewRequest(http.MethodGet, "http://topsecret.proxy.example.com/ok", nil)
+			req.TLS = &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{clientCert},
+			}
+			c, err := s.Cookie(session.New("foobar@example.com"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.AddCookie(c)
+
+			_, err = a.Authenticate(context.TODO(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+
+		t.Run("access to Secure backend with expired Cookie", func(t *testing.T) {
+			t.Parallel()
+
+			clientCert := newClientCert(t, "foobar@example.com")
+			req := httptest.NewRequest(http.MethodGet, "http://topsecret.proxy.example.com/ok", nil)
+			req.TLS = &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{clientCert},
+			}
+			sess := session.New("foobar@example.com")
+			sess.IssuedAt = time.Now().Add(-2 * time.Minute)
+			c, err := s.Cookie(sess)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.AddCookie(c)
+
+			_, err = a.Authenticate(context.TODO(), req)
+			if err == nil {
+				t.Fatal("expected to occurred error but not")
+			}
+			if err != ErrSessionNotFound {
+				t.Fatalf("expected ErrSessionNotFound: %v", err)
 			}
 		})
 	})

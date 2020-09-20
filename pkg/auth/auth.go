@@ -115,7 +115,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 		return &database.User{}, nil
 	}
 
-	user, err := a.findUser(ctx, req)
+	user, sess, err := a.findUser(ctx, req)
 	if backend.AllowRootUser && err == ErrUserNotFound {
 		u, err := a.findRootUser(req)
 		if err != nil {
@@ -126,6 +126,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 		return nil, err
 	}
 
+	checkPermission := false
 	matched := backend.MatchList(req)
 	if len(matched) == 0 {
 		return nil, ErrNotAllowed
@@ -141,14 +142,29 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 		for _, b := range role.Bindings {
 			if b.FQDN == backend.FQDN {
 				if _, ok := matched[b.Permission]; ok {
-					return user, nil
+					checkPermission = true
+					break
 				}
 			}
 		}
 	}
+	if !checkPermission {
+		logger.Log.Debug("User not permitted", zap.String("user", user.Id), zap.Strings("roles", user.Roles))
+		return nil, ErrNotAllowed
+	}
 
-	logger.Log.Debug("User not permitted", zap.String("user", user.Id), zap.Strings("roles", user.Roles))
-	return nil, ErrNotAllowed
+	if backend.MaxSessionDuration != nil {
+		if sess == nil {
+			return nil, ErrSessionNotFound
+		}
+
+		if time.Now().After(sess.IssuedAt.Add(backend.MaxSessionDuration.Duration)) {
+			logger.Log.Debug("User authenticated but session is expired", zap.Time("issued_at", sess.IssuedAt))
+			return nil, ErrSessionNotFound
+		}
+	}
+
+	return user, nil
 }
 
 func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
@@ -190,13 +206,14 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	return nil, ErrNotAllowed
 }
 
-func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*database.User, error) {
+func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
 	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
 		logger.Log.Debug("Client Certificate authorization", logger.WithRequestId(ctx))
 		// Client Certificate Authorization
 		cert := req.TLS.PeerCertificates[0]
 		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
-			return nil, ErrInvalidCertificate
+			logger.Log.Debug("Expired certificate", logger.WithRequestId(ctx))
+			return nil, nil, ErrInvalidCertificate
 		}
 		_, err := cert.Verify(x509.VerifyOptions{
 			Roots:     a.Config.CertificateAuthority.CertPool,
@@ -204,53 +221,64 @@ func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*datab
 		})
 		if err != nil {
 			logger.Log.Debug("Failure verify certificate", zap.Error(err), logger.WithRequestId(ctx))
-			return nil, ErrInvalidCertificate
+			return nil, nil, ErrInvalidCertificate
 		}
 
 		u, err := a.userDatabase.Get(cert.Subject.CommonName)
 		if err != nil {
-			return nil, ErrUserNotFound
+			return nil, nil, ErrUserNotFound
 		}
 
 		revoked := a.revokedCert.Get()
 		for _, r := range revoked {
 			if r.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-				return nil, ErrInvalidCertificate
+				logger.Log.Debug("Revoked certificate", logger.WithRequestId(ctx))
+				return nil, nil, ErrInvalidCertificate
 			}
 		}
 
-		return u, nil
+		// Session by cookie is an optional
+		s, err := a.sessionStore.GetSession(req)
+		if err != nil {
+			return u, nil, nil
+		}
+
+		return u, s, nil
 	}
 
 	if v := req.Header.Get("Authorization"); v == "LP-TOKEN" {
 		token := req.Header.Get("X-LP-Token")
 		if token == "" {
-			return nil, ErrUserNotFound
+			return nil, nil, ErrUserNotFound
 		}
 		at, err := a.userDatabase.GetAccessToken(token)
 		if err != nil {
-			return nil, ErrUserNotFound
+			return nil, nil, ErrUserNotFound
 		}
 		user, err := a.userDatabase.Get(at.UserId)
 		if err != nil {
-			return nil, ErrUserNotFound
+			return nil, nil, ErrUserNotFound
 		}
-		return user, nil
+
+		return user, &session.Session{
+			Id:       at.UserId,
+			IssuedAt: at.CreatedAt,
+		}, nil
 	}
 
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
-		return nil, ErrSessionNotFound
+		return nil, nil, ErrSessionNotFound
 	}
 	u, err := a.userDatabase.Get(s.Id)
 	if err != nil {
-		return nil, ErrUserNotFound
+		return nil, nil, ErrUserNotFound
 	}
 
-	return u, nil
+	return u, s, nil
 }
 
 func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) {

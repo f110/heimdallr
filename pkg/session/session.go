@@ -21,8 +21,8 @@ var (
 )
 
 type Session struct {
-	Unique          string
-	Id              string
+	Unique          string // Unique is a random value
+	Id              string // Id is an identifier of user
 	IssuedAt        time.Time
 	Challenge       string
 	ChallengeMethod string

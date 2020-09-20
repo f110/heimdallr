@@ -5,6 +5,8 @@
     - rpc: dashboard-user
     - backend: test
       permission: all
+    - backend: topsecret
+      permission: all
     - backend: dashboard
       permission: all
     - backend: ssh

@@ -326,7 +326,7 @@ func (p *HttpProxy) director(req *http.Request) {
 		if _, ok := req.Header["User-Agent"]; !ok {
 			req.Header.Set("User-Agent", "")
 		}
-		logger.Log.Debug("Backend is ", zap.String("url", req.URL.String()))
+		logger.Log.Debug("Backend is ", zap.String("url", req.URL.String()), zap.String("name", backend.Name))
 	}
 }
 
