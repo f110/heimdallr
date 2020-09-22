@@ -64,6 +64,9 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister li
 		if v.Spec.SocketTimeout != nil {
 			b.SocketTimeout = &config.Duration{Duration: v.Spec.SocketTimeout.Duration}
 		}
+		if v.Spec.MaxSessionDuration != nil {
+			b.MaxSessionDuration = &config.Duration{Duration: v.Spec.MaxSessionDuration.Duration}
+		}
 		proxies = append(proxies, b)
 	}
 	sort.Slice(proxies, func(i, j int) bool {

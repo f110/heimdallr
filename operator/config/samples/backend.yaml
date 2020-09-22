@@ -54,11 +54,6 @@ metadata:
 spec:
   title: administrator
   description: Proxy administrator a.k.a GOD
-  bindings:
-    - backendName: dashboard
-      permission: all
-    - backendName: hello
-      permission: all
 ---
 apiVersion:  proxy.f110.dev/v1alpha1
 kind: RoleBinding

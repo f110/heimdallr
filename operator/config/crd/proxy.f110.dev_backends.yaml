@@ -50,6 +50,8 @@ spec:
                 type: boolean
               layer:
                 type: string
+              maxSessionDuration:
+                type: string
               permissions:
                 items:
                   properties:

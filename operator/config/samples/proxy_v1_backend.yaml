@@ -60,6 +60,7 @@ metadata:
 spec:
   upstream: tcp://localhost:4502
   socketTimeout: 1m
+  maxSessionDuration: 1m
   permissions:
     - name: all
       locations:

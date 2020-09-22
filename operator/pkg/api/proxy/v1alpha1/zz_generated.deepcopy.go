@@ -122,6 +122,11 @@ func (in *BackendSpec) DeepCopyInto(out *BackendSpec) {
 		*out = new(WebhookConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.MaxSessionDuration != nil {
+		in, out := &in.MaxSessionDuration, &out.MaxSessionDuration
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

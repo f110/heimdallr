@@ -148,7 +148,7 @@ type ServiceSelector struct {
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	FQDN                 string                `json:"fqdn,omitempty"` // If fqdn is set, ignore a layer-style naming.
+	FQDN                 string                `json:"fqdn,omitempty"` // If FQDN is set, ignore a layer-style naming.
 	Layer                string                `json:"layer,omitempty"`
 	Upstream             string                `json:"upstream,omitempty"`
 	SocketTimeout        *metav1.Duration      `json:"socketTimeout,omitempty"`
@@ -163,6 +163,7 @@ type BackendSpec struct {
 	AllowHttp            bool                  `json:"allowHttp,omitempty"`
 	Permissions          []Permission          `json:"permissions,omitempty"`
 	WebhookConfiguration *WebhookConfiguration `json:"webhookConfiguration,omitempty"`
+	MaxSessionDuration   *metav1.Duration      `json:"maxSessionDuration,omitempty"`
 }
 
 type WebhookConfiguration struct {
