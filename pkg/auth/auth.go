@@ -268,9 +268,11 @@ func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*datab
 
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
+		logger.Log.Debug("Failed get session", zap.Error(err))
 		return nil, nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
+		logger.Log.Debug("Got session but id is empty")
 		return nil, nil, ErrSessionNotFound
 	}
 	u, err := a.userDatabase.Get(s.Id)

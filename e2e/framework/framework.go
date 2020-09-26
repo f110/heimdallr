@@ -52,7 +52,7 @@ func New(t *testing.T) *Framework {
 
 	return &Framework{
 		Proxy:  p,
-		Agents: NewAgents(p.Domain, p.CA),
+		Agents: NewAgents(p.Domain, p.CA, p.sessionStore),
 		t:      t,
 		dryRun: dryRun,
 		child:  make([]*Scenario, 0),
@@ -459,6 +459,6 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 	m.t.Logf(format, args...)
 }
 
-func (m *Matcher) Equal(expected, actual interface{}) {
-	assert.Equal(m.t, expected, actual)
+func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
+	assert.Equal(m.t, expected, actual, msgAndArgs...)
 }
