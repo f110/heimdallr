@@ -93,6 +93,7 @@ type ProxyPhase string
 
 var (
 	ProxyPhaseCreating ProxyPhase = "Creating"
+	ProxyPhaseError    ProxyPhase = "Error"
 	ProxyPhaseRunning  ProxyPhase = "Running"
 	ProxyPhaseUpdating ProxyPhase = "Updating"
 )

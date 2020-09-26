@@ -340,6 +340,15 @@ func (c *ProxyController) syncProxy(key string) error {
 		if apierrors.IsNotFound(errors.Unwrap(err)) {
 			c.recorder.Eventf(lp.Object, corev1.EventTypeWarning, "InvalidSpec", "Failure pre-check %v", err)
 		}
+		newP := lp.Object.DeepCopy()
+		newP.Status.Phase = proxyv1alpha1.ProxyPhaseError
+		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
+			_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(context.TODO(), newP, metav1.UpdateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := c.prepare(lp); err != nil {
