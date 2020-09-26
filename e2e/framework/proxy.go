@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -261,8 +262,9 @@ func (p *Proxy) stop() error {
 	}()
 
 	select {
-	case <-time.After(30 * time.Second):
-		return xerrors.New("stopping process was timed out")
+	case <-time.After(10 * time.Second):
+		log.Print("stopping proxy process was timed out. We are going to send KILL signal to stop process forcibly.")
+		return p.proxyCmd.Process.Signal(os.Kill)
 	case <-done:
 	}
 

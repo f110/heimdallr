@@ -415,7 +415,7 @@ func (m *Matcher) Must(err error) {
 
 func (m *Matcher) LastResponse() *http.Response {
 	if m.lastResponse == nil {
-		m.Fail("want to get response but last response is nil")
+		m.Failf("want to get response but last response is nil. err: %v", m.lastHttpErr)
 	}
 
 	return m.lastResponse
