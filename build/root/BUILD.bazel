@@ -126,10 +126,10 @@ job(
     name = "test_all",
     all_revision = True,
     command = "test",
+    config_name = "ci",
     cpu_limit = "2000m",
     github_status = True,
     targets = "//...",
-    config_name = "ci",
 )
 
 load("//build/rules:release.bzl", "github_release")

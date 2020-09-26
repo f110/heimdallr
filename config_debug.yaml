@@ -42,7 +42,6 @@ datastore:
   url: etcd://embed
   data_dir: ./data
 frontend_proxy:
-  access_log: ./access.log
   github_webhook_secret_file: ./github_webhook_secret
   expect_ct: true
   session:

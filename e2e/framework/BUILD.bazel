@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "framework",
+    srcs = [
+        "agent.go",
+        "framework.go",
+        "idp.go",
+        "proxy.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/e2e/framework",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/cert",
+        "//pkg/config",
+        "//pkg/netutil",
+        "//vendor/github.com/gorilla/securecookie",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
+    ],
+)
+
+go_test(
+    name = "framework_test",
+    srcs = ["framework_test.go"],
+    embed = [":framework"],
+    deps = ["//vendor/github.com/stretchr/testify/require"],
+)

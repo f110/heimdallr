@@ -1,0 +1,11 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "scenario_test",
+    srcs = ["proxy_test.go"],
+    tags = ["e2e"],
+    deps = [
+        "//e2e/framework",
+        "//pkg/config",
+    ],
+)
