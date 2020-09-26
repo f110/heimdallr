@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -296,7 +297,19 @@ func (p *Proxy) waitForStart() error {
 }
 
 func (p *Proxy) setup(dir string) error {
-	c, privateKey, err := cert.GenerateServerCertificate(p.caCert, p.caPrivateKey, []string{"e2e.f110.dev", "*.e2e.f110.dev"})
+	s := strings.SplitN(p.Domain, ":", 2)
+	hosts := []string{s[0]}
+	for _, b := range p.backends {
+		if b.FQDN != "" {
+			hosts = append(hosts, b.FQDN)
+			continue
+		}
+		if b.Name != "" {
+			hosts = append(hosts, fmt.Sprintf("%s.%s", b.Name, s[0]))
+			continue
+		}
+	}
+	c, privateKey, err := cert.GenerateServerCertificate(p.caCert, p.caPrivateKey, hosts)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
