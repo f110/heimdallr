@@ -48,6 +48,9 @@ func TestProxy(t *testing.T) {
 
 				s.It("should redirect to IdP", func(m *framework.Matcher) {
 					m.Equal(http.StatusSeeOther, m.LastResponse().StatusCode)
+					u, err := m.LastResponse().Location()
+					m.NoError(err)
+					m.Equal(fmt.Sprintf("https://test.%s/", f.Proxy.Domain), u.Query().Get("from"))
 				})
 			})
 
