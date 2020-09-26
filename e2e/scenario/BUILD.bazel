@@ -7,5 +7,6 @@ go_test(
     deps = [
         "//e2e/framework",
         "//pkg/config",
+        "//pkg/database",
     ],
 )
