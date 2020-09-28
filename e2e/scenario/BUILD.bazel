@@ -8,5 +8,6 @@ go_test(
         "//e2e/framework",
         "//pkg/config",
         "//pkg/database",
+        "//pkg/session",
     ],
 )

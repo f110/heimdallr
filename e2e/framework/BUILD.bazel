@@ -23,10 +23,12 @@ go_library(
         "//vendor/github.com/gorilla/securecookie",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
         "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/golang.org/x/oauth2/jws",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",
+        "//vendor/gopkg.in/square/go-jose.v2",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

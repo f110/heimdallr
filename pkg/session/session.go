@@ -62,9 +62,9 @@ func (s *SecureCookieStore) GetSession(req *http.Request) (*Session, error) {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	co := &Session{}
-	if err := s.s.Decode(c.Name, c.Value, co); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+	co, err := s.DecodeValue(c.Name, c.Value)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	if co.IssuedAt.Add(Expiration).Before(time.Now()) {
 		return nil, ErrSessionExpired
@@ -98,4 +98,12 @@ func (s *SecureCookieStore) Cookie(sess *Session) (*http.Cookie, error) {
 		Expires:  time.Now().Add(24 * time.Hour),
 		Secure:   true,
 	}, nil
+}
+
+func (s *SecureCookieStore) DecodeValue(name, value string) (*Session, error) {
+	co := &Session{}
+	if err := s.s.Decode(name, value, co); err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	return co, nil
 }

@@ -15,6 +15,7 @@ import (
 	"log"
 	mrand "math/rand"
 	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,8 +54,9 @@ func init() {
 }
 
 type Proxy struct {
-	Domain string
-	CA     *x509.Certificate
+	Domain     string
+	DomainHost string
+	CA         *x509.Certificate
 
 	sessionStore *session.SecureCookieStore
 
@@ -179,6 +181,7 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 
 	return &Proxy{
 		Domain:           fmt.Sprintf("e2e.f110.dev:%d", proxyPort),
+		DomainHost:       "e2e.f110.dev",
 		CA:               caCert,
 		sessionStore:     sessionStore,
 		t:                t,
@@ -193,6 +196,27 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 		dashboardPort:    dashboardPort,
 		internalToken:    string(internalToken),
 	}, nil
+}
+
+func (p *Proxy) URL(subdomain string, pathAnd ...string) string {
+	path := ""
+	if len(pathAnd) > 0 {
+		path = pathAnd[0]
+	}
+	if path == "" {
+		return fmt.Sprintf("https://%s.%s/", subdomain, p.Domain)
+	} else {
+		u := &url.URL{
+			Scheme: "https",
+			Path:   path,
+		}
+		if subdomain == "" {
+			u.Host = p.Domain
+		} else {
+			u.Host = subdomain + "." + p.Domain
+		}
+		return u.String()
+	}
 }
 
 func (p *Proxy) Backend(b *config.Backend) {

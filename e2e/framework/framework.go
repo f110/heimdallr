@@ -222,6 +222,7 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher)) {
 			done <- nil
 		}()
 
+		n.m.route = n.route
 		fn(n.m)
 	}()
 	select {
@@ -248,9 +249,10 @@ type Scenario struct {
 	afterAll    *hook
 	beforeEach  func(*Matcher)
 	afterEach   func(*Matcher)
-	subject     func(*Matcher)
+	subject     *hook
 	subjectDone bool
 	deferFunc   func()
+	m           *Matcher
 
 	t      *testing.T
 	parent *Scenario
@@ -266,6 +268,7 @@ func NewScenario(t *testing.T, parent *Scenario, name string, depth int, fn func
 		t:      t,
 		parent: parent,
 		child:  make([]children, 0),
+		m:      NewMatcher(t, route),
 	}
 }
 
@@ -282,6 +285,7 @@ func (f *Scenario) analyze() *node {
 		route:     f.route,
 		depth:     f.depth,
 		child:     child,
+		m:         f.m,
 		beforeAll: f.beforeAll,
 		afterAll:  f.afterAll,
 		deferFunc: f.deferFunc,
@@ -303,6 +307,11 @@ func (f *Scenario) Context(name string, fn func(s *Scenario)) {
 
 func (f *Scenario) It(name string, fn func(m *Matcher)) {
 	s := NewCase(f.t, f, name, f.depth+1, fn, f.beforeEach, f.afterEach, f.route+" "+name)
+	f.child = append(f.child, s)
+}
+
+func (f *Scenario) Step(name string, fn func(s *Scenario)) {
+	s := f.newChild(f.t, name, fn)
 	f.child = append(f.child, s)
 }
 
@@ -343,7 +352,7 @@ func (f *Scenario) Defer(fn func()) {
 }
 
 func (f *Scenario) Subject(fn func(m *Matcher)) {
-	f.subject = fn
+	f.subject = &hook{fn: fn}
 }
 
 type Case struct {
@@ -377,13 +386,13 @@ func NewCase(t *testing.T, s *Scenario, name string, depth int, fn func(m *Match
 func (c *Case) analyze() *node {
 	var s *hook
 	if c.s.subject != nil {
-		s = &hook{fn: c.s.subject}
+		s = c.s.subject
 	}
 	return &node{
 		name:       c.Name,
 		route:      c.route,
 		depth:      c.depth,
-		m:          NewMatcher(c.t, c),
+		m:          c.s.m,
 		subject:    s,
 		beforeEach: c.beforeEach,
 		afterEach:  c.afterEach,
@@ -403,8 +412,8 @@ type Matcher struct {
 	messages []string
 }
 
-func NewMatcher(t *testing.T, c *Case) *Matcher {
-	return &Matcher{t: t, route: c.route}
+func NewMatcher(t *testing.T, route string) *Matcher {
+	return &Matcher{t: t, route: route}
 }
 
 func (m *Matcher) Must(err error) {
@@ -413,12 +422,26 @@ func (m *Matcher) Must(err error) {
 	}
 }
 
-func (m *Matcher) LastResponse() *http.Response {
+type HttpResponse struct {
+	*http.Response
+}
+
+func (h *HttpResponse) FindCookie(name string) *http.Cookie {
+	for _, v := range h.Response.Cookies() {
+		if v.Name == name {
+			return v
+		}
+	}
+
+	return nil
+}
+
+func (m *Matcher) LastResponse() *HttpResponse {
 	if m.lastResponse == nil {
 		m.Failf("want to get response but last response is nil. err: %v", m.lastHttpErr)
 	}
 
-	return m.lastResponse
+	return &HttpResponse{Response: m.lastResponse}
 }
 
 func (m *Matcher) ResetConnection() {
@@ -461,4 +484,34 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 
 func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
 	assert.Equal(m.t, expected, actual, msgAndArgs...)
+}
+
+func (m *Matcher) True(value bool, msgAndArgs ...interface{}) {
+	assert.True(m.t, value, msgAndArgs...)
+}
+
+func (m *Matcher) False(value bool, msgAndArgs ...interface{}) {
+	assert.False(m.t, value, msgAndArgs...)
+}
+
+func (m *Matcher) Contains(s, contains interface{}, msgAndArgs ...interface{}) {
+	assert.Contains(m.t, s, contains, msgAndArgs)
+}
+
+func (m *Matcher) StatusCode(code int, msgAndArgs ...interface{}) {
+	assert.Equal(m.t, code, m.LastResponse().StatusCode, msgAndArgs...)
+}
+
+func (m *Matcher) NotNil(object interface{}, msg ...string) {
+	if object == nil {
+		m.Fail(msg...)
+	}
+}
+
+func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) {
+	assert.Empty(m.t, object, msgAndArgs...)
+}
+
+func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
+	assert.NotEmpty(m.t, object, msgAndArgs...)
 }

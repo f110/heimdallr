@@ -3,10 +3,14 @@ package framework
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/session"
 )
@@ -15,6 +19,9 @@ type Agents struct {
 	resolver     *resolver
 	tlsConfig    *tls.Config
 	sessionStore *session.SecureCookieStore
+
+	mu         sync.Mutex
+	agentCache map[string]*Agent
 }
 
 func NewAgents(domain string, ca *x509.Certificate, sessionStore *session.SecureCookieStore) *Agents {
@@ -30,6 +37,7 @@ func NewAgents(domain string, ca *x509.Certificate, sessionStore *session.Secure
 		tlsConfig: &tls.Config{
 			RootCAs: certPool,
 		},
+		agentCache: make(map[string]*Agent),
 	}
 }
 
@@ -82,13 +90,15 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type Agent struct {
-	resolver *resolver
-	client   *http.Client
+	client  *http.Client
+	cookies []*http.Cookie
+
+	lastResponse *http.Response
+	lastErr      error
 }
 
 func (a *Agents) Unauthorized() *Agent {
 	return &Agent{
-		resolver: a.resolver,
 		client: &http.Client{
 			CheckRedirect: func(_req *http.Request, _via []*http.Request) error {
 				return http.ErrUseLastResponse
@@ -119,7 +129,6 @@ func (a *Agents) Unauthorized() *Agent {
 func (a *Agents) Authorized(id string) *Agent {
 	sess := session.New(id)
 	return &Agent{
-		resolver: a.resolver,
 		client: &http.Client{
 			CheckRedirect: func(_req *http.Request, _via []*http.Request) error {
 				return http.ErrUseLastResponse
@@ -147,16 +156,132 @@ func (a *Agents) Authorized(id string) *Agent {
 	}
 }
 
+// User returns the agent for user.
+// This agent is not authorized initially.
+// If called by same id, then returns the same agent.
+// User is caching the agent, Authorized creates the agent by each call.
+func (a *Agents) User(id string) *Agent {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if v, ok := a.agentCache[id]; ok {
+		return v
+	}
+
+	newAgent := &Agent{
+		client: &http.Client{
+			CheckRedirect: func(_req *http.Request, _via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Transport: &transport{
+				resolver: a.resolver,
+				Transport: &http.Transport{
+					Proxy: http.ProxyFromEnvironment,
+					DialContext: (&net.Dialer{
+						Timeout:   30 * time.Second,
+						KeepAlive: 30 * time.Second,
+						DualStack: true,
+					}).DialContext,
+					ForceAttemptHTTP2:     true,
+					MaxIdleConns:          100,
+					IdleConnTimeout:       90 * time.Second,
+					TLSHandshakeTimeout:   10 * time.Second,
+					ExpectContinueTimeout: 1 * time.Second,
+					TLSClientConfig:       a.tlsConfig.Clone(),
+				},
+			},
+		},
+	}
+	a.agentCache[id] = newAgent
+	return newAgent
+}
+
+func (a *Agents) DecodeCookieValue(name, value string) (*session.Session, error) {
+	return a.sessionStore.DecodeValue(name, value)
+}
+
 func (a *Agent) Get(m *Matcher, u string) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		m.lastHttpErr = err
 		return
 	}
+	if len(a.cookies) > 0 {
+		for _, v := range a.cookies {
+			req.AddCookie(v)
+		}
+	}
 
 	res, err := a.client.Do(req)
 	m.lastResponse = res
 	m.lastHttpErr = err
 	m.done = true
-	return
+
+	a.lastResponse = res
+	a.lastErr = err
+}
+
+func (a *Agent) Post(m *Matcher, u, body string) {
+	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(body))
+	if err != nil {
+		m.lastHttpErr = err
+		return
+	}
+	if len(a.cookies) > 0 {
+		for _, v := range a.cookies {
+			req.AddCookie(v)
+		}
+	}
+
+	res, err := a.client.Do(req)
+	m.lastResponse = res
+	m.lastHttpErr = err
+	m.done = true
+
+	a.lastResponse = res
+	a.lastErr = err
+}
+
+func (a *Agent) FollowRedirect(m *Matcher) error {
+	if a.lastResponse == nil {
+		return xerrors.New("Agent does not have any response. Probably, test suite's bug.")
+	}
+	u, err := a.lastResponse.Location()
+	if err != nil {
+		m.lastResponse = nil
+		m.lastHttpErr = err
+		a.lastResponse = nil
+		a.lastErr = err
+		return err
+	}
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		m.lastResponse = nil
+		m.lastHttpErr = err
+		a.lastResponse = nil
+		a.lastErr = err
+		return err
+	}
+	if len(a.cookies) > 0 {
+		for _, v := range a.cookies {
+			req.AddCookie(v)
+		}
+	}
+
+	m.lastResponse, m.lastHttpErr = a.client.Do(req)
+	a.lastResponse = m.lastResponse
+	a.lastErr = m.lastHttpErr
+	if m.lastHttpErr != nil {
+		return m.lastHttpErr
+	}
+
+	return nil
+}
+
+func (a *Agent) ParseLastResponseBody(in interface{}) error {
+	return json.NewDecoder(a.lastResponse.Body).Decode(in)
+}
+
+func (a *Agent) SaveCookie() {
+	a.cookies = a.lastResponse.Cookies()
 }

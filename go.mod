@@ -46,6 +46,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
+	gopkg.in/square/go-jose.v2 v2.3.1
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver v0.19.0

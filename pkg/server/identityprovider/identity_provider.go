@@ -109,7 +109,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	}
 	unique, err := s.database.GetState(req.Context(), req.URL.Query().Get("state"))
 	if err != nil {
-		logger.Log.Debug("Could not get state", zap.Error(err))
+		logger.Log.Debug("Could not get state", zap.Error(err), zap.String("state", req.URL.Query().Get("state")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
