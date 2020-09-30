@@ -101,14 +101,10 @@ func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {
 
 func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1alpha1.Proxy, backend *proxyv1alpha1.Backend, secret []*corev1.Secret) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	buf := new(bytes.Buffer)
 	err = pem.Encode(buf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	p := &proxyv1alpha1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{

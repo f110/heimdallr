@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -207,9 +208,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
 			s, err := v.Create()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
 		}
 
@@ -217,9 +216,7 @@ func TestProxyController(t *testing.T) {
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
 
 		etcdC, err := f.client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		assert.Equal(t, p.Spec.EtcdVersion, etcdC.Spec.Version)
 	})
 
@@ -267,13 +264,9 @@ func TestProxyController(t *testing.T) {
 		f.RunExpectError(t, p, ErrRPCServerIsNotReady)
 
 		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(proxy.Namespace).Get(context.TODO(), proxy.ReverseProxyConfigName(), metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		assert.NotEmpty(t, updatedP.Status.CASecretName)
 		assert.NotEmpty(t, updatedP.Status.SigningPrivateKeySecretName)
@@ -331,16 +324,12 @@ func TestProxyController(t *testing.T) {
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
 			s, err := v.Create()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
 		}
 		f.client.Tracker().Add(p)
 		pcs, err := proxy.IdealRPCServer()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
 		registerFixtureFromProcess(f, pcs)
 
@@ -364,9 +353,7 @@ func TestProxyController(t *testing.T) {
 		f.Run(t, p)
 
 		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		assert.False(t, updatedP.Status.Ready)
 		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha1.ProxyPhaseRunning)
 
