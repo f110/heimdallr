@@ -83,8 +83,11 @@ func TestProxy(t *testing.T) {
 					agent.Post(m, authResponse.LoginURL, fmt.Sprintf(`{"id":"test@f110.dev","query":"%s"}`, authResponse.Query))
 				})
 
-				s.It("should success", func(m *framework.Matcher) {
+				s.It("should redirect to callback", func(m *framework.Matcher) {
 					m.StatusCode(http.StatusFound)
+					u, err := m.LastResponse().Location()
+					m.NoError(err)
+					m.Contains(u.String(), "auth/callback")
 				})
 			})
 
@@ -93,9 +96,10 @@ func TestProxy(t *testing.T) {
 					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
 				})
 
-				s.It("should success", func(m *framework.Matcher) {
+				s.It("should redirect to backend", func(m *framework.Matcher) {
 					m.StatusCode(http.StatusFound)
-					u, _ := m.LastResponse().Location()
+					u, err := m.LastResponse().Location()
+					m.NoError(err)
 					m.Equal(f.Proxy.URL("test"), u.String())
 				})
 			})
