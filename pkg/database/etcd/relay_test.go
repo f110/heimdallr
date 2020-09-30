@@ -94,13 +94,20 @@ func TestRelayLocator_Watch(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	started := make(chan struct{})
 	gotCh := make(chan *database.Relay)
 	goneCh := rl.Gone()
 	go func() {
+		close(started)
 		gone := <-goneCh
 		t.Logf("Got: %v", *gone)
 		gotCh <- gone
 	}()
+
+	// Wait for starting goroutine
+	select {
+	case <-started:
+	}
 
 	buf, err := yaml.Marshal(&database.Relay{Name: t.Name()})
 	if err != nil {
