@@ -36,8 +36,6 @@ go_test(
         "util_test.go",
     ],
     embed = [":etcd"],
-    shard_count = 1,
-    tags = ["exclusive"],
     deps = [
         "//pkg/cert",
         "//pkg/config",
