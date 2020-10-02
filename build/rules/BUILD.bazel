@@ -5,6 +5,9 @@ filegroup(
 )
 
 exports_files(
-    ["release.bash"],
+    [
+        "release.bash",
+        "e2e.bash",
+    ],
     visibility = ["//visibility:public"],
 )

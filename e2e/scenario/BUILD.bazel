@@ -4,6 +4,7 @@ go_test(
     name = "scenario_test",
     srcs = ["proxy_test.go"],
     tags = ["e2e"],
+    visibility = ["//visibility:public"],
     deps = [
         "//e2e/framework",
         "//pkg/config",

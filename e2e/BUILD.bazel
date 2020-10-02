@@ -1,0 +1,5 @@
+load("//build/rules:e2e.bzl", "heimdallr_e2e_test")
+
+heimdallr_e2e_test(
+    name = "e2e",
+)
