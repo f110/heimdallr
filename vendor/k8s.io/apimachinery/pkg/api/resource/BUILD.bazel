@@ -17,6 +17,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/gogo/protobuf/proto",
-        "//vendor/gopkg.in/inf.v0",
+        "//vendor/gopkg.in/inf.v0:inf_v0",
     ],
 )

@@ -13,6 +13,6 @@ go_library(
         "//vendor/github.com/golang/protobuf/proto",
         "//vendor/github.com/golang/protobuf/ptypes/any",
         "//vendor/github.com/googleapis/gnostic/compiler",
-        "//vendor/gopkg.in/yaml.v2",
+        "//vendor/gopkg.in/yaml.v2:yaml_v2",
     ],
 )

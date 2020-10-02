@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "go-jose.v2",
+    name = "go-jose_v2",
     srcs = [
         "asymmetric.go",
         "crypter.go",

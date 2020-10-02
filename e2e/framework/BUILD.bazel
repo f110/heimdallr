@@ -28,7 +28,7 @@ go_library(
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",
-        "//vendor/gopkg.in/square/go-jose.v2",
+        "//vendor/gopkg.in/square/go-jose.v2:go-jose_v2",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

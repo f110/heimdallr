@@ -14,6 +14,6 @@ go_library(
     deps = [
         "//vendor/github.com/pquerna/cachecontrol",
         "//vendor/golang.org/x/oauth2",
-        "//vendor/gopkg.in/square/go-jose.v2",
+        "//vendor/gopkg.in/square/go-jose.v2:go-jose_v2",
     ],
 )
