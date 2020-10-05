@@ -79,7 +79,7 @@ We've highly recommend to deploying to k8s by the operator.
 Deploy cert-manager
 -----------------------
 
-Basically, You're following `official guide <https://cert-manager.io/docs/installation/kubernetes/>`_ .
+You're following `official guide <https://cert-manager.io/docs/installation/kubernetes/>`_ .
 
 Deploy the operator
 ----------------------
@@ -89,7 +89,7 @@ We provide the manifest for the operator.
 .. code:: shell
 
     $ kubectl create namespace heimdallr
-    $ kubectl apply -f https://github.com/f110/heimdallr/releases/download/v0.8.1/all-in-one.yaml
+    $ kubectl apply -f https://github.com/f110/heimdallr/releases/download/v0.9.0/all-in-one.yaml
 
 Create Secret resource
 -------------------------
@@ -114,7 +114,7 @@ The operator automatically creates a related resources after you create Proxy re
       namespace: heimdallr
     spec:
       replicas: 3
-      version: v0.5.0
+      version: v0.9.0
       domain: x.f110.dev
       port: 443
       backendSelector:
