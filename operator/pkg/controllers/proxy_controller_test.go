@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
@@ -21,6 +22,7 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
+			UID:       uuid.NewUUID(),
 		},
 		Spec: proxyv1alpha1.ProxySpec{
 			Domain:      "test-proxy.f110.dev",
@@ -184,6 +186,44 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateEtcdCluster()
 
 		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+	})
+
+	t.Run("Remove ownerReference in Secret", func(t *testing.T) {
+		t.Parallel()
+
+		f := newProxyControllerTestRunner(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Status.CASecretName = p.Name + "-ca"
+		f.RegisterProxyFixture(p)
+		f.RegisterSecretFixture(clientSecret)
+
+		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:           p,
+			Clientset:      f.client,
+			ServiceLister:  f.c.serviceLister,
+			Backends:       backends,
+			Roles:          roles,
+			RpcPermissions: rpcPermissions,
+			RoleBindings:   roleBindings,
+		})
+		ec, _ := proxy.EtcdCluster()
+		f.RegisterEtcdClusterFixture(ec)
+		for _, v := range proxy.Secrets() {
+			s, err := v.Create()
+			proxy.ControlObject(s)
+
+			require.NoError(t, err)
+			f.RegisterSecretFixture(s)
+		}
+
+		f.ExpectUpdateProxyStatus()
+		f.ExpectUpdateSecret()
+		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+
+		caSecret, err := f.coreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.Len(t, caSecret.OwnerReferences, 0)
 	})
 
 	t.Run("Preparing phase when EtcdCluster is not ready", func(t *testing.T) {

@@ -550,7 +550,6 @@ func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 			caCertificateFilename: certBuf.Bytes(),
 		},
 	}
-	r.ControlObject(secret)
 
 	r.CASecret = secret
 	return secret, nil
@@ -579,7 +578,6 @@ func (r *HeimdallrProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 			privateKeyFilename: buf.Bytes(),
 		},
 	}
-	r.ControlObject(secret)
 
 	r.SigningPrivateKey = secret
 	return secret, nil
@@ -600,7 +598,6 @@ func (r *HeimdallrProxy) NewGithubSecret() (*corev1.Secret, error) {
 			githubWebhookSecretFilename: b,
 		},
 	}
-	r.ControlObject(secret)
 
 	r.GithubWebhookSecret = secret
 	return secret, nil
@@ -629,7 +626,6 @@ func (r *HeimdallrProxy) NewCookieSecret() (*corev1.Secret, error) {
 			cookieSecretFilename: buf.Bytes(),
 		},
 	}
-	r.ControlObject(secret)
 
 	r.CookieSecret = secret
 	return secret, nil
@@ -649,7 +645,6 @@ func (r *HeimdallrProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 			internalTokenFilename: b,
 		},
 	}
-	r.ControlObject(secret)
 
 	r.InternalTokenSecret = secret
 	return secret, nil

@@ -410,6 +410,10 @@ func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
 	secrets := lp.Secrets()
 	for _, secret := range secrets {
 		if secret.Known() {
+			if err := c.removeOwnerReferenceFromSecret(lp, secret.Name); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
 			continue
 		}
 
@@ -430,6 +434,37 @@ func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
 	}
 
 	if err := c.reconcileEtcdCluster(lp); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func (c *ProxyController) removeOwnerReferenceFromSecret(lp *HeimdallrProxy, secretName string) error {
+	if lp.Object.UID == "" {
+		return nil
+	}
+
+	s, err := c.secretLister.Secrets(lp.Namespace).Get(secretName)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	found := false
+	newRef := make([]metav1.OwnerReference, 0)
+	for _, v := range s.OwnerReferences {
+		if v.UID == lp.Object.UID {
+			found = true
+			continue
+		}
+
+		newRef = append(newRef, v)
+	}
+	if !found {
+		return nil
+	}
+	s.SetOwnerReferences(newRef)
+	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(context.TODO(), s, metav1.UpdateOptions{})
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 

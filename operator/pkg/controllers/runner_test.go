@@ -220,6 +220,12 @@ func (f *commonTestRunner) ExpectCreateCertificate() {
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
+func (f *commonTestRunner) ExpectUpdateSecret() {
+	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
 func (f *commonTestRunner) ExpectUpdateProxy() {
 	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha1.Proxy{})
 
@@ -262,7 +268,7 @@ func (f *commonTestRunner) ExpectUpdateEtcdClusterStatus() {
 func (f *commonTestRunner) ExpectUpdateConfigMap() {
 	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
 
-	f.actions = append(f.actions, f.expectActionWithCaller(action))
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) expectActionWithCaller(action core.Action) expectAction {
