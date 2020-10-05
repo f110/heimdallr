@@ -3,8 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_test(
     name = "scenario_test",
     srcs = ["proxy_test.go"],
-    tags = ["e2e"],
     visibility = ["//visibility:public"],
+    args = ["-e2e.binary=../../$(location //cmd/heimdallr-proxy:heimdallr-proxy)"],
+    data = ["//cmd/heimdallr-proxy"],
     deps = [
         "//e2e/framework",
         "//pkg/config",
