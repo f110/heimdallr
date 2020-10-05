@@ -26,8 +26,18 @@ var SystemUser = &User{
 	Type:  UserTypeServiceAccount,
 }
 
+type UserDatabaseOpt struct {
+	WithoutCache bool
+}
+
+type UserDatabaseOption func(*UserDatabaseOpt)
+
+func WithoutCache(opt *UserDatabaseOpt) {
+	opt.WithoutCache = true
+}
+
 type UserDatabase interface {
-	Get(id string) (*User, error)
+	Get(id string, opts ...UserDatabaseOption) (*User, error)
 	GetAll() ([]*User, error)
 	GetAllServiceAccount() ([]*User, error)
 	GetAccessToken(value string) (*AccessToken, error)

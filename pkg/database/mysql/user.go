@@ -30,7 +30,7 @@ func NewUserDatabase(dao *dao.Repository, systemUsers ...*database.User) *UserDa
 	return &UserDatabase{dao: dao, systemUsers: m}
 }
 
-func (u *UserDatabase) Get(id string) (*database.User, error) {
+func (u *UserDatabase) Get(id string, _ ...database.UserDatabaseOption) (*database.User, error) {
 	if v, ok := u.systemUsers[id]; ok {
 		return v, nil
 	}

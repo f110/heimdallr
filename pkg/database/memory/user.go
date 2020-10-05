@@ -37,7 +37,7 @@ func NewUserDatabase(systemUsers ...*database.User) *UserDatabase {
 	}
 }
 
-func (u *UserDatabase) Get(id string) (*database.User, error) {
+func (u *UserDatabase) Get(id string, _ ...database.UserDatabaseOption) (*database.User, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 

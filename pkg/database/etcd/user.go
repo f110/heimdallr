@@ -87,7 +87,29 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers .
 	return u, nil
 }
 
-func (d *UserDatabase) Get(id string) (*database.User, error) {
+func (d *UserDatabase) Get(id string, opts ...database.UserDatabaseOption) (*database.User, error) {
+	opt := &database.UserDatabaseOpt{}
+	for _, v := range opts {
+		v(opt)
+	}
+	if opt.WithoutCache {
+		if id == database.SystemUser.Id {
+			return database.SystemUser, nil
+		}
+		res, err := d.client.Get(context.Background(), d.key(id))
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		if res.Count == 0 {
+			return nil, database.ErrUserNotFound
+		}
+		user, err := database.UnmarshalUser(res.Kvs[0])
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return user, nil
+	}
+
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 

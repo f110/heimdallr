@@ -115,7 +115,7 @@ func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc
 }
 
 func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*rpc.ResponseUserAdd, error) {
-	u, err := s.userDatabase.Get(req.GetId())
+	u, err := s.userDatabase.Get(req.GetId(), database.WithoutCache)
 	if err != nil && err != database.ErrUserNotFound {
 		logger.Log.Info("Failure get user", zap.Error(err))
 		return nil, err
