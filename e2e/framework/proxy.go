@@ -305,7 +305,7 @@ func (p *Proxy) syncUsers() error {
 	}
 
 	for _, user := range users {
-		if user.Id == "system@f110.dev" {
+		if user.Id == database.SystemUser.Id {
 			continue
 		}
 		for _, r := range user.Roles {
