@@ -353,7 +353,7 @@ func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Proxy) {
 		t.Fatal(err)
 	}
 
-	syncErr := f.c.syncProxy(key)
+	syncErr := f.c.syncProxy(context.Background(), key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -367,7 +367,7 @@ func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha
 		t.Fatal(err)
 	}
 
-	syncErr := f.c.syncProxy(key)
+	syncErr := f.c.syncProxy(context.Background(), key)
 	f.actionMatcher()
 
 	IsError(t, syncErr, expectErr)

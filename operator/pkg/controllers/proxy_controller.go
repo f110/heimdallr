@@ -268,7 +268,7 @@ func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResour
 	}
 }
 
-func (c *ProxyController) syncProxy(key string) error {
+func (c *ProxyController) syncProxy(ctx context.Context, key string) error {
 	c.log.Debug("syncProxy", zap.String("key", key))
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -282,7 +282,7 @@ func (c *ProxyController) syncProxy(key string) error {
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha1.ProxyPhaseCreating
-		proxy, err = c.clientset.ProxyV1alpha1().Proxies(proxy.Namespace).UpdateStatus(context.TODO(), proxy, metav1.UpdateOptions{})
+		proxy, err = c.clientset.ProxyV1alpha1().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -351,7 +351,7 @@ func (c *ProxyController) syncProxy(key string) error {
 		newP := lp.Object.DeepCopy()
 		newP.Status.Phase = proxyv1alpha1.ProxyPhaseError
 		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-			_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(context.TODO(), newP, metav1.UpdateOptions{})
+			_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -359,7 +359,7 @@ func (c *ProxyController) syncProxy(key string) error {
 
 		return xerrors.Errorf(": %w", err)
 	}
-	if err := c.prepare(lp); err != nil {
+	if err := c.prepare(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -371,13 +371,13 @@ func (c *ProxyController) syncProxy(key string) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(context.TODO(), newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
 
-	rpcReady, err := c.reconcileRPCServer(lp)
+	rpcReady, err := c.reconcileRPCServer(ctx, lp)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -386,15 +386,15 @@ func (c *ProxyController) syncProxy(key string) error {
 		return xerrors.Errorf(": %w", WrapRetryError(ErrRPCServerIsNotReady))
 	}
 
-	if err := c.reconcileProxyProcess(lp); err != nil {
+	if err := c.reconcileProxyProcess(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := c.reconcileDashboard(lp); err != nil {
+	if err := c.reconcileDashboard(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := c.finishReconcile(lp); err != nil {
+	if err := c.finishReconcile(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -414,11 +414,11 @@ func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
 	return nil
 }
 
-func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
+func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error {
 	secrets := lp.Secrets()
 	for _, secret := range secrets {
 		if secret.Known() {
-			if err := c.removeOwnerReferenceFromSecret(lp, secret.Name); err != nil {
+			if err := c.removeOwnerReferenceFromSecret(ctx, lp, secret.Name); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 
@@ -432,7 +432,7 @@ func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
 				return xerrors.Errorf(": %w", err)
 			}
 
-			_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+			_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(ctx, secret, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -441,14 +441,14 @@ func (c *ProxyController) prepare(lp *HeimdallrProxy) error {
 		}
 	}
 
-	if err := c.reconcileEtcdCluster(lp); err != nil {
+	if err := c.reconcileEtcdCluster(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func (c *ProxyController) removeOwnerReferenceFromSecret(lp *HeimdallrProxy, secretName string) error {
+func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp *HeimdallrProxy, secretName string) error {
 	if lp.Object.UID == "" {
 		return nil
 	}
@@ -471,7 +471,7 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(lp *HeimdallrProxy, sec
 		return nil
 	}
 	s.SetOwnerReferences(newRef)
-	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(context.TODO(), s, metav1.UpdateOptions{})
+	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(ctx, s, metav1.UpdateOptions{})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -479,13 +479,13 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(lp *HeimdallrProxy, sec
 	return nil
 }
 
-func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
+func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *HeimdallrProxy) error {
 	newC, newPM := lp.EtcdCluster()
 
 	cluster, err := c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			cluster, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Create(context.TODO(), newC, metav1.CreateOptions{})
+			cluster, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Create(ctx, newC, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -505,7 +505,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 		podMonitor, err = c.pmLister.PodMonitors(lp.Namespace).Get(newPM.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Create(context.TODO(), newPM, metav1.CreateOptions{})
+				_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Create(ctx, newPM, metav1.CreateOptions{})
 				if err != nil {
 					return xerrors.Errorf(": %w", err)
 				}
@@ -518,7 +518,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 
 	if !reflect.DeepEqual(newC.Spec, cluster.Spec) {
 		cluster.Spec = newC.Spec
-		_, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Update(context.TODO(), cluster, metav1.UpdateOptions{})
+		_, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Update(ctx, cluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -528,7 +528,7 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 		if !reflect.DeepEqual(podMonitor.Labels, newPM.Labels) || !reflect.DeepEqual(podMonitor.Spec, newPM.Spec) {
 			podMonitor.Spec = newPM.Spec
 			podMonitor.Labels = newPM.Labels
-			_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Update(context.TODO(), podMonitor, metav1.UpdateOptions{})
+			_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Update(ctx, podMonitor, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -538,13 +538,13 @@ func (c *ProxyController) reconcileEtcdCluster(lp *HeimdallrProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileRPCServer(lp *HeimdallrProxy) (bool, error) {
+func (c *ProxyController) reconcileRPCServer(ctx context.Context, lp *HeimdallrProxy) (bool, error) {
 	objs, err := lp.IdealRPCServer()
 	if err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
 
-	if err := c.reconcileProcess(lp, objs); err != nil {
+	if err := c.reconcileProcess(ctx, lp, objs); err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
 	lp.RPCServer = objs
@@ -556,13 +556,13 @@ func (c *ProxyController) reconcileRPCServer(lp *HeimdallrProxy) (bool, error) {
 	return true, nil
 }
 
-func (c *ProxyController) reconcileDashboard(lp *HeimdallrProxy) error {
+func (c *ProxyController) reconcileDashboard(ctx context.Context, lp *HeimdallrProxy) error {
 	objs, err := lp.IdealDashboard()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	err = c.reconcileProcess(lp, objs)
+	err = c.reconcileProcess(ctx, lp, objs)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -571,7 +571,7 @@ func (c *ProxyController) reconcileDashboard(lp *HeimdallrProxy) error {
 	return nil
 }
 
-func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
+func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *HeimdallrProxy) error {
 	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -582,7 +582,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	err = c.reconcileProcess(lp, pcs)
+	err = c.reconcileProcess(ctx, lp, pcs)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -614,7 +614,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 					Url:       fmt.Sprintf("https://%s", hostname),
 				})
 
-				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(context.TODO(), updatedB, metav1.UpdateOptions{})
+				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -652,7 +652,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 			Hostname: hostname,
 		})
 		if !reflect.DeepEqual(updatedI.Status, ingress.Status) {
-			_, err = c.client.NetworkingV1().Ingresses(updatedI.Namespace).UpdateStatus(context.TODO(), updatedI, metav1.UpdateOptions{})
+			_, err = c.client.NetworkingV1().Ingresses(updatedI.Namespace).UpdateStatus(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -662,7 +662,7 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 	return nil
 }
 
-func (c *ProxyController) finishReconcile(lp *HeimdallrProxy) error {
+func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = c.isReady(lp)
 	newP.Status.Phase = proxyv1alpha1.ProxyPhaseRunning
@@ -673,7 +673,7 @@ func (c *ProxyController) finishReconcile(lp *HeimdallrProxy) error {
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(context.TODO(), newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -703,15 +703,15 @@ func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
 	return true
 }
 
-func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error {
+func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrProxy, p *process) error {
 	if p.Deployment != nil {
-		if err := c.createOrUpdateDeployment(lp, p.Deployment); err != nil {
+		if err := c.createOrUpdateDeployment(ctx, lp, p.Deployment); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
 
 	if p.PodDisruptionBudget != nil {
-		if err := c.createOrUpdatePodDisruptionBudget(lp, p.PodDisruptionBudget); err != nil {
+		if err := c.createOrUpdatePodDisruptionBudget(ctx, lp, p.PodDisruptionBudget); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -721,7 +721,7 @@ func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error
 			continue
 		}
 
-		if err := c.createOrUpdateService(lp, svc); err != nil {
+		if err := c.createOrUpdateService(ctx, lp, svc); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -731,13 +731,13 @@ func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error
 			continue
 		}
 
-		if err := c.createOrUpdateConfigMap(lp, v); err != nil {
+		if err := c.createOrUpdateConfigMap(ctx, lp, v); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
 
 	if p.Certificate != nil {
-		if err := c.createOrUpdateCertificate(lp, p.Certificate); err != nil {
+		if err := c.createOrUpdateCertificate(ctx, lp, p.Certificate); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -748,7 +748,7 @@ func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error
 				continue
 			}
 
-			if err := c.createOrUpdateServiceMonitor(lp, v); err != nil {
+			if err := c.createOrUpdateServiceMonitor(ctx, lp, v); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
@@ -757,12 +757,12 @@ func (c *ProxyController) reconcileProcess(lp *HeimdallrProxy, p *process) error
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateDeployment(lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
+func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
 	d, err := c.deploymentLister.Deployments(deployment.Namespace).Get(deployment.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
 
-		newD, err := c.client.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
+		newD, err := c.client.AppsV1().Deployments(deployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -776,7 +776,7 @@ func (c *ProxyController) createOrUpdateDeployment(lp *HeimdallrProxy, deploymen
 	newD := d.DeepCopy()
 	newD.Spec = deployment.Spec
 	if !reflect.DeepEqual(newD.Spec, d.Spec) {
-		_, err = c.client.AppsV1().Deployments(newD.Namespace).Update(context.TODO(), newD, metav1.UpdateOptions{})
+		_, err = c.client.AppsV1().Deployments(newD.Namespace).Update(ctx, newD, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -786,12 +786,12 @@ func (c *ProxyController) createOrUpdateDeployment(lp *HeimdallrProxy, deploymen
 	return nil
 }
 
-func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *HeimdallrProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
-	p, err := c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Get(context.TODO(), pdb.Name, metav1.GetOptions{})
+func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
+	p, err := c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(pdb)
 
-		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Create(context.TODO(), pdb, metav1.CreateOptions{})
+		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -804,7 +804,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *HeimdallrProxy, 
 	newPDB := p.DeepCopy()
 	newPDB.Spec = pdb.Spec
 	if !reflect.DeepEqual(newPDB.Spec, pdb.Spec) {
-		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(newPDB.Namespace).Update(context.TODO(), newPDB, metav1.UpdateOptions{})
+		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(newPDB.Namespace).Update(ctx, newPDB, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -813,12 +813,12 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(lp *HeimdallrProxy, 
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateService(lp *HeimdallrProxy, svc *corev1.Service) error {
+func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *HeimdallrProxy, svc *corev1.Service) error {
 	s, err := c.serviceLister.Services(svc.Namespace).Get(svc.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(svc)
 
-		_, err = c.client.CoreV1().Services(svc.Namespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+		_, err = c.client.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -834,7 +834,7 @@ func (c *ProxyController) createOrUpdateService(lp *HeimdallrProxy, svc *corev1.
 	newS.Spec.Type = svc.Spec.Type
 	newS.Spec.Ports = svc.Spec.Ports
 	if !reflect.DeepEqual(newS.Labels, s.Labels) || !reflect.DeepEqual(newS.Spec, s.Spec) {
-		_, err = c.client.CoreV1().Services(newS.Namespace).Update(context.TODO(), newS, metav1.UpdateOptions{})
+		_, err = c.client.CoreV1().Services(newS.Namespace).Update(ctx, newS, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -843,12 +843,12 @@ func (c *ProxyController) createOrUpdateService(lp *HeimdallrProxy, svc *corev1.
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
+func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
 	cm, err := c.configMapLister.ConfigMaps(configMap.Namespace).Get(configMap.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(configMap)
 
-		_, err = c.client.CoreV1().ConfigMaps(configMap.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+		_, err = c.client.CoreV1().ConfigMaps(configMap.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -863,7 +863,7 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap 
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
 		c.log.Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
-		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(context.TODO(), newCM, metav1.UpdateOptions{})
+		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(ctx, newCM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -872,14 +872,14 @@ func (c *ProxyController) createOrUpdateConfigMap(lp *HeimdallrProxy, configMap 
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runtime.Object) error {
+func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *HeimdallrProxy, obj runtime.Object) error {
 	switch certificate := obj.(type) {
 	case *certmanagerv1alpha2.Certificate:
-		crt, err := c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		crt, err := c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			_, err = c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -893,17 +893,17 @@ func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runt
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1alpha2().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			_, err = c.clientset.CertmanagerV1alpha2().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
 	case *certmanagerv1alpha3.Certificate:
-		crt, err := c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		crt, err := c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			_, err = c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -917,17 +917,17 @@ func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runt
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1alpha3().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			_, err = c.clientset.CertmanagerV1alpha3().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
 	case *certmanagerv1beta1.Certificate:
-		crt, err := c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		crt, err := c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			_, err = c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -941,17 +941,17 @@ func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runt
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1beta1().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			_, err = c.clientset.CertmanagerV1beta1().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
 	case *certmanagerv1.Certificate:
-		crt, err := c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Get(context.TODO(), certificate.Name, metav1.GetOptions{})
+		crt, err := c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Create(context.TODO(), certificate, metav1.CreateOptions{})
+			_, err = c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -965,7 +965,7 @@ func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runt
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1().Certificates(newCRT.Namespace).Update(context.TODO(), newCRT, metav1.UpdateOptions{})
+			_, err = c.clientset.CertmanagerV1().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -975,12 +975,12 @@ func (c *ProxyController) createOrUpdateCertificate(lp *HeimdallrProxy, obj runt
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateServiceMonitor(lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
-	sm, err := c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Get(context.TODO(), serviceMonitor.Name, metav1.GetOptions{})
+func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
+	sm, err := c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Get(ctx, serviceMonitor.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)
 
-		_, err = c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Create(context.TODO(), serviceMonitor, metav1.CreateOptions{})
+		_, err = c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Create(ctx, serviceMonitor, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -995,7 +995,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(lp *HeimdallrProxy, servi
 	newSM.Spec = serviceMonitor.Spec
 
 	if !reflect.DeepEqual(newSM.Spec, sm.Spec) || !reflect.DeepEqual(newSM.ObjectMeta, sm.ObjectMeta) {
-		_, err = c.clientset.MonitoringV1().ServiceMonitors(newSM.Namespace).Update(context.TODO(), newSM, metav1.UpdateOptions{})
+		_, err = c.clientset.MonitoringV1().ServiceMonitors(newSM.Namespace).Update(ctx, newSM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1045,7 +1045,9 @@ func (c *ProxyController) processNextItem() bool {
 	err := func(obj interface{}) error {
 		defer c.queue.Done(obj)
 
-		err := c.syncProxy(obj.(string))
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelFunc()
+		err := c.syncProxy(ctx, obj.(string))
 		if err != nil {
 			if errors.Is(err, &RetryError{}) {
 				c.log.Debug("Retrying", zap.Error(err))
