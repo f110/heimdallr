@@ -51,7 +51,7 @@ type Server struct {
 
 var _ server.ChildServer = &Server{}
 
-func NewServer() *Server {
+func New() *Server {
 	r := prometheus.NewRegistry()
 	r.MustRegister(NewCollector())
 	r.MustRegister(prometheus.NewGoCollector())

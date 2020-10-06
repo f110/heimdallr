@@ -354,9 +354,10 @@ func (m *mainProcess) startServer() {
 }
 
 func (m *mainProcess) startInternalApiServer() {
-	internalApi := internalapi.NewServer()
-	probe := internalapi.NewProbe(m.IsReady)
-	s := server.NewInternal(m.config, internalApi, probe)
+	internalApi := internalapi.New()
+	internalProbe := internalapi.NewProbe(m.IsReady)
+	internalProf := internalapi.NewProf()
+	s := server.NewInternal(m.config, internalApi, internalProbe, internalProf)
 	m.internalApi = s
 	if err := m.internalApi.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
