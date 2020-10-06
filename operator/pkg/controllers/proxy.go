@@ -1662,7 +1662,19 @@ func toConfigPermissions(in []proxyv1alpha1.Permission) []*config.Permission {
 	return permissions
 }
 
-func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector) (*corev1.Service, error) {
+func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector, namespace string) (*corev1.Service, error) {
+	if sel.Name != "" {
+		ns := sel.Namespace
+		if ns == "" {
+			ns = namespace
+		}
+		svc, err := lister.Services(ns).Get(sel.Name)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		return svc, nil
+	}
+
 	selector, err := metav1.LabelSelectorAsSelector(&sel.LabelSelector)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)

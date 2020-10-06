@@ -165,28 +165,6 @@ func (ic *IngressController) syncIngress(ctx context.Context, key string) error 
 		}
 
 		p := rule.HTTP.Paths[0]
-		svc, err := ic.serviceLister.Services(ingress.Namespace).Get(p.Backend.Service.Name)
-		if err != nil {
-			ic.log.Info("Could not find service", zap.String("namespace", ingress.Namespace), zap.String("name", p.Backend.Service.Name))
-			continue
-		}
-		var port int32 = 0
-		if p.Backend.Service.Port.Name != "" {
-			for _, v := range svc.Spec.Ports {
-				if v.Name == p.Backend.Service.Port.Name {
-					port = v.Port
-					break
-				}
-			}
-			if port == 0 {
-				ic.log.Warn("Could not find port by name", zap.String("port.name", p.Backend.Service.Port.Name))
-				continue
-			}
-		} else if p.Backend.Service.Port.Number > 0 {
-			port = p.Backend.Service.Port.Number
-		}
-
-		upstream := fmt.Sprintf("http://%s.%s.svc:%d", svc.Name, svc.Namespace, port)
 		backends = append(backends,
 			&proxyv1alpha1.Backend{
 				ObjectMeta: metav1.ObjectMeta{
@@ -200,7 +178,11 @@ func (ic *IngressController) syncIngress(ctx context.Context, key string) error 
 				Spec: proxyv1alpha1.BackendSpec{
 					FQDN:         rule.Host,
 					DisableAuthn: true,
-					Upstream:     upstream,
+					ServiceSelector: proxyv1alpha1.ServiceSelector{
+						Name:      p.Backend.Service.Name,
+						Namespace: ingress.Namespace,
+						Port:      p.Backend.Service.Port.Name,
+					},
 				},
 			},
 		)

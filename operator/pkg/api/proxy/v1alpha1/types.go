@@ -143,6 +143,7 @@ type ProxyList struct {
 type ServiceSelector struct {
 	metav1.LabelSelector `json:",inline"`
 	Namespace            string `json:"namespace,omitempty"`
+	Name                 string `json:"name,omitempty"`
 	Port                 string `json:"port,omitempty"`
 	Scheme               string `json:"scheme,omitempty"`
 }

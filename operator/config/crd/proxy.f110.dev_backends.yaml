@@ -126,6 +126,8 @@ spec:
                       is "In", and the values array contains only "value". The requirements
                       are ANDed.
                     type: object
+                  name:
+                    type: string
                   namespace:
                     type: string
                   port:

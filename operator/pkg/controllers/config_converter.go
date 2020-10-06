@@ -18,7 +18,7 @@ type ConfigConverter struct {
 func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
 	proxies := make([]*config.Backend, 0, len(backends))
 	for _, v := range backends {
-		service, err := findService(serviceLister, v.Spec.ServiceSelector)
+		service, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
