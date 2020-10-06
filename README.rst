@@ -140,6 +140,29 @@ The operator automatically creates a related resources after you create Proxy re
         keySecretRef:
           name: cookie-secret
 
+Ingress support
+-------------------
+
+The operator also supports Ingress and IngressClass. But very limited support yet.
+
+The operator will not create IngressClass automatically.
+If you want to integrate with Ingress, you have to create IngressClass by hand.
+
+.. code:: console
+
+    apiVersion: networking.k8s.io/v1
+    kind: IngressClass
+    metadata:
+      name: heimdallr
+      labels:
+        instance: proxy-sample
+    spec:
+      controller: heimdallr.f110.dev/ingress-controller
+
+``.spec.controller`` is constant value. Only accepts ``heimdallr.f110.dev/ingress-controller``.
+
+And ``.metadata.labels`` is a mandatory value. Because it will be inherited to ``Backend``.
+
 Build & Run
 =============
 
