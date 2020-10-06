@@ -596,10 +596,14 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 					return err
 				}
 
+				hostname := fmt.Sprintf("%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain)
+				if backend.Spec.FQDN != "" {
+					hostname = backend.Spec.FQDN
+				}
 				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
 					Name:      lp.Name,
 					Namespace: lp.Namespace,
-					Url:       fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain),
+					Url:       fmt.Sprintf("https://%s", hostname),
 				})
 
 				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(context.TODO(), updatedB, metav1.UpdateOptions{})
