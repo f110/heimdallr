@@ -465,7 +465,7 @@ func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster
 		t.Fatal(err)
 	}
 
-	syncErr := f.c.syncEtcdCluster(key)
+	syncErr := f.c.syncEtcdCluster(context.Background(), key)
 	f.actionMatcher()
 
 	if syncErr != nil {
