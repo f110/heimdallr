@@ -122,7 +122,7 @@ func (c *GitHubController) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (c *GitHubController) syncBackend(key string) error {
+func (c *GitHubController) syncBackend(ctx context.Context, key string) error {
 	c.log.Debug("syncBackend")
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -145,7 +145,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	if backend.DeletionTimestamp.IsZero() {
 		if !containsString(backend.Finalizers, githubControllerFinalizerName) {
 			backend.ObjectMeta.Finalizers = append(backend.ObjectMeta.Finalizers, githubControllerFinalizerName)
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(context.TODO(), backend, metav1.UpdateOptions{})
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
@@ -154,7 +154,7 @@ func (c *GitHubController) syncBackend(key string) error {
 
 	// Object has been deleted
 	if !backend.DeletionTimestamp.IsZero() {
-		return c.finalizeBackend(backend)
+		return c.finalizeBackend(ctx, backend)
 	}
 
 	ghClient, err := c.newGithubClient(backend)
@@ -174,7 +174,7 @@ func (c *GitHubController) syncBackend(key string) error {
 		}
 		owner, repo := s[0], s[1]
 
-		found, err := c.checkConfigured(ghClient, updatedB, owner, repo)
+		found, err := c.checkConfigured(ctx, ghClient, updatedB, owner, repo)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -182,7 +182,7 @@ func (c *GitHubController) syncBackend(key string) error {
 			continue
 		}
 
-		if err := c.setWebHook(ghClient, updatedB, owner, repo); err != nil {
+		if err := c.setWebHook(ctx, ghClient, updatedB, owner, repo); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -195,7 +195,7 @@ func (c *GitHubController) syncBackend(key string) error {
 			}
 
 			backend.Status = updatedB.Status
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(context.TODO(), backend, metav1.UpdateOptions{})
+			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
 			if err != nil {
 				c.log.Debug("Failed update backend", zap.Error(err))
 				return err
@@ -210,7 +210,7 @@ func (c *GitHubController) syncBackend(key string) error {
 	return nil
 }
 
-func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error {
+func (c *GitHubController) finalizeBackend(ctx context.Context, backend *proxyv1alpha1.Backend) error {
 	if len(backend.Status.WebhookConfigurations) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
@@ -221,7 +221,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 			updatedB := backend.DeepCopy()
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(context.TODO(), updatedB, metav1.UpdateOptions{})
+				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			}
 			return nil
@@ -246,7 +246,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 		owner, repo := s[0], s[1]
 
 		c.log.Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
-		_, err := ghClient.Repositories.DeleteHook(context.Background(), owner, repo, v.Id)
+		_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, v.Id)
 		if err != nil {
 			c.log.Debug("Failed delete hook", zap.Error(err))
 			webhookConfigurations = append(webhookConfigurations, v)
@@ -265,7 +265,7 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(context.TODO(), updatedB, metav1.UpdateOptions{})
+			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -276,8 +276,8 @@ func (c *GitHubController) finalizeBackend(backend *proxyv1alpha1.Backend) error
 	return nil
 }
 
-func (c *GitHubController) checkConfigured(client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) (bool, error) {
-	hooks, _, err := client.Repositories.ListHooks(context.Background(), owner, repo, &github.ListOptions{})
+func (c *GitHubController) checkConfigured(ctx context.Context, client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) (bool, error) {
+	hooks, _, err := client.Repositories.ListHooks(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
 		return false, xerrors.Errorf(": %w", err)
 	}
@@ -298,7 +298,7 @@ func (c *GitHubController) checkConfigured(client *github.Client, backend *proxy
 	return false, nil
 }
 
-func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) error {
+func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) error {
 	for _, v := range backend.Status.DeployedBy {
 		u, err := url.Parse(v.Url)
 		if err != nil {
@@ -337,7 +337,7 @@ func (c *GitHubController) setWebHook(client *github.Client, backend *proxyv1alp
 			},
 		}
 		c.log.Debug("Create new hook", zap.String("repo", owner+"/"+repo))
-		newHook, _, err = client.Repositories.CreateHook(context.Background(), owner, repo, newHook)
+		newHook, _, err = client.Repositories.CreateHook(ctx, owner, repo, newHook)
 		if err != nil {
 			c.log.Info("Failed create hook", zap.Error(err))
 			continue
@@ -398,7 +398,9 @@ func (c *GitHubController) processNextItem() bool {
 	err := func(obj interface{}) error {
 		defer c.queue.Done(obj)
 
-		err := c.syncBackend(obj.(string))
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelFunc()
+		err := c.syncBackend(ctx, obj.(string))
 		if err != nil {
 			if errors.Is(err, &RetryError{}) {
 				c.log.Debug("Retrying", zap.Error(err))

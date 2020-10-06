@@ -401,7 +401,7 @@ func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Backend)
 		t.Fatal(err)
 	}
 
-	syncErr := f.c.syncBackend(key)
+	syncErr := f.c.syncBackend(context.Background(), key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -415,7 +415,7 @@ func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alph
 		t.Fatal(err)
 	}
 
-	syncErr := f.c.syncBackend(key)
+	syncErr := f.c.syncBackend(context.Background(), key)
 	f.actionMatcher()
 
 	IsError(t, syncErr, expectErr)
