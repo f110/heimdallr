@@ -142,6 +142,8 @@ func main() {
 					os.Exit(1)
 				}
 
+				ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, kubeClient, proxyClient)
+
 				coreSharedInformerFactory.Start(ctx.Done())
 				sharedInformerFactory.Start(ctx.Done())
 
@@ -165,6 +167,13 @@ func main() {
 					defer wg.Done()
 
 					g.Run(ctx, 1)
+				}()
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					ic.Run(ctx, 1)
 				}()
 
 				wg.Wait()

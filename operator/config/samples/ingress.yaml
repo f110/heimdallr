@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: short-ingress
+spec:
+  ingressClassName: heimdallr
+  rules:
+    - host: short.f110.dev
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: hello
+                port:
+                  name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: short
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: short
+  ports:
+    - name: http
+      port: 8080
