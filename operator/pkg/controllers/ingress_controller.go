@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
@@ -172,6 +173,9 @@ func (ic *IngressController) syncIngress(ctx context.Context, key string) error 
 					Namespace: ingress.Namespace,
 					OwnerReferences: []metav1.OwnerReference{
 						*metav1.NewControllerRef(ingress, networkingv1.SchemeGroupVersion.WithKind("Ingress")),
+					},
+					Annotations: map[string]string{
+						proxy.AnnotationKeyIngressName: key,
 					},
 					Labels: ingClass.Labels,
 				},

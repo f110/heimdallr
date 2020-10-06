@@ -19,6 +19,7 @@ go_library(
     deps = [
         "//operator/pkg/api/etcd",
         "//operator/pkg/api/etcd/v1alpha1",
+        "//operator/pkg/api/proxy",
         "//operator/pkg/api/proxy/v1alpha1",
         "//operator/pkg/client/versioned",
         "//operator/pkg/client/versioned/scheme",

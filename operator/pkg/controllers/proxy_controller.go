@@ -30,12 +30,14 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	applisters "k8s.io/client-go/listers/apps/v1"
 	listers "k8s.io/client-go/listers/core/v1"
+	networkinglisters "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
@@ -65,6 +67,8 @@ type ProxyController struct {
 	configMapListerSynced  cache.InformerSynced
 	deploymentLister       applisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
+	ingressLister          networkinglisters.IngressLister
+	ingressListerSynced    cache.InformerSynced
 
 	sharedInformer            informers.SharedInformerFactory
 	coreSharedInformer        kubeinformers.SharedInformerFactory
@@ -112,6 +116,7 @@ func NewProxyController(
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 	configMapInformer := coreSharedInformerFactory.Core().V1().ConfigMaps()
 	deploymentInformer := coreSharedInformerFactory.Apps().V1().Deployments()
+	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
 
 	log := logger.Log.Named("proxy-controller")
 	eventBroadcaster := record.NewBroadcaster()
@@ -131,6 +136,8 @@ func NewProxyController(
 		configMapListerSynced:  configMapInformer.Informer().HasSynced,
 		deploymentLister:       deploymentInformer.Lister(),
 		deploymentListerSynced: deploymentInformer.Informer().HasSynced,
+		ingressLister:          ingressInformer.Lister(),
+		ingressListerSynced:    ingressInformer.Informer().HasSynced,
 		clientset:              proxyClient,
 		sharedInformer:         sharedInformerFactory,
 		coreSharedInformer:     coreSharedInformerFactory,
@@ -218,6 +225,7 @@ func (c *ProxyController) Run(ctx context.Context, workers int) {
 		c.secretListerSynced,
 		c.configMapListerSynced,
 		c.deploymentListerSynced,
+		c.ingressListerSynced,
 	) {
 		return
 	}
@@ -589,6 +597,10 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 			}
 		}
 
+		hostname := fmt.Sprintf("%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain)
+		if backend.Spec.FQDN != "" {
+			hostname = backend.Spec.FQDN
+		}
 		if !found && !backend.CreationTimestamp.IsZero() {
 			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				updatedB, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
@@ -596,10 +608,6 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 					return err
 				}
 
-				hostname := fmt.Sprintf("%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain)
-				if backend.Spec.FQDN != "" {
-					hostname = backend.Spec.FQDN
-				}
 				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
 					Name:      lp.Name,
 					Namespace: lp.Namespace,
@@ -609,6 +617,42 @@ func (c *ProxyController) reconcileProxyProcess(lp *HeimdallrProxy) error {
 				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(context.TODO(), updatedB, metav1.UpdateOptions{})
 				return err
 			})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+
+		if _, ok := backend.Annotations[proxy.AnnotationKeyIngressName]; !ok {
+			continue
+		}
+		ns, name, err := cache.SplitMetaNamespaceKey(backend.Annotations[proxy.AnnotationKeyIngressName])
+		if err != nil {
+			c.log.Warn("Could not parse annotation key which contains Ingress name", zap.Error(err))
+			continue
+		}
+		ingress, err := c.ingressLister.Ingresses(ns).Get(name)
+		if err != nil && apierrors.IsNotFound(err) {
+			c.log.Info("Skip updating Ingress")
+			continue
+		} else if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		updatedI := ingress.DeepCopy()
+		found = false
+		for _, v := range ingress.Status.LoadBalancer.Ingress {
+			if v.Hostname == hostname {
+				found = true
+			}
+		}
+		if found {
+			continue
+		}
+		updatedI.Status.LoadBalancer.Ingress = append(updatedI.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{
+			Hostname: hostname,
+		})
+		if !reflect.DeepEqual(updatedI.Status, ingress.Status) {
+			_, err = c.client.NetworkingV1().Ingresses(updatedI.Namespace).UpdateStatus(context.TODO(), updatedI, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
