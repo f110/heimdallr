@@ -36,6 +36,7 @@ func main() {
 	leaseLockNamespace := ""
 	clusterDomain := ""
 	probeAddr := ""
+	workers := 1
 	logLevel := "info"
 	logEncoding := "console"
 	dev := false
@@ -48,6 +49,7 @@ func main() {
 	fs.StringVar(&leaseLockNamespace, "lease-lock-namespace", "", "the lease lock resource namespace")
 	fs.StringVar(&clusterDomain, "cluster-domain", clusterDomain, "Cluster domain")
 	fs.StringVar(&probeAddr, "probe-addr", ":6000", "Listen addr that provides readiness probe")
+	fs.IntVar(&workers, "workers", workers, "The number of workers on each controller")
 	fs.BoolVar(&dev, "dev", dev, "development mode")
 	fs.StringVar(&logLevel, "log-level", logLevel, "Log level")
 	fs.StringVar(&logEncoding, "log-encoding", logEncoding, "Log encoding")
@@ -152,28 +154,28 @@ func main() {
 				go func() {
 					defer wg.Done()
 
-					e.Run(ctx, 1)
+					e.Run(ctx, workers)
 				}()
 
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 
-					c.Run(ctx, 1)
+					c.Run(ctx, workers)
 				}()
 
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 
-					g.Run(ctx, 1)
+					g.Run(ctx, workers)
 				}()
 
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 
-					ic.Run(ctx, 1)
+					ic.Run(ctx, workers)
 				}()
 
 				wg.Wait()
