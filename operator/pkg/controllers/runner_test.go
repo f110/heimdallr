@@ -19,6 +19,7 @@ import (
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -166,6 +167,16 @@ func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
 	}
 }
 
+func (f *commonTestRunner) RegisterIngressFixture(i *networkingv1.Ingress) {
+	f.coreClient.Tracker().Add(i)
+	f.coreSharedInformerFactory.Networking().V1().Ingresses().Informer().GetIndexer().Add(i)
+}
+
+func (f *commonTestRunner) RegisterIngressClassFixture(ic *networkingv1.IngressClass) {
+	f.coreClient.Tracker().Add(ic)
+	f.coreSharedInformerFactory.Networking().V1().IngressClasses().Informer().GetIndexer().Add(ic)
+}
+
 func (f *commonTestRunner) ExpectCreateSecret() {
 	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
 
@@ -214,6 +225,12 @@ func (f *commonTestRunner) ExpectCreateEtcdCluster() {
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
+func (f *commonTestRunner) ExpectCreateBackend() {
+	action := core.NewCreateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
+
+	f.actions = append(f.actions, f.expectActionWithCaller(action))
+}
+
 func (f *commonTestRunner) ExpectCreateCertificate() {
 	action := core.NewCreateAction(certmanagerv1alpha2.SchemeGroupVersion.WithResource("certificates"), "", &certmanagerv1alpha2.Certificate{})
 
@@ -222,6 +239,12 @@ func (f *commonTestRunner) ExpectCreateCertificate() {
 
 func (f *commonTestRunner) ExpectUpdateSecret() {
 	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectUpdateIngress() {
+	action := core.NewUpdateAction(networkingv1.SchemeGroupVersion.WithResource("ingresses"), "", &networkingv1.Ingress{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -559,6 +582,39 @@ func (m *MockMaintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {
 
 func (m *MockMaintenance) MoveLeader(ctx context.Context, transfereeID uint64) (*clientv3.MoveLeaderResponse, error) {
 	panic("implement me")
+}
+
+type ingressControllerTestRunner struct {
+	*commonTestRunner
+	t *testing.T
+
+	c *IngressController
+}
+
+func newIngressControllerTestRunner(t *testing.T) *ingressControllerTestRunner {
+	f := &ingressControllerTestRunner{
+		commonTestRunner: newCommonTestRunner(t),
+		t:                t,
+	}
+
+	c := NewIngressController(f.coreSharedInformerFactory, f.sharedInformerFactory, f.coreClient, f.client)
+	f.c = c
+
+	return f
+}
+
+func (f *ingressControllerTestRunner) Run(t *testing.T, ing *networkingv1.Ingress) {
+	key, err := cache.MetaNamespaceKeyFunc(ing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	syncErr := f.c.syncIngress(context.Background(), key)
+	f.actionMatcher()
+
+	if syncErr != nil {
+		t.Errorf("Expect to not occurred error: %+v", syncErr)
+	}
 }
 
 func IsError(t *testing.T, actual, expect error) {

@@ -99,6 +99,7 @@ go_test(
     srcs = [
         "etcd_controller_test.go",
         "github_controller_test.go",
+        "ingress_controller_test.go",
         "main_test.go",
         "proxy_controller_test.go",
         "runner_test.go",
@@ -123,6 +124,7 @@ go_test(
         "//vendor/gopkg.in/yaml.v2:yaml_v2",
         "//vendor/k8s.io/api/apps/v1:apps",
         "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/api/networking/v1:networking",
         "//vendor/k8s.io/api/policy/v1beta1",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/util/uuid",
