@@ -18,6 +18,7 @@ func cli(args []string) error {
 	heimctl.Cluster(rootCmd)
 	heimctl.TestServer(rootCmd)
 	heimctl.Util(rootCmd)
+	heimctl.Generate(rootCmd)
 
 	rootCmd.SetArgs(args)
 	return rootCmd.Execute()
