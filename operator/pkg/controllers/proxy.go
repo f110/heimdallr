@@ -1135,11 +1135,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 			Selector:       r.LabelsForMain(),
 			LoadBalancerIP: r.Spec.LoadBalancerIP,
 			Ports: []corev1.ServicePort{
-				{
-					Name:       "https",
-					Port:       port,
-					TargetPort: intstr.FromInt(proxyPort),
-				},
+				tcpServicePort("https", int(port), proxyPort),
 			},
 			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
 		},
@@ -1161,11 +1157,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: r.LabelsForMain(),
 			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       internalApiPort,
-					TargetPort: intstr.FromInt(internalApiPort),
-				},
+				tcpServicePort("http", internalApiPort, internalApiPort),
 			},
 		},
 	}
@@ -1335,11 +1327,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 			Selector: r.LabelsForDashboard(),
 			Type:     corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       dashboardPort,
-					TargetPort: intstr.FromInt(dashboardPort),
-				},
+				tcpServicePort("http", dashboardPort, dashboardPort),
 			},
 		},
 	}
@@ -1513,11 +1501,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 			Selector: r.LabelsForRPCServer(),
 			Type:     corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
-				{
-					Name:       "h2",
-					Port:       rpcServerPort,
-					TargetPort: intstr.FromInt(rpcServerPort),
-				},
+				tcpServicePort("h2", rpcServerPort, rpcServerPort),
 			},
 		},
 	}
@@ -1529,10 +1513,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 
 	var rpcMetrics *monitoringv1.ServiceMonitor
 	if r.Spec.Monitor.PrometheusMonitoring {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name: "metrics",
-			Port: int32(rpcMetricsServerPort),
-		})
+		svc.Spec.Ports = append(svc.Spec.Ports, tcpServicePort("metrics", rpcMetricsServerPort, rpcMetricsServerPort))
 
 		rpcMetrics = &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1689,4 +1670,13 @@ func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector
 	}
 
 	return services[0], nil
+}
+
+func tcpServicePort(name string, port, targetPort int) corev1.ServicePort {
+	return corev1.ServicePort{
+		Name:       name,
+		Protocol:   corev1.ProtocolTCP,
+		Port:       int32(port),
+		TargetPort: intstr.FromInt(targetPort),
+	}
 }

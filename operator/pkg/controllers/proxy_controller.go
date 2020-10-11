@@ -833,7 +833,7 @@ func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *Heimdal
 	newS.Spec.Selector = svc.Spec.Selector
 	newS.Spec.Type = svc.Spec.Type
 	newS.Spec.Ports = svc.Spec.Ports
-	if !reflect.DeepEqual(newS.Labels, s.Labels) || !reflect.DeepEqual(newS.Spec, s.Spec) {
+	if !c.equalService(newS, s) {
 		_, err = c.client.CoreV1().Services(newS.Namespace).Update(ctx, newS, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -1347,4 +1347,46 @@ func (c *ProxyController) deleteRpcPermission(obj interface{}) {
 	if err := c.enqueueSubordinateResource(&rpcPermission.ObjectMeta); err != nil {
 		return
 	}
+}
+
+func (c *ProxyController) equalService(left, right *corev1.Service) bool {
+	return reflect.DeepEqual(left.Labels, right.Labels) &&
+		reflect.DeepEqual(left.Spec.Selector, right.Spec.Selector) &&
+		left.Spec.Type == right.Spec.Type &&
+		c.equalServicePort(left.Spec.Ports, right.Spec.Ports)
+}
+
+func (c *ProxyController) equalServicePort(left, right []corev1.ServicePort) bool {
+	l := servicePortMap(left)
+	r := servicePortMap(right)
+	if len(l) != len(r) {
+		return false
+	}
+	for key := range l {
+		if _, ok := r[key]; !ok {
+			return false
+		}
+		if l[key].Protocol != r[key].Protocol {
+			return false
+		}
+		leftTP := l[key].TargetPort
+		rightTP := r[key].TargetPort
+		if leftTP.IntValue() != rightTP.IntValue() {
+			return false
+		}
+		if l[key].Port != r[key].Port {
+			return false
+		}
+	}
+
+	return true
+}
+
+func servicePortMap(ports []corev1.ServicePort) map[string]corev1.ServicePort {
+	result := make(map[string]corev1.ServicePort)
+	for _, v := range ports {
+		result[v.Name] = v
+	}
+
+	return result
 }
