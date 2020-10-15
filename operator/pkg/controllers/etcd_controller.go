@@ -665,7 +665,6 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) error {
 	ec.log.Debug("Delete the member", zap.String("pod.name", pod.Name))
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
 	eClient, forwarder, err := ec.etcdClient(cluster)
 	if forwarder != nil {
 		defer forwarder.Close()
@@ -678,36 +677,41 @@ func (ec *EtcdController) deleteMember(cluster *EtcdCluster, pod *corev1.Pod) er
 			eClient.Close()
 		}
 	}()
-
-	mList, err := eClient.MemberList(ctx)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	var member *etcdserverpb.Member
-	for _, v := range mList.Members {
-		ec.log.Debug("Found the member", zap.String("name", v.Name), zap.Strings("peerURLs", v.PeerURLs))
-		if len(v.PeerURLs) == 0 {
-			ec.log.Warn("The member hasn't any peer url", zap.Uint64("id", v.ID), zap.String("name", v.Name))
-			continue
-		}
-		if strings.HasPrefix(v.PeerURLs[0], "https://"+strings.Replace(pod.Status.PodIP, ".", "-", -1)) {
-			member = v
-		}
-	}
-
-	if member != nil {
-		_, err = eClient.MemberRemove(ctx, member.ID)
+	err = eClient.WithTimeout(context.Background(), 3*time.Second, func(ctx context.Context) error {
+		mList, err := eClient.MemberList(ctx)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		ec.log.Debug("Remove the member from cluster", zap.String("name", member.Name), zap.Strings("peerURLs", member.PeerURLs))
-	}
 
-	if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
+		var member *etcdserverpb.Member
+		for _, v := range mList.Members {
+			ec.log.Debug("Found the member", zap.String("name", v.Name), zap.Strings("peerURLs", v.PeerURLs))
+			if len(v.PeerURLs) == 0 {
+				ec.log.Warn("The member hasn't any peer url", zap.Uint64("id", v.ID), zap.String("name", v.Name))
+				continue
+			}
+			if strings.HasPrefix(v.PeerURLs[0], "https://"+strings.Replace(pod.Status.PodIP, ".", "-", -1)) {
+				member = v
+			}
+		}
+
+		if member != nil {
+			_, err = eClient.MemberRemove(ctx, member.ID)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			ec.log.Debug("Remove the member from cluster", zap.String("name", member.Name), zap.Strings("peerURLs", member.PeerURLs))
+		}
+
+		if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	cancelFunc()
 
 	if forwarder != nil {
 		forwarder.Close()
@@ -1288,7 +1292,18 @@ func (ec *EtcdController) minioClient(spec *etcdv1alpha1.BackupStorageMinIOSpec)
 	return mc, forwarder, nil
 }
 
-func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *portforward.PortForwarder, error) {
+type etcdv3Client struct {
+	*clientv3.Client
+}
+
+func (c *etcdv3Client) WithTimeout(ctx context.Context, timeout time.Duration, f func(ctx context.Context) error) error {
+	eCtx, cancelFunc := context.WithTimeout(ctx, timeout)
+	defer cancelFunc()
+
+	return f(eCtx)
+}
+
+func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*etcdv3Client, *portforward.PortForwarder, error) {
 	var endpoints []string
 	var forwarder *portforward.PortForwarder
 	if ec.runOutsideCluster {
@@ -1313,7 +1328,7 @@ func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*clientv3.Client, *p
 		return nil, forwarder, xerrors.Errorf(": %w", err)
 	}
 
-	return client, forwarder, nil
+	return &etcdv3Client{Client: client}, forwarder, nil
 }
 
 func (ec *EtcdController) portForward(pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
