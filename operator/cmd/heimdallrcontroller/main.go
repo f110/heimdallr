@@ -116,7 +116,7 @@ func main() {
 				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
 
-				c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
+				c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
 				if err != nil {
 					logger.Log.Error("Failed start proxy controller", zap.Error(err))
 					os.Exit(1)

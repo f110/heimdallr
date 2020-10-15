@@ -185,7 +185,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.ExpectCreateEtcdCluster()
 
-		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+		f.Run(t, p)
 	})
 
 	t.Run("Remove ownerReference in Secret", func(t *testing.T) {
@@ -219,7 +219,7 @@ func TestProxyController(t *testing.T) {
 
 		f.ExpectUpdateProxyStatus()
 		f.ExpectUpdateSecret()
-		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+		f.Run(t, p)
 
 		caSecret, err := f.coreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -253,7 +253,7 @@ func TestProxyController(t *testing.T) {
 		}
 
 		f.ExpectUpdateProxyStatus()
-		f.RunExpectError(t, p, ErrEtcdClusterIsNotReady)
+		f.Run(t, p)
 
 		etcdC, err := f.client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -301,7 +301,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateConfigMap()
 		f.ExpectCreateConfigMap()
 		f.ExpectUpdateProxyStatus()
-		f.RunExpectError(t, p, ErrRPCServerIsNotReady)
+		f.Run(t, p)
 
 		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		require.NoError(t, err)

@@ -2,39 +2,29 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/client-go/util/workqueue"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
-	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
-	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (
@@ -42,10 +32,11 @@ const (
 )
 
 type GitHubController struct {
-	schema.GroupVersionKind
+	*Controller
 
 	proxyLister         proxyListers.ProxyLister
 	proxyListerSynced   cache.InformerSynced
+	backendInformer     cache.SharedIndexInformer
 	backendLister       proxyListers.BackendLister
 	backendListerSynced cache.InformerSynced
 	secretLister        listers.SecretLister
@@ -53,10 +44,6 @@ type GitHubController struct {
 
 	client     clientset.Interface
 	coreClient kubernetes.Interface
-
-	queue    workqueue.RateLimitingInterface
-	recorder record.EventRecorder
-	log      *zap.Logger
 
 	transport http.RoundTripper
 }
@@ -73,84 +60,96 @@ func NewGitHubController(
 
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
-	log := logger.Log.Named("github-controller")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
-		log.Info(fmt.Sprintf(format, args...))
-	})
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "github-controller"})
-
 	c := &GitHubController{
 		client:              client,
 		proxyLister:         proxyInformer.Lister(),
 		proxyListerSynced:   proxyInformer.Informer().HasSynced,
+		backendInformer:     backendInformer.Informer(),
 		backendLister:       backendInformer.Lister(),
 		backendListerSynced: backendInformer.Informer().HasSynced,
 		secretLister:        secretInformer.Lister(),
 		secretListerSynced:  secretInformer.Informer().HasSynced,
-		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "backend"),
-		recorder:            recorder,
 		transport:           transport,
-		log:                 log,
 	}
 
-	backendInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addBackend,
-		UpdateFunc: c.updateBackend,
-		DeleteFunc: c.deleteBackend,
-	})
-
+	c.Controller = NewController(c, coreClient)
 	return c, nil
 }
 
-func (c *GitHubController) Run(ctx context.Context, workers int) {
-	defer c.queue.ShutDown()
-
-	if !cache.WaitForNamedCacheSync(
-		c.Kind, ctx.Done(),
-		c.proxyListerSynced,
-		c.backendListerSynced,
-		c.secretListerSynced) {
-		return
-	}
-
-	for i := 0; i < workers; i++ {
-		go wait.Until(c.worker, time.Second, ctx.Done())
-	}
-
-	<-ctx.Done()
+func (c *GitHubController) Name() string {
+	return "github-controller"
 }
 
-func (c *GitHubController) syncBackend(ctx context.Context, key string) error {
-	c.log.Debug("syncBackend")
+func (c *GitHubController) Finalizers() []string {
+	return []string{githubControllerFinalizerName}
+}
+
+func (c *GitHubController) ListerSynced() []cache.InformerSynced {
+	return []cache.InformerSynced{
+		c.proxyListerSynced,
+		c.backendListerSynced,
+		c.secretListerSynced,
+	}
+}
+
+func (c *GitHubController) EventSources() []cache.SharedIndexInformer {
+	return []cache.SharedIndexInformer{
+		c.backendInformer,
+	}
+}
+
+func (c *GitHubController) ConvertToKeys() ObjectToKeyConverter {
+	return func(obj interface{}) (keys []string, err error) {
+		switch obj.(type) {
+		case *proxyv1alpha1.Backend:
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
+				return nil, err
+			}
+			return []string{key}, nil
+		default:
+			c.Log().Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			return nil, nil
+		}
+	}
+}
+
+func (c *GitHubController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	backend, err := c.backendLister.Backends(namespace).Get(name)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
+
 	if backend.Spec.Webhook != "github" {
-		c.log.Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
-		return nil
+		c.Log().Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
+		return nil, nil
 	}
 	if backend.Spec.WebhookConfiguration == nil {
-		c.log.Debug("not set WebhookConfiguration")
+		c.Log().Debug("not set WebhookConfiguration")
+		return nil, nil
+	}
+
+	return backend, nil
+}
+
+func (c *GitHubController) UpdateObject(ctx context.Context, obj interface{}) error {
+	backend, ok := obj.(*proxyv1alpha1.Backend)
+	if !ok {
 		return nil
 	}
 
-	if backend.DeletionTimestamp.IsZero() {
-		if !containsString(backend.Finalizers, githubControllerFinalizerName) {
-			backend.ObjectMeta.Finalizers = append(backend.ObjectMeta.Finalizers, githubControllerFinalizerName)
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-		}
-	}
+	_, err := c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
+	return err
+}
+
+func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error {
+	c.Log().Debug("syncBackend")
+	backend := obj.(*proxyv1alpha1.Backend)
 
 	// Object has been deleted
 	if !backend.DeletionTimestamp.IsZero() {
@@ -197,7 +196,7 @@ func (c *GitHubController) syncBackend(ctx context.Context, key string) error {
 			backend.Status = updatedB.Status
 			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
 			if err != nil {
-				c.log.Debug("Failed update backend", zap.Error(err))
+				c.Log().Debug("Failed update backend", zap.Error(err))
 				return err
 			}
 			return nil
@@ -245,10 +244,10 @@ func (c *GitHubController) finalizeBackend(ctx context.Context, backend *proxyv1
 		s := strings.SplitN(v.Repository, "/", 2)
 		owner, repo := s[0], s[1]
 
-		c.log.Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
+		c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
 		_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, v.Id)
 		if err != nil {
-			c.log.Debug("Failed delete hook", zap.Error(err))
+			c.Log().Debug("Failed delete hook", zap.Error(err))
 			webhookConfigurations = append(webhookConfigurations, v)
 		}
 	}
@@ -285,7 +284,7 @@ func (c *GitHubController) checkConfigured(ctx context.Context, client *github.C
 	for _, h := range hooks {
 		u, err := url.Parse(h.GetURL())
 		if err != nil {
-			c.log.Debug("Failed parse url", zap.Error(err), zap.String("url", h.GetURL()))
+			c.Log().Debug("Failed parse url", zap.Error(err), zap.String("url", h.GetURL()))
 			continue
 		}
 		if backend.Spec.FQDN != "" && u.Host == backend.Spec.FQDN {
@@ -302,7 +301,7 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 	for _, v := range backend.Status.DeployedBy {
 		u, err := url.Parse(v.Url)
 		if err != nil {
-			c.log.Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
+			c.Log().Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
 			continue
 		}
 		u.Path = backend.Spec.WebhookConfiguration.Path
@@ -312,17 +311,17 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 				continue
 			}
 
-			c.log.Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
+			c.Log().Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
 			continue
 		}
 		if proxy.Status.GithubWebhookSecretName == "" {
-			c.log.Debug("Is not ready", zap.String("name", proxy.Name))
+			c.Log().Debug("Is not ready", zap.String("name", proxy.Name))
 			continue
 		}
 		secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				c.log.Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
+				c.Log().Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
 			}
 
 			continue
@@ -336,10 +335,10 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 				"secret":       string(secret.Data[githubWebhookSecretFilename]),
 			},
 		}
-		c.log.Debug("Create new hook", zap.String("repo", owner+"/"+repo))
+		c.Log().Debug("Create new hook", zap.String("repo", owner+"/"+repo))
 		newHook, _, err = client.Repositories.CreateHook(ctx, owner, repo, newHook)
 		if err != nil {
-			c.log.Info("Failed create hook", zap.Error(err))
+			c.Log().Info("Failed create hook", zap.Error(err))
 			continue
 		}
 
@@ -378,115 +377,4 @@ func (c *GitHubController) newGithubClient(backend *proxyv1alpha1.Backend) (*git
 	}
 
 	return github.NewClient(&http.Client{Transport: rt}), nil
-}
-
-func (c *GitHubController) worker() {
-	c.log.Debug("Start worker")
-	for c.processNextItem() {
-	}
-}
-
-func (c *GitHubController) processNextItem() bool {
-	defer c.log.Debug("Finish processNextItem")
-
-	obj, shutdown := c.queue.Get()
-	if shutdown {
-		return false
-	}
-	c.log.Debug("Get next queue", zap.Any("key", obj))
-
-	err := func(obj interface{}) error {
-		defer c.queue.Done(obj)
-
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancelFunc()
-		err := c.syncBackend(ctx, obj.(string))
-		if err != nil {
-			if errors.Is(err, &RetryError{}) {
-				c.log.Debug("Retrying", zap.Error(err))
-				c.queue.AddRateLimited(obj)
-				return nil
-			}
-
-			return err
-		}
-
-		c.queue.Forget(obj)
-		return nil
-	}(obj)
-	if err != nil {
-		c.log.Info("Failed sync", zap.Error(err))
-		return true
-	}
-
-	return true
-}
-
-func (c *GitHubController) addBackend(obj interface{}) {
-	backend := obj.(*proxyv1alpha1.Backend)
-
-	c.enqueue(backend)
-}
-
-func (c *GitHubController) updateBackend(old, cur interface{}) {
-	oldBackend := old.(*proxyv1alpha1.Backend)
-	curBackend := cur.(*proxyv1alpha1.Backend)
-
-	if oldBackend.UID != curBackend.UID {
-		if key, err := cache.MetaNamespaceKeyFunc(oldBackend); err != nil {
-			return
-		} else {
-			c.deleteBackend(cache.DeletedFinalStateUnknown{Key: key, Obj: oldBackend})
-		}
-	}
-
-	c.enqueue(curBackend)
-}
-
-func (c *GitHubController) deleteBackend(obj interface{}) {
-	backend, ok := obj.(*proxyv1alpha1.Backend)
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			return
-		}
-		backend, ok = tombstone.Obj.(*proxyv1alpha1.Backend)
-		if !ok {
-			return
-		}
-	}
-
-	c.enqueue(backend)
-}
-
-func (c *GitHubController) enqueue(backend *proxyv1alpha1.Backend) {
-	if key, err := cache.MetaNamespaceKeyFunc(backend); err != nil {
-		return
-	} else {
-		c.log.Debug("Enqueue", zap.String("key", key))
-		c.queue.Add(key)
-	}
-}
-
-func containsString(v []string, s string) bool {
-	for _, item := range v {
-		if item == s {
-			return true
-		}
-	}
-
-	return false
-}
-
-func removeString(v []string, s string) []string {
-	result := make([]string, 0, len(v))
-	for _, item := range v {
-		if item == s {
-			continue
-		}
-
-		result = append(result, item)
-	}
-
-	return result
 }

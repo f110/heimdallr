@@ -4,6 +4,7 @@ go_library(
     name = "controllers",
     srcs = [
         "config_converter.go",
+        "controller_base.go",
         "etcd_cluster.go",
         "etcd_controller.go",
         "github_controller.go",
@@ -58,6 +59,7 @@ go_library(
         "//vendor/k8s.io/api/networking/v1:networking",
         "//vendor/k8s.io/api/policy/v1beta1",
         "//vendor/k8s.io/apimachinery/pkg/api/errors",
+        "//vendor/k8s.io/apimachinery/pkg/api/meta",
         "//vendor/k8s.io/apimachinery/pkg/api/resource",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/labels",

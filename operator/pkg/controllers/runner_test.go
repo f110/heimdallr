@@ -361,7 +361,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 		},
 	}
 
-	c, err := NewProxyController(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
+	c, err := NewProxyController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,8 +375,7 @@ func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Proxy) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncProxy(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -389,8 +388,7 @@ func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncProxy(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	IsError(t, syncErr, expectErr)
@@ -418,13 +416,12 @@ func newGitHubControllerTestRunner(t *testing.T) *githubControllerTestRunner {
 	return f
 }
 
-func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Backend) {
-	key, err := cache.MetaNamespaceKeyFunc(p)
+func (f *githubControllerTestRunner) Run(t *testing.T, b *proxyv1alpha1.Backend) {
+	key, err := cache.MetaNamespaceKeyFunc(b)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncBackend(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -432,13 +429,12 @@ func (f *githubControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Backend)
 	}
 }
 
-func (f *githubControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha1.Backend, expectErr error) {
-	key, err := cache.MetaNamespaceKeyFunc(p)
+func (f *githubControllerTestRunner) RunExpectError(t *testing.T, b *proxyv1alpha1.Backend, expectErr error) {
+	key, err := cache.MetaNamespaceKeyFunc(b)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncBackend(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	IsError(t, syncErr, expectErr)
@@ -487,8 +483,7 @@ func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncEtcdCluster(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -608,8 +603,7 @@ func (f *ingressControllerTestRunner) Run(t *testing.T, ing *networkingv1.Ingres
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	syncErr := f.c.syncIngress(context.Background(), key)
+	syncErr := f.c.ProcessKey(key)
 	f.actionMatcher()
 
 	if syncErr != nil {
@@ -618,7 +612,9 @@ func (f *ingressControllerTestRunner) Run(t *testing.T, ing *networkingv1.Ingres
 }
 
 func IsError(t *testing.T, actual, expect error) {
-	if !xerrors.Is(actual, expect) {
+	if actual == nil {
+		t.Errorf("Expect occurred error but not")
+	} else if !xerrors.Is(actual, expect) {
 		t.Logf("%+v", actual)
 		t.Errorf("%q is not %q error", actual, expect)
 	}

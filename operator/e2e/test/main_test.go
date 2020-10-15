@@ -131,7 +131,7 @@ func TestMain(m *testing.M) {
 							log.Fatal(err)
 						}
 
-						c, err := controllers.NewProxyController(ctx, sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
+						c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
 						if err != nil {
 							log.Fatal(err)
 						}

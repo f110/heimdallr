@@ -2,35 +2,26 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	coreInformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	coreListers "k8s.io/client-go/listers/core/v1"
 	networkinglisters "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/client-go/util/workqueue"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
-	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (
@@ -39,6 +30,9 @@ const (
 )
 
 type IngressController struct {
+	*Controller
+
+	ingressInformer          cache.SharedIndexInformer
 	ingressLister            networkinglisters.IngressLister
 	ingressListerSynced      cache.InformerSynced
 	ingressClassLister       networkinglisters.IngressClassLister
@@ -51,10 +45,6 @@ type IngressController struct {
 
 	client     clientset.Interface
 	coreClient kubernetes.Interface
-
-	queue    workqueue.RateLimitingInterface
-	recorder record.EventRecorder
-	log      *zap.Logger
 }
 
 func NewIngressController(
@@ -68,15 +58,8 @@ func NewIngressController(
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
 
-	log := logger.Log.Named("ingress-controller")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
-		log.Info(fmt.Sprintf(format, args...))
-	})
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "github-controller"})
-
 	ic := &IngressController{
+		ingressInformer:          ingressInformer.Informer(),
 		ingressLister:            ingressInformer.Lister(),
 		ingressListerSynced:      ingressInformer.Informer().HasSynced,
 		ingressClassLister:       ingressClassInformer.Lister(),
@@ -87,71 +70,94 @@ func NewIngressController(
 		backendListerSynced:      backendInformer.Informer().HasSynced,
 		coreClient:               coreClient,
 		client:                   client,
-		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ingress"),
-		log:                      log,
-		recorder:                 recorder,
 	}
 
-	ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    ic.addIngress,
-		UpdateFunc: ic.updateIngress,
-		DeleteFunc: ic.deleteIngress,
-	})
+	ic.Controller = NewController(ic, coreClient)
 	return ic
 }
 
-func (ic *IngressController) Run(ctx context.Context, workers int) {
-	defer ic.queue.ShutDown()
+func (ic *IngressController) Name() string {
+	return "ingress-controller"
+}
 
-	if !cache.WaitForCacheSync(ctx.Done(),
+func (ic *IngressController) Finalizers() []string {
+	return []string{ingressControllerFinalizerName}
+}
+
+func (ic *IngressController) ListerSynced() []cache.InformerSynced {
+	return []cache.InformerSynced{
 		ic.ingressListerSynced,
 		ic.ingressClassListerSynced,
 		ic.backendListerSynced,
 		ic.serviceListerSynced,
-	) {
-		return
 	}
-
-	for i := 0; i < workers; i++ {
-		go wait.Until(ic.worker, time.Second, ctx.Done())
-	}
-
-	<-ctx.Done()
 }
 
-func (ic *IngressController) syncIngress(ctx context.Context, key string) error {
-	ic.log.Debug("syncIngress")
+func (ic *IngressController) EventSources() []cache.SharedIndexInformer {
+	return []cache.SharedIndexInformer{
+		ic.ingressInformer,
+	}
+}
+
+func (ic *IngressController) ConvertToKeys() ObjectToKeyConverter {
+	return func(obj interface{}) (keys []string, err error) {
+		switch obj.(type) {
+		case *networkingv1.Ingress:
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
+				return nil, err
+			}
+			return []string{key}, nil
+		default:
+			ic.Log().Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			return nil, nil
+		}
+	}
+}
+
+func (ic *IngressController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	ingress, err := ic.ingressLister.Ingresses(namespace).Get(name)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 	if ingress.Spec.IngressClassName == nil {
-		return nil
+		return nil, nil
 	}
 
 	ingClass, err := ic.ingressClassLister.Get(*ingress.Spec.IngressClassName)
 	if err != nil {
-		ic.log.Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", *ingress.Spec.IngressClassName))
-		return nil
+		ic.Log().Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", *ingress.Spec.IngressClassName))
+		return nil, nil
 	}
 	if ingClass.Spec.Controller != ingressClassControllerName {
-		ic.log.Debug("Skip Ingress", zap.String("name", ingress.Name))
+		ic.Log().Debug("Skip Ingress", zap.String("name", ingress.Name))
+		return nil, nil
+	}
+
+	return ingress, nil
+}
+
+func (ic *IngressController) UpdateObject(ctx context.Context, obj interface{}) error {
+	ingress, ok := obj.(*networkingv1.Ingress)
+	if !ok {
 		return nil
 	}
 
-	if ingress.DeletionTimestamp.IsZero() {
-		if !containsString(ingress.Finalizers, ingressControllerFinalizerName) {
-			ingress.ObjectMeta.Finalizers = append(ingress.ObjectMeta.Finalizers, ingressControllerFinalizerName)
-			_, err = ic.coreClient.NetworkingV1().Ingresses(ingress.Namespace).Update(ctx, ingress, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		}
+	_, err := ic.coreClient.NetworkingV1().Ingresses(ingress.Namespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	return err
+}
+
+func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) error {
+	ic.Log().Debug("syncIngress")
+	ingress := obj.(*networkingv1.Ingress)
+	ingClass, err := ic.coreClient.NetworkingV1().IngressClasses().Get(ctx, *ingress.Spec.IngressClassName, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
 
 	if !ingress.DeletionTimestamp.IsZero() {
@@ -161,7 +167,7 @@ func (ic *IngressController) syncIngress(ctx context.Context, key string) error 
 	backends := make([]*proxyv1alpha1.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
 		if len(rule.HTTP.Paths) != 1 {
-			ic.log.Info("Not support multiple paths", zap.String("ingress.name", ingress.Name))
+			ic.Log().Info("Not support multiple paths", zap.String("ingress.name", ingress.Name))
 			continue
 		}
 
@@ -175,7 +181,7 @@ func (ic *IngressController) syncIngress(ctx context.Context, key string) error 
 						*metav1.NewControllerRef(ingress, networkingv1.SchemeGroupVersion.WithKind("Ingress")),
 					},
 					Annotations: map[string]string{
-						proxy.AnnotationKeyIngressName: key,
+						proxy.AnnotationKeyIngressName: fmt.Sprintf("%s/%s", ingress.Namespace, ingress.Name),
 					},
 					Labels: ingClass.Labels,
 				},
@@ -238,93 +244,4 @@ func (ic *IngressController) finalizeIngress(ctx context.Context, ingress *netwo
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
-}
-
-func (ic *IngressController) worker() {
-	ic.log.Debug("Start worker")
-	for ic.processNextItem() {
-	}
-}
-
-func (ic *IngressController) processNextItem() bool {
-	defer ic.log.Debug("Finish processNextItem")
-
-	obj, shutdown := ic.queue.Get()
-	if shutdown {
-		return false
-	}
-	ic.log.Debug("Get next queue", zap.Any("key", obj))
-
-	err := func(obj interface{}) error {
-		defer ic.queue.Done(obj)
-
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancelFunc()
-
-		err := ic.syncIngress(ctx, obj.(string))
-		if err != nil {
-			if errors.Is(err, &RetryError{}) {
-				ic.log.Debug("Retrying", zap.Error(err))
-				ic.queue.AddRateLimited(obj)
-				return nil
-			}
-
-			return err
-		}
-
-		ic.queue.Forget(obj)
-		return nil
-	}(obj)
-	if err != nil {
-		ic.log.Info("Failed sync", zap.Error(err))
-		return true
-	}
-
-	return true
-}
-
-func (ic *IngressController) enqueue(ingress *networkingv1.Ingress) {
-	if key, err := cache.MetaNamespaceKeyFunc(ingress); err != nil {
-		return
-	} else {
-		ic.log.Debug("Enqueue", zap.String("key", key))
-		ic.queue.Add(key)
-	}
-}
-
-func (ic *IngressController) addIngress(obj interface{}) {
-	ingress := obj.(*networkingv1.Ingress)
-
-	ic.enqueue(ingress)
-}
-
-func (ic *IngressController) updateIngress(old, cur interface{}) {
-	oldIngress := old.(*networkingv1.Ingress)
-	curIngress := cur.(*networkingv1.Ingress)
-
-	if oldIngress.UID != curIngress.UID {
-		if key, err := cache.MetaNamespaceKeyFunc(oldIngress); err != nil {
-			return
-		} else {
-			ic.deleteIngress(cache.DeletedFinalStateUnknown{Key: key, Obj: oldIngress})
-		}
-	}
-
-	ic.enqueue(curIngress)
-}
-
-func (ic *IngressController) deleteIngress(obj interface{}) {
-	ingress, ok := obj.(*networkingv1.Ingress)
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			return
-		}
-		ingress, ok = tombstone.Obj.(*networkingv1.Ingress)
-		if !ok {
-			return
-		}
-	}
-
-	ic.enqueue(ingress)
 }
