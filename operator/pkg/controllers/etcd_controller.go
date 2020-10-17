@@ -304,6 +304,10 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	return nil
 }
 
+func (ec *EtcdController) Finalize(_ context.Context, _ interface{}) error {
+	return nil
+}
+
 func (ec *EtcdController) stateCreatingFirstMember(ctx context.Context, cluster *EtcdCluster) error {
 	if cluster.Status.RestoreFrom == "" {
 		return ec.createNewCluster(ctx, cluster)

@@ -457,6 +457,10 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	return nil
 }
 
+func (c *ProxyController) Finalize(_ context.Context, _ interface{}) error {
+	return nil
+}
+
 func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha1.EtcdCluster, error) {
 	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 }

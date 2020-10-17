@@ -160,10 +160,6 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		return err
 	}
 
-	if !ingress.DeletionTimestamp.IsZero() {
-		return ic.finalizeIngress(ctx, ingress)
-	}
-
 	backends := make([]*proxyv1alpha1.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
 		if len(rule.HTTP.Paths) != 1 {
@@ -223,7 +219,9 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 	return nil
 }
 
-func (ic *IngressController) finalizeIngress(ctx context.Context, ingress *networkingv1.Ingress) error {
+func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) error {
+	ingress := obj.(*networkingv1.Ingress)
+
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		ig, err := ic.ingressLister.Ingresses(ingress.Namespace).Get(ingress.Name)
 		if err != nil {

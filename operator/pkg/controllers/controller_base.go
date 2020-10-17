@@ -31,6 +31,7 @@ type ControllerBase interface {
 	GetObject(string) (interface{}, error)
 	UpdateObject(context.Context, interface{}) error
 	Reconcile(context.Context, interface{}) error
+	Finalize(context.Context, interface{}) error
 }
 
 type Controller struct {
@@ -127,11 +128,11 @@ func (c *Controller) ProcessKey(key string) error {
 		return nil
 	}
 
+	objMeta, err := meta.Accessor(obj)
+	if err != nil {
+		return err
+	}
 	if c.useFinalizer {
-		objMeta, err := meta.Accessor(obj)
-		if err != nil {
-			return err
-		}
 		if objMeta.GetDeletionTimestamp().IsZero() {
 			for _, finalizer := range c.Base.Finalizers() {
 				if !containsString(objMeta.GetFinalizers(), finalizer) {
@@ -144,7 +145,11 @@ func (c *Controller) ProcessKey(key string) error {
 		}
 	}
 
-	err = c.Base.Reconcile(ctx, obj)
+	if objMeta.GetDeletionTimestamp().IsZero() {
+		err = c.Base.Reconcile(ctx, obj)
+	} else {
+		err = c.Base.Finalize(ctx, obj)
+	}
 	if err != nil {
 		if errors.Is(err, &RetryError{}) {
 			c.Log().Debug("Retrying", zap.Error(err))

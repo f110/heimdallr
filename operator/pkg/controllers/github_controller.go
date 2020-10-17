@@ -151,11 +151,6 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 	c.Log().Debug("syncBackend")
 	backend := obj.(*proxyv1alpha1.Backend)
 
-	// Object has been deleted
-	if !backend.DeletionTimestamp.IsZero() {
-		return c.finalizeBackend(ctx, backend)
-	}
-
 	ghClient, err := c.newGithubClient(backend)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -209,7 +204,9 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 	return nil
 }
 
-func (c *GitHubController) finalizeBackend(ctx context.Context, backend *proxyv1alpha1.Backend) error {
+func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error {
+	backend := obj.(*proxyv1alpha1.Backend)
+
 	if len(backend.Status.WebhookConfigurations) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
