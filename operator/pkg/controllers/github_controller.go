@@ -215,7 +215,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			}
 
 			updatedB := backend.DeepCopy()
-			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
+			RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
 				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 				return err
@@ -258,7 +258,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		updatedB := backend.DeepCopy()
 		updatedB.Status.WebhookConfigurations = webhookConfigurations
 		if len(updatedB.Status.WebhookConfigurations) == 0 {
-			updatedB.Finalizers = removeString(updatedB.Finalizers, githubControllerFinalizerName)
+			RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
 			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})

@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -213,6 +214,10 @@ func (c *Controller) enqueue(obj interface{}) {
 			c.queue.Add(key)
 		}
 	}
+}
+
+func RemoveFinalizer(metaObj *metav1.ObjectMeta, finalizer string) {
+	removeString(metaObj.Finalizers, finalizer)
 }
 
 func containsString(v []string, s string) bool {

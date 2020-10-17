@@ -229,7 +229,7 @@ func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) erro
 		}
 
 		updatedI := ig.DeepCopy()
-		updatedI.Finalizers = removeString(updatedI.Finalizers, ingressControllerFinalizerName)
+		RemoveFinalizer(&updatedI.ObjectMeta, ingressControllerFinalizerName)
 		if !reflect.DeepEqual(updatedI.Finalizers, ig.Finalizers) {
 			_, err = ic.coreClient.NetworkingV1().Ingresses(updatedI.Namespace).Update(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
