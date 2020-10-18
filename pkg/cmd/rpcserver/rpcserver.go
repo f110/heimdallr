@@ -100,6 +100,9 @@ func (m *mainProcess) setup() (cmd.State, error) {
 	}
 	switch m.datastoreType {
 	case datastoreTypeEtcd:
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
+
 		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
@@ -107,23 +110,23 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		go m.watchGRPCConnState(client.ActiveConnection())
 		m.etcdClient = client
 
-		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
+		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
-		caDatabase, err := etcd.NewCA(context.Background(), client)
+		caDatabase, err := etcd.NewCA(ctx, client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
-		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
+		m.clusterDatabase, err = etcd.NewClusterDatabase(ctx, client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 
 		if m.Config.General.Enable {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
-			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
 				return cmd.UnknownState, xerrors.Errorf(": %v", err)
 			}

@@ -409,6 +409,9 @@ func (m *mainProcess) Setup() error {
 
 	switch m.datastoreType {
 	case datastoreTypeEtcd:
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
+
 		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -417,11 +420,11 @@ func (m *mainProcess) Setup() error {
 
 		m.etcdClient = client
 
-		m.userDatabase, err = etcd.NewUserDatabase(context.Background(), client, database.SystemUser)
+		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		caDatabase, err := etcd.NewCA(context.Background(), client)
+		caDatabase, err := etcd.NewCA(ctx, client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -433,7 +436,7 @@ func (m *mainProcess) Setup() error {
 
 		if m.config.General.Enable {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
-			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
