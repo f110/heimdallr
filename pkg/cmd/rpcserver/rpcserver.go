@@ -187,8 +187,10 @@ func (m *mainProcess) shutdown() (cmd.State, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
 
-	if err := m.server.Shutdown(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+	if m.server != nil {
+		if err := m.server.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		}
 	}
 
 	return cmd.CloseState, nil
