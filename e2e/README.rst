@@ -23,3 +23,12 @@ E2E test suite can show all test case without executing.
 .. code:: console
 
     $ bazel run //e2e/scenario:scenario_test -- -e2e.format doc
+
+Show verbose log
+------------------
+
+If ``e2e.verbose`` is true, then it will output the log of the proxy to stdout.
+
+.. code:: console
+
+  $ bazel test --test_arg=-e2e.verbose //e2e/scenario:scenario_test

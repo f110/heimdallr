@@ -34,6 +34,9 @@ type UserDatabase struct {
 	mu     sync.RWMutex
 	users  map[string]*database.User
 	tokens map[string]*database.AccessToken
+
+	watchCtx    context.Context
+	watchCancel context.CancelFunc
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -61,8 +64,9 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers .
 		users[v.Id] = v
 	}
 
-	u := &UserDatabase{client: client, users: users}
-	go u.watchUser(ctx, res.Header.Revision)
+	watchCtx, watchCancel := context.WithCancel(context.Background())
+	u := &UserDatabase{client: client, users: users, watchCtx: watchCtx, watchCancel: watchCancel}
+	go u.watchUser(res.Header.Revision)
 
 	res, err = client.Get(ctx, "user_token/", clientv3.WithPrefix())
 	if err != nil {
@@ -82,7 +86,7 @@ func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers .
 		t[v.Value] = v
 	}
 	u.tokens = t
-	go u.watchToken(ctx, res.Header.Revision)
+	go u.watchToken(res.Header.Revision)
 
 	return u, nil
 }
@@ -375,11 +379,11 @@ func (d *UserDatabase) key(id string) string {
 	return fmt.Sprintf("user/%s", id)
 }
 
-func (d *UserDatabase) watchUser(ctx context.Context, revision int64) {
+func (d *UserDatabase) watchUser(revision int64) {
 	logger.Log.Debug("Start watching users")
 	defer d.Close()
 
-	watchCh := d.client.Watch(ctx, "user/", clientv3.WithPrefix(), clientv3.WithRev(revision))
+	watchCh := d.client.Watch(d.watchCtx, "user/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 Watch:
 	for {
 		select {
@@ -388,8 +392,7 @@ Watch:
 				break Watch
 			}
 			d.watchUserEvent(res.Events)
-		case <-ctx.Done():
-			return
+		case <-d.watchCtx.Done():
 		}
 	}
 }
@@ -428,11 +431,11 @@ func (d *UserDatabase) watchUserEvent(events []*clientv3.Event) {
 	}
 }
 
-func (d *UserDatabase) watchToken(ctx context.Context, revision int64) {
+func (d *UserDatabase) watchToken(revision int64) {
 	logger.Log.Debug("Start watching tokens")
 	defer d.Close()
 
-	watchCh := d.client.Watch(ctx, "user_token/", clientv3.WithPrefix(), clientv3.WithRev(revision))
+	watchCh := d.client.Watch(d.watchCtx, "user_token/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 Watch:
 	for {
 		select {
@@ -441,7 +444,7 @@ Watch:
 				break Watch
 			}
 			d.watchTokenEvent(res.Events)
-		case <-ctx.Done():
+		case <-d.watchCtx.Done():
 			return
 		}
 	}
@@ -484,6 +487,7 @@ func (d *UserDatabase) Close() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	d.watchCancel()
 	d.users = nil
 	d.tokens = nil
 }
