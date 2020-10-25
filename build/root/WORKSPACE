@@ -49,10 +49,10 @@ git_repository(
 
 http_archive(
     name = "dev_f110_rules_k8s_controller",
-    sha256 = "68da3dd45c25287d38453f558c6c4b73458fd8a476ce91773362e36b2d4122b1",
-    strip_prefix = "rules_k8s_controller-0.1.0",
+    sha256 = "ca1a766f5af0b23907c0dc331ecf43fb0218e1bbe89da2b6a62829204de101e2",
+    strip_prefix = "rules_k8s_controller-0.2.0",
     urls = [
-        "https://github.com/f110/rules_k8s_controller/archive/v0.1.0.tar.gz",
+        "https://github.com/f110/rules_k8s_controller/archive/v0.2.0.tar.gz",
     ],
 )
 
