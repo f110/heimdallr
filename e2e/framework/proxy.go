@@ -39,6 +39,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 	"go.f110.dev/heimdallr/pkg/session"
 )
@@ -274,7 +275,7 @@ func (p *Proxy) syncUsers() error {
 	}
 	caPool.AddCert(p.caCert)
 
-	cred := credentials.NewTLS(&tls.Config{ServerName: "e2e.f110.dev", RootCAs: caPool})
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
 	conn, err := grpc.Dial(
 		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 		grpc.WithTransportCredentials(cred),

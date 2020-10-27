@@ -225,7 +225,7 @@ func TestServicesViaServer(t *testing.T) {
 	caPool := x509.NewCertPool()
 	caPool.AddCert(caCert)
 	transCreds := credentials.NewTLS(&tls.Config{
-		ServerName: conf.General.ServerNameHost,
+		ServerName: rpc.ServerHostname,
 		RootCAs:    caPool,
 	})
 	conn, err := grpc.Dial(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(transCreds))

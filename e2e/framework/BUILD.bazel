@@ -17,6 +17,7 @@ go_library(
         "//pkg/database",
         "//pkg/frontproxy",
         "//pkg/netutil",
+        "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//vendor/github.com/dgrijalva/jwt-go",
