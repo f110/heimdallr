@@ -19,6 +19,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/configreader"
 	"go.f110.dev/heimdallr/pkg/dashboard"
 	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (
@@ -75,7 +76,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 
 func (m *mainProcess) openConnection() (cmd.State, error) {
 	cred := credentials.NewTLS(&tls.Config{
-		ServerName: m.config.General.ServerNameHost,
+		ServerName: rpc.ServerHostname,
 		RootCAs:    m.config.General.CertificateAuthority.CertPool,
 	})
 	conn, err := grpc.Dial(

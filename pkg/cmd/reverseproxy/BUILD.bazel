@@ -20,6 +20,7 @@ go_library(
         "//pkg/frontproxy",
         "//pkg/logger",
         "//pkg/netutil",
+        "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/rpc/rpcserver",
         "//pkg/server",

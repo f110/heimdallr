@@ -37,6 +37,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcserver"
 	"go.f110.dev/heimdallr/pkg/server"
@@ -482,7 +483,7 @@ func (m *mainProcess) Setup() error {
 func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	rpcclient.OverrideGrpcLogger()
 
-	cred := credentials.NewTLS(&tls.Config{ServerName: m.config.General.ServerNameHost, RootCAs: m.config.General.CertificateAuthority.CertPool})
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.General.CertificateAuthority.CertPool})
 	conn, err := grpc.Dial(
 		m.config.General.RpcTarget,
 		grpc.WithTransportCredentials(cred),

@@ -11,6 +11,7 @@ go_library(
         "//pkg/config/configreader",
         "//pkg/dashboard",
         "//pkg/logger",
+        "//pkg/rpc",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
