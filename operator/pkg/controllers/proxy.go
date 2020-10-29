@@ -38,7 +38,9 @@ import (
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (
@@ -665,57 +667,61 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	if r.Spec.Development {
 		logLevel = "debug"
 	}
-	conf := &config.Config{
-		General: &config.General{
-			Enable:            true,
-			Bind:              fmt.Sprintf(":%d", proxyPort),
-			ServerName:        r.Spec.Domain,
-			RpcTarget:         fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
-			RootUsers:         r.Spec.RootUsers,
-			CertFile:          fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
-			KeyFile:           fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
-			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
-			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
-			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
-			CertificateAuthority: &config.CertificateAuthority{
-				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
+			HTTP: &configv2.AuthProxyHTTP{
+				Bind:       fmt.Sprintf(":%d", proxyPort),
+				ServerName: r.Spec.Domain,
+				Certificate: &configv2.Certificate{
+					CertFile: fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
+					KeyFile:  fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
+				},
+				ExpectCT: true,
+				Session: &configv2.Session{
+					Type:    r.Spec.Session.Type,
+					KeyFile: fmt.Sprintf("%s/%s", sessionSecretPath, cookieSecretFilename),
+				},
 			},
-			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
-			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+			RPCServer: fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			ProxyFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			Credential: &configv2.Credential{
+				InternalTokenFile:       fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+				SigningPrivateKeyFile:   fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+				GithubWebHookSecretFile: fmt.Sprintf("%s/%s", githubSecretPath, githubWebhookSecretFilename),
+			},
 		},
-		IdentityProvider: &config.IdentityProvider{
+		AuthorizationEngine: &configv2.AuthorizationEngine{
+			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
+			RPCPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
+			RootUsers:         r.Spec.RootUsers,
+		},
+		CertificateAuthority: &configv2.CertificateAuthority{
+			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+		},
+		IdentityProvider: &configv2.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
 			ClientId:         r.Spec.IdentityProvider.ClientId,
 			ClientSecretFile: fmt.Sprintf("%s/%s", identityProviderSecretPath, r.Spec.IdentityProvider.ClientSecretRef.Key),
 			ExtraScopes:      []string{"email"},
 			RedirectUrl:      r.Spec.IdentityProvider.RedirectUrl,
 		},
-		Datastore: &config.Datastore{
-			RawUrl:     etcdUrl.String(),
-			Namespace:  "/heimdallr/",
-			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
-			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
-			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
-		},
-		FrontendProxy: &config.FrontendProxy{
-			GithubWebHookSecretFile: fmt.Sprintf("%s/%s", githubSecretPath, githubWebhookSecretFilename),
-			ExpectCT:                true,
-			Session: &config.Session{
-				Type:    r.Spec.Session.Type,
-				KeyFile: fmt.Sprintf("%s/%s", sessionSecretPath, cookieSecretFilename),
+		Datastore: &configv2.Datastore{
+			DatastoreEtcd: &configv2.DatastoreEtcd{
+				RawUrl:     etcdUrl.String(),
+				Namespace:  "/heimdallr/",
+				CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
+				CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
+				KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
 			},
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Level:    logLevel,
 			Encoding: "console",
 		},
-		Dashboard: &config.Dashboard{
-			Enable: false,
-		},
+		Dashboard: &configv2.Dashboard{},
 	}
 	if r.Spec.HttpPort != 0 {
-		conf.General.EnableHttp = true
-		conf.General.BindHttp = fmt.Sprintf(":%d", proxyHttpPort)
+		conf.AccessProxy.HTTP.BindHttp = fmt.Sprintf(":%d", proxyHttpPort)
 	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
@@ -739,23 +745,18 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	if r.Spec.Development {
 		logLevel = "debug"
 	}
-	conf := &config.Config{
-		General: &config.General{
-			Enable:     false,
-			ServerName: r.Spec.Domain,
-			RpcTarget:  fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
-			CertificateAuthority: &config.CertificateAuthority{
-				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-			},
-			InternalTokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
-		},
-		Logger: &config.Logger{
+	conf := &configv2.Config{
+		Logger: &configv2.Logger{
 			Level:    logLevel,
 			Encoding: "console",
 		},
-		Dashboard: &config.Dashboard{
-			Enable: true,
-			Bind:   fmt.Sprintf(":%d", dashboardPort),
+		CertificateAuthority: &configv2.CertificateAuthority{
+			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+		},
+		Dashboard: &configv2.Dashboard{
+			Bind:      fmt.Sprintf(":%d", dashboardPort),
+			RPCServer: fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			TokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
 	}
 	b, err := yaml.Marshal(conf)
@@ -790,41 +791,41 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	if r.Spec.Development {
 		logLevel = "debug"
 	}
-	conf := &config.Config{
-		General: &config.General{
-			Enable:            true,
-			ServerName:        r.Spec.Domain,
-			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
-			ProxyFile:         fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
-			RpcPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
-			CertificateAuthority: &config.CertificateAuthority{
-				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
-				Organization:     r.Spec.Organization,
-				OrganizationUnit: r.Spec.AdministratorUnit,
-				Country:          r.Spec.Country,
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
+			ProxyFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			Credential: &configv2.Credential{
+				SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
+				InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 			},
-			RootUsers:             r.Spec.RootUsers,
-			SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
-			InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Level:    logLevel,
 			Encoding: "console",
 		},
-		Datastore: &config.Datastore{
-			RawUrl:     etcdUrl.String(),
-			Namespace:  "/heimdallr/",
-			CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
-			CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
-			KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
+		AuthorizationEngine: &configv2.AuthorizationEngine{
+			RoleFile:          fmt.Sprintf("%s/%s", proxyConfigMountPath, roleFilename),
+			RPCPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
+			RootUsers:         r.Spec.RootUsers,
 		},
-		RPCServer: &config.RPCServer{
-			Bind:   fmt.Sprintf(":%d", rpcServerPort),
-			Enable: true,
+		CertificateAuthority: &configv2.CertificateAuthority{
+			CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
+			Organization:     r.Spec.Organization,
+			OrganizationUnit: r.Spec.AdministratorUnit,
+			Country:          r.Spec.Country,
 		},
-		Dashboard: &config.Dashboard{
-			Enable: false,
+		Datastore: &configv2.Datastore{
+			DatastoreEtcd: &configv2.DatastoreEtcd{
+				RawUrl:     etcdUrl.String(),
+				Namespace:  "/heimdallr/",
+				CACertFile: fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCAFilename),
+				CertFile:   fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreCertFilename),
+				KeyFile:    fmt.Sprintf("%s/%s", datastoreCertMountPath, datastoreKeyFilename),
+			},
+		},
+		RPCServer: &configv2.RPCServer{
+			Bind: fmt.Sprintf(":%d", rpcServerPort),
 		},
 	}
 	if r.Spec.Monitor.PrometheusMonitoring {
@@ -1401,7 +1402,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 											fmt.Sprintf("-addr=:%d", rpcServerPort),
 											"-tls",
 											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-											fmt.Sprintf("-tls-server-name=%s", r.Spec.Domain),
+											fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
 										},
 									},
 								},
@@ -1616,12 +1617,12 @@ func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxy
 	return n
 }
 
-func toConfigPermissions(in []proxyv1alpha1.Permission) []*config.Permission {
-	permissions := make([]*config.Permission, 0, len(in))
+func toConfigPermissions(in []proxyv1alpha1.Permission) []*configv2.Permission {
+	permissions := make([]*configv2.Permission, 0, len(in))
 	for _, p := range in {
-		locations := make([]config.Location, len(p.Locations))
+		locations := make([]configv2.Location, len(p.Locations))
 		for j, u := range p.Locations {
-			locations[j] = config.Location{
+			locations[j] = configv2.Location{
 				Any:     u.Any,
 				Get:     u.Get,
 				Post:    u.Post,
@@ -1634,7 +1635,7 @@ func toConfigPermissions(in []proxyv1alpha1.Permission) []*config.Permission {
 				Patch:   u.Patch,
 			}
 		}
-		permissions = append(permissions, &config.Permission{
+		permissions = append(permissions, &configv2.Permission{
 			Name:      p.Name,
 			Locations: locations,
 		})

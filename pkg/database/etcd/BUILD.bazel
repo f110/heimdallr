@@ -38,7 +38,7 @@ go_test(
     embed = [":etcd"],
     deps = [
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
         "//pkg/netutil",

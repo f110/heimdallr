@@ -9,7 +9,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 type MemcachedStore struct {
@@ -18,7 +18,7 @@ type MemcachedStore struct {
 
 var _ Store = &MemcachedStore{}
 
-func NewMemcachedStore(conf *config.Session) *MemcachedStore {
+func NewMemcachedStore(conf *configv2.Session) *MemcachedStore {
 	return &MemcachedStore{client: memcache.New(conf.Servers...)}
 }
 

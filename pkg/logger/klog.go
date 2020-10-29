@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 	"k8s.io/klog/v2"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 type levelWriter struct {
@@ -20,7 +20,7 @@ func (w *levelWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func OverrideKlog(conf *config.Logger) error {
+func OverrideKlog(conf *configv2.Logger) error {
 	if err := Init(conf); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

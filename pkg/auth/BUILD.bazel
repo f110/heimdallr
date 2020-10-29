@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
         "//pkg/rpc",
@@ -36,7 +37,7 @@ go_test(
     embed = [":auth"],
     deps = [
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/database/memory",
         "//pkg/logger",

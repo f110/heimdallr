@@ -19,14 +19,14 @@ import (
 	"golang.org/x/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 const (
 	CertificateExpirationYear = 10 // year
 )
 
-func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType string, keyBits int, password string, ca *config.CertificateAuthority) ([]byte, *x509.Certificate, error) {
+func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType string, keyBits int, password string, ca *configv2.CertificateAuthority) ([]byte, *x509.Certificate, error) {
 	now := time.Now()
 	cert := &x509.Certificate{
 		SerialNumber: serial,
@@ -109,7 +109,7 @@ func CreateCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, *ecd
 	return buf.Bytes(), privateKey, nil
 }
 
-func SigningCertificateRequest(r *x509.CertificateRequest, ca *config.CertificateAuthority) (*x509.Certificate, error) {
+func SigningCertificateRequest(r *x509.CertificateRequest, ca *configv2.CertificateAuthority) (*x509.Certificate, error) {
 	serialNumber, err := NewSerialNumber()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -229,12 +229,12 @@ func GenerateMutualTLSCertificate(ca *x509.Certificate, caPrivateKey crypto.Priv
 	return cert, privKey, nil
 }
 
-func CreateCertificateAuthorityForConfig(conf *config.Config) (*x509.Certificate, crypto.PrivateKey, error) {
+func CreateCertificateAuthorityForConfig(conf *configv2.Config) (*x509.Certificate, crypto.PrivateKey, error) {
 	return CreateCertificateAuthority(
 		"Heimdallr CA",
-		conf.General.CertificateAuthority.Organization,
-		conf.General.CertificateAuthority.OrganizationUnit,
-		conf.General.CertificateAuthority.Country,
+		conf.CertificateAuthority.Organization,
+		conf.CertificateAuthority.OrganizationUnit,
+		conf.CertificateAuthority.Country,
 	)
 }
 

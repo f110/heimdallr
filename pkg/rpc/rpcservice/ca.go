@@ -12,7 +12,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -20,13 +20,13 @@ import (
 )
 
 type CertificateAuthorityService struct {
-	Config *config.Config
+	Config *configv2.Config
 	ca     *cert.CertificateAuthority
 }
 
 var _ rpc.CertificateAuthorityServer = &CertificateAuthorityService{}
 
-func NewCertificateAuthorityService(conf *config.Config, ca *cert.CertificateAuthority) *CertificateAuthorityService {
+func NewCertificateAuthorityService(conf *configv2.Config, ca *cert.CertificateAuthority) *CertificateAuthorityService {
 	return &CertificateAuthorityService{Config: conf, ca: ca}
 }
 
@@ -63,7 +63,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 	}
 
 	if req.GetAgent() {
-		if _, ok := s.Config.General.GetBackend(commonName); !ok {
+		if _, ok := s.Config.AccessProxy.GetBackend(commonName); !ok {
 			logger.Log.Info("Could not find backend", zap.String("common_name", req.GetCommonName()))
 			return nil, xerrors.New("rpcservice: unknown backend")
 		}
@@ -134,7 +134,7 @@ func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rp
 		return nil, err
 	}
 
-	c, err := cert.SigningCertificateRequest(signingRequest, s.Config.General.CertificateAuthority)
+	c, err := cert.SigningCertificateRequest(signingRequest, s.Config.CertificateAuthority)
 	if err != nil {
 		return nil, err
 	}

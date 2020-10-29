@@ -9,7 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/server",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/connector",
         "//pkg/database",
         "//pkg/frontproxy",

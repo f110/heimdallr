@@ -10,7 +10,7 @@ go_library(
         "//operator/pkg/controllers",
         "//operator/pkg/informers/externalversions",
         "//operator/pkg/signals",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",
         "//vendor/go.uber.org/zap",

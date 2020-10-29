@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
@@ -44,7 +44,7 @@ func (d *dummyHttpProxy) ServeSlackWebHook(_ context.Context, _ http.ResponseWri
 func TestNewFrontendProxy(t *testing.T) {
 	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 
-	v := NewFrontendProxy(&config.Config{Logger: &config.Logger{}}, nil, c)
+	v := NewFrontendProxy(&configv2.Config{Logger: &configv2.Logger{}}, nil, c)
 	if v == nil {
 		t.Fatal("NewFrontendProxy should return a value")
 	}
@@ -52,8 +52,8 @@ func TestNewFrontendProxy(t *testing.T) {
 
 func TestFrontendProxy_ServeHTTP(t *testing.T) {
 	mockProxy := &dummyHttpProxy{}
-	v := NewFrontendProxy(&config.Config{
-		Logger: &config.Logger{},
+	v := NewFrontendProxy(&configv2.Config{
+		Logger: &configv2.Logger{},
 	}, nil, nil)
 	v.httpProxy = mockProxy
 

@@ -1,14 +1,9 @@
 access_proxy:
   http:
-    # Listen address of the proxy. This address is a main socket.
-    # A lot of traffic come here.
-    # Default value is :4000
     bind: :4000
-    # Listen address of HTTP server
-    bind_http: :4001
-    # The name of server. This domain is the name your users will use.
-    # server name has to include the port if your users can't access by well-known port.
-    server_name: local-proxy.f110.dev:4000
+    bind_http: :4002
+    bind_internal: :4004
+    server_name: test.f110.dev:4000
     certificate:
       cert_file: ./tls.crt
       key_file: ./tls.key
@@ -16,39 +11,37 @@ access_proxy:
     session:
       type: secure_cookie
       key_file: ./cookie_secret
+  proxy_file: ./proxies.yaml
+  rpc_server: 127.0.0.1:4001
   credential:
     signing_private_key_file: ./privatekey.pem
     internal_token_file: ./internal_token
     github_webhook_secret_file: ./github_webhook_secret
-  proxy_file: ./proxies.yaml
-  rpc_server: 127.0.0.1:4002
 authorization_engine:
   role_file: ./roles.yaml
   rpc_permission_file: ./rpc_permissions.yaml
   root_users:
     - fmhrit@gmail.com
+rpc_server:
+  bind: :4001
+  metrics_bind: :4005
+dashboard:
+  bind: :4100
+  rpc_server: 127.0.0.1:4001
+  template:
+    loader: shotgun
 certificate_authority:
   cert_file: ./ca.crt
   key_file: ./ca.key
   organization: test
   organization_unit: dev
   country: jp
-rpc_server:
-  bind: :4002
-  metrics_bind: :4005
 identity_provider:
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
   client_secret_file: ./client_secret
   extra_scopes: ["email"]
-  redirect_url: https://local-proxy.f110.dev:4000/auth/callback
+  redirect_url: https://test.f110.dev:4000/auth/callback
 datastore:
   etcd:
-    url: etcd://embed
-    data_dir: ./data
-dashboard:
-  bind: :4100
-  rpc_server: 127.0.0.1:4002
-  ca_cert_file: ./ca.crt
-  template:
-    loader: shotgun
+    url: etcd://localhost:2379

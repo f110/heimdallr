@@ -31,6 +31,7 @@ import (
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
@@ -194,7 +195,7 @@ func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *pro
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	rpcClient, err := NewRPCClient(proxy, ports[0].Local, caPool, token)
+	rpcClient, err := NewRPCClient(ports[0].Local, caPool, token)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -202,8 +203,8 @@ func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *pro
 	return &RPCClient{ClientWithUserToken: rpcClient, forwarder: forwarder}, nil
 }
 
-func NewRPCClient(proxy *proxyv1alpha1.Proxy, port uint16, caPool *x509.CertPool, token string) (*rpcclient.ClientWithUserToken, error) {
-	cred := credentials.NewTLS(&tls.Config{ServerName: proxy.Spec.Domain, RootCAs: caPool})
+func NewRPCClient(port uint16, caPool *x509.CertPool, token string) (*rpcclient.ClientWithUserToken, error) {
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
 	conn, err := grpc.Dial(
 		fmt.Sprintf("127.0.0.1:%d", port),
 		grpc.WithTransportCredentials(cred),

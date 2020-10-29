@@ -27,6 +27,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/dashboard"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -76,7 +77,7 @@ type mainProcess struct {
 	ConfFile string
 
 	wg              sync.WaitGroup
-	config          *config.Config
+	config          *configv2.Config
 	datastoreType   string
 	etcdClient      *clientv3.Client
 	conn            *sql.DB
@@ -171,9 +172,9 @@ func (m *mainProcess) ReadConfig() error {
 	}
 	m.config = conf
 
-	if m.config.Datastore.Url != nil {
+	if m.config.Datastore.DatastoreEtcd != nil {
 		m.datastoreType = datastoreTypeEtcd
-	} else if m.config.Datastore.DSN != nil {
+	} else if m.config.Datastore.DatastoreMySQL != nil {
 		m.datastoreType = datastoreTypeMySQL
 	} else {
 		m.datastoreType = datastoreNone
@@ -327,7 +328,7 @@ func (m *mainProcess) IsReady() bool {
 }
 
 func (m *mainProcess) startServer() {
-	rpcClient, err := rpcclient.NewWithInternalToken(m.rpcServerConn, m.config.General.InternalToken)
+	rpcClient, err := rpcclient.NewWithInternalToken(m.rpcServerConn, m.config.AccessProxy.Credential.InternalToken)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
@@ -402,7 +403,7 @@ func (m *mainProcess) Setup() error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if m.config.Datastore.Embed {
+	if m.config.Datastore.DatastoreEtcd != nil && m.config.Datastore.DatastoreEtcd.Embed {
 		if err := m.startEmbedEtcd(); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -429,13 +430,13 @@ func (m *mainProcess) Setup() error {
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.General.CertificateAuthority)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 
-		if m.config.General.Enable {
+		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
@@ -451,28 +452,28 @@ func (m *mainProcess) Setup() error {
 		repository := dao.NewRepository(conn)
 		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
 		caDatabase := mysql.NewCA(repository)
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.General.CertificateAuthority)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 
-		if m.config.General.Enable {
+		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = mysql.NewTokenDatabase(repository)
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
 	}
 
-	if m.config.General.Enable {
-		switch m.config.FrontendProxy.Session.Type {
+	if m.config.AccessProxy.HTTP.Bind != "" {
+		switch m.config.AccessProxy.HTTP.Session.Type {
 		case config.SessionTypeSecureCookie:
 			m.sessionStore = session.NewSecureCookieStore(
-				m.config.FrontendProxy.Session.HashKey,
-				m.config.FrontendProxy.Session.BlockKey,
-				m.config.General.ServerNameHost,
+				m.config.AccessProxy.HTTP.Session.HashKey,
+				m.config.AccessProxy.HTTP.Session.BlockKey,
+				m.config.AccessProxy.ServerNameHost,
 			)
 		case config.SessionTypeMemcached:
-			m.sessionStore = session.NewMemcachedStore(m.config.FrontendProxy.Session)
+			m.sessionStore = session.NewMemcachedStore(m.config.AccessProxy.HTTP.Session)
 		}
 	}
 
@@ -483,9 +484,9 @@ func (m *mainProcess) Setup() error {
 func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	rpcclient.OverrideGrpcLogger()
 
-	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.General.CertificateAuthority.CertPool})
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.CertPool})
 	conn, err := grpc.Dial(
-		m.config.General.RpcTarget,
+		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
 		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
@@ -496,11 +497,11 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	}
 	m.rpcServerConn = conn
 
-	if m.config.General.Enable {
+	if m.config.AccessProxy.HTTP.Bind != "" {
 		m.connector = connector.NewServer(m.config, m.rpcServerConn, m.relayLocator)
 	}
 
-	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.General.InternalToken)
+	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.AccessProxy.Credential.InternalToken)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -510,7 +511,7 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 }
 
 func (m *mainProcess) StartRPCServer() error {
-	if m.config.RPCServer.Enable {
+	if m.config.RPCServer != nil && m.config.RPCServer.Bind != "" {
 		errCh := make(chan error)
 
 		m.rpcServerDoneCh = make(chan struct{})
@@ -555,7 +556,7 @@ func (m *mainProcess) StartRPCServer() error {
 }
 
 func (m *mainProcess) Start() error {
-	if m.config.General.Enable {
+	if m.config.AccessProxy.HTTP.Bind != "" {
 		m.wg.Add(1)
 		go func() {
 			defer m.wg.Done()
@@ -570,15 +571,15 @@ func (m *mainProcess) Start() error {
 			m.startInternalApiServer()
 		}()
 
-		if err := netutil.WaitListen(m.config.General.Bind, time.Second); err != nil {
+		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.Bind, time.Second); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		if err := netutil.WaitListen(m.config.General.BindInternalApi, time.Second); err != nil {
+		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.BindInternalApi, time.Second); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
 
-	if m.config.Dashboard.Enable {
+	if m.config.Dashboard.Bind != "" {
 		m.wg.Add(1)
 		go func() {
 			defer m.wg.Done()

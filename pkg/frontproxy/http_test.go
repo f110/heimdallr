@@ -18,7 +18,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -31,8 +31,8 @@ func newTLSConnectionState() *tls.ConnectionState {
 }
 
 func TestNewHttpProxy(t *testing.T) {
-	conf := &config.Config{
-		Logger: &config.Logger{},
+	conf := &configv2.Config{
+		Logger: &configv2.Logger{},
 	}
 	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
@@ -45,11 +45,11 @@ func TestNewHttpProxy(t *testing.T) {
 func TestHttpProxy_ServeHTTP(t *testing.T) {
 	u := memory.NewUserDatabase()
 	_ = u.Set(nil, &database.User{Id: "foobarbaz@example.com", Roles: []string{"test", "unknown"}})
-	backends := []*config.Backend{
+	backends := []*configv2.Backend{
 		{
 			Name: "test",
-			Permissions: []*config.Permission{
-				{Name: "all", Locations: []config.Location{{Get: "/"}}},
+			Permissions: []*configv2.Permission{
+				{Name: "all", Locations: []configv2.Location{{Get: "/"}}},
 			},
 		},
 		{
@@ -65,42 +65,46 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		{
 			Name:      "http",
 			AllowHttp: true,
-			Permissions: []*config.Permission{
-				{Name: "all", Locations: []config.Location{{Any: "/"}}},
+			Permissions: []*configv2.Permission{
+				{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
 			},
 		},
 	}
-	roles := []*config.Role{
+	roles := []*configv2.Role{
 		{
 			Name: "test",
-			Bindings: []*config.Binding{
+			Bindings: []*configv2.Binding{
 				{Backend: "test", Permission: "all"},
 				{Backend: "http", Permission: "all"},
 			},
 		},
 	}
-	rpcPermissions := []*config.RpcPermission{}
+	rpcPermissions := []*configv2.RPCPermission{}
 
 	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	signReqPubKey := signReqKey.PublicKey
-	conf := &config.Config{
-		General: &config.General{
-			ServerNameHost:    "example.com",
-			SigningPrivateKey: signReqKey,
-			SigningPublicKey:  signReqPubKey,
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
+			ServerNameHost: "example.com",
+			Credential: &configv2.Credential{
+				SigningPrivateKey:   signReqKey,
+				SigningPublicKey:    signReqPubKey,
+				GithubWebhookSecret: []byte("test"),
+			},
 		},
-		Logger: &config.Logger{
+		AuthorizationEngine: &configv2.AuthorizationEngine{},
+		Logger: &configv2.Logger{
 			Level: "debug",
-		},
-		FrontendProxy: &config.FrontendProxy{
-			GithubWebhookSecret: []byte("test"),
 		},
 	}
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
-	if err := conf.General.Load(backends, roles, rpcPermissions); err != nil {
+	if err := conf.AccessProxy.Setup(backends); err != nil {
+		t.Fatal(err)
+	}
+	if err := conf.AuthorizationEngine.Setup(roles, rpcPermissions); err != nil {
 		t.Fatal(err)
 	}
 	auth.Init(conf, s, u, nil, nil)
@@ -238,7 +242,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		recoder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "https://webhook.example.com/github", body)
 		// req.TLS = newTLSConnectionState()
-		mac := hmac.New(sha1.New, conf.FrontendProxy.GithubWebhookSecret)
+		mac := hmac.New(sha1.New, conf.AccessProxy.Credential.GithubWebhookSecret)
 		mac.Write([]byte("{}"))
 		sign := mac.Sum(nil)
 		req.Header.Set("X-Hub-Signature", "sha1="+hex.EncodeToString(sign))
@@ -270,7 +274,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ca := &config.CertificateAuthority{
+		ca := &configv2.CertificateAuthority{
 			Certificate: caCert,
 			PrivateKey:  caPrivateKey,
 		}
@@ -301,7 +305,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ca := &config.CertificateAuthority{
+		ca := &configv2.CertificateAuthority{
 			Certificate: caCert,
 			PrivateKey:  caPrivateKey,
 		}

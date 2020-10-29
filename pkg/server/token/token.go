@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/server"
@@ -19,7 +19,7 @@ import (
 )
 
 type Server struct {
-	Config        *config.Config
+	Config        *configv2.Config
 	loader        *template.Loader
 	sessionStore  session.Store
 	tokenDatabase database.TokenDatabase
@@ -27,7 +27,7 @@ type Server struct {
 
 var _ server.ChildServer = &Server{}
 
-func New(conf *config.Config, sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
+func New(conf *configv2.Config, sessionStore session.Store, tokenDatabase database.TokenDatabase) *Server {
 	return &Server{
 		Config:        conf,
 		loader:        template.New(ui.Data, template.LoaderTypeEmbed, "tmpl/ui/token", nil),
@@ -50,7 +50,7 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 		*u = *req.URL
 		u.Scheme = "https"
 		u.Host = req.Host
-		redirectUrl, _ := url.Parse(t.Config.General.AuthEndpoint)
+		redirectUrl, _ := url.Parse(t.Config.AccessProxy.AuthEndpoint)
 		v := &url.Values{}
 		v.Set("from", u.String())
 		redirectUrl.RawQuery = v.Encode()

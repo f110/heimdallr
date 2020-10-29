@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/connector",
         "//pkg/logger",
         "//pkg/version",

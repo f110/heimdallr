@@ -18,6 +18,7 @@ go_library(
         "//operator/pkg/client/versioned",
         "//pkg/cert",
         "//pkg/logger",
+        "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//vendor/github.com/dgrijalva/jwt-go",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",

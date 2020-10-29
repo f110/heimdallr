@@ -13,12 +13,12 @@ import (
 
 	"software.sslmate.com/src/go-pkcs12"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 )
 
-func newCertificateAuthorityConfig(t *testing.T) *config.CertificateAuthority {
+func newCertificateAuthorityConfig(t *testing.T) *configv2.CertificateAuthority {
 	caCert, caPrivateKey, err := CreateCertificateAuthority("for test", "test", "", "jp")
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ func newCertificateAuthorityConfig(t *testing.T) *config.CertificateAuthority {
 	cp := x509.NewCertPool()
 	cp.AddCert(caCert)
 
-	return &config.CertificateAuthority{Certificate: caCert, PrivateKey: caPrivateKey, CertPool: cp}
+	return &configv2.CertificateAuthority{Certificate: caCert, PrivateKey: caPrivateKey, CertPool: cp}
 }
 
 func TestCertificateAuthority_NewClientCertificate(t *testing.T) {

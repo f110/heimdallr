@@ -10,7 +10,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/logger",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
         "//vendor/golang.org/x/xerrors",

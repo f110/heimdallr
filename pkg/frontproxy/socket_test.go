@@ -14,7 +14,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -92,7 +92,7 @@ func parseResponseMessage(t *testing.T, buf []byte) MessageError {
 }
 
 func TestNewSocketProxy(t *testing.T) {
-	v := NewSocketProxy(&config.Config{}, nil)
+	v := NewSocketProxy(&configv2.Config{}, nil)
 	if v == nil {
 		t.Fatal("NewSocketProxy should return a value")
 	}
@@ -117,23 +117,29 @@ func TestSocketProxy_Accept(t *testing.T) {
 
 	user := memory.NewUserDatabase()
 	token := memory.NewTokenDatabase()
-	v := NewSocketProxy(&config.Config{
-		General: &config.General{
+	v := NewSocketProxy(&configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "example.com",
 			TokenEndpoint:  "http://token.example.com",
-			Backends: []*config.Backend{
+			Backends: []*configv2.Backend{
 				{Name: "socket", Socket: true},
 				{Name: "success", Socket: true, Upstream: fmt.Sprintf("tcp://:%d", backendAddr.Port)},
 			},
-			Roles: []*config.Role{
-				{Name: "test", Bindings: []*config.Binding{
+		},
+		AuthorizationEngine: &configv2.AuthorizationEngine{
+			Roles: []*configv2.Role{
+				{Name: "test", Bindings: []*configv2.Binding{
 					{Backend: "socket"},
 					{Backend: "success"},
 				}},
 			},
 		},
 	}, nil)
-	err = v.Config.General.Load(v.Config.General.Backends, v.Config.General.Roles, []*config.RpcPermission{})
+	err = v.Config.AccessProxy.Setup(v.Config.AccessProxy.Backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = v.Config.AuthorizationEngine.Setup(v.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	if err != nil {
 		t.Fatal(err)
 	}

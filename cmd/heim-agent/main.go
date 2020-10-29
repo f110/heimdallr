@@ -16,7 +16,7 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/version"
@@ -181,7 +181,7 @@ func agent(args []string) error {
 		return xerrors.New("privatekey or credential is required")
 	}
 
-	err = logger.Init(&config.Logger{
+	err = logger.Init(&configv2.Logger{
 		Level:    logLevel,
 		Encoding: "console",
 	})

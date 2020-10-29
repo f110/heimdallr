@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -16,13 +16,13 @@ import (
 type ConnectionManager struct {
 	MaxConnsPerHost int
 	locator         database.RelayLocator
-	config          *config.Config
+	config          *configv2.Config
 
 	mu    sync.RWMutex
 	conns map[string][]*tls.Conn
 }
 
-func NewConnectionManager(conf *config.Config, locator database.RelayLocator) *ConnectionManager {
+func NewConnectionManager(conf *configv2.Config, locator database.RelayLocator) *ConnectionManager {
 	p := &ConnectionManager{
 		locator: locator,
 		config:  conf,
@@ -40,7 +40,7 @@ func (p *ConnectionManager) GetConn(name string) (*tls.Conn, error) {
 	}
 
 	conn, err := tls.Dial("tcp", r.Addr, &tls.Config{
-		RootCAs: p.config.General.CertificateAuthority.CertPool,
+		RootCAs: p.config.CertificateAuthority.CertPool,
 	})
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)

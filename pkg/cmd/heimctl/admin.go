@@ -2,7 +2,6 @@ package heimctl
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"time"
 
@@ -23,13 +22,10 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	var cp *x509.CertPool
-	if conf.General.Debug {
-		cp = conf.General.CertificateAuthority.CertPool
-	}
-	cred := credentials.NewTLS(&tls.Config{ServerName: conf.General.ServerNameHost, RootCAs: cp})
+	cp := conf.CertificateAuthority.CertPool
+	cred := credentials.NewTLS(&tls.Config{ServerName: conf.AccessProxy.ServerNameHost, RootCAs: cp})
 	conn, err := grpc.Dial(
-		conf.General.ServerName,
+		conf.AccessProxy.HTTP.ServerName,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
 	)

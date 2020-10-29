@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -30,7 +30,7 @@ import (
 
 func TestInit(t *testing.T) {
 	Init(
-		&config.Config{General: &config.General{}},
+		&configv2.Config{AccessProxy: &configv2.AccessProxy{}},
 		session.NewSecureCookieStore([]byte(""), []byte(""), ""),
 		memory.NewUserDatabase(),
 		memory.NewTokenDatabase(),
@@ -40,7 +40,11 @@ func TestInit(t *testing.T) {
 
 func TestInitInterceptor(t *testing.T) {
 	InitInterceptor(
-		&config.Config{General: &config.General{}},
+		&configv2.Config{
+			AccessProxy: &configv2.AccessProxy{
+				Credential: &configv2.Credential{},
+			},
+		},
 		memory.NewUserDatabase(),
 		memory.NewTokenDatabase(),
 	)
@@ -57,53 +61,57 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	cp := x509.NewCertPool()
 	cp.AddCert(caCert)
 	a := &authenticator{
-		Config: &config.General{
-			ServerNameHost: "proxy.example.com",
-			RootUsers:      []string{"root@example.com"},
-			Backends: []*config.Backend{
-				{
-					Name: "test",
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
-						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+		Config: &configv2.Config{
+			AccessProxy: &configv2.AccessProxy{
+				ServerNameHost: "proxy.example.com",
+				Backends: []*configv2.Backend{
+					{
+						Name: "test",
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+							{Name: "ok_but_nobind", Locations: []configv2.Location{{Get: "/no_bind"}}},
+						},
 					},
-				},
-				{
-					Name:               "topsecret",
-					MaxSessionDuration: &config.Duration{Duration: 1 * time.Minute},
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+					{
+						Name:               "topsecret",
+						MaxSessionDuration: &configv2.Duration{Duration: 1 * time.Minute},
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+						},
 					},
-				},
-				{
-					Name:          "root",
-					AllowRootUser: true,
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+					{
+						Name:          "root",
+						AllowRootUser: true,
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+						},
 					},
-				},
-				{
-					Name:         "public",
-					DisableAuthn: true,
-				},
-				{
-					Name:         "public-path",
-					DisableAuthn: true,
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
+					{
+						Name:         "public",
+						DisableAuthn: true,
 					},
-				},
-			},
-			Roles: []*config.Role{
-				{
-					Name: "test",
-					Bindings: []*config.Binding{
-						{Backend: "test", Permission: "ok"},
-						{Backend: "topsecret", Permission: "ok"},
+					{
+						Name:         "public-path",
+						DisableAuthn: true,
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+						},
 					},
 				},
 			},
-			CertificateAuthority: &config.CertificateAuthority{
+			AuthorizationEngine: &configv2.AuthorizationEngine{
+				RootUsers: []string{"root@example.com"},
+				Roles: []*configv2.Role{
+					{
+						Name: "test",
+						Bindings: []*configv2.Binding{
+							{Backend: "test", Permission: "ok"},
+							{Backend: "topsecret", Permission: "ok"},
+						},
+					},
+				},
+			},
+			CertificateAuthority: &configv2.CertificateAuthority{
 				Certificate: caCert,
 				PrivateKey:  caPrivateKey,
 				CertPool:    cp,
@@ -114,7 +122,11 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		revokedCert:  rc,
 	}
 	defaultAuthenticator = a
-	err = a.Config.Load(a.Config.Backends, a.Config.Roles, []*config.RpcPermission{})
+	err = a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = a.Config.AuthorizationEngine.Setup(a.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,23 +482,27 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 	u := memory.NewUserDatabase()
 	token := memory.NewTokenDatabase()
 	a := &authenticator{
-		Config: &config.General{
-			ServerNameHost: "proxy.example.com",
-			Backends: []*config.Backend{
-				{
-					Name:   "test",
-					Socket: true,
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
-						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+		Config: &configv2.Config{
+			AccessProxy: &configv2.AccessProxy{
+				ServerNameHost: "proxy.example.com",
+				Backends: []*configv2.Backend{
+					{
+						Name:   "test",
+						Socket: true,
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+							{Name: "ok_but_nobind", Locations: []configv2.Location{{Get: "/no_bind"}}},
+						},
 					},
 				},
 			},
-			Roles: []*config.Role{
-				{
-					Name: "test",
-					Bindings: []*config.Binding{
-						{Backend: "test"},
+			AuthorizationEngine: &configv2.AuthorizationEngine{
+				Roles: []*configv2.Role{
+					{
+						Name: "test",
+						Bindings: []*configv2.Binding{
+							{Backend: "test"},
+						},
 					},
 				},
 			},
@@ -496,7 +512,11 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 		tokenDatabase: token,
 	}
 	defaultAuthenticator = a
-	err := a.Config.Load(a.Config.Backends, a.Config.Roles, []*config.RpcPermission{})
+	err := a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = a.Config.AuthorizationEngine.Setup(a.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -626,31 +646,37 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
 	a := &authInterceptor{
-		Config: &config.General{
-			ServerNameHost:    "proxy.example.com",
-			SigningPrivateKey: privateKey,
-			InternalToken:     "rpc-internal-token",
-			Backends: []*config.Backend{
-				{
-					Name: "test",
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
-						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+		Config: &configv2.Config{
+			AccessProxy: &configv2.AccessProxy{
+				ServerNameHost: "proxy.example.com",
+				Credential: &configv2.Credential{
+					SigningPrivateKey: privateKey,
+					InternalToken:     "rpc-internal-token",
+				},
+				Backends: []*configv2.Backend{
+					{
+						Name: "test",
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+							{Name: "ok_but_nobind", Locations: []configv2.Location{{Get: "/no_bind"}}},
+						},
 					},
 				},
 			},
-			Roles: []*config.Role{
-				{
-					Name: "test",
-					Bindings: []*config.Binding{
-						{Rpc: "test"},
+			AuthorizationEngine: &configv2.AuthorizationEngine{
+				Roles: []*configv2.Role{
+					{
+						Name: "test",
+						Bindings: []*configv2.Binding{
+							{RPC: "test"},
+						},
 					},
 				},
-			},
-			RpcPermissions: []*config.RpcPermission{
-				{
-					Name:  "test",
-					Allow: []string{"test"},
+				RPCPermissions: []*configv2.RPCPermission{
+					{
+						Name:  "test",
+						Allow: []string{"test"},
+					},
 				},
 			},
 		},
@@ -659,7 +685,11 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		publicKey:     privateKey.PublicKey,
 	}
 	defaultAuthInterceptor = a
-	err = a.Config.Load(a.Config.Backends, a.Config.Roles, a.Config.RpcPermissions)
+	err = a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = a.Config.AuthorizationEngine.Setup(a.Config.AuthorizationEngine.Roles, a.Config.AuthorizationEngine.RPCPermissions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -717,7 +747,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 			IssuedAt:  time.Now().Unix(),
 			ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
 		})
-		jwtToken, err := claim.SignedString(a.Config.SigningPrivateKey)
+		jwtToken, err := claim.SignedString(a.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -741,7 +771,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	t.Run("with internal token", func(t *testing.T) {
 		t.Parallel()
 
-		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.InternalToken})
+		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.AccessProxy.Credential.InternalToken})
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		v, err := a.UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/proxy.rpc.certificateauthority.watchrevokedcert"}, okHandler)
@@ -819,31 +849,37 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
 	a := &authInterceptor{
-		Config: &config.General{
-			ServerNameHost:    "proxy.example.com",
-			SigningPrivateKey: privateKey,
-			InternalToken:     "rpc-internal-token",
-			Backends: []*config.Backend{
-				{
-					Name: "test",
-					Permissions: []*config.Permission{
-						{Name: "ok", Locations: []config.Location{{Get: "/ok"}}},
-						{Name: "ok_but_nobind", Locations: []config.Location{{Get: "/no_bind"}}},
+		Config: &configv2.Config{
+			AccessProxy: &configv2.AccessProxy{
+				ServerNameHost: "proxy.example.com",
+				Credential: &configv2.Credential{
+					SigningPrivateKey: privateKey,
+					InternalToken:     "rpc-internal-token",
+				},
+				Backends: []*configv2.Backend{
+					{
+						Name: "test",
+						Permissions: []*configv2.Permission{
+							{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
+							{Name: "ok_but_nobind", Locations: []configv2.Location{{Get: "/no_bind"}}},
+						},
 					},
 				},
 			},
-			Roles: []*config.Role{
-				{
-					Name: "test",
-					Bindings: []*config.Binding{
-						{Rpc: "test"},
+			AuthorizationEngine: &configv2.AuthorizationEngine{
+				Roles: []*configv2.Role{
+					{
+						Name: "test",
+						Bindings: []*configv2.Binding{
+							{RPC: "test"},
+						},
 					},
 				},
-			},
-			RpcPermissions: []*config.RpcPermission{
-				{
-					Name:  "test",
-					Allow: []string{"test"},
+				RPCPermissions: []*configv2.RPCPermission{
+					{
+						Name:  "test",
+						Allow: []string{"test"},
+					},
 				},
 			},
 		},
@@ -852,7 +888,11 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 		publicKey:     privateKey.PublicKey,
 	}
 	defaultAuthInterceptor = a
-	err = a.Config.Load(a.Config.Backends, a.Config.Roles, a.Config.RpcPermissions)
+	err = a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = a.Config.AuthorizationEngine.Setup(a.Config.AuthorizationEngine.Roles, a.Config.AuthorizationEngine.RPCPermissions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -864,7 +904,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	t.Run("with internal token", func(t *testing.T) {
 		t.Parallel()
 
-		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.InternalToken})
+		md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: a.Config.AccessProxy.Credential.InternalToken})
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		err := StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, okHandler)

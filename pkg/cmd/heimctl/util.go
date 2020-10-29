@@ -24,7 +24,7 @@ func Util(rootCmd *cobra.Command) {
 			if err != nil {
 				return err
 			}
-			h := hmac.New(sha1.New, conf.FrontendProxy.GithubWebhookSecret)
+			h := hmac.New(sha1.New, conf.AccessProxy.Credential.GithubWebhookSecret)
 			h.Write([]byte(body))
 			hash := h.Sum(nil)
 			fmt.Fprintf(os.Stdout, "sha1=%s", hex.EncodeToString(hash[:]))

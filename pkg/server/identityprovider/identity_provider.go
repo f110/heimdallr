@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/server"
@@ -24,7 +24,7 @@ type claims struct {
 }
 
 type Server struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	database     database.UserDatabase
 	sessionStore session.Store
@@ -34,7 +34,7 @@ type Server struct {
 
 var _ server.ChildServer = &Server{}
 
-func NewServer(conf *config.Config, database database.UserDatabase, store session.Store) (*Server, error) {
+func NewServer(conf *configv2.Config, database database.UserDatabase, store session.Store) (*Server, error) {
 	issuer := ""
 	switch conf.IdentityProvider.Provider {
 	case "google":
@@ -150,7 +150,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	}
 
 	rootUser := false
-	for _, v := range s.Config.General.RootUsers {
+	for _, v := range s.Config.AuthorizationEngine.RootUsers {
 		if v == c.Email {
 			rootUser = true
 			break

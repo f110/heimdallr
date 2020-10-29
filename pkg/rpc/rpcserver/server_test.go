@@ -20,7 +20,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -29,14 +29,12 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	conf := &config.Config{
-		General: &config.General{
-			CertificateAuthority: &config.CertificateAuthority{},
-		},
-		RPCServer: &config.RPCServer{
+	conf := &configv2.Config{
+		CertificateAuthority: &configv2.CertificateAuthority{},
+		RPCServer: &configv2.RPCServer{
 			Bind: ":0",
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Level: "error",
 		},
 	}
@@ -50,7 +48,7 @@ func TestNewServer(t *testing.T) {
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
 		nil,
 	)
 	if v == nil {
@@ -72,18 +70,16 @@ func TestServer_Start(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	conf := &config.Config{
-		General: &config.General{
-			CertificateAuthority: &config.CertificateAuthority{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
-			},
+	conf := &configv2.Config{
+		CertificateAuthority: &configv2.CertificateAuthority{
+			Certificate: caCert,
+			PrivateKey:  caPrivateKey,
 		},
-		RPCServer: &config.RPCServer{
+		RPCServer: &configv2.RPCServer{
 			Bind:        fmt.Sprintf(":%d", port),
 			MetricsBind: fmt.Sprintf(":%d", metricPort),
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Level: "error",
 		},
 	}
@@ -97,7 +93,7 @@ func TestServer_Start(t *testing.T) {
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
 		nil,
 	)
 	go func() {
@@ -137,41 +133,48 @@ func TestServicesViaServer(t *testing.T) {
 	}
 	signReqPubKey := signReqKey.PublicKey
 
-	conf := &config.Config{
-		General: &config.General{
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "test.example.com",
-			CertificateAuthority: &config.CertificateAuthority{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
+			Credential: &configv2.Credential{
+				InternalToken:     "internal-token",
+				SigningPrivateKey: signReqKey,
+				SigningPublicKey:  signReqPubKey,
 			},
-			InternalToken:     "internal-token",
-			RootUsers:         []string{database.SystemUser.Id},
-			SigningPrivateKey: signReqKey,
-			SigningPublicKey:  signReqPubKey,
-			Backends: []*config.Backend{
+			Backends: []*configv2.Backend{
 				{Name: "test", Agent: true},
 			},
-			Roles: []*config.Role{
+		},
+		CertificateAuthority: &configv2.CertificateAuthority{
+			Certificate: caCert,
+			PrivateKey:  caPrivateKey,
+		},
+		AuthorizationEngine: &configv2.AuthorizationEngine{
+			RootUsers: []string{database.SystemUser.Id},
+			Roles: []*configv2.Role{
 				{
 					Name: "test-admin",
-					Bindings: []*config.Binding{
-						{Rpc: "test-admin"},
+					Bindings: []*configv2.Binding{
+						{RPC: "test-admin"},
 					},
 				},
 				{Name: "test-admin2"},
 			},
-			RpcPermissions: []*config.RpcPermission{
+			RPCPermissions: []*configv2.RPCPermission{
 				{Name: "test-admin", Allow: []string{"/proxy.rpc.Admin/*"}},
 			},
 		},
-		RPCServer: &config.RPCServer{
+		RPCServer: &configv2.RPCServer{
 			Bind: fmt.Sprintf(":%d", port),
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Level: "error",
 		},
 	}
-	if err := conf.General.Load(conf.General.Backends, conf.General.Roles, conf.General.RpcPermissions); err != nil {
+	if err := conf.AccessProxy.Setup(conf.AccessProxy.Backends); err != nil {
+		t.Fatal(err)
+	}
+	if err := conf.AuthorizationEngine.Setup(conf.AuthorizationEngine.Roles, conf.AuthorizationEngine.RPCPermissions); err != nil {
 		t.Fatal(err)
 	}
 	if err := logger.Init(conf.Logger); err != nil {
@@ -210,7 +213,7 @@ func TestServicesViaServer(t *testing.T) {
 		token,
 		cluster,
 		relay,
-		cert.NewCertificateAuthority(memory.NewCA(), conf.General.CertificateAuthority),
+		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
 		func() bool { return true },
 	)
 	go func() {

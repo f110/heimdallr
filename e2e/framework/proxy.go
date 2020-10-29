@@ -36,6 +36,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -498,57 +499,62 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	conf := &config.Config{
-		General: &config.General{
-			Enable:                true,
-			ServerName:            fmt.Sprintf("e2e.f110.dev:%d", p.proxyPort),
-			Bind:                  fmt.Sprintf(":%d", p.proxyPort),
-			BindInternalApi:       fmt.Sprintf(":%d", p.internalPort),
-			SigningPrivateKeyFile: "./privatekey.pem",
-			InternalTokenFile:     "./internal_token",
-			CertificateAuthority: &config.CertificateAuthority{
-				CertFile:         "./ca.crt",
-				KeyFile:          "./ca.key",
-				Organization:     "test",
-				OrganizationUnit: "e2e",
-				Country:          "jp",
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{
+			HTTP: &configv2.AuthProxyHTTP{
+				ServerName:      fmt.Sprintf("e2e.f110.dev:%d", p.proxyPort),
+				Bind:            fmt.Sprintf(":%d", p.proxyPort),
+				BindInternalApi: fmt.Sprintf(":%d", p.internalPort),
+				Certificate: &configv2.Certificate{
+					CertFile: "./tls.crt",
+					KeyFile:  "./tls.key",
+				},
+				Session: &configv2.Session{
+					Type:    "secure_cookie",
+					KeyFile: "./cookie_secret",
+				},
 			},
-			CertFile:          "./tls.crt",
-			KeyFile:           "./tls.key",
-			RpcTarget:         fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
-			ProxyFile:         "./proxies.yaml",
+			Credential: &configv2.Credential{
+				SigningPrivateKeyFile: "./privatekey.pem",
+				InternalTokenFile:     "./internal_token",
+			},
+			RPCServer: fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
+			ProxyFile: "./proxies.yaml",
+		},
+		CertificateAuthority: &configv2.CertificateAuthority{
+			CertFile:         "./ca.crt",
+			KeyFile:          "./ca.key",
+			Organization:     "test",
+			OrganizationUnit: "e2e",
+			Country:          "jp",
+		},
+		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RoleFile:          "./roles.yaml",
-			RpcPermissionFile: "./rpc_permissions.yaml",
+			RPCPermissionFile: "./rpc_permissions.yaml",
 			RootUsers:         []string{"root@e2e.f110.dev"},
 		},
-		Logger: &config.Logger{
+		Logger: &configv2.Logger{
 			Encoding: "console",
 			Level:    "debug",
 		},
-		RPCServer: &config.RPCServer{
-			Enable: true,
-			Bind:   fmt.Sprintf(":%d", p.rpcPort),
+		RPCServer: &configv2.RPCServer{
+			Bind: fmt.Sprintf(":%d", p.rpcPort),
 		},
-		IdentityProvider: &config.IdentityProvider{
+		IdentityProvider: &configv2.IdentityProvider{
 			Provider:         "custom",
 			Issuer:           p.identityProvider.Issuer,
 			ClientId:         "identityprovider",
 			ClientSecretFile: "./identityprovider",
 			RedirectUrl:      fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", p.proxyPort),
 		},
-		Datastore: &config.Datastore{
-			RawUrl:  "etcd://embed",
-			DataDir: "./data",
-		},
-		FrontendProxy: &config.FrontendProxy{
-			Session: &config.Session{
-				Type:    "secure_cookie",
-				KeyFile: "./cookie_secret",
+		Datastore: &configv2.Datastore{
+			DatastoreEtcd: &configv2.DatastoreEtcd{
+				RawUrl:  "etcd://embed",
+				DataDir: "./data",
 			},
 		},
-		Dashboard: &config.Dashboard{
-			Enable: true,
-			Bind:   fmt.Sprintf(":%d", p.dashboardPort),
+		Dashboard: &configv2.Dashboard{
+			Bind: fmt.Sprintf(":%d", p.dashboardPort),
 		},
 	}
 

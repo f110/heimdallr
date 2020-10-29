@@ -24,7 +24,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	"go.f110.dev/heimdallr/operator/pkg/signals"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -58,7 +58,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := logger.OverrideKlog(&config.Logger{Level: logLevel, Encoding: logEncoding}); err != nil {
+	if err := logger.OverrideKlog(&configv2.Logger{Level: logLevel, Encoding: logEncoding}); err != nil {
 		panic(err)
 	}
 

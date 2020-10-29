@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -20,10 +20,10 @@ var ErrCertificateNotFound = errors.New("cert: certificate not found")
 
 type CertificateAuthority struct {
 	db database.CertificateAuthority
-	ca *config.CertificateAuthority
+	ca *configv2.CertificateAuthority
 }
 
-func NewCertificateAuthority(db database.CertificateAuthority, ca *config.CertificateAuthority) *CertificateAuthority {
+func NewCertificateAuthority(db database.CertificateAuthority, ca *configv2.CertificateAuthority) *CertificateAuthority {
 	return &CertificateAuthority{db: db, ca: ca}
 }
 

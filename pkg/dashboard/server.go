@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
@@ -26,7 +26,7 @@ import (
 )
 
 type Server struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	conn   *grpc.ClientConn
 	client *rpcclient.ClientWithUserToken
@@ -35,7 +35,7 @@ type Server struct {
 	router *httprouter.Router
 }
 
-func NewServer(config *config.Config, grpcConn *grpc.ClientConn) *Server {
+func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
 	s := &Server{
 		Config: config,
 		conn:   grpcConn,
@@ -427,7 +427,7 @@ func (s *Server) handleDownloadCACert(w http.ResponseWriter, _ *http.Request, _ 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename=ca.crt")
 	buf := new(bytes.Buffer)
-	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: s.Config.General.CertificateAuthority.Certificate.Raw}); err != nil {
+	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: s.Config.CertificateAuthority.Certificate.Raw}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "configv2",
+    srcs = ["config.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/config/configv2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/config",
+        "//pkg/k8s",
+        "//pkg/rpc",
+        "//vendor/github.com/go-sql-driver/mysql",
+        "//vendor/github.com/gorilla/mux",
+        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.etcd.io/etcd/v3/clientv3/namespace",
+        "//vendor/go.uber.org/zap",
+        "//vendor/go.uber.org/zap/zapcore",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/sigs.k8s.io/yaml",
+    ],
+)

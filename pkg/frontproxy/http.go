@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -81,7 +81,7 @@ type accessLogger struct {
 	internal *zap.Logger
 }
 
-func newAccessLogger(conf *config.Logger) *accessLogger {
+func newAccessLogger(conf *configv2.Logger) *accessLogger {
 	encoding := "json"
 	if conf.Encoding != "" {
 		encoding = conf.Encoding
@@ -123,11 +123,11 @@ func (a *accessLogger) Log(l AccessLog) {
 }
 
 type Transport struct {
-	config    *config.Config
+	config    *configv2.Config
 	connector *connector.Server
 }
 
-func NewTransport(conf *config.Config, ct *connector.Server) *Transport {
+func NewTransport(conf *configv2.Config, ct *connector.Server) *Transport {
 	return &Transport{
 		config:    conf,
 		connector: ct,
@@ -135,7 +135,7 @@ func NewTransport(conf *config.Config, ct *connector.Server) *Transport {
 }
 
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	b, ok := t.config.General.GetBackendByHost(req.Host)
+	b, ok := t.config.AccessProxy.GetBackendByHost(req.Host)
 	if ok && b.Agent {
 		return t.connector.RoundTrip(b, req)
 	}
@@ -144,14 +144,14 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type HttpProxy struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	client       *rpcclient.Client
 	accessLogger *accessLogger
 	reverseProxy *httputil.ReverseProxy
 }
 
-func NewHttpProxy(conf *config.Config, ct *connector.Server, rpcClient *rpcclient.Client) *HttpProxy {
+func NewHttpProxy(conf *configv2.Config, ct *connector.Server, rpcClient *rpcclient.Client) *HttpProxy {
 	p := &HttpProxy{
 		Config: conf,
 		reverseProxy: &httputil.ReverseProxy{
@@ -180,7 +180,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 
 	if req.TLS == nil {
 		// non secure access
-		backend, ok := p.Config.General.GetBackendByHost(req.Host)
+		backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
 		if !ok {
 			logger.Log.Debug("Hostname not found", zap.String("host", req.Host))
 			panic(http.ErrAbortHandler)
@@ -201,7 +201,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		*u = *req.URL
 		u.Scheme = "https"
 		u.Host = req.Host
-		redirectUrl, _ := url.Parse(p.Config.General.AuthEndpoint)
+		redirectUrl, _ := url.Parse(p.Config.AccessProxy.AuthEndpoint)
 		v := &url.Values{}
 		v.Set("from", u.String())
 		redirectUrl.RawQuery = v.Encode()
@@ -230,14 +230,14 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 
 	if logged.status >= 200 && logged.status <= 299 && req.TLS != nil {
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
-		if p.Config.FrontendProxy.ExpectCT {
-			w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.General.ServerName+"/ct/report\"")
+		if p.Config.AccessProxy.HTTP.ExpectCT {
+			w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.AccessProxy.HTTP.ServerName+"/ct/report\"")
 		}
 	}
 }
 
 func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
-	backend, ok := p.Config.General.GetBackendByHost(req.Host)
+	backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
 		panic(http.ErrAbortHandler)
 	}
@@ -261,7 +261,7 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 	}
 	req.Body.Close()
 	req.Body = ioutil.NopCloser(bytes.NewReader(buf))
-	err = github.ValidateSignature(req.Header.Get("X-Hub-Signature"), buf, p.Config.FrontendProxy.GithubWebhookSecret)
+	err = github.ValidateSignature(req.Header.Get("X-Hub-Signature"), buf, p.Config.AccessProxy.Credential.GithubWebhookSecret)
 	if err != nil {
 		logger.Log.Debug("Couldn't validate signature", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusBadRequest)
@@ -272,7 +272,7 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {
-	backend, ok := p.Config.General.GetBackendByHost(req.Host)
+	backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
 		panic(http.ErrAbortHandler)
 	}
@@ -313,7 +313,7 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 }
 
 func (p *HttpProxy) director(req *http.Request) {
-	if backend, ok := p.Config.General.GetBackendByHost(req.Host); ok {
+	if backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host); ok {
 		q := backend.Url.RawQuery
 		req.URL.Host = backend.Url.Host
 		req.URL.Scheme = backend.Url.Scheme
@@ -343,7 +343,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 			},
 			Roles: user.Roles,
 		})
-		token, err := claim.SignedString(p.Config.General.SigningPrivateKey)
+		token, err := claim.SignedString(p.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {
 			logger.Log.Warn("Failed sign jwt", zap.Error(err))
 			return xerrors.Errorf(": %w", err)

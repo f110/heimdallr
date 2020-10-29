@@ -9,24 +9,24 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/server"
 )
 
 type ResourceServer struct {
-	Config *config.Config
+	Config *configv2.Config
 }
 
 var _ server.ChildServer = &ResourceServer{}
 
-func NewResourceServer(config *config.Config) (*ResourceServer, error) {
+func NewResourceServer(config *configv2.Config) (*ResourceServer, error) {
 	return &ResourceServer{Config: config}, nil
 }
 
 func (r *ResourceServer) Route(mux *httprouter.Router) {
 	mux.GET("/internal/publickey", func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		b, err := x509.MarshalPKIXPublicKey(&r.Config.General.SigningPublicKey)
+		b, err := x509.MarshalPKIXPublicKey(&r.Config.AccessProxy.Credential.SigningPublicKey)
 		if err != nil {
 			logger.Log.Error("Failed marshal public key", zap.Error(err))
 		}

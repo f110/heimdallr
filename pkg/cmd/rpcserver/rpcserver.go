@@ -17,8 +17,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/etcd"
 	"go.f110.dev/heimdallr/pkg/database/mysql"
@@ -44,7 +44,7 @@ type mainProcess struct {
 	*cmd.FSM
 
 	ConfFile string
-	Config   *config.Config
+	Config   *configv2.Config
 
 	server *rpcserver.Server
 
@@ -84,10 +84,10 @@ func (m *mainProcess) init() (cmd.State, error) {
 	}
 	m.Config = conf
 
-	if m.Config.Datastore.Url != nil {
+	switch {
+	case m.Config.Datastore.DatastoreEtcd != nil:
 		m.datastoreType = datastoreTypeEtcd
-	}
-	if m.Config.Datastore.DSN != nil {
+	case m.Config.Datastore.DatastoreMySQL != nil:
 		m.datastoreType = datastoreTypeMySQL
 	}
 
@@ -118,13 +118,13 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(ctx, client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 
-		if m.Config.General.Enable {
+		if m.Config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
@@ -142,13 +142,13 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		repository := dao.NewRepository(conn)
 		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
 		caDatabase := mysql.NewCA(repository)
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.General.CertificateAuthority)
+		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.CertificateAuthority)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
-		if m.Config.General.Enable {
+		if m.Config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = mysql.NewTokenDatabase(repository)
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}

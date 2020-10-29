@@ -15,8 +15,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/dashboard"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -34,7 +34,7 @@ type mainProcess struct {
 	*cmd.FSM
 	ConfFile string
 
-	config        *config.Config
+	config        *configv2.Config
 	rpcServerConn *grpc.ClientConn
 	dashboard     *dashboard.Server
 }
@@ -77,10 +77,10 @@ func (m *mainProcess) setup() (cmd.State, error) {
 func (m *mainProcess) openConnection() (cmd.State, error) {
 	cred := credentials.NewTLS(&tls.Config{
 		ServerName: rpc.ServerHostname,
-		RootCAs:    m.config.General.CertificateAuthority.CertPool,
+		RootCAs:    m.config.CertificateAuthority.CertPool,
 	})
 	conn, err := grpc.Dial(
-		m.config.General.RpcTarget,
+		m.config.Dashboard.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
 		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),

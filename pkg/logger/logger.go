@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 )
 var initOnce = &sync.Once{}
 
-func Init(conf *config.Logger) error {
+func Init(conf *configv2.Logger) error {
 	var err error
 	initOnce.Do(func() {
 		if e := initLogger(conf); e != nil {
@@ -48,7 +48,7 @@ func WithRequestId(ctx context.Context) zap.Field {
 	}
 }
 
-func initLogger(conf *config.Logger) error {
+func initLogger(conf *configv2.Logger) error {
 	encoderConf := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -74,7 +74,7 @@ func initLogger(conf *config.Logger) error {
 	return nil
 }
 
-func initAuditLogger(conf *config.Logger) error {
+func initAuditLogger(conf *configv2.Logger) error {
 	encoderConf := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",

@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -44,7 +45,7 @@ type revokedCertClient interface {
 }
 
 type authenticator struct {
-	Config        *config.General
+	Config        *configv2.Config
 	sessionStore  session.Store
 	userDatabase  database.UserDatabase
 	revokedCert   revokedCertClient
@@ -52,22 +53,22 @@ type authenticator struct {
 }
 
 type authInterceptor struct {
-	Config        *config.General
+	Config        *configv2.Config
 	userDatabase  database.UserDatabase
 	tokenDatabase database.TokenDatabase
 	publicKey     ecdsa.PublicKey
 }
 
 // Init is initializing authenticator. You must call first before calling Authenticate.
-func Init(conf *config.Config, sessionStore session.Store, userDatabase database.UserDatabase, tokenDatabase database.TokenDatabase, revokedCert revokedCertClient) {
-	defaultAuthenticator.Config = conf.General
+func Init(conf *configv2.Config, sessionStore session.Store, userDatabase database.UserDatabase, tokenDatabase database.TokenDatabase, revokedCert revokedCertClient) {
+	defaultAuthenticator.Config = conf
 	defaultAuthenticator.sessionStore = sessionStore
 	defaultAuthenticator.userDatabase = userDatabase
 	defaultAuthenticator.revokedCert = revokedCert
 	defaultAuthenticator.tokenDatabase = tokenDatabase
 
 	v, err := unauthorizedError.WithDetails(&rpc.ErrorUnauthorized{
-		Endpoint: conf.General.TokenEndpoint,
+		Endpoint: conf.AccessProxy.TokenEndpoint,
 	})
 	if err != nil {
 		panic(err)
@@ -75,11 +76,11 @@ func Init(conf *config.Config, sessionStore session.Store, userDatabase database
 	unauthorizedError = v
 }
 
-func InitInterceptor(conf *config.Config, user database.UserDatabase, token database.TokenDatabase) {
-	defaultAuthInterceptor.Config = conf.General
+func InitInterceptor(conf *configv2.Config, user database.UserDatabase, token database.TokenDatabase) {
+	defaultAuthInterceptor.Config = conf
 	defaultAuthInterceptor.userDatabase = user
 	defaultAuthInterceptor.tokenDatabase = token
-	defaultAuthInterceptor.publicKey = conf.General.SigningPublicKey
+	defaultAuthInterceptor.publicKey = conf.AccessProxy.Credential.SigningPublicKey
 }
 
 func Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
@@ -99,7 +100,7 @@ func StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamS
 }
 
 func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
-	backend, ok := a.Config.GetBackendByHost(req.Host)
+	backend, ok := a.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}
@@ -132,7 +133,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 		return nil, ErrNotAllowed
 	}
 	for _, r := range user.Roles {
-		role, err := a.Config.GetRole(r)
+		role, err := a.Config.AuthorizationEngine.GetRole(r)
 		if err == config.ErrRoleNotFound {
 			continue
 		}
@@ -140,7 +141,7 @@ func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*d
 			continue
 		}
 		for _, b := range role.Bindings {
-			if b.FQDN == backend.FQDN {
+			if b.Backend == backend.Name {
 				if _, ok := matched[b.Permission]; ok {
 					checkPermission = true
 					break
@@ -174,7 +175,7 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	if host == "" {
 		return nil, ErrHostnameNotFound
 	}
-	backend, ok := a.Config.GetBackendByHostname(host)
+	backend, ok := a.Config.AccessProxy.GetBackendByHostname(host)
 	if !ok {
 		return nil, ErrHostnameNotFound
 	}
@@ -189,7 +190,7 @@ func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host s
 	}
 
 	for _, r := range user.Roles {
-		role, err := a.Config.GetRole(r)
+		role, err := a.Config.AuthorizationEngine.GetRole(r)
 		if err == config.ErrRoleNotFound {
 			continue
 		}
@@ -293,7 +294,7 @@ func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) 
 	}
 
 	asRootUser := false
-	for _, v := range a.Config.RootUsers {
+	for _, v := range a.Config.AuthorizationEngine.RootUsers {
 		if v == s.Id {
 			asRootUser = true
 			break
@@ -330,7 +331,7 @@ func (a *authInterceptor) UnaryInterceptor(ctx context.Context, req interface{},
 
 	ok = false
 	for _, v := range user.Roles {
-		role, err := a.Config.GetRole(v)
+		role, err := a.Config.AuthorizationEngine.GetRole(v)
 		if err != nil {
 			continue
 		}
@@ -409,7 +410,7 @@ func (a *authInterceptor) authenticateByMetadata(ctx context.Context, md metadat
 	} else if len(md.Get(rpc.InternalTokenMetadataKey)) > 0 {
 		logger.Log.Debug("Found internal token", zap.String("token", md.Get(rpc.InternalTokenMetadataKey)[0]))
 		t := md.Get(rpc.InternalTokenMetadataKey)[0]
-		if a.Config.InternalToken != t {
+		if a.Config.AccessProxy.Credential.InternalToken != t {
 			return nil, ErrInvalidToken
 		}
 
@@ -417,7 +418,7 @@ func (a *authInterceptor) authenticateByMetadata(ctx context.Context, md metadat
 	}
 
 	var rootUser *database.User
-	for _, v := range a.Config.RootUsers {
+	for _, v := range a.Config.AuthorizationEngine.RootUsers {
 		if v == userId {
 			rootUser = &database.User{Id: userId, Admin: true, RootUser: true}
 		}

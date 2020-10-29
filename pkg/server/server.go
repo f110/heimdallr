@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/frontproxy"
@@ -39,13 +39,13 @@ type ChildServer interface {
 }
 
 type HostMultiplexer struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	frontProxy http.Handler
 	utilities  http.Handler
 }
 
-func NewHostMultiplexer(conf *config.Config, frontProxy, utilities http.Handler) *HostMultiplexer {
+func NewHostMultiplexer(conf *configv2.Config, frontProxy, utilities http.Handler) *HostMultiplexer {
 	return &HostMultiplexer{Config: conf, frontProxy: frontProxy, utilities: utilities}
 }
 
@@ -56,7 +56,7 @@ func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		host = s[0]
 	}
 
-	if host == h.Config.General.ServerNameHost {
+	if host == h.Config.AccessProxy.ServerNameHost {
 		h.utilities.ServeHTTP(w, req)
 		return
 	}
@@ -65,14 +65,14 @@ func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type Server struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	server          *http.Server
 	connector       *connector.Server
 	clusterDatabase database.ClusterDatabase
 }
 
-func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *frontproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
+func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *frontproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
@@ -96,16 +96,16 @@ func New(conf *config.Config, cluster database.ClusterDatabase, frontProxy *fron
 }
 
 func (s *Server) Start() error {
-	l, err := net.Listen("tcp", s.Config.General.Bind)
+	l, err := net.Listen("tcp", s.Config.AccessProxy.HTTP.Bind)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:     tls.VersionTLS12,
 		CipherSuites:   allowCipherSuites,
-		GetCertificate: s.Config.General.GetCertificate,
+		GetCertificate: s.Config.AccessProxy.HTTP.Certificate.GetCertificate,
 		ClientAuth:     tls.RequestClientCert,
-		ClientCAs:      s.Config.General.CertificateAuthority.CertPool,
+		ClientCAs:      s.Config.CertificateAuthority.CertPool,
 		NextProtos:     []string{connector.ProtocolName, frontproxy.SocketProxyNextProto, http2.NextProtoTLS},
 	})
 
@@ -116,14 +116,14 @@ func (s *Server) Start() error {
 	if err := s.clusterDatabase.Join(context.Background()); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	logger.Log.Info("Start Server", zap.String("listen", s.Config.General.Bind))
+	logger.Log.Info("Start Server", zap.String("listen", s.Config.AccessProxy.HTTP.Bind))
 
-	if s.Config.General.EnableHttp {
-		l, err := net.Listen("tcp", s.Config.General.BindHttp)
+	if s.Config.AccessProxy.HTTP.BindHttp != "" {
+		l, err := net.Listen("tcp", s.Config.AccessProxy.HTTP.BindHttp)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.General.BindHttp))
+		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.AccessProxy.HTTP.BindHttp))
 		go s.server.Serve(l)
 	}
 	return s.server.Serve(listener)

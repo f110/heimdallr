@@ -8,20 +8,20 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 type AdminService struct {
-	Config       *config.Config
+	Config       *configv2.Config
 	userDatabase database.UserDatabase
 }
 
 var _ rpc.AdminServer = &AdminService{}
 
-func NewAdminService(conf *config.Config, user database.UserDatabase) *AdminService {
+func NewAdminService(conf *configv2.Config, user database.UserDatabase) *AdminService {
 	return &AdminService{
 		Config:       conf,
 		userDatabase: user,
@@ -183,7 +183,7 @@ func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBec
 		return nil, err
 	}
 
-	if _, err := s.Config.General.GetRole(req.GetRole()); err != nil {
+	if _, err := s.Config.AuthorizationEngine.GetRole(req.GetRole()); err != nil {
 		logger.Log.Info("Role not found", zap.String("role", req.Role))
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*r
 		return nil, err
 	}
 
-	roles := s.Config.General.GetAllRoles()
+	roles := s.Config.AuthorizationEngine.GetAllRoles()
 
 	res := make([]*rpc.RoleItem, 0, len(roles))
 	for _, v := range roles {
@@ -279,7 +279,11 @@ func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*r
 				continue
 			}
 		}
-		backends, err := s.Config.General.GetBackendsByRole(v.Name)
+		r, err := s.Config.AuthorizationEngine.GetRole(v.Name)
+		if err != nil {
+			continue
+		}
+		backends, err := s.Config.AccessProxy.GetBackendsByRole(r)
 		if err != nil {
 			continue
 		}
@@ -301,7 +305,7 @@ func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*r
 }
 
 func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendList) (*rpc.ResponseBackendList, error) {
-	backends := s.Config.General.GetAllBackends()
+	backends := s.Config.AccessProxy.GetAllBackends()
 
 	res := make([]*rpc.BackendItem, 0, len(backends))
 	for _, v := range backends {

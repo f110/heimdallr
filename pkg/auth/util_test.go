@@ -7,13 +7,13 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func TestMain(m *testing.M) {
-	logger.Init(&config.Logger{Level: "debug"})
+	logger.Init(&configv2.Logger{Level: "debug"})
 
 	os.Exit(m.Run())
 }

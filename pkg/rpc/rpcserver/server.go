@@ -24,7 +24,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -37,7 +37,7 @@ var (
 )
 
 type Server struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	server        *grpc.Server
 	privKey       crypto.PrivateKey
@@ -55,7 +55,7 @@ func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grp
 }
 
 func NewServer(
-	conf *config.Config,
+	conf *configv2.Config,
 	user database.UserDatabase,
 	token database.TokenDatabase,
 	cluster database.ClusterDatabase,
@@ -98,8 +98,8 @@ func NewServer(
 func (s *Server) Start() error {
 	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", rpc.ServerHostname))
 	c, privKey, err := cert.GenerateServerCertificate(
-		s.Config.General.CertificateAuthority.Certificate,
-		s.Config.General.CertificateAuthority.PrivateKey,
+		s.Config.CertificateAuthority.Certificate,
+		s.Config.CertificateAuthority.PrivateKey,
 		[]string{rpc.ServerHostname},
 	)
 	if err != nil {

@@ -6,7 +6,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/dashboard",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/logger",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",

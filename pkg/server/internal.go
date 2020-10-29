@@ -7,17 +7,17 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 type Internal struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	server *http.Server
 }
 
-func NewInternal(conf *config.Config, child ...ChildServer) *Internal {
+func NewInternal(conf *configv2.Config, child ...ChildServer) *Internal {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
@@ -26,7 +26,7 @@ func NewInternal(conf *config.Config, child ...ChildServer) *Internal {
 	return &Internal{
 		Config: conf,
 		server: &http.Server{
-			Addr:     conf.General.BindInternalApi,
+			Addr:     conf.AccessProxy.HTTP.BindInternalApi,
 			ErrorLog: logger.CompatibleLogger,
 			Handler:  mux,
 		},
@@ -34,7 +34,7 @@ func NewInternal(conf *config.Config, child ...ChildServer) *Internal {
 }
 
 func (s *Internal) Start() error {
-	logger.Log.Info("Start Internal server", zap.String("listen", s.Config.General.BindInternalApi))
+	logger.Log.Info("Start Internal server", zap.String("listen", s.Config.AccessProxy.HTTP.BindInternalApi))
 	return s.server.ListenAndServe()
 }
 

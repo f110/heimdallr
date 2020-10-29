@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
@@ -292,7 +292,7 @@ type dialSuccess struct {
 }
 
 type Server struct {
-	Config  *config.Config
+	Config  *configv2.Config
 	Locator database.RelayLocator
 	Pool    *ConnectionManager
 	client  *rpcclient.Client
@@ -304,8 +304,8 @@ type Server struct {
 	roundTrippers map[string]http.RoundTripper
 }
 
-func NewServer(conf *config.Config, rpcConn *grpc.ClientConn, locator database.RelayLocator) *Server {
-	c, _ := rpcclient.NewWithInternalToken(rpcConn, conf.General.InternalToken)
+func NewServer(conf *configv2.Config, rpcConn *grpc.ClientConn, locator database.RelayLocator) *Server {
+	c, _ := rpcclient.NewWithInternalToken(rpcConn, conf.AccessProxy.Credential.InternalToken)
 
 	return &Server{
 		Config:        conf,
@@ -321,7 +321,7 @@ func NewServer(conf *config.Config, rpcConn *grpc.ClientConn, locator database.R
 
 func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 	logger.Log.Debug("Accept connector", zap.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
-	b, ok := s.Config.General.GetBackend(conn.ConnectionState().PeerCertificates[0].Subject.CommonName)
+	b, ok := s.Config.AccessProxy.GetBackend(conn.ConnectionState().PeerCertificates[0].Subject.CommonName)
 	if !ok {
 		logger.Log.Info("Unknown host", zap.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
 		return
@@ -424,7 +424,7 @@ func (s *Server) Serve(conn net.Conn) error {
 }
 
 func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error) {
-	b, ok := s.Config.General.GetBackend(name)
+	b, ok := s.Config.AccessProxy.GetBackend(name)
 	if !ok {
 		return nil, xerrors.New("connector: backend not found")
 	}
@@ -469,7 +469,7 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 	}
 }
 
-func (s *Server) dialUpstreamViaRelay(ctx context.Context, b *config.Backend) (net.Conn, error) {
+func (s *Server) dialUpstreamViaRelay(ctx context.Context, b *configv2.Backend) (net.Conn, error) {
 	conn, err := s.Pool.GetConn(b.Name)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -478,7 +478,7 @@ func (s *Server) dialUpstreamViaRelay(ctx context.Context, b *config.Backend) (n
 }
 
 func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Writer, dialId uint32) (uint32, *net.TCPAddr, error) {
-	b, ok := s.Config.General.GetBackend(name)
+	b, ok := s.Config.AccessProxy.GetBackend(name)
 	if !ok {
 		return 0, nil, xerrors.New("connector: backend not found")
 	}
@@ -512,7 +512,7 @@ func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Wri
 	}
 }
 
-func (s *Server) RoundTrip(backend *config.Backend, req *http.Request) (*http.Response, error) {
+func (s *Server) RoundTrip(backend *configv2.Backend, req *http.Request) (*http.Response, error) {
 	s.mu.Lock()
 	rt, ok := s.roundTrippers[backend.Name]
 	s.mu.Unlock()

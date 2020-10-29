@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//pkg/auth",
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
         "//pkg/rpc",
@@ -32,7 +32,7 @@ go_test(
     deps = [
         "//pkg/auth",
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/database/memory",
         "//pkg/logger",

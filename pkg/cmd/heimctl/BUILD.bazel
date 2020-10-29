@@ -19,6 +19,7 @@ go_library(
         "//pkg/cert",
         "//pkg/config",
         "//pkg/config/configreader",
+        "//pkg/config/configv2",
         "//pkg/frontproxy",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",

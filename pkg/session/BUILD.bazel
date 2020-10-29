@@ -9,7 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/session",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//vendor/github.com/bradfitz/gomemcache/memcache",
         "//vendor/github.com/gorilla/securecookie",
         "//vendor/golang.org/x/xerrors",

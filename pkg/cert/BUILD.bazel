@@ -9,7 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cert",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
         "//vendor/golang.org/x/xerrors",
@@ -26,7 +26,7 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":cert"],
     deps = [
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/database/memory",
         "//vendor/software.sslmate.com/src/go-pkcs12",

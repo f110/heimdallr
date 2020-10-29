@@ -9,14 +9,14 @@ import (
 	"sigs.k8s.io/yaml"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 type ConfigConverter struct {
 }
 
 func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
-	proxies := make([]*config.Backend, 0, len(backends))
+	proxies := make([]*configv2.Backend, 0, len(backends))
 	for _, v := range backends {
 		service, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
 		if err != nil {
@@ -47,25 +47,25 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister li
 				}
 			}
 		}
-		b := &config.Backend{
-			Name:          name,
-			FQDN:          v.Spec.FQDN,
-			Upstream:      upstream,
-			Permissions:   toConfigPermissions(v.Spec.Permissions),
-			WebHook:       v.Spec.Webhook,
-			WebHookPath:   v.Spec.WebhookPath,
-			Agent:         v.Spec.Agent,
-			Socket:        v.Spec.Socket,
-			AllowRootUser: v.Spec.AllowRootUser,
-			DisableAuthn:  v.Spec.DisableAuthn,
-			Insecure:      v.Spec.Insecure,
-			AllowHttp:     v.Spec.AllowHttp,
+		b := &configv2.Backend{
+			Name:             name,
+			FQDN:             v.Spec.FQDN,
+			Upstream:         upstream,
+			Permissions:      toConfigPermissions(v.Spec.Permissions),
+			WebHook:          v.Spec.Webhook,
+			WebHookPath:      v.Spec.WebhookPath,
+			Agent:            v.Spec.Agent,
+			Socket:           v.Spec.Socket,
+			AllowRootUser:    v.Spec.AllowRootUser,
+			DisableAuthn:     v.Spec.DisableAuthn,
+			InsecureUpstream: v.Spec.Insecure,
+			AllowHttp:        v.Spec.AllowHttp,
 		}
 		if v.Spec.SocketTimeout != nil {
-			b.SocketTimeout = &config.Duration{Duration: v.Spec.SocketTimeout.Duration}
+			b.SocketTimeout = &configv2.Duration{Duration: v.Spec.SocketTimeout.Duration}
 		}
 		if v.Spec.MaxSessionDuration != nil {
-			b.MaxSessionDuration = &config.Duration{Duration: v.Spec.MaxSessionDuration.Duration}
+			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.Duration}
 		}
 		proxies = append(proxies, b)
 	}
@@ -86,9 +86,9 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 		backendMap[v.Namespace+"/"+v.Name] = v
 	}
 
-	roles := make([]*config.Role, len(roleList))
+	roles := make([]*configv2.Role, len(roleList))
 	for i, role := range roleList {
-		bindings := make([]*config.Binding, 0)
+		bindings := make([]*configv2.Binding, 0)
 
 		matchedBindings := RoleBindings(roleBindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
 			if binding.RoleRef.Name != role.Name {
@@ -136,19 +136,19 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 						continue
 					}
 
-					bindings = append(bindings, &config.Binding{
+					bindings = append(bindings, &configv2.Binding{
 						Permission: subject.Permission,
 						Backend:    backendHost,
 					})
 				case "RpcPermission":
-					bindings = append(bindings, &config.Binding{
-						Rpc: subject.Name,
+					bindings = append(bindings, &configv2.Binding{
+						RPC: subject.Name,
 					})
 				}
 			}
 		}
 
-		roles[i] = &config.Role{
+		roles[i] = &configv2.Role{
 			Name:        role.Name,
 			Title:       role.Spec.Title,
 			Description: role.Spec.Description,
@@ -167,9 +167,9 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 }
 
 func (ConfigConverter) RPCPermission(permissions []*proxyv1alpha1.RpcPermission) ([]byte, error) {
-	rpcPermissions := make([]*config.RpcPermission, len(permissions))
+	rpcPermissions := make([]*configv2.RPCPermission, len(permissions))
 	for i, v := range permissions {
-		rpcPermissions[i] = &config.RpcPermission{
+		rpcPermissions[i] = &configv2.RPCPermission{
 			Name:  v.Name,
 			Allow: v.Spec.Allow,
 		}

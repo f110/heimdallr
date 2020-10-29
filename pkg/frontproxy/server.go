@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
@@ -22,13 +22,13 @@ type httpProxy interface {
 }
 
 type FrontendProxy struct {
-	Config *config.Config
+	Config *configv2.Config
 
 	httpProxy   httpProxy
 	socketProxy *SocketProxy
 }
 
-func NewFrontendProxy(conf *config.Config, ct *connector.Server, c *rpcclient.Client) *FrontendProxy {
+func NewFrontendProxy(conf *configv2.Config, ct *connector.Server, c *rpcclient.Client) *FrontendProxy {
 	s := NewSocketProxy(conf, ct)
 	h := NewHttpProxy(conf, ct, c)
 

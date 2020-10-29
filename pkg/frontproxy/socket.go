@@ -20,7 +20,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -120,13 +120,13 @@ type Stream struct {
 
 	closeOnce   sync.Once
 	user        *database.User
-	backend     *config.Backend
+	backend     *configv2.Backend
 	backendConn net.Conn
 	closeCh     chan struct{}
 }
 
 type SocketProxy struct {
-	Config    *config.Config
+	Config    *configv2.Config
 	connector *connector.Server
 
 	mu    sync.Mutex
@@ -138,7 +138,7 @@ type tlsConn interface {
 	ConnectionState() tls.ConnectionState
 }
 
-func NewSocketProxy(conf *config.Config, ct *connector.Server) *SocketProxy {
+func NewSocketProxy(conf *configv2.Config, ct *connector.Server) *SocketProxy {
 	return &SocketProxy{Config: conf, connector: ct, conns: make(map[string]*Stream, 0)}
 }
 
@@ -169,7 +169,7 @@ func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 		logger.Log.Info("Failure handshake", zap.Error(err))
 		return
 	}
-	if err := st.authenticate(ctx, s.Config.General.TokenEndpoint); err != nil {
+	if err := st.authenticate(ctx, s.Config.AccessProxy.TokenEndpoint); err != nil {
 		logger.Log.Info("Failure authenticate", zap.Error(err))
 		return
 	}
@@ -245,7 +245,7 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 
 	// AuthenticateForSocket is already check the host parameter inside AuthenticateForSocket.
 	// Thus skip error check here.
-	b, _ := st.parent.Config.General.GetBackendByHostname(st.host)
+	b, _ := st.parent.Config.AccessProxy.GetBackendByHostname(st.host)
 	st.backend = b
 
 	return nil

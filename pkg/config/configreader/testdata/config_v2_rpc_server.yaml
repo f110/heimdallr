@@ -1,0 +1,18 @@
+rpc_server:
+  bind: :4001
+  metrics_bind: :4005
+certificate_authority:
+  cert_file: ./ca.crt
+  key_file: ./ca.key
+  organization: test
+  organization_unit: dev
+  country: jp
+identity_provider:
+  provider: google
+  client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
+  client_secret_file: ./client_secret
+  extra_scopes: ["email"]
+  redirect_url: https://test.f110.dev:4000/auth/callback
+datastore:
+  etcd:
+    url: etcd://localhost:2379

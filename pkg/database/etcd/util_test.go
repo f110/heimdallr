@@ -11,7 +11,7 @@ import (
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/embed"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/netutil"
 )
@@ -68,7 +68,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	logger.Init(&config.Logger{Level: "debug", Encoding: "console"})
+	logger.Init(&configv2.Logger{Level: "debug", Encoding: "console"})
 
 	os.Exit(m.Run())
 }

@@ -15,7 +15,7 @@ go_library(
     deps = [
         "//pkg/auth",
         "//pkg/cert",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/connector",
         "//pkg/database",
         "//pkg/logger",
