@@ -37,13 +37,20 @@ container_image(
     tars = [":bin"],
 )
 
+CONTAINER_IMAGE_REPOSITORIES = {
+    "proxy": "f110/heimdallr-proxy",
+    "rpcserver": "f110/heimdallr-rpcserver",
+    "dashboard": "f110/heimdallr-dashboard",
+    "ctl": "f110/heimdallr-ctl",
+}
+
 container_push(
     name = "push",
     format = "Docker",
     image = ":image",
     registry = "quay.io",
-    repository = "f110/heimdallr-proxy",
-    tag = VERSION,
+    repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
+    tag = "dev-{BUILD_USER}",
 )
 
 pkg_tar(
@@ -68,8 +75,8 @@ container_push(
     format = "Docker",
     image = ":image_rpcserver",
     registry = "quay.io",
-    repository = "f110/heimdallr-rpcserver",
-    tag = VERSION,
+    repository = CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+    tag = "dev-{BUILD_USER}",
 )
 
 pkg_tar(
@@ -93,8 +100,8 @@ container_push(
     format = "Docker",
     image = ":image_dashboard",
     registry = "quay.io",
-    repository = "f110/heimdallr-dashboard",
-    tag = VERSION,
+    repository = CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+    tag = "dev-{BUILD_USER}",
 )
 
 pkg_tar(
@@ -116,8 +123,8 @@ container_push(
     format = "Docker",
     image = ":image_ctl",
     registry = "quay.io",
-    repository = "f110/heimdallr-ctl",
-    tag = VERSION,
+    repository = CONTAINER_IMAGE_REPOSITORIES["ctl"],
+    tag = "dev-{BUILD_USER}",
 )
 
 load("@dev_f110_mono//build:job.bzl", "job")
@@ -130,6 +137,86 @@ job(
     cpu_limit = "2000m",
     github_status = True,
     targets = "//...",
+)
+
+sh_binary(
+    name = "tag_image",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/f110/heimdallr-test",
+        "--sha256",
+        "$(location :push.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_proxy",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/" + CONTAINER_IMAGE_REPOSITORIES["proxy"],
+        "--sha256",
+        "$(location :push.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_rpcserver",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/" + CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+        "--sha256",
+        "$(location :push_rpcserver.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push_rpcserver.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_dashboard",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/" + CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+        "--sha256",
+        "$(location :push_dashboard.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push_dashboard.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_ctl",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/" + CONTAINER_IMAGE_REPOSITORIES["ctl"],
+        "--sha256",
+        "$(location :push_ctl.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push_ctl.digest",
+    ],
 )
 
 load("//build/rules:release.bzl", "github_release")

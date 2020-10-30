@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "v1util",
+    srcs = [
+        "and_closer.go",
+        "verify.go",
+        "zip.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-containerregistry/pkg/v1/v1util",
+    importpath = "github.com/google/go-containerregistry/pkg/v1/v1util",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/google/go-containerregistry/pkg/v1:pkg"],
+)

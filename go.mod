@@ -14,6 +14,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.5.1
+	github.com/google/go-containerregistry v0.1.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/uuid v1.1.1
@@ -40,7 +41,6 @@ require (
 	go.uber.org/zap v1.14.1
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/tools v0.0.0-20200822203824-307de81be3f4 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect

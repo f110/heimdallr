@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "authn",
+    srcs = [
+        "anon.go",
+        "auth.go",
+        "authn.go",
+        "basic.go",
+        "bearer.go",
+        "doc.go",
+        "keychain.go",
+        "multikeychain.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-containerregistry/pkg/authn",
+    importpath = "github.com/google/go-containerregistry/pkg/authn",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/docker/cli/cli/config",
+        "//vendor/github.com/docker/cli/cli/config/types",
+        "//vendor/github.com/google/go-containerregistry/pkg/logs",
+        "//vendor/github.com/google/go-containerregistry/pkg/name",
+    ],
+)
