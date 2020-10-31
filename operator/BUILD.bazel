@@ -15,7 +15,7 @@ container_image(
     tars = [":bin"],
 )
 
-load("//:VERSION.bzl", "VERSION")
+load("//:RELEASE.bzl", "VERSION")
 
 container_push(
     name = "push",

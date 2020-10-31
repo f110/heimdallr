@@ -1,6 +1,7 @@
 load("@bazel_skylib//lib:shell.bzl", "shell")
 
 def _github_release_impl(ctx):
+    files = []
     assets = ["--attach=%s" % x.short_path for x in ctx.files.assets]
     substitutions = {
         "@@BIN@@": shell.quote(ctx.executable._bin.short_path),
@@ -9,6 +10,10 @@ def _github_release_impl(ctx):
         "@@BRANCH@@": shell.quote(ctx.attr.branch),
         "@@ASSETS@@": shell.array_literal(assets),
     }
+    if ctx.attr.body:
+        substitutions["@@BODY@@"] = shell.quote(ctx.file.body.short_path)
+        files.append(ctx.file.body)
+
     out = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.expand_template(
         template = ctx.file._template,
@@ -17,7 +22,9 @@ def _github_release_impl(ctx):
         is_executable = True,
     )
 
-    runfiles = ctx.runfiles(files = [ctx.executable._bin] + ctx.files.assets)
+    files.append(ctx.executable._bin)
+    files.extend(ctx.files.assets)
+    runfiles = ctx.runfiles(files = files)
     return [
         DefaultInfo(
             executable = out,
@@ -33,6 +40,7 @@ github_release = rule(
         "repository": attr.string(),
         "branch": attr.string(),
         "assets": attr.label_list(allow_files = True),
+        "body": attr.label(allow_single_file = True),
         "_bin": attr.label(
             executable = True,
             cfg = "host",
@@ -40,4 +48,30 @@ github_release = rule(
         ),
         "_template": attr.label(default = "//build/rules:release.bash", allow_single_file = True),
     },
+)
+
+def _template_string_impl(ctx):
+    tmpl_file = ctx.actions.declare_file("%s_tmpl" % ctx.label.name)
+    ctx.actions.write(tmpl_file, ctx.attr.template)
+
+    data = {}
+    for k in ctx.attr.data.keys():
+        data["{"+k+"}"] = ctx.attr.data[k]
+
+    out = ctx.actions.declare_file(ctx.label.name)
+    ctx.actions.expand_template(
+        template = tmpl_file,
+        output = out,
+        substitutions = data,
+        is_executable = False,
+    )
+
+    return [DefaultInfo(files = depset([out]))]
+
+template_string = rule(
+    implementation = _template_string_impl,
+    attrs = {
+        "data": attr.string_dict(),
+        "template": attr.string(),
+    }
 )

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,11 +19,13 @@ func githubRelease(args []string) error {
 	var from string
 	var attach []string
 	var githubRepo string
+	var bodyFile string
 	fs := pflag.NewFlagSet("github-release", pflag.ContinueOnError)
 	fs.StringVar(&version, "version", "", "")
 	fs.StringVar(&from, "from", "", "")
 	fs.StringArrayVar(&attach, "attach", []string{}, "")
 	fs.StringVar(&githubRepo, "repo", "", "")
+	fs.StringVar(&bodyFile, "body", "", "Release body")
 	if err := fs.Parse(args); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -33,6 +36,14 @@ func githubRelease(args []string) error {
 	}
 	if !strings.Contains(githubRepo, "/") {
 		return xerrors.Errorf("invalid repo name: %s", githubRepo)
+	}
+	body := ""
+	if _, err := os.Lstat(bodyFile); !os.IsNotExist(err) {
+		b, err := ioutil.ReadFile(bodyFile)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		body = string(b)
 	}
 
 	ts := oauth2.StaticTokenSource(
@@ -68,6 +79,7 @@ func githubRelease(args []string) error {
 		r, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
 			TagName:         github.String(version),
 			TargetCommitish: branch.Commit.SHA,
+			Body:            github.String(body),
 		})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)

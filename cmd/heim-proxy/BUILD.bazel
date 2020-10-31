@@ -21,7 +21,7 @@ go_binary(
 )
 
 load("//build/rules/go:util.bzl", "multiplatform_go_binary")
-load("//:VERSION.bzl", "PLATFORMS")
+load("//:RELEASE.bzl", "PLATFORMS")
 
 multiplatform_go_binary(
     embed = [":heim-proxy_lib"],

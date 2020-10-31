@@ -11,7 +11,7 @@ kustomization(
 )
 
 load("//operator/hack/manifest-finalizer:def.bzl", "finalize_manifest")
-load("//:VERSION.bzl", "VERSION")
+load("//:RELEASE.bzl", "VERSION")
 
 finalize_manifest(
     name = "all-in-one",

@@ -1,1 +1,0 @@
-build/root/VERSION.bzl

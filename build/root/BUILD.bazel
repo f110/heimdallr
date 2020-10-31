@@ -1,6 +1,6 @@
 filegroup(
     name = "all",
-    srcs = ["VERSION.bzl"],
+    srcs = ["RELEASE.bzl"],
     visibility = ["//visibility:public"],
 )
 
@@ -19,7 +19,7 @@ go_vendor(
 
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
-load("//:VERSION.bzl", "VERSION")
+load("//:RELEASE.bzl", "VERSION", "RELEASE_MESSAGE")
 
 pkg_tar(
     name = "bin",
@@ -219,7 +219,19 @@ sh_binary(
     ],
 )
 
-load("//build/rules:release.bzl", "github_release")
+load("//build/rules:release.bzl", "github_release", "template_string")
+
+template_string(
+    name = "release_message",
+    template = RELEASE_MESSAGE,
+    data = {
+        "version": VERSION,
+        "proxy_repository": CONTAINER_IMAGE_REPOSITORIES["proxy"],
+        "rpcserver_repository": CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+        "dashboard_repository": CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+        "ctl_repository": CONTAINER_IMAGE_REPOSITORIES["ctl"],
+    },
+)
 
 github_release(
     name = "github_release",
@@ -235,4 +247,5 @@ github_release(
     branch = "master",
     repository = "f110/heimdallr",
     version = VERSION,
+    body = ":release_message",
 )
