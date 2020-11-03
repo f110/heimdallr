@@ -1,4 +1,5 @@
 general:
+  enable: true
   bind: :4000
   debug: true
   server_name: test.f110.dev:4000

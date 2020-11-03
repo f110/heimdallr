@@ -25,7 +25,7 @@ func ReadConfig(filename string) (*configv2.Config, error) {
 			if err != nil {
 				return nil, xerrors.Errorf(": %w", err)
 			}
-			return v1ToV2(confv1), nil
+			return V1ToV2(confv1), nil
 		}
 	}
 
@@ -188,7 +188,7 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 	return conf, nil
 }
 
-func v1ToV2(in *config.Config) *configv2.Config {
+func V1ToV2(in *config.Config) *configv2.Config {
 	out := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			HTTP: &configv2.AuthProxyHTTP{
@@ -204,20 +204,9 @@ func v1ToV2(in *config.Config) *configv2.Config {
 			RPCPermissionFile: in.General.RpcPermissionFile,
 			RootUsers:         in.General.RootUsers,
 		},
-		Datastore: &configv2.Datastore{},
-		IdentityProvider: &configv2.IdentityProvider{
-			Provider:         in.IdentityProvider.Provider,
-			Issuer:           in.IdentityProvider.Issuer,
-			ClientId:         in.IdentityProvider.ClientId,
-			ClientSecretFile: in.IdentityProvider.ClientSecretFile,
-			ExtraScopes:      in.IdentityProvider.ExtraScopes,
-			Domain:           in.IdentityProvider.Domain,
-			RedirectUrl:      in.IdentityProvider.RedirectUrl,
-		},
-		Logger: &configv2.Logger{
-			Encoding: in.Logger.Encoding,
-			Level:    in.Logger.Level,
-		},
+		Datastore:        &configv2.Datastore{},
+		IdentityProvider: &configv2.IdentityProvider{},
+		Logger:           &configv2.Logger{},
 	}
 	if in.General.CertificateAuthority != nil {
 		out.CertificateAuthority = &configv2.CertificateAuthority{
@@ -288,6 +277,23 @@ func v1ToV2(in *config.Config) *configv2.Config {
 					KeyFile:    in.Datastore.KeyFile,
 				}
 			}
+		}
+	}
+	if in.Logger != nil {
+		out.Logger = &configv2.Logger{
+			Level:    in.Logger.Level,
+			Encoding: in.Logger.Encoding,
+		}
+	}
+	if in.IdentityProvider != nil {
+		out.IdentityProvider = &configv2.IdentityProvider{
+			Provider:         in.IdentityProvider.Provider,
+			Issuer:           in.IdentityProvider.Issuer,
+			ClientId:         in.IdentityProvider.ClientId,
+			ClientSecretFile: in.IdentityProvider.ClientSecretFile,
+			ExtraScopes:      in.IdentityProvider.ExtraScopes,
+			Domain:           in.IdentityProvider.Domain,
+			RedirectUrl:      in.IdentityProvider.RedirectUrl,
 		}
 	}
 

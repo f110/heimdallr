@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -20,7 +21,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+	"sigs.k8s.io/yaml"
 
+	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configreader"
 )
 
@@ -31,6 +34,7 @@ func Util(rootCmd *cobra.Command) {
 	}
 	util.AddCommand(githubSignature())
 	util.AddCommand(webhookCert())
+	util.AddCommand(convertV2Config())
 
 	rootCmd.AddCommand(util)
 }
@@ -133,4 +137,55 @@ func webhookCert() *cobra.Command {
 	_ = wc.MarkFlagRequired("certificate")
 
 	return wc
+}
+
+func convertV2Config() *cobra.Command {
+	v1Config := ""
+	output := ""
+
+	cc := &cobra.Command{
+		Use:   "convert-v2-config",
+		Short: "Covert to v2 config from v1",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			var outWriter io.Writer
+			if output == "" {
+				outWriter = os.Stdout
+			} else {
+				f, err := os.Open(output)
+				if err != nil {
+					return xerrors.Errorf(": %w", err)
+				}
+				outWriter = f
+			}
+
+			conf := &config.Config{}
+			readBuf, err := ioutil.ReadFile(v1Config)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if err := yaml.Unmarshal(readBuf, &conf); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			v2Conf := configreader.V1ToV2(conf)
+
+			b, err := yaml.Marshal(v2Conf)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			n, err := outWriter.Write(b)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if len(b) != n {
+				return xerrors.New("short write")
+			}
+
+			return nil
+		},
+	}
+	cc.Flags().StringVarP(&v1Config, "config", "c", "", "Config file which is v1 format")
+	cc.Flags().StringVar(&output, "output", "", "Output file")
+	_ = cc.MarkFlagRequired("config")
+
+	return cc
 }
