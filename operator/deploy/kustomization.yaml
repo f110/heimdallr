@@ -3,3 +3,4 @@ resources:
   - ../config/manager
   - ../config/crd
   - ../config/rbac
+  - ../config/webhook

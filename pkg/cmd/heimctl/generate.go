@@ -16,9 +16,18 @@ import (
 )
 
 func Generate(rootCmd *cobra.Command) {
+	generate := &cobra.Command{
+		Use:   "generate",
+		Short: "Generate something",
+	}
+	generate.AddCommand(generateBackendCommand())
+
+	rootCmd.AddCommand(generate)
+}
+
+func generateBackendCommand() *cobra.Command {
 	input := ""
 	output := ""
-
 	backend := &cobra.Command{
 		Use:   "backend",
 		Short: "Generate Backend from Service",
@@ -87,11 +96,5 @@ func Generate(rootCmd *cobra.Command) {
 	backend.Flags().StringVarP(&input, "input", "i", input, "Input")
 	backend.Flags().StringVarP(&output, "output", "o", output, "Output")
 
-	generate := &cobra.Command{
-		Use:   "generate",
-		Short: "Generate something",
-	}
-	generate.AddCommand(backend)
-
-	rootCmd.AddCommand(generate)
+	return backend
 }

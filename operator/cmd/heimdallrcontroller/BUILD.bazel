@@ -10,6 +10,7 @@ go_library(
         "//operator/pkg/controllers",
         "//operator/pkg/informers/externalversions",
         "//operator/pkg/signals",
+        "//operator/pkg/webhook",
         "//pkg/config/configv2",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",

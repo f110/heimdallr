@@ -24,6 +24,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	"go.f110.dev/heimdallr/operator/pkg/signals"
+	"go.f110.dev/heimdallr/operator/pkg/webhook"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -37,6 +38,9 @@ func main() {
 	clusterDomain := ""
 	probeAddr := ""
 	workers := 1
+	disableWebhook := false
+	certFile := ""
+	keyFile := ""
 	logLevel := "info"
 	logEncoding := "console"
 	dev := false
@@ -53,9 +57,18 @@ func main() {
 	fs.BoolVar(&dev, "dev", dev, "development mode")
 	fs.StringVar(&logLevel, "log-level", logLevel, "Log level")
 	fs.StringVar(&logEncoding, "log-encoding", logEncoding, "Log encoding")
+	fs.BoolVar(&disableWebhook, "disable-webhook", false, "Disable webhook server")
+	fs.StringVar(&certFile, "cert", "", "Server certificate file for webhook")
+	fs.StringVar(&keyFile, "key", "", "Private key for server certificate")
 	klog.InitFlags(fs)
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		panic(err)
+	}
+	if !disableWebhook && certFile == "" {
+		panic("-cert is mandatory")
+	}
+	if !disableWebhook && keyFile == "" {
+		panic("-private-key is mandatory")
 	}
 
 	if err := logger.OverrideKlog(&configv2.Logger{Level: logLevel, Encoding: logEncoding}); err != nil {
@@ -177,6 +190,19 @@ func main() {
 
 					ic.Run(ctx, workers)
 				}()
+
+				if !disableWebhook {
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+
+						ws := webhook.NewServer(":8080", certFile, keyFile)
+						err := ws.Start()
+						if err != nil && err != http.ErrServerClosed {
+							logger.Log.Info("Failed start webhook server", zap.Error(err))
+						}
+					}()
+				}
 
 				wg.Wait()
 			},

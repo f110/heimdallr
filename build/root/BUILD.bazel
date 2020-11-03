@@ -19,7 +19,7 @@ go_vendor(
 
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
-load("//:RELEASE.bzl", "VERSION", "RELEASE_MESSAGE")
+load("//:RELEASE.bzl", "RELEASE_MESSAGE", "VERSION")
 
 pkg_tar(
     name = "bin",
@@ -140,22 +140,6 @@ job(
 )
 
 sh_binary(
-    name = "tag_image",
-    srcs = ["//script/container-release"],
-    args = [
-        "--repository",
-        "quay.io/f110/heimdallr-test",
-        "--sha256",
-        "$(location :push.digest)",
-        "--tag",
-        VERSION,
-    ],
-    data = [
-        ":push.digest",
-    ],
-)
-
-sh_binary(
     name = "tag_proxy",
     srcs = ["//script/container-release"],
     args = [
@@ -223,7 +207,6 @@ load("//build/rules:release.bzl", "github_release", "template_string")
 
 template_string(
     name = "release_message",
-    template = RELEASE_MESSAGE,
     data = {
         "version": VERSION,
         "proxy_repository": CONTAINER_IMAGE_REPOSITORIES["proxy"],
@@ -231,6 +214,7 @@ template_string(
         "dashboard_repository": CONTAINER_IMAGE_REPOSITORIES["dashboard"],
         "ctl_repository": CONTAINER_IMAGE_REPOSITORIES["ctl"],
     },
+    template = RELEASE_MESSAGE,
 )
 
 github_release(
@@ -244,8 +228,8 @@ github_release(
         "//cmd/heim-proxy:heim-proxy_linux_amd64",
         "//cmd/heim-proxy:heim-proxy_windows_amd64",
     ],
+    body = ":release_message",
     branch = "master",
     repository = "f110/heimdallr",
     version = VERSION,
-    body = ":release_message",
 )

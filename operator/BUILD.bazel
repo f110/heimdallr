@@ -23,5 +23,21 @@ container_push(
     image = ":image",
     registry = "quay.io",
     repository = "f110/heimdallr-operator",
-    tag = VERSION,
+    tag = "dev-{BUILD_USER}",
+)
+
+sh_binary(
+    name = "tag_image",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        "quay.io/f110/heimdallr-operator",
+        "--sha256",
+        "$(location //operator/:push.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push.digest",
+    ],
 )

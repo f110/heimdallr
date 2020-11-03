@@ -1,0 +1,11 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "webhook",
+    src = "kustomization.yaml",
+    resources = [
+        "manifests.yaml",
+        "service.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)

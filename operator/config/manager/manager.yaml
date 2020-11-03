@@ -23,6 +23,8 @@ spec:
             - -lease-lock-name=operator
             - -lease-lock-namespace=$(MY_NAMESPACE)
             - -cluster-domain=cluster.local
+            - -cert=/etc/heimdallr-operator/webhook-cert/webhook.crt
+            - -key=/etc/heimdallr-operator/webhook-cert/webhook.key
           env:
             - name: MY_NAMESPACE
               valueFrom:
@@ -39,4 +41,35 @@ spec:
             requests:
               cpu: 30m
               memory: 32Mi
+          volumeMounts:
+            - name: webhook-cert
+              mountPath: /etc/heimdallr-operator/webhook-cert
+      volumes:
+        - name: webhook-cert
+          secret:
+            secretName: webhook-cert
       terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-cert
+stringData:
+  webhook.crt: |-
+    -----BEGIN CERTIFICATE-----
+    MIIBjjCCATOgAwIBAgIIVNWTMtpuDKUwCgYIKoZIzj0EAwIwIDEeMBwGA1UEAxMV
+    d2ViaG9vay5oZWltZGFsbHIuc3ZjMB4XDTIwMTEwMzE1NDE0M1oXDTIyMTEwMzE1
+    NDE0M1owIDEeMBwGA1UEAxMVd2ViaG9vay5oZWltZGFsbHIuc3ZjMFkwEwYHKoZI
+    zj0CAQYIKoZIzj0DAQcDQgAE3H0qYKLu9HYKiOWSCRpMRhlNqsHqDGIxwugHm2l7
+    qkzGBeG91N9OJGKGDy9ttO1J+M5MpXOEaxaDs+tCPs5nXKNXMFUwDgYDVR0PAQH/
+    BAQDAgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwIAYDVR0R
+    BBkwF4IVd2ViaG9vay5oZWltZGFsbHIuc3ZjMAoGCCqGSM49BAMCA0kAMEYCIQC5
+    vJ+u4s8uQElxWPx+wmddK6YC0kd3ryxY1YRppVLQjAIhANvXVC1MnDTaSykdnl+2
+    Z4oKp5FFBT7xpsTXKc9AUKgX
+    -----END CERTIFICATE-----
+  webhook.key: |-
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEIIeBYmwPNgxHwqgTJfpAdFvU1f10H7N7giq7lE9VgsYwoAoGCCqGSM49
+    AwEHoUQDQgAE3H0qYKLu9HYKiOWSCRpMRhlNqsHqDGIxwugHm2l7qkzGBeG91N9O
+    JGKGDy9ttO1J+M5MpXOEaxaDs+tCPs5nXA==
+    -----END EC PRIVATE KEY-----

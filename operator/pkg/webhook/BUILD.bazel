@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "webhook",
+    srcs = ["server.go"],
+    importpath = "go.f110.dev/heimdallr/operator/pkg/webhook",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/logger",
+        "//vendor/go.uber.org/zap",
+        "//vendor/k8s.io/api/admission/v1:admission",
+    ],
+)
