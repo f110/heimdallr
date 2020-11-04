@@ -1,0 +1,206 @@
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+load("//:RELEASE.bzl", "RELEASE_MESSAGE", "VERSION")
+load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES", "REGISTRY")
+
+pkg_tar(
+    name = "bin",
+    srcs = [
+        "//cmd/heimdallr-proxy",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heimdallr-proxy"],
+    tars = [":bin"],
+)
+
+container_push(
+    name = "push",
+    format = "Docker",
+    image = ":image",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
+    tag = "dev-{BUILD_USER}",
+)
+
+pkg_tar(
+    name = "bin_rpcserver",
+    srcs = [
+        "//cmd/heim-rpcserver",
+        "@grpc_health_probe//file",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_rpcserver",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heim-rpcserver"],
+    tars = [":bin_rpcserver"],
+)
+
+container_push(
+    name = "push_rpcserver",
+    format = "Docker",
+    image = ":image_rpcserver",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+    tag = "dev-{BUILD_USER}",
+)
+
+pkg_tar(
+    name = "bin_dashboard",
+    srcs = [
+        "//cmd/heim-dashboard",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_dashboard",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heim-dashboard"],
+    tars = [":bin_dashboard"],
+)
+
+container_push(
+    name = "push_dashboard",
+    format = "Docker",
+    image = ":image_dashboard",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+    tag = "dev-{BUILD_USER}",
+)
+
+pkg_tar(
+    name = "bin_ctl",
+    srcs = ["//cmd/heimctl"],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_ctl",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heimctl"],
+    tars = [":bin_ctl"],
+)
+
+container_push(
+    name = "push_ctl",
+    format = "Docker",
+    image = ":image_ctl",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["ctl"],
+    tag = "dev-{BUILD_USER}",
+)
+
+pkg_tar(
+    name = "bin_operator",
+    srcs = ["//operator/cmd/heimdallrcontroller"],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_operator",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/heimdallrcontroller"],
+    tars = [":bin_operator"],
+)
+
+container_push(
+    name = "push_operator",
+    format = "Docker",
+    image = ":image_operator",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["operator"],
+    tag = "dev-{BUILD_USER}",
+)
+
+sh_binary(
+    name = "tag_proxy",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["proxy"],
+        "--sha256",
+        "$(location //container:push.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        "//container:push.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_rpcserver",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+        "--sha256",
+        "$(location //container:push_rpcserver.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        "//container:push_rpcserver.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_dashboard",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+        "--sha256",
+        "$(location //container:push_dashboard.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        "//container:push_dashboard.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_ctl",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["ctl"],
+        "--sha256",
+        "$(location //container:push_ctl.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        "//container:push_ctl.digest",
+    ],
+)
+
+sh_binary(
+    name = "tag_operator",
+    srcs = ["//script/container-release"],
+    args = [
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["operator"],
+        "--sha256",
+        "$(location //container/:push_operator.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [
+        ":push_operator.digest",
+    ],
+)

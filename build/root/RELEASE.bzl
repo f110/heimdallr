@@ -12,4 +12,5 @@ proxy: quay.io/{proxy_repository}:{version}
 rpcserver: quay.io/{rpcserver_repository}:{version}
 dashboard: quay.io/{dashboard_repository}:{version}
 CLI: quay.io/{ctl_repository}:{version}
+operator: quay.io/{operator_repository}:{version}
 """
