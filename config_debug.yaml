@@ -1,7 +1,6 @@
 access_proxy:
   http:
-    # Listen address of the proxy. This address is a main socket.
-    # A lot of traffic come here.
+    # Listen address of the proxy. A lot of traffic come here.
     # Default value is :4000
     bind: :4000
     # Listen address of HTTP server

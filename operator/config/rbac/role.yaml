@@ -12,6 +12,8 @@ rules:
   - configmaps
   - cronjobs
   - deployments
+  - ingressclasses
+  - ingresses
   - poddisruptionbudgets
   - pods
   - secrets
