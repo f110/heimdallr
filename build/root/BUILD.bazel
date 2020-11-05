@@ -38,9 +38,9 @@ github_release(
     name = "github_release",
     assets = [
         "//operator/deploy:all-in-one",
-        "//cmd/heim-agent:heim-agent_darwin_amd64",
-        "//cmd/heim-agent:heim-agent_linux_amd64",
-        "//cmd/heim-agent:heim-agent_windows_amd64",
+        "//cmd/heim-connector:heim-connector_darwin_amd64",
+        "//cmd/heim-connector:heim-connector_linux_amd64",
+        "//cmd/heim-connector:heim-connector_windows_amd64",
         "//cmd/heim-proxy:heim-proxy_darwin_amd64",
         "//cmd/heim-proxy:heim-proxy_linux_amd64",
         "//cmd/heim-proxy:heim-proxy_windows_amd64",

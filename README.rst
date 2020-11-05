@@ -187,10 +187,10 @@ After running bootstrap command, build and run.
 
 All dependent libraries are included in the repository.
 
-Agent
-========
+Connector
+===========
 
-The agent is a sidecar of upstream server which behinds NAT.
+The connector is a sidecar of upstream server which behinds NAT.
 
 Traffic can be proxied through the agent even if it cannot be connect to the upstream server due to NAT.
 
@@ -201,35 +201,35 @@ The agent is a client program that beside a backend like a sidecar.
 the agent will connect to the proxy and relay ingress traffic of proxy.
 Thus it can be proxying to the backend that likes behind NAT.
 
-The agent is desgined to run the same host with the backend.
+The agent is designed to run the same host with the backend.
 And the agent is also designed for 1:1 corresponding between the agent and the server.
 
 #. Decide the backend's name with your proxy admin
-#. Generate CSR(Certificate Signing Request) and private key by heim-agent
+#. Generate CSR(Certificate Signing Request) and private key by heim-connector
 #. Send CSR to the proxy admin
 #. You got signed certificate from the proxy admin
-#. Run heim-agent with signed certificate
+#. Run heim-connector with signed certificate
 
 DO NOT move the private key to outside of the agent server for any reason.
 
 Generate CSR
 +++++++++++++++++
 
-Generating CSR by heim-agent.
+Generating CSR by heim-connector.
 CSR includes the backend's name. so you have to pass it by an argument.
 
 .. code:: console
 
-    $ heim-agent --name test --privatekey $HOME/.heimdallr/privatekey.pem
+    $ heim-connector --name test --privatekey $HOME/.heimdallr/privatekey.pem
 
-heim-agent will create a CSR in temporary directory.
+heim-connector will create a CSR in temporary directory.
 
-Start heim-agent with signed certificate
+Start heim-connector with signed certificate
 +++++++++++++++++++++++++++++++++++++++++++++
 
 .. code:: console
 
-    $ heim-agent --host your.proxy.f110.dev \
+    $ heim-connector --host your.proxy.f110.dev \
         --name test \
         --privatekey $HOME/.heimdallr/privatekey.pem \
         --backend 127.0.0.1:22 \

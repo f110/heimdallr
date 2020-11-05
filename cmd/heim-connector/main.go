@@ -133,7 +133,7 @@ func agent(args []string) error {
 	host := "127.0.0.1:443"
 	debug := false
 	v := false
-	fs := pflag.NewFlagSet("heim-agent", pflag.ExitOnError)
+	fs := pflag.NewFlagSet("heim-connector", pflag.ExitOnError)
 	fs.StringVarP(&credential, "credential", "k", credential, "Credential file for proxy (p12)")
 	fs.StringVarP(&certificate, "certificate", "c", certificate, "Signed certificate file path")
 	fs.StringVarP(&privateKey, "privatekey", "p", privateKey, "Private Key file path. If file is not exists, agent will be create a new private key.")

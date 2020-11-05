@@ -196,7 +196,7 @@ sh_binary(
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["operator"],
         "--sha256",
-        "$(location //container/:push_operator.digest)",
+        "$(location //container:push_operator.digest)",
         "--tag",
         VERSION,
     ],
