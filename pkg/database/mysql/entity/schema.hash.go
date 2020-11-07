@@ -1,3 +1,3 @@
 package entity
 
-const SchemaHash = "0c9f4e4eb78463ee9f3d412523aacc7219ec3af2800314951e7ef3ab2ec5e56b"
+const SchemaHash = "017b396e9a7a7fbe3399d009700062673771965ce415d19d0303f2e796100dfe"

@@ -21,6 +21,7 @@ type Column struct {
 type User struct {
 	Id        int32
 	Identity  string
+	LoginName string
 	Admin     bool
 	Type      string
 	Comment   string
@@ -43,6 +44,7 @@ func (e *User) IsChanged() bool {
 	defer e.mu.Unlock()
 
 	return e.Identity != e.mark.Identity ||
+		e.LoginName != e.mark.LoginName ||
 		e.Admin != e.mark.Admin ||
 		e.Type != e.mark.Type ||
 		e.Comment != e.mark.Comment ||
@@ -57,6 +59,9 @@ func (e *User) ChangedColumn() []ddl.Column {
 	res := make([]ddl.Column, 0)
 	if e.Identity != e.mark.Identity {
 		res = append(res, ddl.Column{Name: "identity", Value: e.Identity})
+	}
+	if e.LoginName != e.mark.LoginName {
+		res = append(res, ddl.Column{Name: "login_name", Value: e.LoginName})
 	}
 	if e.Admin != e.mark.Admin {
 		res = append(res, ddl.Column{Name: "admin", Value: e.Admin})
@@ -85,6 +90,7 @@ func (e *User) Copy() *User {
 	n := &User{
 		Id:        e.Id,
 		Identity:  e.Identity,
+		LoginName: e.LoginName,
 		Admin:     e.Admin,
 		Type:      e.Type,
 		Comment:   e.Comment,

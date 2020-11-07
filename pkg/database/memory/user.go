@@ -60,6 +60,19 @@ func (u *UserDatabase) GetAll() ([]*database.User, error) {
 	return users, nil
 }
 
+func (u *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName string) (string, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	for _, v := range u.data {
+		if v.LoginName == loginName {
+			return v.Id, nil
+		}
+	}
+
+	return "", database.ErrUserNotFound
+}
+
 func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()

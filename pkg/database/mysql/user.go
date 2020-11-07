@@ -109,6 +109,19 @@ func (u *UserDatabase) GetAll() ([]*database.User, error) {
 	return result, nil
 }
 
+func (u *UserDatabase) GetIdentityByLoginName(ctx context.Context, loginName string) (string, error) {
+	users, err := u.dao.User.ListIdentityByLoginName(ctx, loginName)
+	if err != nil {
+		return "", xerrors.Errorf(": %w", err)
+	}
+	if len(users) == 0 {
+		return "", database.ErrUserNotFound
+	}
+
+	user := users[0]
+	return user.Identity, nil
+}
+
 func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	users, err := u.GetAll()
 	if err != nil {

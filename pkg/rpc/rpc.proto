@@ -78,13 +78,14 @@ enum UserType {
 }
 
 message UserItem {
-    string id = 1;
-    repeated string roles = 2;
-    repeated string maintain_roles = 3;
-    bool admin = 4;
-    UserType type = 5;
-    string comment = 6;
-    repeated AccessTokenItem tokens = 7;
+             string          id             = 1;
+    repeated string          roles          = 2;
+    repeated string          maintain_roles = 3;
+             bool            admin          = 4;
+             UserType        type           = 5;
+             string          comment        = 6;
+    repeated AccessTokenItem tokens         = 7;
+             string          login_name     = 8;
 }
 
 message AccessTokenItem {

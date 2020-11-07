@@ -144,6 +144,19 @@ func (d *UserDatabase) GetAll() ([]*database.User, error) {
 	return users, nil
 }
 
+func (d *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName string) (string, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	for _, v := range d.users {
+		if v.LoginName == loginName {
+			return v.Id, nil
+		}
+	}
+
+	return "", database.ErrUserNotFound
+}
+
 func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

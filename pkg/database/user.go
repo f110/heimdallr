@@ -42,6 +42,7 @@ type UserDatabase interface {
 	GetAllServiceAccount() ([]*User, error)
 	GetAccessToken(value string) (*AccessToken, error)
 	GetAccessTokens(id string) ([]*AccessToken, error)
+	GetIdentityByLoginName(ctx context.Context, loginName string) (string, error)
 	Set(ctx context.Context, user *User) error
 	SetAccessToken(ctx context.Context, token *AccessToken) error
 	Delete(ctx context.Context, id string) error
@@ -74,6 +75,7 @@ type GPGKey struct {
 
 type User struct {
 	Id            string          `json:"id"`
+	LoginName     string          `json:"login_name"`
 	Roles         []string        `json:"roles"`
 	MaintainRoles map[string]bool `json:"maintain_roles,omitempty"`
 	Admin         bool            `json:"admin"`

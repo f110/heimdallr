@@ -6,11 +6,12 @@ import "ddl.proto";
 import "google/protobuf/timestamp.proto";
 
 message User {
-    int32  id        = 1 [(dev.f110.ddl.column) = {sequence: true}];
-    string identity  = 2 [(dev.f110.ddl.column) = {unique: true}];
-    bool   admin     = 3;
-    string type      = 4;
-    string comment   = 5;
+    int32  id         = 1 [(dev.f110.ddl.column) = {sequence: true}];
+    string identity   = 2 [(dev.f110.ddl.column) = {unique: true}];
+    string login_name = 3;
+    bool   admin      = 4;
+    string type       = 5;
+    string comment    = 6;
 
     option (dev.f110.ddl.table) = {
         primary_key: "id"
@@ -21,6 +22,10 @@ message User {
         queries: {
             name: "Identity"
             query: "select * from `:table_name:` where identity = ?"
+        };
+        queries: {
+            name: "IdentityByLoginName"
+            query: "select identity from `:table_name:` where login_name = ?"
         };
         queries: {
             name: "All"

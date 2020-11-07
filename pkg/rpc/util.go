@@ -20,6 +20,7 @@ func DatabaseUserToRPCUser(in *database.User) *UserItem {
 	return &UserItem{
 		Id:            in.Id,
 		Roles:         in.Roles,
+		LoginName:     in.LoginName,
 		MaintainRoles: maintainRoles,
 		Type:          t,
 		Admin:         in.Admin,

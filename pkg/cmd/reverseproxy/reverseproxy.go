@@ -341,7 +341,7 @@ func (m *mainProcess) startServer() {
 		return
 	}
 	t := token.New(m.config, m.sessionStore, m.tokenDatabase)
-	resourceServer, err := internalapi.NewResourceServer(m.config)
+	resourceServer, err := internalapi.NewResourceServer(m.config, m.userDatabase)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
