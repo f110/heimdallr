@@ -30,6 +30,7 @@ func NewResourceServer(config *configv2.Config, userDatabase database.UserDataba
 func (r *ResourceServer) Route(mux *httprouter.Router) {
 	mux.GET("/internal/publickey", r.PublicKey)
 	mux.GET("/users/:username/ssh_keys", r.SSHKeys)
+	mux.GET("/users/:username/gpg_key", r.GPGKey)
 }
 
 func (r *ResourceServer) PublicKey(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
@@ -71,4 +72,30 @@ func (r *ResourceServer) SSHKeys(w http.ResponseWriter, req *http.Request, param
 		return
 	}
 	io.WriteString(w, keys.Keys)
+}
+
+func (r *ResourceServer) GPGKey(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	loginName := params.ByName("username")
+	if loginName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	identity := loginName
+	id, err := r.userDatabase.GetIdentityByLoginName(req.Context(), loginName)
+	if err != nil && err != database.ErrUserNotFound {
+		logger.Log.Warn("Failed get identity", zap.Error(err), zap.String("login_name", loginName))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if id != "" {
+		identity = id
+	}
+
+	keys, err := r.userDatabase.GetGPGKey(req.Context(), identity)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	io.WriteString(w, keys.Key)
 }
