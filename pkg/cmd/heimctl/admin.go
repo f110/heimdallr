@@ -22,7 +22,7 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 		return nil, xerrors.Errorf(": %v", err)
 	}
 
-	cp := conf.CertificateAuthority.CertPool
+	cp := conf.CertificateAuthority.Local.CertPool
 	cred := credentials.NewTLS(&tls.Config{ServerName: conf.AccessProxy.ServerNameHost, RootCAs: cp})
 	conn, err := grpc.Dial(
 		conf.AccessProxy.HTTP.ServerName,

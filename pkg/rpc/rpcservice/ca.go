@@ -134,7 +134,7 @@ func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rp
 		return nil, err
 	}
 
-	c, err := cert.SigningCertificateRequest(signingRequest, s.Config.CertificateAuthority)
+	c, err := cert.SigningCertificateRequest(signingRequest, s.Config.CertificateAuthority.Local)
 	if err != nil {
 		return nil, err
 	}

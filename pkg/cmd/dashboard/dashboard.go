@@ -77,7 +77,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 func (m *mainProcess) openConnection() (cmd.State, error) {
 	cred := credentials.NewTLS(&tls.Config{
 		ServerName: rpc.ServerHostname,
-		RootCAs:    m.config.CertificateAuthority.CertPool,
+		RootCAs:    m.config.CertificateAuthority.Local.CertPool,
 	})
 	conn, err := grpc.Dial(
 		m.config.Dashboard.RPCServer,

@@ -522,11 +522,13 @@ func (p *Proxy) buildConfig() error {
 			ProxyFile: "./proxies.yaml",
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			CertFile:         "./ca.crt",
-			KeyFile:          "./ca.key",
-			Organization:     "test",
-			OrganizationUnit: "e2e",
-			Country:          "jp",
+			Local: &configv2.CertificateAuthorityLocal{
+				CertFile:         "./ca.crt",
+				KeyFile:          "./ca.key",
+				Organization:     "test",
+				OrganizationUnit: "e2e",
+				Country:          "jp",
+			},
 		},
 		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RoleFile:          "./roles.yaml",

@@ -112,9 +112,11 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 				},
 			},
 			CertificateAuthority: &configv2.CertificateAuthority{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
-				CertPool:    cp,
+				Local: &configv2.CertificateAuthorityLocal{
+					Certificate: caCert,
+					PrivateKey:  caPrivateKey,
+					CertPool:    cp,
+				},
 			},
 		},
 		sessionStore: s,
@@ -299,7 +301,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			clientCert, err := cert.SigningCertificateRequest(csr, a.Config.CertificateAuthority)
+			clientCert, err := cert.SigningCertificateRequest(csr, a.Config.CertificateAuthority.Local)
 			if err != nil {
 				t.Fatal(err)
 			}

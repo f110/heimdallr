@@ -24,8 +24,10 @@ func createCAForTest(t *testing.T) *configv2.CertificateAuthority {
 		t.Fatal(err)
 	}
 	ca := &configv2.CertificateAuthority{
-		Certificate: caCert,
-		PrivateKey:  caPrivateKey,
+		Local: &configv2.CertificateAuthorityLocal{
+			Certificate: caCert,
+			PrivateKey:  caPrivateKey,
+		},
 	}
 
 	return ca
@@ -42,7 +44,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca)
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca.Local)
 		if err != nil {
 			t.Fatalf("%+v", err)
 		}
@@ -64,7 +66,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "rsa", 4096, "test", ca)
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "rsa", 4096, "test", ca.Local)
 		if err != nil {
 			t.Fatalf("%+v", err)
 		}
@@ -90,7 +92,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 		}
 
 		for _, b := range bits {
-			p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "ecdsa", b, "test", ca)
+			p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "ecdsa", b, "test", ca.Local)
 			if err != nil {
 				t.Fatalf("%+v", err)
 			}
@@ -115,9 +117,11 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 func TestCreateCertificateAuthorityForConfig(t *testing.T) {
 	_, _, err := CreateCertificateAuthorityForConfig(&configv2.Config{
 		CertificateAuthority: &configv2.CertificateAuthority{
-			Organization:     "test",
-			OrganizationUnit: "test",
-			Country:          "jp",
+			Local: &configv2.CertificateAuthorityLocal{
+				Organization:     "test",
+				OrganizationUnit: "test",
+				Country:          "jp",
+			},
 		},
 	})
 	if err != nil {
@@ -156,7 +160,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		signedCert, err := SigningCertificateRequest(csr, ca)
+		signedCert, err := SigningCertificateRequest(csr, ca.Local)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +175,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 
 func TestGenerateServerCertificate(t *testing.T) {
 	ca := createCAForTest(t)
-	serverCert, privateKey, err := GenerateServerCertificate(ca.Certificate, ca.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
+	serverCert, privateKey, err := GenerateServerCertificate(ca.Local.Certificate, ca.Local.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
 	if err != nil {
 		t.Fatal(err)
 	}

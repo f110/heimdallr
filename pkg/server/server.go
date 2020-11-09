@@ -105,7 +105,7 @@ func (s *Server) Start() error {
 		CipherSuites:   allowCipherSuites,
 		GetCertificate: s.Config.AccessProxy.HTTP.Certificate.GetCertificate,
 		ClientAuth:     tls.RequestClientCert,
-		ClientCAs:      s.Config.CertificateAuthority.CertPool,
+		ClientCAs:      s.Config.CertificateAuthority.Local.CertPool,
 		NextProtos:     []string{connector.ProtocolName, frontproxy.SocketProxyNextProto, http2.NextProtoTLS},
 	})
 

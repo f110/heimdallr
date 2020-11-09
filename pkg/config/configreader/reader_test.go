@@ -88,9 +88,11 @@ logger:
 	caCert, privateKey, err := cert.CreateCertificateAuthorityForConfig(
 		&configv2.Config{
 			CertificateAuthority: &configv2.CertificateAuthority{
-				Organization:     "Test",
-				OrganizationUnit: "Test Unit",
-				Country:          "JP",
+				Local: &configv2.CertificateAuthorityLocal{
+					Organization:     "Test",
+					OrganizationUnit: "Test Unit",
+					Country:          "JP",
+				},
 			},
 		},
 	)
@@ -223,7 +225,7 @@ func TestReadConfig(t *testing.T) {
 		assert.Equal(t, "./internal_token", conf.Dashboard.TokenFile)
 		assert.Equal(t, "127.0.0.1:4001", conf.Dashboard.RPCServer)
 		assert.Equal(t, ":4100", conf.Dashboard.Bind)
-		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.CertFile)
+		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.Local.CertFile)
 	})
 
 	t.Run("RPCServer", func(t *testing.T) {
@@ -239,11 +241,11 @@ func TestReadConfig(t *testing.T) {
 		require.Nil(t, conf.Datastore.DatastoreMySQL)
 		require.NotNil(t, conf.Dashboard)
 		assert.Equal(t, ":4001", conf.RPCServer.Bind)
-		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.CertFile)
-		assert.Equal(t, "./ca.key", conf.CertificateAuthority.KeyFile)
-		assert.Equal(t, "test", conf.CertificateAuthority.Organization)
-		assert.Equal(t, "dev", conf.CertificateAuthority.OrganizationUnit)
-		assert.Equal(t, "jp", conf.CertificateAuthority.Country)
+		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.Local.CertFile)
+		assert.Equal(t, "./ca.key", conf.CertificateAuthority.Local.KeyFile)
+		assert.Equal(t, "test", conf.CertificateAuthority.Local.Organization)
+		assert.Equal(t, "dev", conf.CertificateAuthority.Local.OrganizationUnit)
+		assert.Equal(t, "jp", conf.CertificateAuthority.Local.Country)
 		assert.Contains(t, conf.AuthorizationEngine.RoleFile, "/roles.yaml") // RoleFile is expanded.
 		assert.Contains(t, conf.AuthorizationEngine.RPCPermissionFile, "/rpc_permissions.yaml")
 		assert.Equal(t, []string{"fmhrit@gmail.com"}, conf.AuthorizationEngine.RootUsers)
@@ -284,7 +286,7 @@ func TestReadConfig(t *testing.T) {
 		assert.Contains(t, conf.AuthorizationEngine.RPCPermissionFile, "/rpc_permissions.yaml")
 		assert.Equal(t, []string{"fmhrit@gmail.com"}, conf.AuthorizationEngine.RootUsers)
 		assert.Equal(t, "127.0.0.1:4001", conf.AccessProxy.RPCServer)
-		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.CertFile)
+		assert.Equal(t, "./ca.crt", conf.CertificateAuthority.Local.CertFile)
 		assert.Empty(t, conf.RPCServer.Bind)
 		assert.Equal(t, "google", conf.IdentityProvider.Provider)
 		assert.Equal(t, "70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com", conf.IdentityProvider.ClientId)

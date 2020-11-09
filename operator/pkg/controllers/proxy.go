@@ -696,7 +696,9 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			RootUsers:         r.Spec.RootUsers,
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			Local: &configv2.CertificateAuthorityLocal{
+				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			},
 		},
 		IdentityProvider: &configv2.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
@@ -751,7 +753,9 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			Encoding: "console",
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			Local: &configv2.CertificateAuthorityLocal{
+				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			},
 		},
 		Dashboard: &configv2.Dashboard{
 			Bind:      fmt.Sprintf(":%d", dashboardPort),
@@ -809,11 +813,13 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			RootUsers:         r.Spec.RootUsers,
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-			KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
-			Organization:     r.Spec.Organization,
-			OrganizationUnit: r.Spec.AdministratorUnit,
-			Country:          r.Spec.Country,
+			Local: &configv2.CertificateAuthorityLocal{
+				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
+				Organization:     r.Spec.Organization,
+				OrganizationUnit: r.Spec.AdministratorUnit,
+				Country:          r.Spec.Country,
+			},
 		},
 		Datastore: &configv2.Datastore{
 			DatastoreEtcd: &configv2.DatastoreEtcd{

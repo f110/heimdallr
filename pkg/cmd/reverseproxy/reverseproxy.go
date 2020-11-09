@@ -484,7 +484,7 @@ func (m *mainProcess) Setup() error {
 func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	rpcclient.OverrideGrpcLogger()
 
-	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.CertPool})
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.Local.CertPool})
 	conn, err := grpc.Dial(
 		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),

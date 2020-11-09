@@ -275,14 +275,16 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			t.Fatal(err)
 		}
 		ca := &configv2.CertificateAuthority{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
+			Local: &configv2.CertificateAuthorityLocal{
+				Certificate: caCert,
+				PrivateKey:  caPrivateKey,
+			},
 		}
 		serial, err := cert.NewSerialNumber()
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca)
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca.Local)
 		if err != nil {
 			t.Fatal()
 		}
@@ -306,14 +308,16 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			t.Fatal(err)
 		}
 		ca := &configv2.CertificateAuthority{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
+			Local: &configv2.CertificateAuthorityLocal{
+				Certificate: caCert,
+				PrivateKey:  caPrivateKey,
+			},
 		}
 		serial, err := cert.NewSerialNumber()
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca)
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca.Local)
 		if err != nil {
 			t.Fatal()
 		}

@@ -46,9 +46,9 @@ func bootstrap(confFile string) error {
 		return xerrors.New("not enough configuration")
 	}
 
-	_, err = os.Stat(absPath(conf.CertificateAuthority.CertFile, dir))
+	_, err = os.Stat(absPath(conf.CertificateAuthority.Local.CertFile, dir))
 	certFileExist := !os.IsNotExist(err)
-	_, err = os.Stat(absPath(conf.CertificateAuthority.KeyFile, dir))
+	_, err = os.Stat(absPath(conf.CertificateAuthority.Local.KeyFile, dir))
 	keyFileExist := !os.IsNotExist(err)
 	if !certFileExist && !keyFileExist {
 		if err := generateNewCertificateAuthority(conf, dir); err != nil {
@@ -56,7 +56,7 @@ func bootstrap(confFile string) error {
 		}
 	}
 
-	b, err := ioutil.ReadFile(absPath(conf.CertificateAuthority.CertFile, dir))
+	b, err := ioutil.ReadFile(absPath(conf.CertificateAuthority.Local.CertFile, dir))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -65,7 +65,7 @@ func bootstrap(confFile string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	b, err = ioutil.ReadFile(absPath(conf.CertificateAuthority.KeyFile, dir))
+	b, err = ioutil.ReadFile(absPath(conf.CertificateAuthority.Local.KeyFile, dir))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -170,11 +170,11 @@ func generateNewCertificateAuthority(conf *configv2.Config, dir string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	if err := cert.PemEncode(absPath(conf.CertificateAuthority.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
+	if err := cert.PemEncode(absPath(conf.CertificateAuthority.Local.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	if err := cert.PemEncode(absPath(conf.CertificateAuthority.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
+	if err := cert.PemEncode(absPath(conf.CertificateAuthority.Local.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return nil

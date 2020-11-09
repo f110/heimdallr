@@ -72,8 +72,10 @@ func TestServer_Start(t *testing.T) {
 
 	conf := &configv2.Config{
 		CertificateAuthority: &configv2.CertificateAuthority{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
+			Local: &configv2.CertificateAuthorityLocal{
+				Certificate: caCert,
+				PrivateKey:  caPrivateKey,
+			},
 		},
 		RPCServer: &configv2.RPCServer{
 			Bind:        fmt.Sprintf(":%d", port),
@@ -146,8 +148,10 @@ func TestServicesViaServer(t *testing.T) {
 			},
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
+			Local: &configv2.CertificateAuthorityLocal{
+				Certificate: caCert,
+				PrivateKey:  caPrivateKey,
+			},
 		},
 		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RootUsers: []string{database.SystemUser.Id},

@@ -101,6 +101,10 @@ type AuthorizationEngine struct {
 }
 
 type CertificateAuthority struct {
+	Local *CertificateAuthorityLocal `json:"local"`
+}
+
+type CertificateAuthorityLocal struct {
 	CertFile         string `json:"cert_file"`
 	KeyFile          string `json:"key_file"`
 	Organization     string `json:"organization"`
@@ -329,57 +333,59 @@ func (idp *IdentityProvider) Load(dir string) error {
 }
 
 func (ca *CertificateAuthority) Load(dir string) error {
-	if ca.CertFile != "" {
-		b, err := ioutil.ReadFile(absPath(ca.CertFile, dir))
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
+	if ca.Local != nil {
+		if ca.Local.CertFile != "" {
+			b, err := ioutil.ReadFile(absPath(ca.Local.CertFile, dir))
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			block, _ := pem.Decode(b)
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			ca.Local.Certificate = cert
+			ca.Local.CertPool, err = x509.SystemCertPool()
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			ca.Local.CertPool.AddCert(cert)
 		}
-		block, _ := pem.Decode(b)
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		ca.Certificate = cert
-		ca.CertPool, err = x509.SystemCertPool()
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-		ca.CertPool.AddCert(cert)
-	}
 
-	if ca.KeyFile != "" {
-		b, err := ioutil.ReadFile(absPath(ca.KeyFile, dir))
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
+		if ca.Local.KeyFile != "" {
+			b, err := ioutil.ReadFile(absPath(ca.Local.KeyFile, dir))
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			block, _ := pem.Decode(b)
+			switch block.Type {
+			case "EC PRIVATE KEY":
+				privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %v", err)
+				}
+				ca.Local.PrivateKey = privateKey
+			case "RSA PRIVATE KEY":
+				privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %v", err)
+				}
+				ca.Local.PrivateKey = privateKey
+			case "PRIVATE KEY":
+				privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %v", err)
+				}
+				ca.Local.PrivateKey = privateKey
+			}
 		}
-		block, _ := pem.Decode(b)
-		switch block.Type {
-		case "EC PRIVATE KEY":
-			privateKey, err := x509.ParseECPrivateKey(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			ca.PrivateKey = privateKey
-		case "RSA PRIVATE KEY":
-			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			ca.PrivateKey = privateKey
-		case "PRIVATE KEY":
-			privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			ca.PrivateKey = privateKey
-		}
-	}
 
-	ca.Subject = pkix.Name{
-		Organization:       []string{ca.Organization},
-		OrganizationalUnit: []string{ca.OrganizationUnit},
-		Country:            []string{ca.Country},
-		CommonName:         "Heimdallr CA",
+		ca.Local.Subject = pkix.Name{
+			Organization:       []string{ca.Local.Organization},
+			OrganizationalUnit: []string{ca.Local.OrganizationUnit},
+			Country:            []string{ca.Local.Country},
+			CommonName:         "Heimdallr CA",
+		}
 	}
 
 	return nil

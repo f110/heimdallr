@@ -40,7 +40,7 @@ func (p *ConnectionManager) GetConn(name string) (*tls.Conn, error) {
 	}
 
 	conn, err := tls.Dial("tcp", r.Addr, &tls.Config{
-		RootCAs: p.config.CertificateAuthority.CertPool,
+		RootCAs: p.config.CertificateAuthority.Local.CertPool,
 	})
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)

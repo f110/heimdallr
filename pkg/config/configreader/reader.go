@@ -210,11 +210,13 @@ func V1ToV2(in *config.Config) *configv2.Config {
 	}
 	if in.General.CertificateAuthority != nil {
 		out.CertificateAuthority = &configv2.CertificateAuthority{
-			CertFile:         in.General.CertificateAuthority.CertFile,
-			KeyFile:          in.General.CertificateAuthority.KeyFile,
-			Organization:     in.General.CertificateAuthority.Organization,
-			OrganizationUnit: in.General.CertificateAuthority.OrganizationUnit,
-			Country:          in.General.CertificateAuthority.Country,
+			Local: &configv2.CertificateAuthorityLocal{
+				CertFile:         in.General.CertificateAuthority.CertFile,
+				KeyFile:          in.General.CertificateAuthority.KeyFile,
+				Organization:     in.General.CertificateAuthority.Organization,
+				OrganizationUnit: in.General.CertificateAuthority.OrganizationUnit,
+				Country:          in.General.CertificateAuthority.Country,
+			},
 		}
 	}
 	if in.General.Enable {

@@ -28,7 +28,7 @@ func NewCertificateAuthority(db database.CertificateAuthority, ca *configv2.Cert
 }
 
 func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, forAgent bool) (*database.SignedCertificate, error) {
-	signedCert, err := SigningCertificateRequest(csr, ca.ca)
+	signedCert, err := SigningCertificateRequest(csr, ca.ca.Local)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -74,7 +74,7 @@ func (ca *CertificateAuthority) NewAgentCertificate(ctx context.Context, name, p
 
 func (ca *CertificateAuthority) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
 	// TODO: Should use a serial key which created by database.CertificateAuthority
-	certificate, privateKey, err := GenerateServerCertificate(ca.ca.Certificate, ca.ca.PrivateKey, []string{commonName})
+	certificate, privateKey, err := GenerateServerCertificate(ca.ca.Local.Certificate, ca.ca.Local.PrivateKey, []string{commonName})
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
@@ -122,16 +122,16 @@ func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, 
 	}
 	data, clientCert, err := CreateNewCertificateForClient(
 		pkix.Name{
-			Organization:       []string{ca.ca.Organization},
-			OrganizationalUnit: []string{ca.ca.OrganizationUnit},
-			Country:            []string{ca.ca.Country},
+			Organization:       []string{ca.ca.Local.Organization},
+			OrganizationalUnit: []string{ca.ca.Local.OrganizationUnit},
+			Country:            []string{ca.ca.Local.Country},
 			CommonName:         name,
 		},
 		serial,
 		keyType,
 		keyBits,
 		password,
-		ca.ca,
+		ca.ca.Local,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)

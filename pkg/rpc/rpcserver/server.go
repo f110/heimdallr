@@ -98,8 +98,8 @@ func NewServer(
 func (s *Server) Start() error {
 	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", rpc.ServerHostname))
 	c, privKey, err := cert.GenerateServerCertificate(
-		s.Config.CertificateAuthority.Certificate,
-		s.Config.CertificateAuthority.PrivateKey,
+		s.Config.CertificateAuthority.Local.Certificate,
+		s.Config.CertificateAuthority.Local.PrivateKey,
 		[]string{rpc.ServerHostname},
 	)
 	if err != nil {
