@@ -1,17 +1,16 @@
-dashboard:
-  bind: :4101
-  enable: true
-  template:
-    loader: shotgun
-datastore:
-  namespace: /heimdallr/
-  url: etcd://127.0.0.1:40473
-general:
-  certificate_authority:
+certificate_authority:
+  local:
     cert_file: ./ca.crt
+    country: jp
     key_file: ./ca.key
     organization: test
     organization_unit: dev
-    country: jp
-  enable: false
-  rpc_target: 127.0.0.1:4002
+dashboard:
+  bind: :4101
+  rpc_server: 127.0.0.1:4002
+  template:
+    loader: shotgun
+datastore:
+  etcd:
+    namespace: /heimdallr/
+    url: etcd://127.0.0.1:40473

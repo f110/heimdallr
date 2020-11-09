@@ -260,7 +260,7 @@ func V1ToV2(in *config.Config) *configv2.Config {
 			},
 		}
 	}
-	if in.RPCServer.Enable {
+	if in.RPCServer != nil && in.RPCServer.Enable {
 		out.RPCServer = &configv2.RPCServer{
 			Bind: in.RPCServer.Bind,
 		}
