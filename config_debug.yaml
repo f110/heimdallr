@@ -27,11 +27,12 @@ authorization_engine:
   root_users:
     - fmhrit@gmail.com
 certificate_authority:
-  cert_file: ./ca.crt
-  key_file: ./ca.key
-  organization: test
-  organization_unit: dev
-  country: jp
+  local:
+    cert_file: ./ca.crt
+    key_file: ./ca.key
+    organization: test
+    organization_unit: dev
+    country: jp
 rpc_server:
   bind: :4002
   metrics_bind: :4005
