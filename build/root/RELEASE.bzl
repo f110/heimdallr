@@ -1,4 +1,4 @@
-VERSION = "latest"
+VERSION = "v0.10"
 
 PLATFORMS = [
     "linux_amd64",
