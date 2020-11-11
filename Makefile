@@ -3,7 +3,7 @@ DATABASE_USER = heimdallr
 DATABASE_NAME = heimdallr
 
 DSN = $(DATABASE_USER)@tcp($(DATABASE_HOST))/$(DATABASE_NAME)
-WEBHOOK_CERT = -cert $(CURDIR)/operator/webhook.crt -private-key $(CURDIR)/operator/webhook.key
+WEBHOOK_CERT = -cert $(CURDIR)/operator/webhook.crt -key $(CURDIR)/operator/webhook.key
 OPERATOR_ARG = -lease-lock-name operator -lease-lock-namespace default -cluster-domain cluster.local -dev -v 4 -logtostderr=false -log-level=debug $(WEBHOOK_CERT)
 
 run:
