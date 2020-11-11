@@ -46,7 +46,7 @@ github_release(
         "//cmd/heim-proxy:heim-proxy_windows_amd64",
     ],
     body = ":release_message",
-    branch = "master",
+    branch = "release-v0.10",
     repository = "f110/heimdallr",
     version = VERSION,
 )
