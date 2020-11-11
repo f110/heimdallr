@@ -17,7 +17,7 @@ go_vendor(
     ],
 )
 
-load("//:RELEASE.bzl", "RELEASE_MESSAGE", "VERSION")
+load("//:RELEASE.bzl", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
 load("//build/rules:release.bzl", "github_release", "template_string")
 
@@ -46,7 +46,7 @@ github_release(
         "//cmd/heim-proxy:heim-proxy_windows_amd64",
     ],
     body = ":release_message",
-    branch = "master",
+    branch = RELEASE_BRANCH,
     repository = "f110/heimdallr",
     version = VERSION,
 )

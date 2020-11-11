@@ -1,4 +1,5 @@
 VERSION = "latest"
+RELEASE_BRANCH = "master"
 
 PLATFORMS = [
     "linux_amd64",
