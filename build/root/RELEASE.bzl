@@ -6,7 +6,7 @@ PLATFORMS = [
     "windows_amd64",
 ]
 
-RELEASE_MESSAGE = """We publish container images in quay.io.
+RELEASE_MESSAGE = """We have been published container images in quay.io.
 
 * proxy: `quay.io/{proxy_repository}:{version}`
 * rpcserver: `quay.io/{rpcserver_repository}:{version}`
