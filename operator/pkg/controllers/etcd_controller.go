@@ -900,20 +900,20 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	memberList, err := etcdClient.MemberList(ctx)
+	mlCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	memberList, err := etcdClient.MemberList(mlCtx)
 	if err != nil {
 		return nil
 	}
 	cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+	sCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	for i, v := range etcdPods {
 		u, err := url.Parse(v.Endpoint)
 		if err != nil {
 			continue
 		}
-		st, err := etcdClient.Status(ctx, u.Host)
+		st, err := etcdClient.Status(sCtx, u.Host)
 		if err != nil {
 			ec.Log().Info("Failed get status", zap.Error(err))
 			continue
