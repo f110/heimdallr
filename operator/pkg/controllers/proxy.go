@@ -1422,7 +1422,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 											fmt.Sprintf("-addr=:%d", rpcServerPort),
 											"-tls",
 											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-											fmt.Sprintf("-tls-server-name=%s", r.Spec.Domain),
+											fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
 										},
 									},
 								},
