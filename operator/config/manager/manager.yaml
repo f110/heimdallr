@@ -20,11 +20,11 @@ spec:
           image: quay.io/f110/heimdallr-operator:v0.6.2
           imagePullPolicy: Always
           args:
-            - -lease-lock-name=operator
-            - -lease-lock-namespace=$(MY_NAMESPACE)
-            - -cluster-domain=cluster.local
-            - -cert=/etc/heimdallr-operator/webhook-cert/webhook.crt
-            - -key=/etc/heimdallr-operator/webhook-cert/webhook.key
+            - --lease-lock-name=operator
+            - --lease-lock-namespace=$(MY_NAMESPACE)
+            - --cluster-domain=cluster.local
+            - --cert=/etc/heimdallr-operator/webhook-cert/webhook.crt
+            - --key=/etc/heimdallr-operator/webhook-cert/webhook.key
           env:
             - name: MY_NAMESPACE
               valueFrom:

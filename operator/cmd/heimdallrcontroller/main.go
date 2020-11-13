@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -44,7 +45,7 @@ func main() {
 	logLevel := "info"
 	logEncoding := "console"
 	dev := false
-	fs := flag.NewFlagSet("heimdallrcontroller", flag.ExitOnError)
+	fs := pflag.NewFlagSet("heimdallrcontroller", pflag.ExitOnError)
 	fs.StringVar(&id, "id", uuid.New().String(), "the holder identity name")
 	fs.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	fs.BoolVar(&enableLeaderElection, "enable-leader-election", enableLeaderElection,
@@ -60,7 +61,11 @@ func main() {
 	fs.BoolVar(&disableWebhook, "disable-webhook", false, "Disable webhook server")
 	fs.StringVar(&certFile, "cert", "", "Server certificate file for webhook")
 	fs.StringVar(&keyFile, "key", "", "Private key for server certificate")
-	klog.InitFlags(fs)
+
+	goFlagSet := flag.NewFlagSet("", flag.ContinueOnError)
+	klog.InitFlags(goFlagSet)
+	fs.AddGoFlagSet(goFlagSet)
+
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
