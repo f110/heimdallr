@@ -152,7 +152,6 @@ func (ec *EtcdController) ConvertToKeys() ObjectToKeyConverter {
 		case *corev1.Pod:
 			pod := obj.(*corev1.Pod)
 			if v, ok := pod.Labels[etcd.LabelNameClusterName]; !ok || v == "" {
-				ec.Log().Debug("Pod doesn't have label", zap.String("pod.name", pod.Name))
 				return nil, nil
 			}
 
