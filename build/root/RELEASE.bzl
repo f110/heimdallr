@@ -1,4 +1,4 @@
-VERSION = "v0.10.1"
+VERSION = "v0.10.2"
 
 PLATFORMS = [
     "linux_amd64",
