@@ -62,7 +62,7 @@ load("//build:go_sdk.bzl", "GO_SDK")
 
 go_download_sdk(
     name = "go_sdk",
-    sdks = GO_SDK["1.15.4"],
+    sdks = GO_SDK["1.15.5"],
 )
 
 go_rules_dependencies()
