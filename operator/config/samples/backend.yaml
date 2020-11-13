@@ -28,10 +28,39 @@ spec:
     - name: "http"
       port: 80
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello2
+  labels:
+    app: hello
+spec:
+  selector:
+    app: nginx
+  ports:
+    - name: "http"
+      port: 80
+---
 apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: hello
+  labels:
+    instance: proxy-sample
+spec:
+  layer: example
+  serviceSelector:
+    name: hello
+    port: "http"
+  permissions:
+    - name: all
+      locations:
+        - get: /
+---
+apiVersion: proxy.f110.dev/v1alpha1
+kind: Backend
+metadata:
+  name: hello2
   labels:
     instance: proxy-sample
 spec:
@@ -54,6 +83,7 @@ metadata:
 spec:
   title: administrator
   description: Proxy administrator a.k.a GOD
+  allowDashboard: true
 ---
 apiVersion:  proxy.f110.dev/v1alpha1
 kind: RoleBinding

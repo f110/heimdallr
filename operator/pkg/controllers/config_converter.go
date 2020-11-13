@@ -20,7 +20,8 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister li
 	for _, v := range backends {
 		service, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			// At this time, ignore error
+			return nil, nil
 		}
 		if service == nil {
 			continue

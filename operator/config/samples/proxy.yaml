@@ -4,7 +4,7 @@ metadata:
   name: proxy-sample
 spec:
   replicas: 3
-  version: latest
+  version: v0.10.1
   etcdVersion: v3.4.9
   domain: local-proxy.f110.dev
   port: 443

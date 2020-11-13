@@ -1673,7 +1673,10 @@ func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector
 		return nil, xerrors.Errorf(": %w", err)
 	}
 	if len(services) == 0 {
-		return nil, nil
+		return nil, xerrors.Errorf("%s not found", sel.LabelSelector.String())
+	}
+	if len(services) > 1 {
+		return nil, xerrors.Errorf("Found %d services", len(services))
 	}
 
 	return services[0], nil

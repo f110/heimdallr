@@ -649,6 +649,13 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 	lp.ProxyServer = pcs
 
 	for _, backend := range lp.Backends() {
+		skipProvision := false
+		_, err := findService(c.serviceLister, backend.Spec.ServiceSelector, backend.Namespace)
+		if err != nil && !backend.CreationTimestamp.IsZero() {
+			skipProvision = true
+			c.EventRecorder().Event(backend, corev1.EventTypeWarning, "FindServiceError", err.Error())
+		}
+
 		found := false
 		for _, v := range backend.Status.DeployedBy {
 			if v.Name == lp.Name && v.Namespace == lp.Namespace {
@@ -661,7 +668,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		if backend.Spec.FQDN != "" {
 			hostname = backend.Spec.FQDN
 		}
-		if !found && !backend.CreationTimestamp.IsZero() {
+		if !found && !skipProvision && !backend.CreationTimestamp.IsZero() {
 			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				updatedB, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
 				if err != nil {
