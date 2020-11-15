@@ -1,11 +1,29 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
+K8S_CLUSTER_VERSION = "v1.19.0"
+
 go_test(
     name = "test_test",
     srcs = [
         "etcd-controller_test.go",
         "main_test.go",
         "proxy-controller_test.go",
+    ],
+    rundir = ".",
+    timeout = "eternal",
+    args = [
+        "-test.v=true",
+        "-crd=$(location //operator/config/crd:crd)",
+        "-cluster-version="+K8S_CLUSTER_VERSION,
+        "-proxy-image-file=$(location //container:image.tar)",
+        "-rpc-image-file=$(location //container:image_rpcserver.tar)",
+        "-dashboard-image-file=$(location //container:image_dashboard.tar)",
+    ],
+    data = [
+        "//operator/config/crd",
+        "//container:image.tar",
+        "//container:image_rpcserver.tar",
+        "//container:image_dashboard.tar",
     ],
     tags = ["e2e"],
     deps = [

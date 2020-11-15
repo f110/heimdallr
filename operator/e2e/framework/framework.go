@@ -16,19 +16,25 @@ var (
 var Config = &ConfigStruct{}
 
 type ConfigStruct struct {
-	RandomSeed     int64
-	ProxyVersion   string
-	CRDDir         string
-	ClusterVersion string
-	Verbose        bool
+	RandomSeed         int64
+	ProxyVersion       string
+	CRDDir             string
+	ClusterVersion     string
+	Verbose            bool
+	ProxyImageFile     string
+	RPCImageFile       string
+	DashboardImageFile string
 }
 
 func Flags(fs *flag.FlagSet) {
 	fs.Int64Var(&Config.RandomSeed, "random-seed", time.Now().Unix(), "Random seed")
-	fs.StringVar(&Config.ProxyVersion, "proxy.version", "v0.5.0", "Proxy version")
+	fs.StringVar(&Config.ProxyVersion, "proxy.version", "", "Proxy version")
 	fs.StringVar(&Config.CRDDir, "crd", "", "CRD files")
 	fs.BoolVar(&Config.Verbose, "verbose", false, "View controller's log")
 	fs.StringVar(&Config.ClusterVersion, "cluster-version", "v0.18.8", "Kubernetes cluster version")
+	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
+	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
+	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
 }
 
 func BeforeSuite(f func()) {

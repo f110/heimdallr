@@ -46,10 +46,10 @@ import (
 const (
 	EtcdVersion = "v3.4.8"
 
-	imageRepository            = "quay.io/f110/heimdallr-proxy"
+	ProxyImageRepository       = "quay.io/f110/heimdallr-proxy"
 	defaultImageTag            = "latest"
-	rpcServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
-	dashboardImageRepository   = "quay.io/f110/heimdallr-dashboard"
+	RPCServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
+	DashboardImageRepository   = "quay.io/f110/heimdallr-dashboard"
 	defaultCommand             = "/usr/local/bin/heimdallr-proxy"
 	rpcServerCommand           = "/usr/local/bin/heim-rpcserver"
 	dashboardCommand           = "/usr/local/bin/heim-dashboard"
@@ -965,8 +965,8 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:            "proxy",
-							Image:           fmt.Sprintf("%s:%s", imageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullAlways,
+							Image:           fmt.Sprintf("%s:%s", ProxyImageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{defaultCommand},
 							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
@@ -1272,8 +1272,8 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:            "proxy",
-							Image:           fmt.Sprintf("%s:%s", dashboardImageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullAlways,
+							Image:           fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{dashboardCommand},
 							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{
@@ -1396,8 +1396,8 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 					Containers: []corev1.Container{
 						{
 							Name:            "rpcserver",
-							Image:           fmt.Sprintf("%s:%s", rpcServerImageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullAlways,
+							Image:           fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()),
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{rpcServerCommand},
 							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
 							ReadinessProbe: &corev1.Probe{

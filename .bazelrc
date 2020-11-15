@@ -5,3 +5,5 @@ run --host_force_python=PY2
 test:ci --test_output=errors
 test:ci --test_tag_filters=-e2e
 test:ci --test_sharding_strategy=disabled
+
+test:e2e --test_tag_filters=e2e --test_output=streamed

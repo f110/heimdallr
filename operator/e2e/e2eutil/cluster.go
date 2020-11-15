@@ -1,15 +1,18 @@
 package e2eutil
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -57,50 +60,65 @@ nodes:
     image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
 `
 
-func CreateCluster(id, clusterVersion string) (string, error) {
+type Cluster struct {
+	id         string
+	kubeconfig string
+}
+
+func NewCluster(id string) *Cluster {
+	return &Cluster{id: id}
+}
+
+func (c *Cluster) Create(clusterVersion string) error {
 	_, err := exec.LookPath("kind")
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	imageHash, ok := kindImages[clusterVersion]
 	if !ok {
-		return "", xerrors.Errorf("%s is not supported", clusterVersion)
+		return xerrors.Errorf("%s is not supported", clusterVersion)
 	}
 
 	kf, err := ioutil.TempFile("", "kind.yaml")
 	if err != nil {
-		return "", err
+		return err
 	}
 	t := template.Must(template.New("").Parse(kindConfigTemplate))
 	if err := t.Execute(kf, kindConfigBinding{
 		ClusterVersion: clusterVersion,
 		ImageHash:      imageHash,
 	}); err != nil {
-		return "", err
+		return err
 	}
 
 	f, err := ioutil.TempFile("", "config")
 	if err != nil {
-		return "", err
+		return err
 	}
 	cmd := exec.CommandContext(
 		context.TODO(),
 		"kind", "create", "cluster",
-		"--name", fmt.Sprintf("e2e-%s", id),
+		"--name", fmt.Sprintf("e2e-%s", c.id),
 		"--kubeconfig", f.Name(),
 		"--config", kf.Name(),
+		"--quiet",
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return err
 	}
+	c.kubeconfig = f.Name()
 
-	return f.Name(), nil
+	return nil
 }
 
-func DeleteCluster(id string) error {
+func (c *Cluster) KubeConfig() string {
+	return c.kubeconfig
+}
+
+func (c *Cluster) Delete() error {
 	cmd := exec.CommandContext(context.TODO(), "kind", "get", "clusters")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -111,7 +129,7 @@ func DeleteCluster(id string) error {
 	s := bufio.NewScanner(bytes.NewReader(out))
 	for s.Scan() {
 		t := s.Text()
-		if strings.HasPrefix(t, fmt.Sprintf("e2e-%s", id)) {
+		if strings.HasPrefix(t, fmt.Sprintf("e2e-%s", c.id)) {
 			found = true
 		}
 	}
@@ -120,10 +138,100 @@ func DeleteCluster(id string) error {
 		return nil
 	}
 
-	cmd = exec.CommandContext(context.TODO(), "kind", "delete", "cluster", "--name", fmt.Sprintf("e2e-%s", id))
+	cmd = exec.CommandContext(context.TODO(), "kind", "delete", "cluster", "--name", fmt.Sprintf("e2e-%s", c.id))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+type ContainerImageFile struct {
+	File       string
+	Repository string
+	Tag        string
+
+	repoTags string
+}
+
+type manifest struct {
+	RepoTags []string `json:"RepoTags"`
+}
+
+func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
+	for _, v := range images {
+		if err := readManifest(v); err != nil {
+			return err
+		}
+
+		log.Printf("Load image file: %s", v.repoTags)
+		cmd := exec.CommandContext(context.TODO(), "kind", "load", "image-archive", "--name", "e2e-"+c.id, v.File)
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	cmd := exec.CommandContext(context.TODO(), "kind", "get", "nodes", "--name", "e2e-"+c.id)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	nodes := make([]string, 0)
+	s := bufio.NewScanner(bytes.NewReader(out))
+	for s.Scan() {
+		nodes = append(nodes, s.Text())
+	}
+
+	for _, node := range nodes {
+		for _, image := range images {
+			log.Printf("Set an image tag %s:%s on %s", image.Repository, image.Tag, node)
+			cmd = exec.CommandContext(
+				context.TODO(),
+				"docker", "exec", node,
+				"ctr", "-n", "k8s.io", "images", "tag",
+				"docker.io/"+image.repoTags,
+				fmt.Sprintf("%s:%s", image.Repository, image.Tag),
+			)
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func readManifest(image *ContainerImageFile) error {
+	f, err := os.Open(image.File)
+	if err != nil {
+		return err
+	}
+	r := tar.NewReader(f)
+	for {
+		hdr, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if hdr.Name != "manifest.json" {
+			// Skip reading if the file name is not manifest.json.
+			if _, err := io.Copy(ioutil.Discard, r); err != nil {
+				return err
+			}
+			continue
+		}
+
+		manifests := make([]manifest, 0)
+		if err := json.NewDecoder(r).Decode(&manifests); err != nil {
+			return err
+		}
+		if len(manifests) == 0 {
+			return errors.New("manifest.json is empty")
+		}
+		image.repoTags = manifests[0].RepoTags[0]
+	}
+
+	return nil
 }
 
 func WaitForReady(ctx context.Context, client *kubernetes.Clientset) error {
@@ -150,37 +258,48 @@ func WaitForReady(ctx context.Context, client *kubernetes.Clientset) error {
 
 func ReadCRDFiles(dir string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
 	crdFiles := make([][]byte, 0)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
+	//filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if info.IsDir() {
+	//		return nil
+	//	}
 
-		f, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		crdFiles = append(crdFiles, f)
+	f, err := ioutil.ReadFile(dir)
+	if err != nil {
+		return nil, err
+	}
+	crdFiles = append(crdFiles, f)
 
-		return nil
-	})
+	//return nil
+	//})
 
 	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
 	sch := runtime.NewScheme()
 	_ = apiextensionsv1.AddToScheme(sch)
 	codecs := serializer.NewCodecFactory(sch)
 	for _, v := range crdFiles {
-		obj, _, err := codecs.UniversalDeserializer().Decode(v, nil, nil)
-		if err != nil {
-			continue
+		d := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(v), 4096)
+		for {
+			ext := &runtime.RawExtension{}
+			err := d.Decode(ext)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
+			if err != nil {
+				continue
+			}
+			c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+			if !ok {
+				continue
+			}
+			crd = append(crd, c)
 		}
-		c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
-		if !ok {
-			continue
-		}
-		crd = append(crd, c)
 	}
 
 	return crd, nil

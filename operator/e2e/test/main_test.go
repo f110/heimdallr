@@ -52,17 +52,20 @@ func TestMain(m *testing.M) {
 	}
 	klog.SetOutput(ioutil.Discard)
 
+	log.Printf("%+v", framework.Config)
+
+	var cluster *e2eutil.Cluster
 	framework.BeforeSuite(func() {
 		crd, err := e2eutil.ReadCRDFiles(framework.Config.CRDDir)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		k, err := e2eutil.CreateCluster(id, framework.Config.ClusterVersion)
-		if err != nil {
+		cluster = e2eutil.NewCluster(id)
+		if err := cluster.Create(framework.Config.ClusterVersion); err != nil {
 			log.Fatalf("Could not create a cluster: %v", err)
 		}
-		kubeConfig = k
+		kubeConfig = cluster.KubeConfig()
 
 		cfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 		if err != nil {
@@ -81,6 +84,30 @@ func TestMain(m *testing.M) {
 
 		if err := e2eutil.WaitForReady(context.TODO(), kubeClient); err != nil {
 			log.Fatal(err)
+		}
+		if framework.Config.ProxyImageFile != "" || framework.Config.RPCImageFile != "" || framework.Config.DashboardImageFile != "" {
+			images := []*e2eutil.ContainerImageFile{
+				{
+					File:       framework.Config.ProxyImageFile,
+					Repository: controllers.ProxyImageRepository,
+					Tag:        "e2e",
+				},
+				{
+					File:       framework.Config.RPCImageFile,
+					Repository: controllers.RPCServerImageRepository,
+					Tag:        "e2e",
+				},
+				{
+					File:       framework.Config.DashboardImageFile,
+					Repository: controllers.DashboardImageRepository,
+					Tag:        "e2e",
+				},
+			}
+			if err := cluster.LoadImageFiles(images...); err != nil {
+				log.Fatal(err)
+			}
+
+			framework.Config.ProxyVersion = "e2e"
 		}
 
 		if err := e2eutil.EnsureCertManager(cfg); err != nil {
@@ -172,9 +199,10 @@ func TestMain(m *testing.M) {
 			os.Remove(kubeConfig)
 		}
 
-		err := e2eutil.DeleteCluster(id)
-		if err != nil {
-			log.Fatalf("Could not delete a cluster: %v", err)
+		if cluster != nil {
+			if err := cluster.Delete(); err != nil {
+				log.Fatalf("Could not delete a cluster: %v", err)
+			}
 		}
 	})
 

@@ -17,6 +17,7 @@ container_image(
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heimdallr-proxy"],
     tars = [":bin"],
+    visibility = ["//visibility:public"],
 )
 
 container_push(
@@ -43,6 +44,7 @@ container_image(
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heim-rpcserver"],
     tars = [":bin_rpcserver"],
+    visibility = ["//visibility:public"],
 )
 
 container_push(
@@ -68,6 +70,7 @@ container_image(
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heim-dashboard"],
     tars = [":bin_dashboard"],
+    visibility = ["//visibility:public"],
 )
 
 container_push(
