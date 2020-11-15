@@ -41,7 +41,11 @@ func TestMain(m *testing.M) {
 	id := e2eutil.MakeId()
 	kubeConfig := ""
 
-	if err := logger.OverrideKlog(&configv2.Logger{Level: "fatal"}); err != nil {
+	logLevel := "fatal"
+	if framework.Config.Verbose {
+		logLevel = "debug"
+	}
+	if err := logger.OverrideKlog(&configv2.Logger{Level: logLevel}); err != nil {
 		panic(err)
 		return
 	}
