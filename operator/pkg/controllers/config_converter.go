@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"golang.org/x/xerrors"
+	corev1 "k8s.io/api/core/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
 
@@ -18,12 +19,21 @@ type ConfigConverter struct {
 func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
 	proxies := make([]*configv2.Backend, 0, len(backends))
 	for _, v := range backends {
-		service, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
-		if err != nil {
-			// At this time, ignore error
-			return nil, nil
+		_, virtualDashboard := v.Labels[labelKeyVirtualDashboard]
+
+		var service *corev1.Service
+		if !virtualDashboard && v.Spec.Upstream == "" {
+			svc, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
+			if err != nil {
+				// At this time, ignore error
+				continue
+			}
+			if svc == nil {
+				continue
+			}
+			service = svc
 		}
-		if service == nil {
+		if v.Spec.Upstream == "" && service == nil {
 			continue
 		}
 

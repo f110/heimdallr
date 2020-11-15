@@ -89,6 +89,8 @@ const (
 	datastoreKeyFilename        = "client.key"
 
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	labelKeyVirtualDashboard = "virtual.dashboard"
 )
 
 type process struct {
@@ -166,6 +168,9 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dashboard",
 				Namespace: opt.Spec.Namespace,
+				Labels: map[string]string{
+					labelKeyVirtualDashboard: "yes",
+				},
 			},
 			Spec: proxyv1alpha1.BackendSpec{
 				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
@@ -1651,11 +1656,11 @@ func toConfigPermissions(in []proxyv1alpha1.Permission) []*configv2.Permission {
 }
 
 func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector, namespace string) (*corev1.Service, error) {
+	ns := sel.Namespace
+	if ns == "" {
+		ns = namespace
+	}
 	if sel.Name != "" {
-		ns := sel.Namespace
-		if ns == "" {
-			ns = namespace
-		}
 		svc, err := lister.Services(ns).Get(sel.Name)
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
@@ -1668,7 +1673,7 @@ func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	services, err := lister.Services(sel.Namespace).List(selector)
+	services, err := lister.Services(ns).List(selector)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -1676,7 +1681,7 @@ func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector
 		return nil, xerrors.Errorf("%s not found", sel.LabelSelector.String())
 	}
 	if len(services) > 1 {
-		return nil, xerrors.Errorf("Found %d services", len(services))
+		return nil, xerrors.Errorf("Found %d services: %s", len(services), sel.LabelSelector.String())
 	}
 
 	return services[0], nil

@@ -102,7 +102,6 @@ func (c *Cluster) Create(clusterVersion string) error {
 		"--name", fmt.Sprintf("e2e-%s", c.id),
 		"--kubeconfig", f.Name(),
 		"--config", kf.Name(),
-		"--quiet",
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
