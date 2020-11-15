@@ -24,6 +24,7 @@ type ConfigStruct struct {
 	ProxyImageFile     string
 	RPCImageFile       string
 	DashboardImageFile string
+	Retain             bool
 }
 
 func Flags(fs *flag.FlagSet) {
@@ -35,6 +36,7 @@ func Flags(fs *flag.FlagSet) {
 	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
 	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
 	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
+	fs.BoolVar(&Config.Retain, "retain", false, "Do not delete cluster after test")
 }
 
 func BeforeSuite(f func()) {

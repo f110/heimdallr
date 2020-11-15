@@ -66,6 +66,7 @@ func TestMain(m *testing.M) {
 			log.Fatalf("Could not create a cluster: %v", err)
 		}
 		kubeConfig = cluster.KubeConfig()
+		log.Printf("KubeConfig: %s", kubeConfig)
 
 		cfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 		if err != nil {
@@ -195,11 +196,11 @@ func TestMain(m *testing.M) {
 	})
 
 	framework.AfterSuite(func() {
-		if kubeConfig != "" {
+		if kubeConfig != "" && !framework.Config.Retain {
 			os.Remove(kubeConfig)
 		}
 
-		if cluster != nil {
+		if cluster != nil && !framework.Config.Retain {
 			if err := cluster.Delete(); err != nil {
 				log.Fatalf("Could not delete a cluster: %v", err)
 			}
