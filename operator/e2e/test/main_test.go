@@ -65,7 +65,7 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		cluster = e2eutil.NewCluster(id)
+		cluster = e2eutil.NewCluster(framework.Config.KindFile, id)
 		if err := cluster.Create(framework.Config.ClusterVersion); err != nil {
 			log.Fatalf("Could not create a cluster: %v", err)
 		}

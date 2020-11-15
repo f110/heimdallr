@@ -119,3 +119,10 @@ kustomize_binary(
     name = "kustomize",
     version = "3.8.1",
 )
+
+load("//build/rules/kind:def.bzl", "kind_binary")
+
+kind_binary(
+    name = "kind",
+    version = "0.9.0",
+)

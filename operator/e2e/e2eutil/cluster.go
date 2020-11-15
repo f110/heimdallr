@@ -61,12 +61,13 @@ nodes:
 `
 
 type Cluster struct {
+	kind       string
 	id         string
 	kubeconfig string
 }
 
-func NewCluster(id string) *Cluster {
-	return &Cluster{id: id}
+func NewCluster(kind, id string) *Cluster {
+	return &Cluster{kind: kind, id: id}
 }
 
 func (c *Cluster) Create(clusterVersion string) error {
@@ -98,7 +99,7 @@ func (c *Cluster) Create(clusterVersion string) error {
 	}
 	cmd := exec.CommandContext(
 		context.TODO(),
-		"kind", "create", "cluster",
+		c.kind, "create", "cluster",
 		"--name", fmt.Sprintf("e2e-%s", c.id),
 		"--kubeconfig", f.Name(),
 		"--config", kf.Name(),
@@ -137,7 +138,7 @@ func (c *Cluster) Delete() error {
 		return nil
 	}
 
-	cmd = exec.CommandContext(context.TODO(), "kind", "delete", "cluster", "--name", fmt.Sprintf("e2e-%s", c.id))
+	cmd = exec.CommandContext(context.TODO(), c.kind, "delete", "cluster", "--name", fmt.Sprintf("e2e-%s", c.id))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -162,13 +163,13 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 		}
 
 		log.Printf("Load image file: %s", v.repoTags)
-		cmd := exec.CommandContext(context.TODO(), "kind", "load", "image-archive", "--name", "e2e-"+c.id, v.File)
+		cmd := exec.CommandContext(context.TODO(), c.kind, "load", "image-archive", "--name", "e2e-"+c.id, v.File)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
 	}
 
-	cmd := exec.CommandContext(context.TODO(), "kind", "get", "nodes", "--name", "e2e-"+c.id)
+	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "nodes", "--name", "e2e-"+c.id)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return err

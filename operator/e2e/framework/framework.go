@@ -21,6 +21,7 @@ type ConfigStruct struct {
 	CRDDir             string
 	ClusterVersion     string
 	Verbose            bool
+	KindFile           string
 	ProxyImageFile     string
 	RPCImageFile       string
 	DashboardImageFile string
@@ -33,6 +34,7 @@ func Flags(fs *flag.FlagSet) {
 	fs.StringVar(&Config.CRDDir, "crd", "", "CRD files")
 	fs.BoolVar(&Config.Verbose, "verbose", false, "View controller's log")
 	fs.StringVar(&Config.ClusterVersion, "cluster-version", "v0.18.8", "Kubernetes cluster version")
+	fs.StringVar(&Config.KindFile, "kind-file", "", "Kind executable file path")
 	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
 	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
 	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
