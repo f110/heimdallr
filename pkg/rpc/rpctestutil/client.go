@@ -17,6 +17,7 @@ type AdminClient struct {
 	UserAddCall          int
 	UserDelCall          int
 	UserGetCall          int
+	UserEditCall         int
 	BecomeMaintainerCall int
 	ToggleAdminCall      int
 	TokenNewCall         int
@@ -66,6 +67,14 @@ func (a *AdminClient) UserGet(ctx context.Context, in *rpc.RequestUserGet, opts 
 	a.UserGetCall++
 
 	return &rpc.ResponseUserGet{}, nil
+}
+
+func (a *AdminClient) UserEdit(ctx context.Context, in *rpc.RequestUserEdit, opts ...grpc.CallOption) (*rpc.ResponseUserEdit, error) {
+	a.Lock()
+	defer a.Unlock()
+	a.UserEditCall++
+
+	return &rpc.ResponseUserEdit{}, nil
 }
 
 func (a *AdminClient) BecomeMaintainer(ctx context.Context, in *rpc.RequestBecomeMaintainer, opts ...grpc.CallOption) (*rpc.ResponseBecomeMaintainer, error) {
