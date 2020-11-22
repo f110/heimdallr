@@ -16,6 +16,7 @@ service Admin {
 
     rpc UserList (RequestUserList) returns (ResponseUserList);
     rpc UserAdd (RequestUserAdd) returns (ResponseUserAdd);
+    rpc UserEdit (RequestUserEdit) returns (ResponseUserEdit);
     rpc UserDel (RequestUserDel) returns (ResponseUserDel);
     rpc UserGet (RequestUserGet) returns (ResponseUserGet);
     rpc BecomeMaintainer (RequestBecomeMaintainer) returns (ResponseBecomeMaintainer);
@@ -143,6 +144,15 @@ message RequestUserAdd {
 }
 
 message ResponseUserAdd {
+    bool ok = 1;
+}
+
+message RequestUserEdit {
+    string id = 1;
+    UserItem user = 2;
+}
+
+message ResponseUserEdit {
     bool ok = 1;
 }
 

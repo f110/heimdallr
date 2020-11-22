@@ -61,6 +61,8 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
 	s.Get("/user", s.handleUsers)
 	s.Post("/user", s.handleAddUser)
 	s.Get("/user/:id", s.handleGetUser)
+	s.Get("/user/:id/edit", s.handleEditUserIndex)
+	s.Post("/user/:id/edit", s.handleEditUser)
 	s.Post("/user/:id/delete", s.handleDeleteUser)
 	s.Post("/user/:id/maintainer", s.handleMakeMaintainer)
 	s.Post("/user/:id/admin", s.handleMakeAdmin)
@@ -616,6 +618,31 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 	})
 }
 
+func (s *Server) handleEditUserIndex(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	id := params.ByName("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	u, err := client.GetUser(id, false)
+	if err != nil {
+		logger.Log.Info("User not found", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	s.RenderTemplate(w, "user/edit.tmpl", struct {
+		Id       string
+		UserInfo *rpc.UserItem
+	}{
+		Id:       u.Id,
+		UserInfo: u,
+	})
+}
+
 func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
@@ -635,6 +662,29 @@ func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httpr
 	}
 
 	http.Redirect(w, req, "/user", http.StatusFound)
+}
+
+func (s *Server) handleEditUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	u, err := client.GetUser(params.ByName("id"), false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u.LoginName = req.FormValue("login_name")
+
+	if err := client.UpdateUser(u.Id, u); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/user/"+u.Id, http.StatusFound)
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {

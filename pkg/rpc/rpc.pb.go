@@ -1180,6 +1180,108 @@ func (x *ResponseUserAdd) GetOk() bool {
 	return false
 }
 
+type RequestUserEdit struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id   string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	User *UserItem `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+}
+
+func (x *RequestUserEdit) Reset() {
+	*x = RequestUserEdit{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RequestUserEdit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestUserEdit) ProtoMessage() {}
+
+func (x *RequestUserEdit) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestUserEdit.ProtoReflect.Descriptor instead.
+func (*RequestUserEdit) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RequestUserEdit) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RequestUserEdit) GetUser() *UserItem {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type ResponseUserEdit struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+}
+
+func (x *ResponseUserEdit) Reset() {
+	*x = ResponseUserEdit{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResponseUserEdit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResponseUserEdit) ProtoMessage() {}
+
+func (x *ResponseUserEdit) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResponseUserEdit.ProtoReflect.Descriptor instead.
+func (*ResponseUserEdit) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ResponseUserEdit) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
 type RequestUserDel struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1192,7 +1294,7 @@ type RequestUserDel struct {
 func (x *RequestUserDel) Reset() {
 	*x = RequestUserDel{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1205,7 +1307,7 @@ func (x *RequestUserDel) String() string {
 func (*RequestUserDel) ProtoMessage() {}
 
 func (x *RequestUserDel) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1218,7 +1320,7 @@ func (x *RequestUserDel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserDel.ProtoReflect.Descriptor instead.
 func (*RequestUserDel) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{19}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RequestUserDel) GetId() string {
@@ -1246,7 +1348,7 @@ type ResponseUserDel struct {
 func (x *ResponseUserDel) Reset() {
 	*x = ResponseUserDel{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1259,7 +1361,7 @@ func (x *ResponseUserDel) String() string {
 func (*ResponseUserDel) ProtoMessage() {}
 
 func (x *ResponseUserDel) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1272,7 +1374,7 @@ func (x *ResponseUserDel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserDel.ProtoReflect.Descriptor instead.
 func (*ResponseUserDel) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{20}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ResponseUserDel) GetOk() bool {
@@ -1294,7 +1396,7 @@ type RequestUserGet struct {
 func (x *RequestUserGet) Reset() {
 	*x = RequestUserGet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1307,7 +1409,7 @@ func (x *RequestUserGet) String() string {
 func (*RequestUserGet) ProtoMessage() {}
 
 func (x *RequestUserGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1320,7 +1422,7 @@ func (x *RequestUserGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserGet.ProtoReflect.Descriptor instead.
 func (*RequestUserGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{21}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RequestUserGet) GetId() string {
@@ -1349,7 +1451,7 @@ type ResponseUserGet struct {
 func (x *ResponseUserGet) Reset() {
 	*x = ResponseUserGet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1362,7 +1464,7 @@ func (x *ResponseUserGet) String() string {
 func (*ResponseUserGet) ProtoMessage() {}
 
 func (x *ResponseUserGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1375,7 +1477,7 @@ func (x *ResponseUserGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserGet.ProtoReflect.Descriptor instead.
 func (*ResponseUserGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{22}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ResponseUserGet) GetUser() *UserItem {
@@ -1404,7 +1506,7 @@ type RequestBecomeMaintainer struct {
 func (x *RequestBecomeMaintainer) Reset() {
 	*x = RequestBecomeMaintainer{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1417,7 +1519,7 @@ func (x *RequestBecomeMaintainer) String() string {
 func (*RequestBecomeMaintainer) ProtoMessage() {}
 
 func (x *RequestBecomeMaintainer) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1430,7 +1532,7 @@ func (x *RequestBecomeMaintainer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestBecomeMaintainer.ProtoReflect.Descriptor instead.
 func (*RequestBecomeMaintainer) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{23}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RequestBecomeMaintainer) GetId() string {
@@ -1458,7 +1560,7 @@ type ResponseBecomeMaintainer struct {
 func (x *ResponseBecomeMaintainer) Reset() {
 	*x = ResponseBecomeMaintainer{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1471,7 +1573,7 @@ func (x *ResponseBecomeMaintainer) String() string {
 func (*ResponseBecomeMaintainer) ProtoMessage() {}
 
 func (x *ResponseBecomeMaintainer) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1484,7 +1586,7 @@ func (x *ResponseBecomeMaintainer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseBecomeMaintainer.ProtoReflect.Descriptor instead.
 func (*ResponseBecomeMaintainer) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{24}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ResponseBecomeMaintainer) GetOk() bool {
@@ -1505,7 +1607,7 @@ type RequestToggleAdmin struct {
 func (x *RequestToggleAdmin) Reset() {
 	*x = RequestToggleAdmin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1518,7 +1620,7 @@ func (x *RequestToggleAdmin) String() string {
 func (*RequestToggleAdmin) ProtoMessage() {}
 
 func (x *RequestToggleAdmin) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1531,7 +1633,7 @@ func (x *RequestToggleAdmin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestToggleAdmin.ProtoReflect.Descriptor instead.
 func (*RequestToggleAdmin) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{25}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RequestToggleAdmin) GetId() string {
@@ -1552,7 +1654,7 @@ type ResponseToggleAdmin struct {
 func (x *ResponseToggleAdmin) Reset() {
 	*x = ResponseToggleAdmin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1565,7 +1667,7 @@ func (x *ResponseToggleAdmin) String() string {
 func (*ResponseToggleAdmin) ProtoMessage() {}
 
 func (x *ResponseToggleAdmin) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1578,7 +1680,7 @@ func (x *ResponseToggleAdmin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseToggleAdmin.ProtoReflect.Descriptor instead.
 func (*ResponseToggleAdmin) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{26}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ResponseToggleAdmin) GetOk() bool {
@@ -1600,7 +1702,7 @@ type RequestTokenNew struct {
 func (x *RequestTokenNew) Reset() {
 	*x = RequestTokenNew{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1613,7 +1715,7 @@ func (x *RequestTokenNew) String() string {
 func (*RequestTokenNew) ProtoMessage() {}
 
 func (x *RequestTokenNew) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1626,7 +1728,7 @@ func (x *RequestTokenNew) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestTokenNew.ProtoReflect.Descriptor instead.
 func (*RequestTokenNew) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{27}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RequestTokenNew) GetUserId() string {
@@ -1654,7 +1756,7 @@ type ResponseTokenNew struct {
 func (x *ResponseTokenNew) Reset() {
 	*x = ResponseTokenNew{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1667,7 +1769,7 @@ func (x *ResponseTokenNew) String() string {
 func (*ResponseTokenNew) ProtoMessage() {}
 
 func (x *ResponseTokenNew) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1680,7 +1782,7 @@ func (x *ResponseTokenNew) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseTokenNew.ProtoReflect.Descriptor instead.
 func (*ResponseTokenNew) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{28}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ResponseTokenNew) GetItem() *AccessTokenItem {
@@ -1699,7 +1801,7 @@ type RequestRoleList struct {
 func (x *RequestRoleList) Reset() {
 	*x = RequestRoleList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1712,7 +1814,7 @@ func (x *RequestRoleList) String() string {
 func (*RequestRoleList) ProtoMessage() {}
 
 func (x *RequestRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1725,7 +1827,7 @@ func (x *RequestRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestRoleList.ProtoReflect.Descriptor instead.
 func (*RequestRoleList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{29}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{31}
 }
 
 type ResponseRoleList struct {
@@ -1739,7 +1841,7 @@ type ResponseRoleList struct {
 func (x *ResponseRoleList) Reset() {
 	*x = ResponseRoleList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1752,7 +1854,7 @@ func (x *ResponseRoleList) String() string {
 func (*ResponseRoleList) ProtoMessage() {}
 
 func (x *ResponseRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1765,7 +1867,7 @@ func (x *ResponseRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseRoleList.ProtoReflect.Descriptor instead.
 func (*ResponseRoleList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{30}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ResponseRoleList) GetItems() []*RoleItem {
@@ -1786,7 +1888,7 @@ type RequestBackendList struct {
 func (x *RequestBackendList) Reset() {
 	*x = RequestBackendList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1799,7 +1901,7 @@ func (x *RequestBackendList) String() string {
 func (*RequestBackendList) ProtoMessage() {}
 
 func (x *RequestBackendList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1812,7 +1914,7 @@ func (x *RequestBackendList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestBackendList.ProtoReflect.Descriptor instead.
 func (*RequestBackendList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{31}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RequestBackendList) GetAgent() bool {
@@ -1833,7 +1935,7 @@ type ResponseBackendList struct {
 func (x *ResponseBackendList) Reset() {
 	*x = ResponseBackendList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1846,7 +1948,7 @@ func (x *ResponseBackendList) String() string {
 func (*ResponseBackendList) ProtoMessage() {}
 
 func (x *ResponseBackendList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1859,7 +1961,7 @@ func (x *ResponseBackendList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseBackendList.ProtoReflect.Descriptor instead.
 func (*ResponseBackendList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{32}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ResponseBackendList) GetItems() []*BackendItem {
@@ -1878,7 +1980,7 @@ type RequestGetSignedList struct {
 func (x *RequestGetSignedList) Reset() {
 	*x = RequestGetSignedList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1891,7 +1993,7 @@ func (x *RequestGetSignedList) String() string {
 func (*RequestGetSignedList) ProtoMessage() {}
 
 func (x *RequestGetSignedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1904,7 +2006,7 @@ func (x *RequestGetSignedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetSignedList.ProtoReflect.Descriptor instead.
 func (*RequestGetSignedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{33}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{35}
 }
 
 type ResponseGetSignedList struct {
@@ -1918,7 +2020,7 @@ type ResponseGetSignedList struct {
 func (x *ResponseGetSignedList) Reset() {
 	*x = ResponseGetSignedList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1931,7 +2033,7 @@ func (x *ResponseGetSignedList) String() string {
 func (*ResponseGetSignedList) ProtoMessage() {}
 
 func (x *ResponseGetSignedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1944,7 +2046,7 @@ func (x *ResponseGetSignedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetSignedList.ProtoReflect.Descriptor instead.
 func (*ResponseGetSignedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{34}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ResponseGetSignedList) GetItems() []*CertItem {
@@ -1971,7 +2073,7 @@ type RequestNewClientCert struct {
 func (x *RequestNewClientCert) Reset() {
 	*x = RequestNewClientCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1984,7 +2086,7 @@ func (x *RequestNewClientCert) String() string {
 func (*RequestNewClientCert) ProtoMessage() {}
 
 func (x *RequestNewClientCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1997,7 +2099,7 @@ func (x *RequestNewClientCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestNewClientCert.ProtoReflect.Descriptor instead.
 func (*RequestNewClientCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{35}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RequestNewClientCert) GetCommonName() string {
@@ -2061,7 +2163,7 @@ type ResponseNewClientCert struct {
 func (x *ResponseNewClientCert) Reset() {
 	*x = ResponseNewClientCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2074,7 +2176,7 @@ func (x *ResponseNewClientCert) String() string {
 func (*ResponseNewClientCert) ProtoMessage() {}
 
 func (x *ResponseNewClientCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2087,7 +2189,7 @@ func (x *ResponseNewClientCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseNewClientCert.ProtoReflect.Descriptor instead.
 func (*ResponseNewClientCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{36}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ResponseNewClientCert) GetOk() bool {
@@ -2115,7 +2217,7 @@ type CARequestRevoke struct {
 func (x *CARequestRevoke) Reset() {
 	*x = CARequestRevoke{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2128,7 +2230,7 @@ func (x *CARequestRevoke) String() string {
 func (*CARequestRevoke) ProtoMessage() {}
 
 func (x *CARequestRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2141,7 +2243,7 @@ func (x *CARequestRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CARequestRevoke.ProtoReflect.Descriptor instead.
 func (*CARequestRevoke) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{37}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CARequestRevoke) GetSerialNumber() []byte {
@@ -2162,7 +2264,7 @@ type CAResponseRevoke struct {
 func (x *CAResponseRevoke) Reset() {
 	*x = CAResponseRevoke{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2175,7 +2277,7 @@ func (x *CAResponseRevoke) String() string {
 func (*CAResponseRevoke) ProtoMessage() {}
 
 func (x *CAResponseRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2188,7 +2290,7 @@ func (x *CAResponseRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CAResponseRevoke.ProtoReflect.Descriptor instead.
 func (*CAResponseRevoke) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{38}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CAResponseRevoke) GetOk() bool {
@@ -2209,7 +2311,7 @@ type CARequestGet struct {
 func (x *CARequestGet) Reset() {
 	*x = CARequestGet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2222,7 +2324,7 @@ func (x *CARequestGet) String() string {
 func (*CARequestGet) ProtoMessage() {}
 
 func (x *CARequestGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2235,7 +2337,7 @@ func (x *CARequestGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CARequestGet.ProtoReflect.Descriptor instead.
 func (*CARequestGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{39}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *CARequestGet) GetSerialNumber() []byte {
@@ -2256,7 +2358,7 @@ type CAResponseGet struct {
 func (x *CAResponseGet) Reset() {
 	*x = CAResponseGet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2269,7 +2371,7 @@ func (x *CAResponseGet) String() string {
 func (*CAResponseGet) ProtoMessage() {}
 
 func (x *CAResponseGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2282,7 +2384,7 @@ func (x *CAResponseGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CAResponseGet.ProtoReflect.Descriptor instead.
 func (*CAResponseGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{40}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *CAResponseGet) GetItem() *CertItem {
@@ -2301,7 +2403,7 @@ type RequestGetRevokedList struct {
 func (x *RequestGetRevokedList) Reset() {
 	*x = RequestGetRevokedList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2314,7 +2416,7 @@ func (x *RequestGetRevokedList) String() string {
 func (*RequestGetRevokedList) ProtoMessage() {}
 
 func (x *RequestGetRevokedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2327,7 +2429,7 @@ func (x *RequestGetRevokedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetRevokedList.ProtoReflect.Descriptor instead.
 func (*RequestGetRevokedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{41}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{43}
 }
 
 type ResponseGetRevokedList struct {
@@ -2341,7 +2443,7 @@ type ResponseGetRevokedList struct {
 func (x *ResponseGetRevokedList) Reset() {
 	*x = ResponseGetRevokedList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2354,7 +2456,7 @@ func (x *ResponseGetRevokedList) String() string {
 func (*ResponseGetRevokedList) ProtoMessage() {}
 
 func (x *ResponseGetRevokedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2367,7 +2469,7 @@ func (x *ResponseGetRevokedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetRevokedList.ProtoReflect.Descriptor instead.
 func (*ResponseGetRevokedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{42}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ResponseGetRevokedList) GetItems() []*CertItem {
@@ -2386,7 +2488,7 @@ type RequestWatchRevokedCert struct {
 func (x *RequestWatchRevokedCert) Reset() {
 	*x = RequestWatchRevokedCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2399,7 +2501,7 @@ func (x *RequestWatchRevokedCert) String() string {
 func (*RequestWatchRevokedCert) ProtoMessage() {}
 
 func (x *RequestWatchRevokedCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2412,7 +2514,7 @@ func (x *RequestWatchRevokedCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWatchRevokedCert.ProtoReflect.Descriptor instead.
 func (*RequestWatchRevokedCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{43}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{45}
 }
 
 type ResponseWatchRevokedCert struct {
@@ -2426,7 +2528,7 @@ type ResponseWatchRevokedCert struct {
 func (x *ResponseWatchRevokedCert) Reset() {
 	*x = ResponseWatchRevokedCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2439,7 +2541,7 @@ func (x *ResponseWatchRevokedCert) String() string {
 func (*ResponseWatchRevokedCert) ProtoMessage() {}
 
 func (x *ResponseWatchRevokedCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2452,7 +2554,7 @@ func (x *ResponseWatchRevokedCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseWatchRevokedCert.ProtoReflect.Descriptor instead.
 func (*ResponseWatchRevokedCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{44}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ResponseWatchRevokedCert) GetItems() []*CertItem {
@@ -2473,7 +2575,7 @@ type RequestNewServerCert struct {
 func (x *RequestNewServerCert) Reset() {
 	*x = RequestNewServerCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2486,7 +2588,7 @@ func (x *RequestNewServerCert) String() string {
 func (*RequestNewServerCert) ProtoMessage() {}
 
 func (x *RequestNewServerCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2499,7 +2601,7 @@ func (x *RequestNewServerCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestNewServerCert.ProtoReflect.Descriptor instead.
 func (*RequestNewServerCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{45}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *RequestNewServerCert) GetSigningRequest() []byte {
@@ -2520,7 +2622,7 @@ type ResponseNewServerCert struct {
 func (x *ResponseNewServerCert) Reset() {
 	*x = ResponseNewServerCert{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2533,7 +2635,7 @@ func (x *ResponseNewServerCert) String() string {
 func (*ResponseNewServerCert) ProtoMessage() {}
 
 func (x *ResponseNewServerCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2546,7 +2648,7 @@ func (x *ResponseNewServerCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseNewServerCert.ProtoReflect.Descriptor instead.
 func (*ResponseNewServerCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{46}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ResponseNewServerCert) GetCertificate() []byte {
@@ -2567,7 +2669,7 @@ type RequestSignRequest struct {
 func (x *RequestSignRequest) Reset() {
 	*x = RequestSignRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2580,7 +2682,7 @@ func (x *RequestSignRequest) String() string {
 func (*RequestSignRequest) ProtoMessage() {}
 
 func (x *RequestSignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2593,7 +2695,7 @@ func (x *RequestSignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestSignRequest.ProtoReflect.Descriptor instead.
 func (*RequestSignRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{47}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *RequestSignRequest) GetUserId() string {
@@ -2614,7 +2716,7 @@ type ResponseSignResponse struct {
 func (x *ResponseSignResponse) Reset() {
 	*x = ResponseSignResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2627,7 +2729,7 @@ func (x *ResponseSignResponse) String() string {
 func (*ResponseSignResponse) ProtoMessage() {}
 
 func (x *ResponseSignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2640,7 +2742,7 @@ func (x *ResponseSignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseSignResponse.ProtoReflect.Descriptor instead.
 func (*ResponseSignResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{48}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ResponseSignResponse) GetToken() string {
@@ -2659,7 +2761,7 @@ type RequestGetPublicKey struct {
 func (x *RequestGetPublicKey) Reset() {
 	*x = RequestGetPublicKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2672,7 +2774,7 @@ func (x *RequestGetPublicKey) String() string {
 func (*RequestGetPublicKey) ProtoMessage() {}
 
 func (x *RequestGetPublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2685,7 +2787,7 @@ func (x *RequestGetPublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetPublicKey.ProtoReflect.Descriptor instead.
 func (*RequestGetPublicKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{49}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{51}
 }
 
 type ResponseGetPublicKey struct {
@@ -2699,7 +2801,7 @@ type ResponseGetPublicKey struct {
 func (x *ResponseGetPublicKey) Reset() {
 	*x = ResponseGetPublicKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2712,7 +2814,7 @@ func (x *ResponseGetPublicKey) String() string {
 func (*ResponseGetPublicKey) ProtoMessage() {}
 
 func (x *ResponseGetPublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2725,7 +2827,7 @@ func (x *ResponseGetPublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetPublicKey.ProtoReflect.Descriptor instead.
 func (*ResponseGetPublicKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{50}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ResponseGetPublicKey) GetPublicKey() []byte {
@@ -2746,7 +2848,7 @@ type RequestGetSSHKey struct {
 func (x *RequestGetSSHKey) Reset() {
 	*x = RequestGetSSHKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2759,7 +2861,7 @@ func (x *RequestGetSSHKey) String() string {
 func (*RequestGetSSHKey) ProtoMessage() {}
 
 func (x *RequestGetSSHKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2772,7 +2874,7 @@ func (x *RequestGetSSHKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetSSHKey.ProtoReflect.Descriptor instead.
 func (*RequestGetSSHKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{51}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *RequestGetSSHKey) GetUserId() string {
@@ -2794,7 +2896,7 @@ type ResponseGetSSHKey struct {
 func (x *ResponseGetSSHKey) Reset() {
 	*x = ResponseGetSSHKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2807,7 +2909,7 @@ func (x *ResponseGetSSHKey) String() string {
 func (*ResponseGetSSHKey) ProtoMessage() {}
 
 func (x *ResponseGetSSHKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2820,7 +2922,7 @@ func (x *ResponseGetSSHKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetSSHKey.ProtoReflect.Descriptor instead.
 func (*ResponseGetSSHKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{52}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ResponseGetSSHKey) GetUserId() string {
@@ -2848,7 +2950,7 @@ type RequestSetSSHKey struct {
 func (x *RequestSetSSHKey) Reset() {
 	*x = RequestSetSSHKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2861,7 +2963,7 @@ func (x *RequestSetSSHKey) String() string {
 func (*RequestSetSSHKey) ProtoMessage() {}
 
 func (x *RequestSetSSHKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2874,7 +2976,7 @@ func (x *RequestSetSSHKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestSetSSHKey.ProtoReflect.Descriptor instead.
 func (*RequestSetSSHKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{53}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *RequestSetSSHKey) GetKey() string {
@@ -2895,7 +2997,7 @@ type ResponseSetSSHKey struct {
 func (x *ResponseSetSSHKey) Reset() {
 	*x = ResponseSetSSHKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2908,7 +3010,7 @@ func (x *ResponseSetSSHKey) String() string {
 func (*ResponseSetSSHKey) ProtoMessage() {}
 
 func (x *ResponseSetSSHKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2921,7 +3023,7 @@ func (x *ResponseSetSSHKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseSetSSHKey.ProtoReflect.Descriptor instead.
 func (*ResponseSetSSHKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{54}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ResponseSetSSHKey) GetOk() bool {
@@ -2942,7 +3044,7 @@ type RequestGetGPGKey struct {
 func (x *RequestGetGPGKey) Reset() {
 	*x = RequestGetGPGKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2955,7 +3057,7 @@ func (x *RequestGetGPGKey) String() string {
 func (*RequestGetGPGKey) ProtoMessage() {}
 
 func (x *RequestGetGPGKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2968,7 +3070,7 @@ func (x *RequestGetGPGKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetGPGKey.ProtoReflect.Descriptor instead.
 func (*RequestGetGPGKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{55}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *RequestGetGPGKey) GetUserId() string {
@@ -2990,7 +3092,7 @@ type ResponseGetGPGKey struct {
 func (x *ResponseGetGPGKey) Reset() {
 	*x = ResponseGetGPGKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[58]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3003,7 +3105,7 @@ func (x *ResponseGetGPGKey) String() string {
 func (*ResponseGetGPGKey) ProtoMessage() {}
 
 func (x *ResponseGetGPGKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[58]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3016,7 +3118,7 @@ func (x *ResponseGetGPGKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetGPGKey.ProtoReflect.Descriptor instead.
 func (*ResponseGetGPGKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{56}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ResponseGetGPGKey) GetUserId() string {
@@ -3045,7 +3147,7 @@ type RequestSetGPGKey struct {
 func (x *RequestSetGPGKey) Reset() {
 	*x = RequestSetGPGKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3058,7 +3160,7 @@ func (x *RequestSetGPGKey) String() string {
 func (*RequestSetGPGKey) ProtoMessage() {}
 
 func (x *RequestSetGPGKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3071,7 +3173,7 @@ func (x *RequestSetGPGKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestSetGPGKey.ProtoReflect.Descriptor instead.
 func (*RequestSetGPGKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{57}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *RequestSetGPGKey) GetUserId() string {
@@ -3099,7 +3201,7 @@ type ResponseSetGPGKey struct {
 func (x *ResponseSetGPGKey) Reset() {
 	*x = ResponseSetGPGKey{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[58]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3112,7 +3214,7 @@ func (x *ResponseSetGPGKey) String() string {
 func (*ResponseSetGPGKey) ProtoMessage() {}
 
 func (x *ResponseSetGPGKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[58]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3125,7 +3227,7 @@ func (x *ResponseSetGPGKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseSetGPGKey.ProtoReflect.Descriptor instead.
 func (*ResponseSetGPGKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{58}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ResponseSetGPGKey) GetOk() bool {
@@ -3146,7 +3248,7 @@ type ErrorUnauthorized struct {
 func (x *ErrorUnauthorized) Reset() {
 	*x = ErrorUnauthorized{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_rpc_rpc_proto_msgTypes[59]
+		mi := &file_pkg_rpc_rpc_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3159,7 +3261,7 @@ func (x *ErrorUnauthorized) String() string {
 func (*ErrorUnauthorized) ProtoMessage() {}
 
 func (x *ErrorUnauthorized) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[59]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3172,7 +3274,7 @@ func (x *ErrorUnauthorized) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorUnauthorized.ProtoReflect.Descriptor instead.
 func (*ErrorUnauthorized) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{59}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ErrorUnauthorized) GetEndpoint() string {
@@ -3298,6 +3400,13 @@ var file_pkg_rpc_rpc_proto_rawDesc = []byte{
 	0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
 	0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x22, 0x21, 0x0a, 0x0f, 0x52, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x41, 0x64, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x4a, 0x0a, 0x0f, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x45, 0x64, 0x69, 0x74, 0x12, 0x0e, 0x0a,
+	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x27, 0x0a,
+	0x04, 0x75, 0x73, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x70, 0x72,
+	0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x55, 0x73, 0x65, 0x72, 0x49, 0x74, 0x65, 0x6d,
+	0x52, 0x04, 0x75, 0x73, 0x65, 0x72, 0x22, 0x22, 0x0a, 0x10, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x45, 0x64, 0x69, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x34, 0x0a, 0x0e, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x12, 0x0e, 0x0a, 0x02,
 	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04,
@@ -3457,8 +3566,8 @@ var file_pkg_rpc_rpc_proto_rawDesc = []byte{
 	0x69, 0x73, 0x74, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x41, 0x67, 0x65, 0x6e, 0x74, 0x4c, 0x69, 0x73, 0x74,
 	0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x41, 0x67, 0x65, 0x6e, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x32, 0xce,
-	0x05, 0x0a, 0x05, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x37, 0x0a, 0x04, 0x50, 0x69, 0x6e, 0x67,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x41, 0x67, 0x65, 0x6e, 0x74, 0x4c, 0x69, 0x73, 0x74, 0x32, 0x93,
+	0x06, 0x0a, 0x05, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x37, 0x0a, 0x04, 0x50, 0x69, 0x6e, 0x67,
 	0x12, 0x16, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x50, 0x69, 0x6e, 0x67, 0x1a, 0x17, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
 	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x50, 0x6f, 0x6e,
@@ -3470,97 +3579,102 @@ var file_pkg_rpc_rpc_proto_rawDesc = []byte{
 	0x64, 0x12, 0x19, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x41, 0x64, 0x64, 0x1a, 0x1a, 0x2e, 0x70,
 	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x55, 0x73, 0x65, 0x72, 0x41, 0x64, 0x64, 0x12, 0x40, 0x0a, 0x07, 0x55, 0x73, 0x65, 0x72,
-	0x44, 0x65, 0x6c, 0x12, 0x19, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x1a, 0x1a,
-	0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x12, 0x40, 0x0a, 0x07, 0x55, 0x73,
-	0x65, 0x72, 0x47, 0x65, 0x74, 0x12, 0x19, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
-	0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x47, 0x65, 0x74,
-	0x1a, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x47, 0x65, 0x74, 0x12, 0x5b, 0x0a, 0x10,
-	0x42, 0x65, 0x63, 0x6f, 0x6d, 0x65, 0x4d, 0x61, 0x69, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72,
-	0x12, 0x22, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x42, 0x65, 0x63, 0x6f, 0x6d, 0x65, 0x4d, 0x61, 0x69, 0x6e, 0x74, 0x61,
-	0x69, 0x6e, 0x65, 0x72, 0x1a, 0x23, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63,
-	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x65, 0x63, 0x6f, 0x6d, 0x65, 0x4d,
-	0x61, 0x69, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x4c, 0x0a, 0x0b, 0x54, 0x6f, 0x67,
-	0x67, 0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x1d, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
-	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x54, 0x6f, 0x67, 0x67,
-	0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x1a, 0x1e, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e,
-	0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f, 0x67, 0x67,
-	0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x43, 0x0a, 0x08, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
-	0x4e, 0x65, 0x77, 0x12, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x4e, 0x65, 0x77, 0x1a,
-	0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x4e, 0x65, 0x77, 0x12, 0x43, 0x0a, 0x08,
-	0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
-	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x6f, 0x6c, 0x65,
-	0x4c, 0x69, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63,
-	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73,
-	0x74, 0x12, 0x4c, 0x0a, 0x0b, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x4c, 0x69, 0x73, 0x74,
-	0x12, 0x1d, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x1a,
-	0x1e, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x32,
-	0xc5, 0x04, 0x0a, 0x14, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x41,
-	0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x12, 0x52, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x53,
-	0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x1f, 0x2e, 0x70, 0x72, 0x6f, 0x78,
-	0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74,
-	0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x47,
-	0x65, 0x74, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x52, 0x0a, 0x0d,
-	0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x65, 0x72, 0x74, 0x12, 0x1f, 0x2e,
+	0x65, 0x55, 0x73, 0x65, 0x72, 0x41, 0x64, 0x64, 0x12, 0x43, 0x0a, 0x08, 0x55, 0x73, 0x65, 0x72,
+	0x45, 0x64, 0x69, 0x74, 0x12, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63,
+	0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x45, 0x64, 0x69, 0x74,
+	0x1a, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x45, 0x64, 0x69, 0x74, 0x12, 0x40, 0x0a,
+	0x07, 0x55, 0x73, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x12, 0x19, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
+	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72,
+	0x44, 0x65, 0x6c, 0x1a, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x12,
+	0x40, 0x0a, 0x07, 0x55, 0x73, 0x65, 0x72, 0x47, 0x65, 0x74, 0x12, 0x19, 0x2e, 0x70, 0x72, 0x6f,
+	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73,
+	0x65, 0x72, 0x47, 0x65, 0x74, 0x1a, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
+	0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x55, 0x73, 0x65, 0x72, 0x47, 0x65,
+	0x74, 0x12, 0x5b, 0x0a, 0x10, 0x42, 0x65, 0x63, 0x6f, 0x6d, 0x65, 0x4d, 0x61, 0x69, 0x6e, 0x74,
+	0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x22, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
+	0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x42, 0x65, 0x63, 0x6f, 0x6d, 0x65, 0x4d,
+	0x61, 0x69, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x23, 0x2e, 0x70, 0x72, 0x6f, 0x78,
+	0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x65,
+	0x63, 0x6f, 0x6d, 0x65, 0x4d, 0x61, 0x69, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x4c,
+	0x0a, 0x0b, 0x54, 0x6f, 0x67, 0x67, 0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x1d, 0x2e,
 	0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x65, 0x72, 0x74, 0x1a, 0x20,
-	0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x65, 0x72, 0x74,
-	0x12, 0x52, 0x0a, 0x0d, 0x4e, 0x65, 0x77, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x43, 0x65, 0x72,
-	0x74, 0x12, 0x1f, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x4e, 0x65, 0x77, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x43, 0x65,
-	0x72, 0x74, 0x1a, 0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x4e, 0x65, 0x77, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72,
-	0x43, 0x65, 0x72, 0x74, 0x12, 0x41, 0x0a, 0x06, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x12, 0x1a,
-	0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x1a, 0x1b, 0x2e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x12, 0x38, 0x0a, 0x03, 0x47, 0x65, 0x74, 0x12, 0x17,
-	0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x1a, 0x18, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e,
-	0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x47, 0x65,
-	0x74, 0x12, 0x55, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x4c,
-	0x69, 0x73, 0x74, 0x12, 0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65,
-	0x64, 0x4c, 0x69, 0x73, 0x74, 0x1a, 0x21, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
-	0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x52, 0x65, 0x76,
-	0x6f, 0x6b, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x5d, 0x0a, 0x10, 0x57, 0x61, 0x74, 0x63,
-	0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74, 0x12, 0x22, 0x2e, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74,
-	0x1a, 0x23, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65,
-	0x64, 0x43, 0x65, 0x72, 0x74, 0x30, 0x01, 0x32, 0xa6, 0x02, 0x0a, 0x04, 0x55, 0x73, 0x65, 0x72,
-	0x12, 0x46, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e,
+	0x74, 0x54, 0x6f, 0x67, 0x67, 0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x1a, 0x1e, 0x2e, 0x70,
+	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x54, 0x6f, 0x67, 0x67, 0x6c, 0x65, 0x41, 0x64, 0x6d, 0x69, 0x6e, 0x12, 0x43, 0x0a, 0x08,
+	0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x4e, 0x65, 0x77, 0x12, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
+	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x54, 0x6f, 0x6b, 0x65,
+	0x6e, 0x4e, 0x65, 0x77, 0x1a, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63,
+	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x4e, 0x65,
+	0x77, 0x12, 0x43, 0x0a, 0x08, 0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x1a, 0x2e,
 	0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x47, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78,
+	0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x6f,
+	0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x4c, 0x0a, 0x0b, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e,
+	0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x1d, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
+	0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64,
+	0x4c, 0x69, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63,
+	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64,
+	0x4c, 0x69, 0x73, 0x74, 0x32, 0xc5, 0x04, 0x0a, 0x14, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69,
+	0x63, 0x61, 0x74, 0x65, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x12, 0x52, 0x0a,
+	0x0d, 0x47, 0x65, 0x74, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x1f,
+	0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x47, 0x65, 0x74, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x1a,
+	0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x69, 0x73,
+	0x74, 0x12, 0x52, 0x0a, 0x0d, 0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x65,
+	0x72, 0x74, 0x12, 0x1f, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43,
+	0x65, 0x72, 0x74, 0x1a, 0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x4e, 0x65, 0x77, 0x43, 0x6c, 0x69, 0x65, 0x6e,
+	0x74, 0x43, 0x65, 0x72, 0x74, 0x12, 0x52, 0x0a, 0x0d, 0x4e, 0x65, 0x77, 0x53, 0x65, 0x72, 0x76,
+	0x65, 0x72, 0x43, 0x65, 0x72, 0x74, 0x12, 0x1f, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72,
+	0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x4e, 0x65, 0x77, 0x53, 0x65, 0x72,
+	0x76, 0x65, 0x72, 0x43, 0x65, 0x72, 0x74, 0x1a, 0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e,
+	0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x4e, 0x65, 0x77, 0x53,
+	0x65, 0x72, 0x76, 0x65, 0x72, 0x43, 0x65, 0x72, 0x74, 0x12, 0x41, 0x0a, 0x06, 0x52, 0x65, 0x76,
+	0x6f, 0x6b, 0x65, 0x12, 0x1a, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
+	0x43, 0x41, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x1a,
+	0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x12, 0x38, 0x0a, 0x03,
+	0x47, 0x65, 0x74, 0x12, 0x17, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e,
+	0x43, 0x41, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x1a, 0x18, 0x2e, 0x70,
+	0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x43, 0x41, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x12, 0x55, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x76,
+	0x6f, 0x6b, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x20, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79,
+	0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x52,
+	0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x1a, 0x21, 0x2e, 0x70, 0x72, 0x6f,
 	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x47,
-	0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x46, 0x0a, 0x09, 0x53, 0x65, 0x74, 0x53,
-	0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
-	0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x53, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b,
-	0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x53, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79,
-	0x12, 0x46, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e,
-	0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x47, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x47,
-	0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x12, 0x46, 0x0a, 0x09, 0x53, 0x65, 0x74, 0x47,
-	0x50, 0x47, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
-	0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x53, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b,
-	0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x53, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79,
-	0x42, 0x26, 0x5a, 0x24, 0x67, 0x6f, 0x2e, 0x66, 0x31, 0x31, 0x30, 0x2e, 0x64, 0x65, 0x76, 0x2f,
-	0x68, 0x65, 0x69, 0x6d, 0x64, 0x61, 0x6c, 0x6c, 0x72, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x73, 0x65,
-	0x72, 0x76, 0x65, 0x72, 0x2f, 0x72, 0x70, 0x63, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x74, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x5d, 0x0a,
+	0x10, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72,
+	0x74, 0x12, 0x22, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x76, 0x6f, 0x6b, 0x65,
+	0x64, 0x43, 0x65, 0x72, 0x74, 0x1a, 0x23, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70,
+	0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52,
+	0x65, 0x76, 0x6f, 0x6b, 0x65, 0x64, 0x43, 0x65, 0x72, 0x74, 0x30, 0x01, 0x32, 0xa6, 0x02, 0x0a,
+	0x04, 0x55, 0x73, 0x65, 0x72, 0x12, 0x46, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b,
+	0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x1a,
+	0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x46, 0x0a,
+	0x09, 0x53, 0x65, 0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f,
+	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x53, 0x65,
+	0x74, 0x53, 0x53, 0x48, 0x4b, 0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e,
+	0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x53, 0x65, 0x74, 0x53,
+	0x53, 0x48, 0x4b, 0x65, 0x79, 0x12, 0x46, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b,
+	0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x47, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x1a,
+	0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x12, 0x46, 0x0a,
+	0x09, 0x53, 0x65, 0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x12, 0x1b, 0x2e, 0x70, 0x72, 0x6f,
+	0x78, 0x79, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x53, 0x65,
+	0x74, 0x47, 0x50, 0x47, 0x4b, 0x65, 0x79, 0x1a, 0x1c, 0x2e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2e,
+	0x72, 0x70, 0x63, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x53, 0x65, 0x74, 0x47,
+	0x50, 0x47, 0x4b, 0x65, 0x79, 0x42, 0x26, 0x5a, 0x24, 0x67, 0x6f, 0x2e, 0x66, 0x31, 0x31, 0x30,
+	0x2e, 0x64, 0x65, 0x76, 0x2f, 0x68, 0x65, 0x69, 0x6d, 0x64, 0x61, 0x6c, 0x6c, 0x72, 0x2f, 0x70,
+	0x6b, 0x67, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x2f, 0x72, 0x70, 0x63, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3576,7 +3690,7 @@ func file_pkg_rpc_rpc_proto_rawDescGZIP() []byte {
 }
 
 var file_pkg_rpc_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pkg_rpc_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
+var file_pkg_rpc_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 62)
 var file_pkg_rpc_rpc_proto_goTypes = []interface{}{
 	(UserType)(0),                    // 0: proxy.rpc.UserType
 	(*RequestPing)(nil),              // 1: proxy.rpc.RequestPing
@@ -3598,122 +3712,127 @@ var file_pkg_rpc_rpc_proto_goTypes = []interface{}{
 	(*ResponseUserList)(nil),         // 17: proxy.rpc.ResponseUserList
 	(*RequestUserAdd)(nil),           // 18: proxy.rpc.RequestUserAdd
 	(*ResponseUserAdd)(nil),          // 19: proxy.rpc.ResponseUserAdd
-	(*RequestUserDel)(nil),           // 20: proxy.rpc.RequestUserDel
-	(*ResponseUserDel)(nil),          // 21: proxy.rpc.ResponseUserDel
-	(*RequestUserGet)(nil),           // 22: proxy.rpc.RequestUserGet
-	(*ResponseUserGet)(nil),          // 23: proxy.rpc.ResponseUserGet
-	(*RequestBecomeMaintainer)(nil),  // 24: proxy.rpc.RequestBecomeMaintainer
-	(*ResponseBecomeMaintainer)(nil), // 25: proxy.rpc.ResponseBecomeMaintainer
-	(*RequestToggleAdmin)(nil),       // 26: proxy.rpc.RequestToggleAdmin
-	(*ResponseToggleAdmin)(nil),      // 27: proxy.rpc.ResponseToggleAdmin
-	(*RequestTokenNew)(nil),          // 28: proxy.rpc.RequestTokenNew
-	(*ResponseTokenNew)(nil),         // 29: proxy.rpc.ResponseTokenNew
-	(*RequestRoleList)(nil),          // 30: proxy.rpc.RequestRoleList
-	(*ResponseRoleList)(nil),         // 31: proxy.rpc.ResponseRoleList
-	(*RequestBackendList)(nil),       // 32: proxy.rpc.RequestBackendList
-	(*ResponseBackendList)(nil),      // 33: proxy.rpc.ResponseBackendList
-	(*RequestGetSignedList)(nil),     // 34: proxy.rpc.RequestGetSignedList
-	(*ResponseGetSignedList)(nil),    // 35: proxy.rpc.ResponseGetSignedList
-	(*RequestNewClientCert)(nil),     // 36: proxy.rpc.RequestNewClientCert
-	(*ResponseNewClientCert)(nil),    // 37: proxy.rpc.ResponseNewClientCert
-	(*CARequestRevoke)(nil),          // 38: proxy.rpc.CARequestRevoke
-	(*CAResponseRevoke)(nil),         // 39: proxy.rpc.CAResponseRevoke
-	(*CARequestGet)(nil),             // 40: proxy.rpc.CARequestGet
-	(*CAResponseGet)(nil),            // 41: proxy.rpc.CAResponseGet
-	(*RequestGetRevokedList)(nil),    // 42: proxy.rpc.RequestGetRevokedList
-	(*ResponseGetRevokedList)(nil),   // 43: proxy.rpc.ResponseGetRevokedList
-	(*RequestWatchRevokedCert)(nil),  // 44: proxy.rpc.RequestWatchRevokedCert
-	(*ResponseWatchRevokedCert)(nil), // 45: proxy.rpc.ResponseWatchRevokedCert
-	(*RequestNewServerCert)(nil),     // 46: proxy.rpc.RequestNewServerCert
-	(*ResponseNewServerCert)(nil),    // 47: proxy.rpc.ResponseNewServerCert
-	(*RequestSignRequest)(nil),       // 48: proxy.rpc.RequestSignRequest
-	(*ResponseSignResponse)(nil),     // 49: proxy.rpc.ResponseSignResponse
-	(*RequestGetPublicKey)(nil),      // 50: proxy.rpc.RequestGetPublicKey
-	(*ResponseGetPublicKey)(nil),     // 51: proxy.rpc.ResponseGetPublicKey
-	(*RequestGetSSHKey)(nil),         // 52: proxy.rpc.RequestGetSSHKey
-	(*ResponseGetSSHKey)(nil),        // 53: proxy.rpc.ResponseGetSSHKey
-	(*RequestSetSSHKey)(nil),         // 54: proxy.rpc.RequestSetSSHKey
-	(*ResponseSetSSHKey)(nil),        // 55: proxy.rpc.ResponseSetSSHKey
-	(*RequestGetGPGKey)(nil),         // 56: proxy.rpc.RequestGetGPGKey
-	(*ResponseGetGPGKey)(nil),        // 57: proxy.rpc.ResponseGetGPGKey
-	(*RequestSetGPGKey)(nil),         // 58: proxy.rpc.RequestSetGPGKey
-	(*ResponseSetGPGKey)(nil),        // 59: proxy.rpc.ResponseSetGPGKey
-	(*ErrorUnauthorized)(nil),        // 60: proxy.rpc.ErrorUnauthorized
-	(*timestamp.Timestamp)(nil),      // 61: google.protobuf.Timestamp
+	(*RequestUserEdit)(nil),          // 20: proxy.rpc.RequestUserEdit
+	(*ResponseUserEdit)(nil),         // 21: proxy.rpc.ResponseUserEdit
+	(*RequestUserDel)(nil),           // 22: proxy.rpc.RequestUserDel
+	(*ResponseUserDel)(nil),          // 23: proxy.rpc.ResponseUserDel
+	(*RequestUserGet)(nil),           // 24: proxy.rpc.RequestUserGet
+	(*ResponseUserGet)(nil),          // 25: proxy.rpc.ResponseUserGet
+	(*RequestBecomeMaintainer)(nil),  // 26: proxy.rpc.RequestBecomeMaintainer
+	(*ResponseBecomeMaintainer)(nil), // 27: proxy.rpc.ResponseBecomeMaintainer
+	(*RequestToggleAdmin)(nil),       // 28: proxy.rpc.RequestToggleAdmin
+	(*ResponseToggleAdmin)(nil),      // 29: proxy.rpc.ResponseToggleAdmin
+	(*RequestTokenNew)(nil),          // 30: proxy.rpc.RequestTokenNew
+	(*ResponseTokenNew)(nil),         // 31: proxy.rpc.ResponseTokenNew
+	(*RequestRoleList)(nil),          // 32: proxy.rpc.RequestRoleList
+	(*ResponseRoleList)(nil),         // 33: proxy.rpc.ResponseRoleList
+	(*RequestBackendList)(nil),       // 34: proxy.rpc.RequestBackendList
+	(*ResponseBackendList)(nil),      // 35: proxy.rpc.ResponseBackendList
+	(*RequestGetSignedList)(nil),     // 36: proxy.rpc.RequestGetSignedList
+	(*ResponseGetSignedList)(nil),    // 37: proxy.rpc.ResponseGetSignedList
+	(*RequestNewClientCert)(nil),     // 38: proxy.rpc.RequestNewClientCert
+	(*ResponseNewClientCert)(nil),    // 39: proxy.rpc.ResponseNewClientCert
+	(*CARequestRevoke)(nil),          // 40: proxy.rpc.CARequestRevoke
+	(*CAResponseRevoke)(nil),         // 41: proxy.rpc.CAResponseRevoke
+	(*CARequestGet)(nil),             // 42: proxy.rpc.CARequestGet
+	(*CAResponseGet)(nil),            // 43: proxy.rpc.CAResponseGet
+	(*RequestGetRevokedList)(nil),    // 44: proxy.rpc.RequestGetRevokedList
+	(*ResponseGetRevokedList)(nil),   // 45: proxy.rpc.ResponseGetRevokedList
+	(*RequestWatchRevokedCert)(nil),  // 46: proxy.rpc.RequestWatchRevokedCert
+	(*ResponseWatchRevokedCert)(nil), // 47: proxy.rpc.ResponseWatchRevokedCert
+	(*RequestNewServerCert)(nil),     // 48: proxy.rpc.RequestNewServerCert
+	(*ResponseNewServerCert)(nil),    // 49: proxy.rpc.ResponseNewServerCert
+	(*RequestSignRequest)(nil),       // 50: proxy.rpc.RequestSignRequest
+	(*ResponseSignResponse)(nil),     // 51: proxy.rpc.ResponseSignResponse
+	(*RequestGetPublicKey)(nil),      // 52: proxy.rpc.RequestGetPublicKey
+	(*ResponseGetPublicKey)(nil),     // 53: proxy.rpc.ResponseGetPublicKey
+	(*RequestGetSSHKey)(nil),         // 54: proxy.rpc.RequestGetSSHKey
+	(*ResponseGetSSHKey)(nil),        // 55: proxy.rpc.ResponseGetSSHKey
+	(*RequestSetSSHKey)(nil),         // 56: proxy.rpc.RequestSetSSHKey
+	(*ResponseSetSSHKey)(nil),        // 57: proxy.rpc.ResponseSetSSHKey
+	(*RequestGetGPGKey)(nil),         // 58: proxy.rpc.RequestGetGPGKey
+	(*ResponseGetGPGKey)(nil),        // 59: proxy.rpc.ResponseGetGPGKey
+	(*RequestSetGPGKey)(nil),         // 60: proxy.rpc.RequestSetGPGKey
+	(*ResponseSetGPGKey)(nil),        // 61: proxy.rpc.ResponseSetGPGKey
+	(*ErrorUnauthorized)(nil),        // 62: proxy.rpc.ErrorUnauthorized
+	(*timestamp.Timestamp)(nil),      // 63: google.protobuf.Timestamp
 }
 var file_pkg_rpc_rpc_proto_depIdxs = []int32{
 	9,  // 0: proxy.rpc.ResponseMemberList.items:type_name -> proxy.rpc.ClusterMember
 	15, // 1: proxy.rpc.ResponseAgentList.items:type_name -> proxy.rpc.Agent
 	0,  // 2: proxy.rpc.UserItem.type:type_name -> proxy.rpc.UserType
 	11, // 3: proxy.rpc.UserItem.tokens:type_name -> proxy.rpc.AccessTokenItem
-	61, // 4: proxy.rpc.AccessTokenItem.issued_at:type_name -> google.protobuf.Timestamp
-	61, // 5: proxy.rpc.CertItem.issued_at:type_name -> google.protobuf.Timestamp
-	61, // 6: proxy.rpc.CertItem.revoked_at:type_name -> google.protobuf.Timestamp
-	61, // 7: proxy.rpc.Agent.connected_at:type_name -> google.protobuf.Timestamp
+	63, // 4: proxy.rpc.AccessTokenItem.issued_at:type_name -> google.protobuf.Timestamp
+	63, // 5: proxy.rpc.CertItem.issued_at:type_name -> google.protobuf.Timestamp
+	63, // 6: proxy.rpc.CertItem.revoked_at:type_name -> google.protobuf.Timestamp
+	63, // 7: proxy.rpc.Agent.connected_at:type_name -> google.protobuf.Timestamp
 	10, // 8: proxy.rpc.ResponseUserList.items:type_name -> proxy.rpc.UserItem
 	0,  // 9: proxy.rpc.RequestUserAdd.type:type_name -> proxy.rpc.UserType
-	10, // 10: proxy.rpc.ResponseUserGet.user:type_name -> proxy.rpc.UserItem
-	11, // 11: proxy.rpc.ResponseTokenNew.item:type_name -> proxy.rpc.AccessTokenItem
-	12, // 12: proxy.rpc.ResponseRoleList.items:type_name -> proxy.rpc.RoleItem
-	13, // 13: proxy.rpc.ResponseBackendList.items:type_name -> proxy.rpc.BackendItem
-	14, // 14: proxy.rpc.ResponseGetSignedList.items:type_name -> proxy.rpc.CertItem
-	14, // 15: proxy.rpc.ResponseNewClientCert.certificate:type_name -> proxy.rpc.CertItem
-	14, // 16: proxy.rpc.CAResponseGet.item:type_name -> proxy.rpc.CertItem
-	14, // 17: proxy.rpc.ResponseGetRevokedList.items:type_name -> proxy.rpc.CertItem
-	14, // 18: proxy.rpc.ResponseWatchRevokedCert.items:type_name -> proxy.rpc.CertItem
-	3,  // 19: proxy.rpc.Cluster.MemberList:input_type -> proxy.rpc.RequestMemberList
-	5,  // 20: proxy.rpc.Cluster.MemberStat:input_type -> proxy.rpc.RequestMemberStat
-	7,  // 21: proxy.rpc.Cluster.AgentList:input_type -> proxy.rpc.RequestAgentList
-	1,  // 22: proxy.rpc.Admin.Ping:input_type -> proxy.rpc.RequestPing
-	16, // 23: proxy.rpc.Admin.UserList:input_type -> proxy.rpc.RequestUserList
-	18, // 24: proxy.rpc.Admin.UserAdd:input_type -> proxy.rpc.RequestUserAdd
-	20, // 25: proxy.rpc.Admin.UserDel:input_type -> proxy.rpc.RequestUserDel
-	22, // 26: proxy.rpc.Admin.UserGet:input_type -> proxy.rpc.RequestUserGet
-	24, // 27: proxy.rpc.Admin.BecomeMaintainer:input_type -> proxy.rpc.RequestBecomeMaintainer
-	26, // 28: proxy.rpc.Admin.ToggleAdmin:input_type -> proxy.rpc.RequestToggleAdmin
-	28, // 29: proxy.rpc.Admin.TokenNew:input_type -> proxy.rpc.RequestTokenNew
-	30, // 30: proxy.rpc.Admin.RoleList:input_type -> proxy.rpc.RequestRoleList
-	32, // 31: proxy.rpc.Admin.BackendList:input_type -> proxy.rpc.RequestBackendList
-	34, // 32: proxy.rpc.CertificateAuthority.GetSignedList:input_type -> proxy.rpc.RequestGetSignedList
-	36, // 33: proxy.rpc.CertificateAuthority.NewClientCert:input_type -> proxy.rpc.RequestNewClientCert
-	46, // 34: proxy.rpc.CertificateAuthority.NewServerCert:input_type -> proxy.rpc.RequestNewServerCert
-	38, // 35: proxy.rpc.CertificateAuthority.Revoke:input_type -> proxy.rpc.CARequestRevoke
-	40, // 36: proxy.rpc.CertificateAuthority.Get:input_type -> proxy.rpc.CARequestGet
-	42, // 37: proxy.rpc.CertificateAuthority.GetRevokedList:input_type -> proxy.rpc.RequestGetRevokedList
-	44, // 38: proxy.rpc.CertificateAuthority.WatchRevokedCert:input_type -> proxy.rpc.RequestWatchRevokedCert
-	52, // 39: proxy.rpc.User.GetSSHKey:input_type -> proxy.rpc.RequestGetSSHKey
-	54, // 40: proxy.rpc.User.SetSSHKey:input_type -> proxy.rpc.RequestSetSSHKey
-	56, // 41: proxy.rpc.User.GetGPGKey:input_type -> proxy.rpc.RequestGetGPGKey
-	58, // 42: proxy.rpc.User.SetGPGKey:input_type -> proxy.rpc.RequestSetGPGKey
-	4,  // 43: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
-	6,  // 44: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
-	8,  // 45: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
-	2,  // 46: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
-	17, // 47: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
-	19, // 48: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
-	21, // 49: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
-	23, // 50: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
-	25, // 51: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
-	27, // 52: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
-	29, // 53: proxy.rpc.Admin.TokenNew:output_type -> proxy.rpc.ResponseTokenNew
-	31, // 54: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
-	33, // 55: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
-	35, // 56: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
-	37, // 57: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
-	47, // 58: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
-	39, // 59: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
-	41, // 60: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
-	43, // 61: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
-	45, // 62: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
-	53, // 63: proxy.rpc.User.GetSSHKey:output_type -> proxy.rpc.ResponseGetSSHKey
-	55, // 64: proxy.rpc.User.SetSSHKey:output_type -> proxy.rpc.ResponseSetSSHKey
-	57, // 65: proxy.rpc.User.GetGPGKey:output_type -> proxy.rpc.ResponseGetGPGKey
-	59, // 66: proxy.rpc.User.SetGPGKey:output_type -> proxy.rpc.ResponseSetGPGKey
-	43, // [43:67] is the sub-list for method output_type
-	19, // [19:43] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	10, // 10: proxy.rpc.RequestUserEdit.user:type_name -> proxy.rpc.UserItem
+	10, // 11: proxy.rpc.ResponseUserGet.user:type_name -> proxy.rpc.UserItem
+	11, // 12: proxy.rpc.ResponseTokenNew.item:type_name -> proxy.rpc.AccessTokenItem
+	12, // 13: proxy.rpc.ResponseRoleList.items:type_name -> proxy.rpc.RoleItem
+	13, // 14: proxy.rpc.ResponseBackendList.items:type_name -> proxy.rpc.BackendItem
+	14, // 15: proxy.rpc.ResponseGetSignedList.items:type_name -> proxy.rpc.CertItem
+	14, // 16: proxy.rpc.ResponseNewClientCert.certificate:type_name -> proxy.rpc.CertItem
+	14, // 17: proxy.rpc.CAResponseGet.item:type_name -> proxy.rpc.CertItem
+	14, // 18: proxy.rpc.ResponseGetRevokedList.items:type_name -> proxy.rpc.CertItem
+	14, // 19: proxy.rpc.ResponseWatchRevokedCert.items:type_name -> proxy.rpc.CertItem
+	3,  // 20: proxy.rpc.Cluster.MemberList:input_type -> proxy.rpc.RequestMemberList
+	5,  // 21: proxy.rpc.Cluster.MemberStat:input_type -> proxy.rpc.RequestMemberStat
+	7,  // 22: proxy.rpc.Cluster.AgentList:input_type -> proxy.rpc.RequestAgentList
+	1,  // 23: proxy.rpc.Admin.Ping:input_type -> proxy.rpc.RequestPing
+	16, // 24: proxy.rpc.Admin.UserList:input_type -> proxy.rpc.RequestUserList
+	18, // 25: proxy.rpc.Admin.UserAdd:input_type -> proxy.rpc.RequestUserAdd
+	20, // 26: proxy.rpc.Admin.UserEdit:input_type -> proxy.rpc.RequestUserEdit
+	22, // 27: proxy.rpc.Admin.UserDel:input_type -> proxy.rpc.RequestUserDel
+	24, // 28: proxy.rpc.Admin.UserGet:input_type -> proxy.rpc.RequestUserGet
+	26, // 29: proxy.rpc.Admin.BecomeMaintainer:input_type -> proxy.rpc.RequestBecomeMaintainer
+	28, // 30: proxy.rpc.Admin.ToggleAdmin:input_type -> proxy.rpc.RequestToggleAdmin
+	30, // 31: proxy.rpc.Admin.TokenNew:input_type -> proxy.rpc.RequestTokenNew
+	32, // 32: proxy.rpc.Admin.RoleList:input_type -> proxy.rpc.RequestRoleList
+	34, // 33: proxy.rpc.Admin.BackendList:input_type -> proxy.rpc.RequestBackendList
+	36, // 34: proxy.rpc.CertificateAuthority.GetSignedList:input_type -> proxy.rpc.RequestGetSignedList
+	38, // 35: proxy.rpc.CertificateAuthority.NewClientCert:input_type -> proxy.rpc.RequestNewClientCert
+	48, // 36: proxy.rpc.CertificateAuthority.NewServerCert:input_type -> proxy.rpc.RequestNewServerCert
+	40, // 37: proxy.rpc.CertificateAuthority.Revoke:input_type -> proxy.rpc.CARequestRevoke
+	42, // 38: proxy.rpc.CertificateAuthority.Get:input_type -> proxy.rpc.CARequestGet
+	44, // 39: proxy.rpc.CertificateAuthority.GetRevokedList:input_type -> proxy.rpc.RequestGetRevokedList
+	46, // 40: proxy.rpc.CertificateAuthority.WatchRevokedCert:input_type -> proxy.rpc.RequestWatchRevokedCert
+	54, // 41: proxy.rpc.User.GetSSHKey:input_type -> proxy.rpc.RequestGetSSHKey
+	56, // 42: proxy.rpc.User.SetSSHKey:input_type -> proxy.rpc.RequestSetSSHKey
+	58, // 43: proxy.rpc.User.GetGPGKey:input_type -> proxy.rpc.RequestGetGPGKey
+	60, // 44: proxy.rpc.User.SetGPGKey:input_type -> proxy.rpc.RequestSetGPGKey
+	4,  // 45: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
+	6,  // 46: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
+	8,  // 47: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
+	2,  // 48: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
+	17, // 49: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
+	19, // 50: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
+	21, // 51: proxy.rpc.Admin.UserEdit:output_type -> proxy.rpc.ResponseUserEdit
+	23, // 52: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
+	25, // 53: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
+	27, // 54: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
+	29, // 55: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
+	31, // 56: proxy.rpc.Admin.TokenNew:output_type -> proxy.rpc.ResponseTokenNew
+	33, // 57: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
+	35, // 58: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
+	37, // 59: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
+	39, // 60: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
+	49, // 61: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
+	41, // 62: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
+	43, // 63: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
+	45, // 64: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
+	47, // 65: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
+	55, // 66: proxy.rpc.User.GetSSHKey:output_type -> proxy.rpc.ResponseGetSSHKey
+	57, // 67: proxy.rpc.User.SetSSHKey:output_type -> proxy.rpc.ResponseSetSSHKey
+	59, // 68: proxy.rpc.User.GetGPGKey:output_type -> proxy.rpc.ResponseGetGPGKey
+	61, // 69: proxy.rpc.User.SetGPGKey:output_type -> proxy.rpc.ResponseSetGPGKey
+	45, // [45:70] is the sub-list for method output_type
+	20, // [20:45] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_pkg_rpc_rpc_proto_init() }
@@ -3951,7 +4070,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestUserDel); i {
+			switch v := v.(*RequestUserEdit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3963,7 +4082,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseUserDel); i {
+			switch v := v.(*ResponseUserEdit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3975,7 +4094,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestUserGet); i {
+			switch v := v.(*RequestUserDel); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3987,7 +4106,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseUserGet); i {
+			switch v := v.(*ResponseUserDel); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3999,7 +4118,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestBecomeMaintainer); i {
+			switch v := v.(*RequestUserGet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4011,7 +4130,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseBecomeMaintainer); i {
+			switch v := v.(*ResponseUserGet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4023,7 +4142,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestToggleAdmin); i {
+			switch v := v.(*RequestBecomeMaintainer); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4035,7 +4154,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseToggleAdmin); i {
+			switch v := v.(*ResponseBecomeMaintainer); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4047,7 +4166,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestTokenNew); i {
+			switch v := v.(*RequestToggleAdmin); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4059,7 +4178,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseTokenNew); i {
+			switch v := v.(*ResponseToggleAdmin); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4071,7 +4190,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestRoleList); i {
+			switch v := v.(*RequestTokenNew); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4083,7 +4202,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseRoleList); i {
+			switch v := v.(*ResponseTokenNew); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4095,7 +4214,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestBackendList); i {
+			switch v := v.(*RequestRoleList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4107,7 +4226,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseBackendList); i {
+			switch v := v.(*ResponseRoleList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4119,7 +4238,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestGetSignedList); i {
+			switch v := v.(*RequestBackendList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4131,7 +4250,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseGetSignedList); i {
+			switch v := v.(*ResponseBackendList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4143,7 +4262,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestNewClientCert); i {
+			switch v := v.(*RequestGetSignedList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4155,7 +4274,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseNewClientCert); i {
+			switch v := v.(*ResponseGetSignedList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4167,7 +4286,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CARequestRevoke); i {
+			switch v := v.(*RequestNewClientCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4179,7 +4298,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CAResponseRevoke); i {
+			switch v := v.(*ResponseNewClientCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4191,7 +4310,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CARequestGet); i {
+			switch v := v.(*CARequestRevoke); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4203,7 +4322,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CAResponseGet); i {
+			switch v := v.(*CAResponseRevoke); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4215,7 +4334,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestGetRevokedList); i {
+			switch v := v.(*CARequestGet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4227,7 +4346,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseGetRevokedList); i {
+			switch v := v.(*CAResponseGet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4239,7 +4358,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestWatchRevokedCert); i {
+			switch v := v.(*RequestGetRevokedList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4251,7 +4370,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseWatchRevokedCert); i {
+			switch v := v.(*ResponseGetRevokedList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4263,7 +4382,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestNewServerCert); i {
+			switch v := v.(*RequestWatchRevokedCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4275,7 +4394,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseNewServerCert); i {
+			switch v := v.(*ResponseWatchRevokedCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4287,7 +4406,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestSignRequest); i {
+			switch v := v.(*RequestNewServerCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4299,7 +4418,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseSignResponse); i {
+			switch v := v.(*ResponseNewServerCert); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4311,7 +4430,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestGetPublicKey); i {
+			switch v := v.(*RequestSignRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4323,7 +4442,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseGetPublicKey); i {
+			switch v := v.(*ResponseSignResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4335,7 +4454,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestGetSSHKey); i {
+			switch v := v.(*RequestGetPublicKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4347,7 +4466,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseGetSSHKey); i {
+			switch v := v.(*ResponseGetPublicKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4359,7 +4478,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestSetSSHKey); i {
+			switch v := v.(*RequestGetSSHKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4371,7 +4490,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseSetSSHKey); i {
+			switch v := v.(*ResponseGetSSHKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4383,7 +4502,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestGetGPGKey); i {
+			switch v := v.(*RequestSetSSHKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4395,7 +4514,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseGetGPGKey); i {
+			switch v := v.(*ResponseSetSSHKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4407,7 +4526,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RequestSetGPGKey); i {
+			switch v := v.(*RequestGetGPGKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4419,7 +4538,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseSetGPGKey); i {
+			switch v := v.(*ResponseGetGPGKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4431,6 +4550,30 @@ func file_pkg_rpc_rpc_proto_init() {
 			}
 		}
 		file_pkg_rpc_rpc_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RequestSetGPGKey); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_rpc_rpc_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ResponseSetGPGKey); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_rpc_rpc_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ErrorUnauthorized); i {
 			case 0:
 				return &v.state
@@ -4449,7 +4592,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_pkg_rpc_rpc_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   60,
+			NumMessages:   62,
 			NumExtensions: 0,
 			NumServices:   4,
 		},
@@ -4623,6 +4766,7 @@ type AdminClient interface {
 	Ping(ctx context.Context, in *RequestPing, opts ...grpc.CallOption) (*ResponsePong, error)
 	UserList(ctx context.Context, in *RequestUserList, opts ...grpc.CallOption) (*ResponseUserList, error)
 	UserAdd(ctx context.Context, in *RequestUserAdd, opts ...grpc.CallOption) (*ResponseUserAdd, error)
+	UserEdit(ctx context.Context, in *RequestUserEdit, opts ...grpc.CallOption) (*ResponseUserEdit, error)
 	UserDel(ctx context.Context, in *RequestUserDel, opts ...grpc.CallOption) (*ResponseUserDel, error)
 	UserGet(ctx context.Context, in *RequestUserGet, opts ...grpc.CallOption) (*ResponseUserGet, error)
 	BecomeMaintainer(ctx context.Context, in *RequestBecomeMaintainer, opts ...grpc.CallOption) (*ResponseBecomeMaintainer, error)
@@ -4661,6 +4805,15 @@ func (c *adminClient) UserList(ctx context.Context, in *RequestUserList, opts ..
 func (c *adminClient) UserAdd(ctx context.Context, in *RequestUserAdd, opts ...grpc.CallOption) (*ResponseUserAdd, error) {
 	out := new(ResponseUserAdd)
 	err := c.cc.Invoke(ctx, "/proxy.rpc.Admin/UserAdd", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) UserEdit(ctx context.Context, in *RequestUserEdit, opts ...grpc.CallOption) (*ResponseUserEdit, error) {
+	out := new(ResponseUserEdit)
+	err := c.cc.Invoke(ctx, "/proxy.rpc.Admin/UserEdit", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4735,6 +4888,7 @@ type AdminServer interface {
 	Ping(context.Context, *RequestPing) (*ResponsePong, error)
 	UserList(context.Context, *RequestUserList) (*ResponseUserList, error)
 	UserAdd(context.Context, *RequestUserAdd) (*ResponseUserAdd, error)
+	UserEdit(context.Context, *RequestUserEdit) (*ResponseUserEdit, error)
 	UserDel(context.Context, *RequestUserDel) (*ResponseUserDel, error)
 	UserGet(context.Context, *RequestUserGet) (*ResponseUserGet, error)
 	BecomeMaintainer(context.Context, *RequestBecomeMaintainer) (*ResponseBecomeMaintainer, error)
@@ -4756,6 +4910,9 @@ func (*UnimplementedAdminServer) UserList(context.Context, *RequestUserList) (*R
 }
 func (*UnimplementedAdminServer) UserAdd(context.Context, *RequestUserAdd) (*ResponseUserAdd, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UserAdd not implemented")
+}
+func (*UnimplementedAdminServer) UserEdit(context.Context, *RequestUserEdit) (*ResponseUserEdit, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UserEdit not implemented")
 }
 func (*UnimplementedAdminServer) UserDel(context.Context, *RequestUserDel) (*ResponseUserDel, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UserDel not implemented")
@@ -4833,6 +4990,24 @@ func _Admin_UserAdd_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServer).UserAdd(ctx, req.(*RequestUserAdd))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_UserEdit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestUserEdit)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).UserEdit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proxy.rpc.Admin/UserEdit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).UserEdit(ctx, req.(*RequestUserEdit))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4978,6 +5153,10 @@ var _Admin_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UserAdd",
 			Handler:    _Admin_UserAdd_Handler,
+		},
+		{
+			MethodName: "UserEdit",
+			Handler:    _Admin_UserEdit_Handler,
 		},
 		{
 			MethodName: "UserDel",

@@ -141,6 +141,24 @@ func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*r
 	return &rpc.ResponseUserAdd{Ok: true}, nil
 }
 
+func (s *AdminService) UserEdit(ctx context.Context, req *rpc.RequestUserEdit) (*rpc.ResponseUserEdit, error) {
+	u, err := s.userDatabase.Get(req.GetId(), database.WithoutCache)
+	if err != nil {
+		logger.Log.Info("Failed get user", zap.Error(err), zap.String("id", req.GetId()))
+		return nil, err
+	}
+
+	u.LoginName = req.User.LoginName
+
+	if err := s.userDatabase.Set(ctx, u); err != nil {
+		logger.Log.Warn("Failed update user", zap.Error(err), zap.String("id", u.Id))
+		return nil, err
+	}
+
+	logger.Audit.Info("Edit user", zap.Any("user", u), auditBy(ctx))
+	return &rpc.ResponseUserEdit{Ok: true}, nil
+}
+
 func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*rpc.ResponseUserDel, error) {
 	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {

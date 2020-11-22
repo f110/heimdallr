@@ -26,50 +26,17 @@
   <h2 class="ui header">test1@example.com</h2>
   <div class="ui divider"></div>
 
-  <a href="./user_edit.html" class="ui button basic green">
-    <i class="edit icon"></i>Edit
-  </a>
-
-  <table class="ui definition table">
-    <thead></thead>
-    <tbody>
-      <tr>
-        <td>Id</td>
-        <td>test1@example.com</td>
-      </tr>
-      <tr>
-        <td>Type</td>
-        <td>User</td>
-      </tr>
-      <tr>
-        <td>Role</td>
-        <td>
-          <ol class="ui list">
-            <li>Administrator</li>
-            <li>User</li>
-          </ol>
-        </td>
-      </tr>
-      <tr>
-        <td>Login Name</td>
-        <td>test1</td>
-      </tr>
-      <tr>
-        <td>Last Logged-in</td>
-        <td>2019/01/01 01:02:03</td>
-      </tr>
-      <tr>
-        <td>Allowed URLs</td>
-        <td>
-          <div class="ui list">
-            <a href="" class="item">https://test.local-proxy.f110.dev</a>
-            <a href="" class="item">https://dashboard.local-proxy.f110.dev</a>
-            <a href="" class="item">https://content.local-proxy.f110.dev</a>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <form class="ui form" action="/user/test1@example.com/edit" method="POST">
+    <div class="disable field">
+      <label>Id</label>
+      <input type="text" placeholder="test1@example.com" disabled>
+    </div>
+    <div class="field">
+      <label>Login name</label>
+      <input type="text" placeholder="username">
+    </div>
+    <button class="ui button primary" type="submit">Edit</button>
+  </form>
 </div>
 
 </body>

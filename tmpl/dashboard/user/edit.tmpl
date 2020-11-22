@@ -1,0 +1,20 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+  <h2 class="ui header">{{ .UserInfo.Id }}</h2>
+  <div class="ui divider"></div>
+
+  <form class="ui form" action="/user/{{ .UserInfo.Id }}/edit" method="POST">
+    <div class="disable field">
+      <label>Id</label>
+      <input type="text" placeholder="{{ .Id }}" disabled>
+    </div>
+    <div class="field">
+      <label>Login name</label>
+      <input type="text" placeholder="username" name="login_name" value="{{ .UserInfo.LoginName }}">
+    </div>
+    <button class="ui button primary" type="submit">Edit</button>
+  </form>
+</div>
+
+{{ template "include/footer.tmpl" }}

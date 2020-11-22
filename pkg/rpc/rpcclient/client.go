@@ -173,6 +173,11 @@ func (c *Client) GetUser(id string, withToken bool) (*rpc.UserItem, error) {
 	return res.User, nil
 }
 
+func (c *Client) UpdateUser(id string, user *rpc.UserItem) error {
+	_, err := c.adminClient.UserEdit(c.md, &rpc.RequestUserEdit{Id: id, User: user})
+	return err
+}
+
 func (c *Client) UserBecomeMaintainer(id, role string) error {
 	_, err := c.adminClient.BecomeMaintainer(c.md, &rpc.RequestBecomeMaintainer{Id: id, Role: role})
 	if err != nil {
