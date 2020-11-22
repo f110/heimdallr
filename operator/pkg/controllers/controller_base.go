@@ -64,7 +64,7 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 		c.Log().Info(fmt.Sprintf(format, args...))
 	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "proxy-controller"})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: base.Name()})
 	c.recoder = recorder
 
 	return c
