@@ -1,37 +1,38 @@
 {{ template "include/header.tmpl" }}
 
 <div class="ui container">
-  <div style="padding-top: 2em">
-    <table class="ui table striped">
-      <thead>
-      <th>Id</th>
-      <th></th>
-      </thead>
-      <tbody>
-      {{ range .Users -}}
-      <tr>
-        <td>
-          <a href="/user/{{ .Id }}">{{ .Id }}</a>
-          {{ if .Admin -}}
-          <button class="ui button basic green mini" style="margin-left: 1em">Admin</button>
-          {{ end -}}
-          {{- if .ServiceAccount -}}
-          <button class="ui button basic pink mini" style="margin-left: 1em">ServiceAccount</button>
-          {{ end -}}
-        </td>
-        <td>
-          <div class="ui right floated tiny buttons">
-            <form method="POST">
-            {{ if not .ServiceAccount }}<button type="submit" class="ui button" formaction="/user/{{ .Id }}/admin">{{ if .Admin }}Back to user{{ else }}Become admin{{ end }}</button>{{ end }}
-            <button type="submit" class="ui button red" formaction="/user/{{ .Id }}/delete">Delete</button>
-            </form>
-          </div>
-        </td>
-      </tr>
-      {{ end -}}
-      </tbody>
-    </table>
-  </div>
+  <h2 class="ui header">Manage User</h2>
+  <div class="ui divider"></div>
+
+  <table class="ui table striped">
+    <thead>
+    <th>Id</th>
+    <th></th>
+    </thead>
+    <tbody>
+    {{ range .Users -}}
+    <tr>
+      <td>
+        <a href="/user/{{ .Id }}">{{ .Id }}</a>
+        {{ if .Admin -}}
+        <button class="ui button basic green mini" style="margin-left: 1em">Admin</button>
+        {{ end -}}
+        {{- if .ServiceAccount -}}
+        <button class="ui button basic pink mini" style="margin-left: 1em">ServiceAccount</button>
+        {{ end -}}
+      </td>
+      <td>
+        <div class="ui right floated tiny buttons">
+          <form method="POST">
+          {{ if not .ServiceAccount }}<button type="submit" class="ui button" formaction="/user/{{ .Id }}/admin">{{ if .Admin }}Back to user{{ else }}Become admin{{ end }}</button>{{ end }}
+          <button type="submit" class="ui button red" formaction="/user/{{ .Id }}/delete">Delete</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {{ end -}}
+    </tbody>
+  </table>
 </div>
 
 {{ template "include/footer.tmpl" }}

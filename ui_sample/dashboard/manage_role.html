@@ -1,0 +1,179 @@
+<html>
+<head>
+  <title>Heimdallr Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+  <style type="text/css">
+    body > .ui.container {
+      padding-top: 2em;
+      padding-left: 210px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ui sidebar inverted vertical menu left visible">
+  <a href="./me.html" class="item"><i class="home icon"></i>Me</a>
+  <a href="./manage_user.html" class="item"><i class="user icon"></i>User</a>
+  <a href="./manage_role.html" class="item"><i class="file alternate outline icon"></i>Role</a>
+  <a href="./manage_service_account.html" class="item"><i class="desktop icon"></i>Service Account</a>
+  <a href="./client_cert.html" class="item"><i class="certificate icon"></i>Client Certificate</a>
+  <a href="./agent.html" class="item"><i class="clone icon"></i>Agent</a>
+</div>
+
+<div class="ui container">
+  <h2 class="ui header">Manage Role</h2>
+  <div class="ui divider"></div>
+
+  <div class="ui row">
+    <div class="ui labeled icon dropdown button" id="filter">
+      <i class="filter icon"></i>
+      <span class="text">Role</span>
+      <div class="menu">
+        <div class="item" data-value="_all">All</div>
+        <div class="item" data-value="admin">Administrator</div>
+        <div class="item" data-value="user">User</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding-top: 2em">
+    <div id="admin" class="userlist">
+      <h3 class="ui header">Administrator</h3>
+      <table class="ui table striped">
+        <thead>
+          <th>Id</th>
+          <th></th>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <a href="./user.html">test1@example.com</a>
+              <button class="ui button basic green mini" style="margin-left: 1em">Maintainer</button>
+            </td>
+            <td>
+              <div class="ui right floated tiny buttons">
+                <a class="ui button red" href="/user/delete?email=test1@example.com&role=admin">Delete</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><a href="/user/test3@example.com">test3@example.com</a></td>
+            <td>
+              <div class="ui right floated tiny buttons">
+                <a class="ui button" href="/user/evalation?email=test1@example.com&role=admin">Become maintainer</a>
+                <a class="ui button red" href="/user/delete?email=test1@example.com&role=admin">Delete</a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot class="full-width">
+          <tr>
+            <th colspan="2">
+              <div class="addform" style="display: none">
+                <form class="ui right floated form">
+                <div class="inline fields">
+                  <div class="field">
+                    <label>Id</label>
+                    <input type="text" name="id" placeholder="Email">
+                  </div>
+                  <div class="field">
+                    <label>Role</label>
+                    <input type="text" name="role" value="admin" readonly>
+                  </div>
+                  <div class="ui submit small button primary">Submit</div>
+                </div>
+                </form>
+              </div>
+
+              <div class="addbutton">
+                <div class="ui right floated small primary labeled icon button adduser" data-role="admin">
+                  <i class="user icon"></i>Add User
+                </div>
+              </div>
+            </th>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="ui divider"></div>
+    </div>
+
+    <div id="user" class="userlist">
+      <h3 class="ui header">User</h3>
+      <table class="ui table striped">
+        <thead>
+        <th>Id</th>
+        <th></th>
+        </thead>
+        <tbody>
+        <tr>
+          <td>
+            <a href="/user/test2@example.com">test2@example.com</a>
+            <button class="ui button basic green mini" style="margin-left: 1em">Maintainer</button>
+          </td>
+          <td>
+            <div class="ui right floated tiny buttons">
+              <a class="ui tiny button red" href="/user/delete?email=test2@example.com&role=user">Delete</a>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+        <tfoot class="full-width">
+        <tr>
+          <th colspan="2">
+            <div class="addform" style="display: none">
+              <form class="ui right floated form">
+                <div class="inline fields">
+                  <div class="field">
+                    <label>Id</label>
+                    <input type="text" name="id" placeholder="Email">
+                  </div>
+                  <div class="field">
+                    <label>Role</label>
+                    <input type="text" name="role" value="user" readonly>
+                  </div>
+                  <div class="ui submit small button primary">Submit</div>
+                </div>
+              </form>
+            </div>
+
+            <div class="addbutton">
+              <div class="ui right floated small primary labeled icon button adduser" data-role="user">
+                <i class="user icon"></i>Add User
+              </div>
+            </div>
+          </th>
+        </tr>
+        </tfoot>
+      </table>
+      <div class="ui divider"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+$("#filter").dropdown({
+  onChange: function(val) {
+    if (val == "_all") {
+      $(".userlist:hidden").each(function() {
+        $(this).show();
+      });
+    } else {
+      $(".userlist:visible").each(function() {
+        $(this).hide();
+      });
+      $("#"+val).show();
+    }
+  },
+});
+
+$(".adduser").on('click', function() {
+  var obj = $(this);
+  $("#"+obj.data()["role"]+" > table > tfoot > tr > th > .addform").show();
+  obj.hide();
+});
+</script>
+
+</body>
+</html>

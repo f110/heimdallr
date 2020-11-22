@@ -57,8 +57,8 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
 	s.Get("/liveness", s.handleLiveness)
 	s.Get("/readiness", s.handleReadiness)
 	s.Get("/", s.handleIndex)
-	s.Get("/user", s.handleUserIndex)
-	s.Get("/users", s.handleUsers)
+	s.Get("/role", s.handleRoleIndex)
+	s.Get("/user", s.handleUsers)
 	s.Post("/user", s.handleAddUser)
 	s.Get("/user/:id", s.handleGetUser)
 	s.Post("/user/:id/delete", s.handleDeleteUser)
@@ -447,7 +447,7 @@ type roleAndUser struct {
 	Users []user
 }
 
-func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
 	users, err := client.ListUser("")
@@ -473,11 +473,13 @@ func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _ htt
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	manageRoles := make([]*rpc.RoleItem, 0, len(roles))
 	sortedUsers := make([]roleAndUser, 0)
 	for _, v := range roles {
 		if v.System {
 			continue
 		}
+		manageRoles = append(manageRoles, v)
 
 		u := make([]user, 0, len(v.Name))
 		for _, k := range userMap[v.Name] {
@@ -499,11 +501,11 @@ func (s *Server) handleUserIndex(w http.ResponseWriter, req *http.Request, _ htt
 		sortedUsers = append(sortedUsers, roleAndUser{Role: v, Users: u})
 	}
 
-	s.RenderTemplate(w, "user/index.tmpl", struct {
+	s.RenderTemplate(w, "role/index.tmpl", struct {
 		Roles []*rpc.RoleItem
 		Users []roleAndUser
 	}{
-		Roles: roles,
+		Roles: manageRoles,
 		Users: sortedUsers,
 	})
 }
