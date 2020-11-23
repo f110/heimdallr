@@ -75,6 +75,10 @@ func TestEtcdController(t *testing.T) {
 					t.Fatal(err)
 				}
 				convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+
+				if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+					t.Fatal(err)
+				}
 			})
 		})
 
@@ -133,6 +137,10 @@ func TestEtcdController(t *testing.T) {
 				convey.So(pods.Items, convey.ShouldHaveLength, 3)
 				for _, v := range pods.Items {
 					convey.So(v.Labels[etcd.LabelNameEtcdVersion], convey.ShouldEqual, etcdCluster.Spec.Version)
+				}
+
+				if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+					t.Fatal(err)
 				}
 			})
 		})
