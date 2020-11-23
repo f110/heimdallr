@@ -59,6 +59,7 @@ type EtcdCluster struct {
 type EtcdClusterSpec struct {
 	Members            int         `json:"members"`
 	Version            string      `json:"version"`
+	AntiAffinity       bool        `json:"antiAffinity,omitempty"`
 	DefragmentSchedule string      `json:"defragmentSchedule"`
 	Backup             *BackupSpec `json:"backup,omitempty"`
 }

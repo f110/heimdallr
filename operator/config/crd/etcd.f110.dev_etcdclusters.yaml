@@ -55,6 +55,8 @@ spec:
             type: object
           spec:
             properties:
+              antiAffinity:
+                type: boolean
               backup:
                 properties:
                   intervalInSeconds:

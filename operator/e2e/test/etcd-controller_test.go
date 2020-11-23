@@ -39,8 +39,9 @@ func TestEtcdController(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: etcdv1alpha1.EtcdClusterSpec{
-						Members: 3,
-						Version: "v3.4.4",
+						Members:      3,
+						Version:      "v3.4.4",
+						AntiAffinity: true,
 					},
 				}
 				_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
@@ -61,6 +62,13 @@ func TestEtcdController(t *testing.T) {
 					t.Fatal(err)
 				}
 				convey.So(pods.Items, convey.ShouldHaveLength, 3)
+				nodes := make(map[string]struct{})
+				for _, v := range pods.Items {
+					if _, ok := nodes[v.Spec.NodeName]; ok {
+						t.Error("Pod was created on the same node")
+					}
+					nodes[v.Spec.NodeName] = struct{}{}
+				}
 
 				newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 				if err != nil {

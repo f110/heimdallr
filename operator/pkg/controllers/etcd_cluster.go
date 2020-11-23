@@ -378,6 +378,7 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 				etcdVersion,
 				clusterState,
 				append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
+				false,
 			)
 			result = append(result, newPod)
 		}
@@ -815,13 +816,18 @@ func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClust
 		etcdVersion,
 		"existing",
 		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
+		true,
 	)
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
 
 	return pod
 }
 
-func (c *EtcdCluster) newEtcdPod(etcdVersion string, clusterState string, initialCluster []string) *corev1.Pod {
+func (c *EtcdCluster) newEtcdPod(etcdVersion string, clusterState string, initialCluster []string, temporaryMember bool) *corev1.Pod {
+	antiAffinity := c.Spec.AntiAffinity
+	if antiAffinity && temporaryMember {
+		antiAffinity = false
+	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: c.Name + "-",
@@ -836,11 +842,11 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, clusterState string, initia
 			},
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
-		Spec: c.etcdPodSpec(etcdVersion, clusterState, initialCluster),
+		Spec: c.etcdPodSpec(etcdVersion, clusterState, initialCluster, antiAffinity),
 	}
 }
 
-func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialCluster []string) corev1.PodSpec {
+func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
 	initContainers := make([]corev1.Container, 0)
 	dnsPropagationScript := template.Must(template.New("").Parse(waitDNSPropagationScript))
 
@@ -954,8 +960,30 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 		"-c",
 		"/usr/local/bin/etcd " + strings.Join(etcdArgs, " "),
 	}
+	var affinity *corev1.Affinity
+	if antiAffinity {
+		affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      etcd.LabelNameClusterName,
+									Operator: metav1.LabelSelectorOpIn,
+									Values:   []string{c.Name},
+								},
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		}
+	}
 
 	return corev1.PodSpec{
+		Affinity:       affinity,
 		Subdomain:      c.ServerDiscoveryServiceName(),
 		RestartPolicy:  corev1.RestartPolicyNever,
 		InitContainers: initContainers,

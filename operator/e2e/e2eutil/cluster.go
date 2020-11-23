@@ -59,6 +59,8 @@ nodes:
     image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
   - role: worker
     image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
+  - role: worker
+    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
 `
 
 type Cluster struct {

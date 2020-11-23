@@ -46,6 +46,8 @@ func TestEtcdController(t *testing.T) {
 		assert.Len(t, pods.Items, 1)
 
 		assert.Contains(t, pods.Items[0].Spec.Containers[0].Args[1], "--initial-cluster-state=new")
+		require.NotNil(t, pods.Items[0].Spec.Affinity)
+		assert.NotNil(t, pods.Items[0].Spec.Affinity.PodAntiAffinity)
 	})
 
 	t.Run("CreatingMember", func(t *testing.T) {
@@ -123,6 +125,7 @@ func TestEtcdController(t *testing.T) {
 		require.NotNil(t, temporaryMember, "Could not find temporary member")
 		assert.Contains(t, temporaryMember.Spec.Containers[0].Args[1], "--initial-cluster-state=existing")
 		assert.Contains(t, temporaryMember.Annotations, etcd.AnnotationKeyTemporaryMember)
+		assert.Nil(t, temporaryMember.Spec.Affinity)
 	})
 
 	t.Run("UpdatingMember", func(t *testing.T) {
@@ -407,7 +410,8 @@ func etcdClusterFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase, opt 
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: etcdv1alpha1.EtcdClusterSpec{
-			Members: 3,
+			Members:      3,
+			AntiAffinity: true,
 		},
 		Status: etcdv1alpha1.EtcdClusterStatus{
 			Phase: phase,
