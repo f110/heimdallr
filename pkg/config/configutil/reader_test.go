@@ -1,4 +1,4 @@
-package configreader
+package configutil
 
 import (
 	"crypto/ecdsa"

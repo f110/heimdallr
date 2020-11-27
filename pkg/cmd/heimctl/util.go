@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config"
-	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configutil"
 )
 
 func Util(rootCmd *cobra.Command) {
@@ -47,7 +47,7 @@ func githubSignature() *cobra.Command {
 		Use:   "github-signature",
 		Short: "Generate a signature of webhook of github",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			conf, err := configreader.ReadConfig(confFile)
+			conf, err := configutil.ReadConfig(confFile)
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func convertV2Config() *cobra.Command {
 			if err := yaml.Unmarshal(readBuf, &conf); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-			v2Conf := configreader.V1ToV2(conf)
+			v2Conf := configutil.V1ToV2(conf)
 
 			b, err := yaml.Marshal(v2Conf)
 			if err != nil {

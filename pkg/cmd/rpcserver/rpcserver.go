@@ -17,7 +17,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/etcd"
@@ -43,8 +43,9 @@ const (
 type mainProcess struct {
 	*cmd.FSM
 
-	ConfFile string
-	Config   *configv2.Config
+	ConfFile       string
+	Config         *configv2.Config
+	configReloader *configutil.Reloader
 
 	server *rpcserver.Server
 
@@ -78,11 +79,15 @@ func New() *mainProcess {
 }
 
 func (m *mainProcess) init() (cmd.State, error) {
-	conf, err := configreader.ReadConfig(m.ConfFile)
+	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.Config = conf
+	m.configReloader, err = configutil.NewReloader(conf)
+	if err != nil {
+		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+	}
 
 	switch {
 	case m.Config.Datastore.DatastoreEtcd != nil:

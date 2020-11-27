@@ -1,23 +1,29 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "configreader",
-    srcs = ["reader.go"],
-    importpath = "go.f110.dev/heimdallr/pkg/config/configreader",
+    name = "configutil",
+    srcs = [
+        "reader.go",
+        "reloader.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/config/configutil",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config",
         "//pkg/config/configv2",
+        "//pkg/k8s",
+        "//pkg/logger",
+        "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )
 
 go_test(
-    name = "configreader_test",
+    name = "configutil_test",
     srcs = ["reader_test.go"],
     data = glob(["testdata/**"]),
-    embed = [":configreader"],
+    embed = [":configutil"],
     deps = [
         "//pkg/cert",
         "//pkg/config",

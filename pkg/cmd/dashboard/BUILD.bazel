@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cmd",
-        "//pkg/config/configreader",
+        "//pkg/config/configutil",
         "//pkg/config/configv2",
         "//pkg/dashboard",
         "//pkg/logger",

@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/dashboard"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -57,7 +57,7 @@ func New() *mainProcess {
 }
 
 func (m *mainProcess) init() (cmd.State, error) {
-	conf, err := configreader.ReadConfig(m.ConfFile)
+	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
 		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}

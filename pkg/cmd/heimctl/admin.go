@@ -11,13 +11,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
-	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
 func getClient(confFile string) (*rpcclient.Client, error) {
-	conf, err := configreader.ReadConfig(confFile)
+	conf, err := configutil.ReadConfig(confFile)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

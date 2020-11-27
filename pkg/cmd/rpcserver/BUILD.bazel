@@ -9,7 +9,7 @@ go_library(
         "//pkg/auth",
         "//pkg/cert",
         "//pkg/cmd",
-        "//pkg/config/configreader",
+        "//pkg/config/configutil",
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/database/etcd",

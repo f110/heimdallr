@@ -499,19 +499,6 @@ func (g *AccessProxy) Load(dir string) error {
 		if err := yaml.Unmarshal(b, &backends); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-
-		if k8s.CanWatchVolume(g.ProxyFile) {
-			mountPath, err := k8s.FindMountPath(g.ProxyFile)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			fmt.Fprintf(os.Stderr, "watch volume: %s\n", mountPath)
-			w, err := k8s.NewVolumeWatcher(mountPath, g.reloadConfig)
-			if err != nil {
-				return xerrors.Errorf(": %v", err)
-			}
-			g.watcher = w
-		}
 	}
 
 	g.AuthEndpoint = fmt.Sprintf("https://%s/auth", g.HTTP.ServerName)
@@ -558,7 +545,7 @@ func (c *Certificate) Load(dir string) error {
 		c.CertFile = absPath(c.CertFile, dir)
 		c.KeyFile = absPath(c.KeyFile, dir)
 
-		c.reloadCertificate()
+		c.ReloadCertificate()
 		if _, err := c.GetCertificate(nil); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -578,34 +565,34 @@ func (c *Certificate) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, 
 	return c.certificate, nil
 }
 
-func (c *Certificate) reloadCertificate() {
+func (c *Certificate) ReloadCertificate() error {
 	cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load server certificate: %v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 
 	c.mu.Lock()
 	c.certificate = &cert
 	c.mu.Unlock()
+
+	return nil
 }
 
-func (g *AccessProxy) reloadConfig() {
+func (g *AccessProxy) ReloadConfig() error {
 	backends := make([]*Backend, 0)
 	b, err := ioutil.ReadFile(g.ProxyFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 	if err := yaml.Unmarshal(b, &backends); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 
 	if err := g.Setup(backends); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
+		return xerrors.Errorf(": %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "%s\tReload proxy config file\n", time.Now().Format(time.RFC3339))
+
+	return nil
 }
 
 func (c *Credential) Load(dir string) error {
@@ -660,18 +647,6 @@ func (a *AuthorizationEngine) Load(dir string) error {
 			return xerrors.Errorf(": %v", err)
 		}
 	}
-	if k8s.CanWatchVolume(a.RoleFile) {
-		mountPath, err := k8s.FindMountPath(a.RoleFile)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		fmt.Fprintf(os.Stderr, "watch volume: %s\n", mountPath)
-		w, err := k8s.NewVolumeWatcher(mountPath, a.reloadConfig)
-		if err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-		a.watcher = w
-	}
 
 	return a.Setup(roles, rpcPermissions)
 }
@@ -705,34 +680,30 @@ func (a *AuthorizationEngine) GetRPCPermission(name string) (*RPCPermission, boo
 	return nil, false
 }
 
-func (a *AuthorizationEngine) reloadConfig() {
+func (a *AuthorizationEngine) ReloadConfig() error {
 	roles := make([]*Role, 0)
 	b, err := ioutil.ReadFile(a.RoleFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 	if err := yaml.Unmarshal(b, &roles); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 
 	rpcPermissions := make([]*RPCPermission, 0)
 	b, err = ioutil.ReadFile(a.RPCPermissionFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 	if err := yaml.Unmarshal(b, &rpcPermissions); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load config file: %+v\n", err)
-		return
+		return xerrors.Errorf(": %w", err)
 	}
 
 	if err := a.Setup(roles, rpcPermissions); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed load role and rpc permission config file: %+v\n", err)
+		return xerrors.Errorf(": %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "%s\tReload role and rpc permission successfully\n", time.Now().Format(time.RFC3339))
+	return nil
 }
 
 func (a *AuthorizationEngine) Setup(roles []*Role, rpcPermissions []*RPCPermission) error {

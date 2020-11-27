@@ -26,7 +26,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
-	"go.f110.dev/heimdallr/pkg/config/configreader"
+	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/dashboard"
@@ -78,6 +78,7 @@ type mainProcess struct {
 
 	wg              sync.WaitGroup
 	config          *configv2.Config
+	configReloader  *configutil.Reloader
 	datastoreType   string
 	etcdClient      *clientv3.Client
 	conn            *sql.DB
@@ -166,11 +167,15 @@ func (m *mainProcess) Loop() {
 }
 
 func (m *mainProcess) ReadConfig() error {
-	conf, err := configreader.ReadConfig(m.ConfFile)
+	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
 		return err
 	}
 	m.config = conf
+	m.configReloader, err = configutil.NewReloader(conf)
+	if err != nil {
+		return err
+	}
 
 	if m.config.Datastore.DatastoreEtcd != nil {
 		m.datastoreType = datastoreTypeEtcd
