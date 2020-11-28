@@ -817,7 +817,7 @@ func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
 func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClusters []string) *corev1.Pod {
 	pod := c.newEtcdPod(
 		etcdVersion,
-		len(c.ownedPods)+1,
+		c.Spec.Members+1,
 		"existing",
 		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 		true,
