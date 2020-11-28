@@ -16,7 +16,7 @@ type Reloader struct {
 
 func NewReloader(conf *configv2.Config) (*Reloader, error) {
 	r := &Reloader{}
-	if k8s.CanWatchVolume(conf.AccessProxy.HTTP.Certificate.CertFile) {
+	if conf.AccessProxy.HTTP.Certificate != nil && k8s.CanWatchVolume(conf.AccessProxy.HTTP.Certificate.CertFile) {
 		mountPath, err := k8s.FindMountPath(conf.AccessProxy.HTTP.Certificate.CertFile)
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
