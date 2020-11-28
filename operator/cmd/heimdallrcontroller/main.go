@@ -98,12 +98,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	kubeClient, err := kubernetes.NewForConfig(cfg)
+	coreClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
-	proxyClient, err := clientset.NewForConfig(cfg)
+	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		log.Print(err)
 		os.Exit(1)
@@ -118,7 +118,7 @@ func main() {
 			Name:      leaseLockName,
 			Namespace: leaseLockNamespace,
 		},
-		Client: kubeClient.CoordinationV1(),
+		Client: coreClient.CoordinationV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
 			Identity: id,
 		},
@@ -131,10 +131,10 @@ func main() {
 		RetryPeriod:     5 * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 30*time.Second)
-				sharedInformerFactory := informers.NewSharedInformerFactory(proxyClient, 30*time.Second)
+				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+				sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
 
-				c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient)
+				c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client)
 				if err != nil {
 					logger.Log.Error("Failed start proxy controller", zap.Error(err))
 					os.Exit(1)
@@ -143,8 +143,8 @@ func main() {
 				e, err := controllers.NewEtcdController(
 					sharedInformerFactory,
 					coreSharedInformerFactory,
-					kubeClient,
-					proxyClient,
+					coreClient,
+					client,
 					cfg,
 					clusterDomain,
 					dev,
@@ -156,13 +156,13 @@ func main() {
 					os.Exit(1)
 				}
 
-				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, kubeClient, proxyClient, http.DefaultTransport)
+				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client, http.DefaultTransport)
 				if err != nil {
 					logger.Log.Error("Failed start github controller", zap.Error(err))
 					os.Exit(1)
 				}
 
-				ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, kubeClient, proxyClient)
+				ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, coreClient, client)
 
 				coreSharedInformerFactory.Start(ctx.Done())
 				sharedInformerFactory.Start(ctx.Done())

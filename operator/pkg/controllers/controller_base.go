@@ -29,10 +29,10 @@ type ControllerBase interface {
 	ListerSynced() []cache.InformerSynced
 	EventSources() []cache.SharedIndexInformer
 	ConvertToKeys() ObjectToKeyConverter
-	GetObject(string) (interface{}, error)
-	UpdateObject(context.Context, interface{}) error
-	Reconcile(context.Context, interface{}) error
-	Finalize(context.Context, interface{}) error
+	GetObject(key string) (interface{}, error)
+	UpdateObject(ctx context.Context, obj interface{}) error
+	Reconcile(ctx context.Context, obj interface{}) error
+	Finalize(ctx context.Context, obj interface{}) error
 }
 
 type Controller struct {

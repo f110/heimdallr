@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -352,7 +353,9 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		var initialClusters []string
 		var updating bool
 		result := make([]*corev1.Pod, 0)
+		pods := make(map[string]*corev1.Pod)
 		for _, v := range c.ownedPods {
+			pods[v.Name] = v
 			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
 				updating = true
 			}
@@ -367,19 +370,23 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		if updating {
 			expectMemberCount++
 		}
-		for i := 0; i < expectMemberCount-len(c.ownedPods); i++ {
+		for i := 1; i <= expectMemberCount; i++ {
 			clusterState := "existing"
-			if i == 0 && c.CurrentInternalState() == InternalStateCreatingFirstMember {
+			if i == 1 && c.CurrentInternalState() == InternalStateCreatingFirstMember {
 				clusterState = "new"
 				initialClusters = []string{}
 			}
 
 			newPod := c.newEtcdPod(
 				etcdVersion,
+				i,
 				clusterState,
 				append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 				false,
 			)
+			if _, ok := pods[newPod.Name]; ok {
+				continue
+			}
 			result = append(result, newPod)
 		}
 
@@ -391,10 +398,6 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 		}
 
 		sort.Slice(result, func(i, j int) bool {
-			if result[i].CreationTimestamp.IsZero() {
-				return false
-			}
-
 			return result[i].Name < result[j].Name
 		})
 		c.expectedPods = result
@@ -814,6 +817,7 @@ func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
 func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClusters []string) *corev1.Pod {
 	pod := c.newEtcdPod(
 		etcdVersion,
+		len(c.ownedPods)+1,
 		"existing",
 		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 		true,
@@ -823,15 +827,15 @@ func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClust
 	return pod
 }
 
-func (c *EtcdCluster) newEtcdPod(etcdVersion string, clusterState string, initialCluster []string, temporaryMember bool) *corev1.Pod {
+func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState string, initialCluster []string, temporaryMember bool) *corev1.Pod {
 	antiAffinity := c.Spec.AntiAffinity
 	if antiAffinity && temporaryMember {
 		antiAffinity = false
 	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: c.Name + "-",
-			Namespace:    c.Namespace,
+			Name:      fmt.Sprintf("%s-%d", c.Name, index),
+			Namespace: c.Namespace,
 			Labels: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
 				etcd.LabelNameEtcdVersion: etcdVersion,
@@ -860,6 +864,43 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 	})
 	if err != nil {
 		panic(err)
+	}
+
+	caVolume := &podVolume{
+		Name: "ca",
+		Path: "/etc/etcd-ca",
+		Source: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: c.CASecretName(),
+				Items: []corev1.KeyToPath{
+					{Key: caSecretCertName, Path: caSecretCertName},
+				},
+			},
+		},
+	}
+	serverCertVolume := &podVolume{
+		Name: "cert",
+		Path: "/etc/etcd-cert",
+		Source: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: c.ServerCertSecretName(),
+			},
+		},
+	}
+	clientCertVolume := &podVolume{
+		Name: "client-cert",
+		Path: "/etc/etcd-client-cert",
+		Source: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: c.ClientCertSecretName(),
+			},
+		},
+	}
+	dataVolume := &podVolume{
+		Name: "data",
+		Source: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
 	}
 
 	// We have to wait for cache invalidation of kube-dns.
@@ -898,9 +939,9 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 					"-c",
 					strings.Join([]string{
 						"/usr/local/bin/etcdctl",
-						"--cacert=/etc/etcd-cert/" + clientCertSecretCACertName,
-						"--cert=/etc/etcd-cert/" + clientCertSecretCertName,
-						"--key=/etc/etcd-cert/" + clientCertSecretPrivateKeyName,
+						"--cacert=" + clientCertVolume.PathJoin(clientCertSecretCACertName),
+						"--cert=" + clientCertVolume.PathJoin(clientCertSecretCertName),
+						"--key=" + clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
 						fmt.Sprintf("--endpoints=%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
 						"member", "add",
 						"$(MY_POD_NAME)", // The name of the member
@@ -925,12 +966,7 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 						},
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "client-cert",
-						MountPath: "/etc/etcd-cert",
-					},
-				},
+				VolumeMounts: []corev1.VolumeMount{clientCertVolume.ToMount()},
 			},
 		)
 	}
@@ -944,13 +980,13 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 		fmt.Sprintf("--listen-client-urls=https://0.0.0.0:%d", EtcdClientPort),
 		fmt.Sprintf("--listen-peer-urls=https://0.0.0.0:%d", EtcdPeerPort),
 		fmt.Sprintf("--listen-metrics-urls=http://0.0.0.0:%d", EtcdMetricsPort),
-		fmt.Sprintf("--trusted-ca-file=/etc/etcd-ca/%s", caSecretCertName),
+		fmt.Sprintf("--trusted-ca-file=%s", caVolume.PathJoin(caSecretCertName)),
 		"--client-cert-auth",
-		fmt.Sprintf("--cert-file=/etc/etcd-cert/%s", serverCertSecretCertName),
-		fmt.Sprintf("--key-file=/etc/etcd-cert/%s", serverCertSecretPrivateKeyName),
-		fmt.Sprintf("--peer-cert-file=/etc/etcd-cert/%s", serverCertSecretCertName),
-		fmt.Sprintf("--peer-key-file=/etc/etcd-cert/%s", serverCertSecretPrivateKeyName),
-		fmt.Sprintf("--peer-trusted-ca-file=/etc/etcd-ca/%s", caSecretCertName),
+		fmt.Sprintf("--cert-file=%s", serverCertVolume.PathJoin(serverCertSecretCertName)),
+		fmt.Sprintf("--key-file=%s", serverCertVolume.PathJoin(serverCertSecretPrivateKeyName)),
+		fmt.Sprintf("--peer-cert-file=%s", serverCertVolume.PathJoin(serverCertSecretCertName)),
+		fmt.Sprintf("--peer-key-file=%s", serverCertVolume.PathJoin(serverCertSecretPrivateKeyName)),
+		fmt.Sprintf("--peer-trusted-ca-file=%s", caVolume.PathJoin(caSecretCertName)),
 		"--peer-client-cert-auth",
 	}
 	if initialCluster != nil && len(initialCluster) > 0 {
@@ -1031,54 +1067,40 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 						},
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "cert",
-						MountPath: "/etc/etcd-cert",
-					},
-					{
-						Name:      "ca",
-						MountPath: "/etc/etcd-ca",
-					},
-				},
+				VolumeMounts: []corev1.VolumeMount{serverCertVolume.ToMount(), caVolume.ToMount()},
 			},
 		},
 		Volumes: []corev1.Volume{
-			{
-				Name: "client-cert",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: c.ClientCertSecretName(),
-					},
-				},
-			},
-			{
-				Name: "cert",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: c.ServerCertSecretName(),
-					},
-				},
-			},
-			{
-				Name: "ca",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: c.CASecretName(),
-						Items: []corev1.KeyToPath{
-							{Key: caSecretCertName, Path: caSecretCertName},
-						},
-					},
-				},
-			},
-			{
-				Name: "data",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
+			clientCertVolume.ToVolume(),
+			serverCertVolume.ToVolume(),
+			caVolume.ToVolume(),
+			dataVolume.ToVolume(),
 		},
 	}
+}
+
+type podVolume struct {
+	Name   string
+	Path   string
+	Source corev1.VolumeSource
+}
+
+func (p *podVolume) ToVolume() corev1.Volume {
+	return corev1.Volume{
+		Name:         p.Name,
+		VolumeSource: p.Source,
+	}
+}
+
+func (p *podVolume) ToMount() corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      p.Name,
+		MountPath: p.Path,
+	}
+}
+
+func (p *podVolume) PathJoin(elem ...string) string {
+	return filepath.Join(append([]string{p.Path}, elem...)...)
 }
 
 type certAndKey struct {
