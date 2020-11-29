@@ -7,5 +7,6 @@ REPO=@@REPO@@
 BRANCH=@@BRANCH@@
 ASSETS=@@ASSETS@@
 BODY=@@BODY@@
+RC=@@RC@@
 
-$BIN --version $VERSION --repo $REPO --from $BRANCH --body "$BODY" "${ASSETS[@]}"
+$BIN --version $VERSION --repo $REPO --from $BRANCH $RC --body "$BODY" "${ASSETS[@]}"

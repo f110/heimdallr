@@ -14,32 +14,38 @@ import (
 	"golang.org/x/xerrors"
 )
 
+type commandOpt struct {
+	Version          string
+	From             string
+	Attach           []string
+	GithubRepo       string
+	BodyFile         string
+	ReleaseCandidate bool
+}
+
 func githubRelease(args []string) error {
-	var version string
-	var from string
-	var attach []string
-	var githubRepo string
-	var bodyFile string
+	opt := commandOpt{}
 	fs := pflag.NewFlagSet("github-release", pflag.ContinueOnError)
-	fs.StringVar(&version, "version", "", "")
-	fs.StringVar(&from, "from", "", "")
-	fs.StringArrayVar(&attach, "attach", []string{}, "")
-	fs.StringVar(&githubRepo, "repo", "", "")
-	fs.StringVar(&bodyFile, "body", "", "Release body")
+	fs.StringVar(&opt.Version, "version", "", "")
+	fs.StringVar(&opt.From, "from", "", "")
+	fs.StringArrayVar(&opt.Attach, "attach", []string{}, "")
+	fs.StringVar(&opt.GithubRepo, "repo", "", "")
+	fs.StringVar(&opt.BodyFile, "body", "", "Release body")
+	fs.BoolVar(&opt.ReleaseCandidate, "release-candidate", false, "This release is the candidate")
 	if err := fs.Parse(args); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
 	token := os.Getenv("GITHUB_APITOKEN")
 	if token == "" {
-		return xerrors.New("GITHUB_APITOKEN is empty")
+		return xerrors.New("GITHUB_APITOKEN is mandatory")
 	}
-	if !strings.Contains(githubRepo, "/") {
-		return xerrors.Errorf("invalid repo name: %s", githubRepo)
+	if !strings.Contains(opt.GithubRepo, "/") {
+		return xerrors.Errorf("invalid repo name: %s", opt.GithubRepo)
 	}
 	body := ""
-	if _, err := os.Lstat(bodyFile); !os.IsNotExist(err) {
-		b, err := ioutil.ReadFile(bodyFile)
+	if _, err := os.Lstat(opt.BodyFile); !os.IsNotExist(err) {
+		b, err := ioutil.ReadFile(opt.BodyFile)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -52,10 +58,10 @@ func githubRelease(args []string) error {
 	tc := oauth2.NewClient(context.Background(), ts)
 	client := github.NewClient(tc)
 
-	r := strings.Split(githubRepo, "/")
+	r := strings.Split(opt.GithubRepo, "/")
 	owner, repo := r[0], r[1]
 
-	release, res, err := client.Repositories.GetReleaseByTag(context.Background(), owner, repo, version)
+	release, res, err := client.Repositories.GetReleaseByTag(context.Background(), owner, repo, opt.Version)
 	if err != nil && res == nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -67,19 +73,20 @@ func githubRelease(args []string) error {
 			attachedFiles[v.GetName()] = struct{}{}
 		}
 	} else {
-		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, from)
+		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		if branch == nil {
-			return xerrors.Errorf("branch(%s) is not found", from)
+			return xerrors.Errorf("branch(%s) is not found", opt.From)
 		}
 		fmt.Printf("Get commit hash %s\n", branch.Commit.GetSHA())
 
 		r, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
-			TagName:         github.String(version),
+			TagName:         github.String(opt.Version),
 			TargetCommitish: branch.Commit.SHA,
 			Body:            github.String(body),
+			Prerelease:      github.Bool(opt.ReleaseCandidate),
 		})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -88,7 +95,7 @@ func githubRelease(args []string) error {
 		release = r
 	}
 
-	for _, v := range attach {
+	for _, v := range opt.Attach {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "%s is not found", v)
 			continue
