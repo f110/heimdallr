@@ -27,7 +27,10 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	listers "k8s.io/client-go/listers/core/v1"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
@@ -87,11 +90,13 @@ type EtcdCluster struct {
 
 	ClusterDomain string
 
-	ownedPods        []*corev1.Pod
-	caSecret         *corev1.Secret
-	serverCertSecret Certificate
-	podsOnce         sync.Once
-	expectedPods     []*corev1.Pod
+	fetchedChildResources bool
+	ownedPods             []*corev1.Pod
+	ownedPVC              map[string]*corev1.PersistentVolumeClaim
+	caSecret              *corev1.Secret
+	serverCertSecret      Certificate
+	podsOnce              sync.Once
+	expectedPods          []*EtcdMember
 
 	log     *zap.Logger
 	mockOpt *MockOption
@@ -128,6 +133,54 @@ func (c *EtcdCluster) SetServerCertSecret(cert *corev1.Secret) {
 		c.log.Warn("Failed encode a private key", zap.Error(err))
 	}
 	c.serverCertSecret = serverCert
+}
+
+func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister listers.PersistentVolumeClaimLister) error {
+	if c.UID == "" {
+		return nil
+	}
+
+	r, err := labels.NewRequirement(etcd.LabelNameClusterName, selection.Equals, []string{c.Name})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	pods, err := podLister.Pods(c.Namespace).List(labels.NewSelector().Add(*r))
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	owned := make([]*corev1.Pod, 0)
+	for _, v := range pods {
+		if len(v.OwnerReferences) == 0 {
+			continue
+		}
+		for _, ref := range v.OwnerReferences {
+			if ref.UID == c.UID {
+				owned = append(owned, v)
+			}
+		}
+	}
+	c.ownedPods = owned
+
+	pvcs, err := pvcLister.PersistentVolumeClaims(c.Namespace).List(labels.Everything())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	myPVC := make(map[string]*corev1.PersistentVolumeClaim, 0)
+	for _, v := range pvcs {
+		if len(v.OwnerReferences) == 0 {
+			continue
+		}
+		for _, ref := range v.OwnerReferences {
+			if ref.UID == c.UID {
+				myPVC[v.Name] = v
+			}
+		}
+	}
+	c.ownedPVC = myPVC
+
+	c.fetchedChildResources = true
+	return nil
 }
 
 func (c *EtcdCluster) CA(s *corev1.Secret) (*corev1.Secret, error) {
@@ -343,7 +396,7 @@ func (c *EtcdCluster) DefragmentCronJobName() string {
 }
 
 // AllMembers returns all members of etcd, regardless of status
-func (c *EtcdCluster) AllMembers() []*corev1.Pod {
+func (c *EtcdCluster) AllMembers() []*EtcdMember {
 	c.podsOnce.Do(func() {
 		etcdVersion := defaultEtcdVersion
 		if c.Spec.Version != "" {
@@ -352,15 +405,16 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 
 		var initialClusters []string
 		var updating bool
-		result := make([]*corev1.Pod, 0)
+		result := make([]*EtcdMember, 0)
 		pods := make(map[string]*corev1.Pod)
 		for _, v := range c.ownedPods {
 			pods[v.Name] = v
 			if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
 				updating = true
 			}
+			pvc := c.ownedPVC[v.Name]
 
-			result = append(result, v)
+			result = append(result, &EtcdMember{Pod: v, PersistentVolumeClaim: pvc})
 			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodRunning {
 				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.pod.%s:%d", v.Name, strings.Replace(v.Status.PodIP, ".", "-", -1), c.Namespace, c.ClusterDomain, EtcdPeerPort))
 			}
@@ -387,18 +441,20 @@ func (c *EtcdCluster) AllMembers() []*corev1.Pod {
 			if _, ok := pods[newPod.Name]; ok {
 				continue
 			}
-			result = append(result, newPod)
+
+			result = append(result, c.newEtcdMember(newPod))
 		}
 
 		switch c.CurrentInternalState() {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
 			if !c.HasTemporaryMember() {
-				result = append(result, c.newTemporaryMemberPodSpec(etcdVersion, initialClusters))
+				temporaryMemberPod := c.newTemporaryMemberPodSpec(etcdVersion, initialClusters)
+				result = append(result, c.newEtcdMember(temporaryMemberPod))
 			}
 		}
 
 		sort.Slice(result, func(i, j int) bool {
-			return result[i].Name < result[j].Name
+			return result[i].Pod.Name < result[j].Pod.Name
 		})
 		c.expectedPods = result
 	})
@@ -418,10 +474,10 @@ func (c *EtcdCluster) PermanentMembers() []*corev1.Pod {
 	return result
 }
 
-func (c *EtcdCluster) TemporaryMember() *corev1.Pod {
+func (c *EtcdCluster) TemporaryMember() *EtcdMember {
 	for _, p := range c.ownedPods {
 		if metav1.HasAnnotation(p.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
-			return p
+			return &EtcdMember{Pod: p}
 		}
 	}
 
@@ -717,11 +773,11 @@ func (c *EtcdCluster) currentInternalStateUpdating() InternalState {
 	// If a temporary member is deleting then InternalState is TeardownUpdating.
 	// If a temporary member is not ready, then InternalState is still PreparingUpdate
 	if v := c.TemporaryMember(); v != nil {
-		if !v.DeletionTimestamp.IsZero() {
+		if !v.Pod.DeletionTimestamp.IsZero() {
 			return InternalStateTeardownUpdating
 		}
 
-		if !c.IsPodReady(v) {
+		if !c.IsPodReady(v.Pod) {
 			return InternalStatePreparingUpdate
 		}
 	}
@@ -832,9 +888,10 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 	if antiAffinity && temporaryMember {
 		antiAffinity = false
 	}
+	podName := fmt.Sprintf("%s-%d", c.Name, index)
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d", c.Name, index),
+			Name:      podName,
 			Namespace: c.Namespace,
 			Labels: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
@@ -846,11 +903,11 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 			},
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
-		Spec: c.etcdPodSpec(etcdVersion, clusterState, initialCluster, antiAffinity),
+		Spec: c.etcdPodSpec(podName, etcdVersion, clusterState, initialCluster, antiAffinity),
 	}
 }
 
-func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
+func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
 	initContainers := make([]corev1.Container, 0)
 	dnsPropagationScript := template.Must(template.New("").Parse(waitDNSPropagationScript))
 
@@ -898,9 +955,17 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 	}
 	dataVolume := &podVolume{
 		Name: "data",
+		Path: "/data",
 		Source: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
+	}
+	if c.Spec.VolumeClaimTemplate != nil {
+		dataVolume.Source = corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: podName,
+			},
+		}
 	}
 
 	// We have to wait for cache invalidation of kube-dns.
@@ -924,6 +989,12 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 					},
 				},
 			},
+		},
+		corev1.Container{
+			Name:         "wipe-data",
+			Image:        "busybox:latest",
+			Command:      []string{"/bin/sh", "-c", "rm -rf /data/*"},
+			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
 		},
 	)
 	if clusterState == "existing" {
@@ -973,7 +1044,7 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 
 	etcdArgs := []string{
 		"--name=$(MY_POD_NAME)",
-		"--data-dir=/var/$(MY_POD_NAME).etcd",
+		"--data-dir=/data/$(MY_POD_NAME).etcd",
 		fmt.Sprintf("--initial-cluster-state=%s", clusterState),
 		fmt.Sprintf("--initial-advertise-peer-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
 		fmt.Sprintf("--advertise-client-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdClientPort),
@@ -1067,7 +1138,11 @@ func (c *EtcdCluster) etcdPodSpec(etcdVersion, clusterState string, initialClust
 						},
 					},
 				},
-				VolumeMounts: []corev1.VolumeMount{serverCertVolume.ToMount(), caVolume.ToMount()},
+				VolumeMounts: []corev1.VolumeMount{
+					serverCertVolume.ToMount(),
+					caVolume.ToMount(),
+					dataVolume.ToMount(),
+				},
 			},
 		},
 		Volumes: []corev1.Volume{
@@ -1138,6 +1213,36 @@ func (c *EtcdCluster) IsPodReady(pod *corev1.Pod) bool {
 	return false
 }
 
+func (c *EtcdCluster) newEtcdMember(pod *corev1.Pod) *EtcdMember {
+	var pvc *corev1.PersistentVolumeClaim
+	if c.Spec.VolumeClaimTemplate != nil {
+		pvc = c.ownedPVC[pod.Name]
+		if pvc == nil {
+			tmpl := c.Spec.VolumeClaimTemplate
+			l := map[string]string{
+				etcd.LabelNameClusterName: c.Name,
+			}
+			for k, v := range tmpl.ObjectMeta.Labels {
+				l[k] = v
+			}
+			pvc = &corev1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        pod.Name,
+					Namespace:   c.Namespace,
+					Labels:      l,
+					Annotations: tmpl.ObjectMeta.Annotations,
+					OwnerReferences: []metav1.OwnerReference{
+						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster")),
+					},
+				},
+				Spec: tmpl.Spec,
+			}
+		}
+	}
+
+	return &EtcdMember{Pod: pod, PersistentVolumeClaim: pvc}
+}
+
 type etcdPod struct {
 	*corev1.Pod
 	*clientv3.StatusResponse
@@ -1179,4 +1284,9 @@ func (c *Certificate) ToSecret() *corev1.Secret {
 
 func (c *Certificate) MarshalCertificate() []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Certificate.Certificate[0]})
+}
+
+type EtcdMember struct {
+	Pod                   *corev1.Pod
+	PersistentVolumeClaim *corev1.PersistentVolumeClaim
 }

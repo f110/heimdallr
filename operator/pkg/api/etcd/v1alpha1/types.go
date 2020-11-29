@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,11 +58,12 @@ type EtcdCluster struct {
 }
 
 type EtcdClusterSpec struct {
-	Members            int         `json:"members"`
-	Version            string      `json:"version"`
-	AntiAffinity       bool        `json:"antiAffinity,omitempty"`
-	DefragmentSchedule string      `json:"defragmentSchedule"`
-	Backup             *BackupSpec `json:"backup,omitempty"`
+	Members             int                                   `json:"members"`
+	Version             string                                `json:"version"`
+	AntiAffinity        bool                                  `json:"antiAffinity,omitempty"`
+	DefragmentSchedule  string                                `json:"defragmentSchedule"`
+	Backup              *BackupSpec                           `json:"backup,omitempty"`
+	VolumeClaimTemplate *corev1.PersistentVolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
 }
 
 type BackupSpec struct {

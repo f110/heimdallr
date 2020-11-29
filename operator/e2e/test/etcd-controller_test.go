@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -27,58 +29,134 @@ func TestEtcdController(t *testing.T) {
 
 	framework.Describe(t, "EtcdController", func() {
 		framework.Context("creates a new cluster", func() {
-			framework.It("should create some pods", func() {
-				client, err := clientset.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				etcdCluster := &etcdv1alpha1.EtcdCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "create",
-						Namespace: "default",
-					},
-					Spec: etcdv1alpha1.EtcdClusterSpec{
-						Members:      3,
-						Version:      "v3.4.4",
-						AntiAffinity: true,
-					},
-				}
-				_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
-					t.Fatal(err)
-				}
-
-				kubeClient, err := kubernetes.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
-				pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
-				if err != nil {
-					t.Fatal(err)
-				}
-				convey.So(pods.Items, convey.ShouldHaveLength, 3)
-				nodes := make(map[string]struct{})
-				for _, v := range pods.Items {
-					if _, ok := nodes[v.Spec.NodeName]; ok {
-						t.Error("Pod was created on the same node")
+			framework.Context("with PersistentVolumeClaim", func() {
+				framework.It("should create some pods with PersistentVolume", func() {
+					client, err := clientset.NewForConfig(RESTConfig)
+					if err != nil {
+						t.Fatal(err)
 					}
-					nodes[v.Spec.NodeName] = struct{}{}
-				}
 
-				newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+					etcdCluster := &etcdv1alpha1.EtcdCluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pvc",
+							Namespace: "default",
+						},
+						Spec: etcdv1alpha1.EtcdClusterSpec{
+							Members:      3,
+							Version:      "v3.4.4",
+							AntiAffinity: true,
+							VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
+								Spec: corev1.PersistentVolumeClaimSpec{
+									AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											"storage": resource.MustParse("1Gi"),
+										},
+									},
+								},
+							},
+						},
+					}
+					_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
-					t.Fatal(err)
-				}
+					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+						t.Fatal(err)
+					}
+
+					kubeClient, err := kubernetes.NewForConfig(RESTConfig)
+					if err != nil {
+						t.Fatal(err)
+					}
+					pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
+					if err != nil {
+						t.Fatal(err)
+					}
+					convey.So(pods.Items, convey.ShouldHaveLength, 3)
+				Item:
+					for _, pod := range pods.Items {
+						for _, vol := range pod.Spec.Volumes {
+							if vol.Name == "data" {
+								convey.So(vol.PersistentVolumeClaim, convey.ShouldNotBeNil)
+								continue Item
+							}
+						}
+
+						t.Fatal("Data volume does not attached")
+					}
+
+					newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+
+					if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				})
+			})
+
+			framework.Context("with EmptyDir", func() {
+				framework.It("should create some pods", func() {
+					client, err := clientset.NewForConfig(RESTConfig)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					etcdCluster := &etcdv1alpha1.EtcdCluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "create",
+							Namespace: "default",
+						},
+						Spec: etcdv1alpha1.EtcdClusterSpec{
+							Members:      3,
+							Version:      "v3.4.4",
+							AntiAffinity: true,
+						},
+					}
+					_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+						t.Fatal(err)
+					}
+
+					kubeClient, err := kubernetes.NewForConfig(RESTConfig)
+					if err != nil {
+						t.Fatal(err)
+					}
+					pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
+					if err != nil {
+						t.Fatal(err)
+					}
+					convey.So(pods.Items, convey.ShouldHaveLength, 3)
+				Item:
+					for _, pod := range pods.Items {
+						for _, vol := range pod.Spec.Volumes {
+							if vol.Name == "data" {
+								convey.So(vol.EmptyDir, convey.ShouldNotBeNil)
+								continue Item
+							}
+						}
+
+						t.Fatal("Data volume does not attached")
+					}
+
+					newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+
+					if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				})
 			})
 		})
 

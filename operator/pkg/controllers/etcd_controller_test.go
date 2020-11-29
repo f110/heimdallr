@@ -60,8 +60,8 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		member := cluster.AllMembers()[0]
-		podIsReady(member)
-		f.RegisterPodFixture(member)
+		podIsReady(member.Pod)
+		f.RegisterPodFixture(member.Pod)
 
 		f.ExpectCreatePod()
 		f.ExpectUpdateEtcdClusterStatus()
@@ -86,7 +86,7 @@ func TestEtcdController(t *testing.T) {
 		}
 
 		portNames := make([]string, 0)
-		for _, v := range member.Spec.Containers[0].Ports {
+		for _, v := range member.Pod.Spec.Containers[0].Ports {
 			portNames = append(portNames, v.Name)
 		}
 		assert.Contains(t, portNames, "metrics")
@@ -101,8 +101,8 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
-			podIsReady(v)
-			f.RegisterPodFixture(v)
+			podIsReady(v.Pod)
+			f.RegisterPodFixture(v.Pod)
 		}
 		e.Spec.Version = "v3.3.0"
 		f.RegisterEtcdClusterFixture(e)
@@ -141,9 +141,9 @@ func TestEtcdController(t *testing.T) {
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers() {
-				v.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				podIsReady(v)
-				f.RegisterPodFixture(v)
+				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
+				podIsReady(v.Pod)
+				f.RegisterPodFixture(v.Pod)
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			podIsReady(tempMemberPod)
@@ -164,9 +164,9 @@ func TestEtcdController(t *testing.T) {
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers()[1:] {
-				v.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				podIsReady(v)
-				f.RegisterPodFixture(v)
+				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
+				podIsReady(v.Pod)
+				f.RegisterPodFixture(v.Pod)
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			podIsReady(tempMemberPod)
@@ -188,8 +188,8 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
-			podIsReady(v)
-			f.RegisterPodFixture(v)
+			podIsReady(v.Pod)
+			f.RegisterPodFixture(v.Pod)
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 		podIsReady(tempMemberPod)
@@ -210,13 +210,15 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for i, v := range cluster.AllMembers() {
-			podIsReady(v)
+			podIsReady(v.Pod)
 
 			if i == 0 {
-				v.Status.Phase = corev1.PodSucceeded
+				v.Pod.Status.Phase = corev1.PodSucceeded
 			}
 		}
-		f.RegisterPodFixture(cluster.AllMembers()...)
+		for _, v := range cluster.AllMembers() {
+			f.RegisterPodFixture(v.Pod)
+		}
 
 		f.ExpectDeletePod()
 		f.ExpectUpdateEtcdClusterStatus()
@@ -255,8 +257,8 @@ func TestEtcdController_Backup(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
-			podIsReady(v)
-			f.RegisterPodFixture(v)
+			podIsReady(v.Pod)
+			f.RegisterPodFixture(v.Pod)
 		}
 
 		// Get bucket location
@@ -313,8 +315,8 @@ func TestEtcdController_Backup(t *testing.T) {
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
-			podIsReady(v)
-			f.RegisterPodFixture(v)
+			podIsReady(v.Pod)
+			f.RegisterPodFixture(v.Pod)
 		}
 
 		// Get bucket location
@@ -368,10 +370,10 @@ func TestEtcdController_Restore(t *testing.T) {
 	cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 	cluster.registerBasicObjectOfEtcdCluster(f)
 	for _, v := range cluster.AllMembers() {
-		podIsReady(v)
+		podIsReady(v.Pod)
 
-		v.Status.Phase = corev1.PodSucceeded
-		f.RegisterPodFixture(v)
+		v.Pod.Status.Phase = corev1.PodSucceeded
+		f.RegisterPodFixture(v.Pod)
 	}
 
 	// Get bucket location

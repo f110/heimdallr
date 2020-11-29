@@ -29,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -69,6 +68,8 @@ type EtcdController struct {
 	serviceListerSynced cache.InformerSynced
 	secretLister        listers.SecretLister
 	secretListerSynced  cache.InformerSynced
+	pvcLister           listers.PersistentVolumeClaimLister
+	pvcListerSynced     cache.InformerSynced
 
 	// for testing hack
 	etcdClientMockOpt *MockOption
@@ -89,6 +90,7 @@ func NewEtcdController(
 	podInformer := coreSharedInformerFactory.Core().V1().Pods()
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
+	pvcInformer := coreSharedInformerFactory.Core().V1().PersistentVolumeClaims()
 
 	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
 
@@ -108,6 +110,8 @@ func NewEtcdController(
 		serviceListerSynced: serviceInformer.Informer().HasSynced,
 		secretLister:        secretInformer.Lister(),
 		secretListerSynced:  secretInformer.Informer().HasSynced,
+		pvcLister:           pvcInformer.Lister(),
+		pvcListerSynced:     pvcInformer.Informer().HasSynced,
 		transport:           transport,
 		etcdClientMockOpt:   mockOpt,
 	}
@@ -130,6 +134,7 @@ func (ec *EtcdController) ListerSynced() []cache.InformerSynced {
 		ec.podListerSynced,
 		ec.serviceListerSynced,
 		ec.secretListerSynced,
+		ec.pvcListerSynced,
 	}
 }
 
@@ -224,12 +229,9 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 	cluster.SetCASecret(caSecret)
 	cluster.SetServerCertSecret(serverCertSecret)
-
-	pods, err := ec.getOwnedPods(cluster)
-	if err != nil {
+	if err := cluster.GetOwnedPods(ec.podLister, ec.pvcLister); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	cluster.SetOwnedPods(pods)
 
 	var handler internalStateHandleFunc
 	ec.Log().Debug("Execute handler", zap.String("internalState", string(cluster.CurrentInternalState())))
@@ -318,17 +320,15 @@ func (ec *EtcdController) stateCreatingFirstMember(ctx context.Context, cluster 
 func (ec *EtcdController) createNewCluster(ctx context.Context, cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
-	if members[0].CreationTimestamp.IsZero() {
-		ec.Log().Debug("Create first member", zap.String("name", members[0].Name))
-		cluster.SetAnnotationForPod(members[0])
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0], metav1.CreateOptions{})
-		if err != nil {
+	if members[0].Pod.CreationTimestamp.IsZero() {
+		ec.Log().Debug("Create first member", zap.String("name", members[0].Pod.Name))
+		if err := ec.startMember(ctx, cluster, members[0]); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
 	} else {
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
-		ec.Log().Debug("Waiting for running first member", zap.String("name", members[0].Name))
+		ec.Log().Debug("Waiting for running first member", zap.String("name", members[0].Pod.Name))
 	}
 
 	return nil
@@ -336,18 +336,21 @@ func (ec *EtcdController) createNewCluster(ctx context.Context, cluster *EtcdClu
 
 func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
-	if members[0].CreationTimestamp.IsZero() {
-		ec.Log().Debug("Create first member", zap.String("name", members[0].Name))
-		cluster.SetAnnotationForPod(members[0])
+	if members[0].Pod.CreationTimestamp.IsZero() {
+		ec.Log().Debug("Create first member", zap.String("name", members[0].Pod.Name))
+		cluster.SetAnnotationForPod(members[0].Pod)
 		receiverContainer := corev1.Container{
 			Name:         "receive-backup-file",
 			Image:        "busybox:latest",
 			Command:      []string{"/bin/sh", "-c", "nc -l -p 2900 > /data/backup"},
 			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
 		}
-		members[0].Spec.InitContainers = append([]corev1.Container{receiverContainer}, members[0].Spec.InitContainers...)
+		members[0].Pod.Spec.InitContainers = append(
+			members[0].Pod.Spec.InitContainers,
+			receiverContainer,
+		)
 
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0], metav1.CreateOptions{})
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0].Pod, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -356,7 +359,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 	}
 
 	readyReceiver := false
-	for _, v := range members[0].Status.InitContainerStatuses {
+	for _, v := range members[0].Pod.Status.InitContainerStatuses {
 		if v.Name == "receive-backup-file" {
 			if v.State.Running != nil {
 				readyReceiver = true
@@ -365,7 +368,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 		}
 	}
 	if readyReceiver {
-		if err := ec.sendBackupToContainer(cluster, members[0], cluster.Status.RestoreFrom); err != nil {
+		if err := ec.sendBackupToContainer(cluster, members[0].Pod, cluster.Status.RestoreFrom); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 
@@ -374,7 +377,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 	}
 
 	ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running first member")
-	ec.Log().Debug("Waiting for running first member", zap.String("name", members[0].Name))
+	ec.Log().Debug("Waiting for running first member", zap.String("name", members[0].Pod.Name))
 
 	return nil
 }
@@ -385,13 +388,13 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 	ctx, cancelFunc := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelFunc()
 
-	var targetMember *corev1.Pod
+	var targetMember *EtcdMember
 	for _, v := range members {
-		if !cluster.IsPodReady(v) && !v.CreationTimestamp.IsZero() {
+		if !cluster.IsPodReady(v.Pod) && !v.Pod.CreationTimestamp.IsZero() {
 			break
 		}
 
-		if v.CreationTimestamp.IsZero() {
+		if v.Pod.CreationTimestamp.IsZero() {
 			targetMember = v
 			break
 		}
@@ -409,23 +412,22 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
-	var targetMember *corev1.Pod
+	var targetMember *EtcdMember
 	for _, v := range members {
-		if cluster.NeedRepair(v) {
+		if cluster.NeedRepair(v.Pod) {
 			targetMember = v
 			break
-
 		}
 	}
 
 	if targetMember != nil {
 		canDeleteMember := true
 		for _, v := range members {
-			if targetMember.UID == v.UID {
+			if targetMember.Pod.UID == v.Pod.UID {
 				continue
 			}
 
-			if v.Status.Phase != corev1.PodRunning {
+			if v.Pod.Status.Phase != corev1.PodRunning {
 				canDeleteMember = false
 			}
 		}
@@ -448,9 +450,9 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 func (ec *EtcdController) statePreparingUpdate(ctx context.Context, cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
-	var temporaryMember *corev1.Pod
+	var temporaryMember *EtcdMember
 	for _, v := range members {
-		if metav1.HasAnnotation(v.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
+		if metav1.HasAnnotation(v.Pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember) {
 			temporaryMember = v
 			break
 		}
@@ -459,7 +461,7 @@ func (ec *EtcdController) statePreparingUpdate(ctx context.Context, cluster *Etc
 		return errors.New("all member has been created")
 	}
 
-	if temporaryMember.CreationTimestamp.IsZero() {
+	if temporaryMember.Pod.CreationTimestamp.IsZero() {
 		ctx, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
 		defer cancelFunc()
 
@@ -467,9 +469,9 @@ func (ec *EtcdController) statePreparingUpdate(ctx context.Context, cluster *Etc
 			return xerrors.Errorf(": %w", err)
 		}
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
-	} else if !cluster.IsPodReady(temporaryMember) {
+	} else if !cluster.IsPodReady(temporaryMember.Pod) {
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "Waiting", "Waiting for running temporary member")
-		ec.Log().Debug("Waiting for running temporary member", zap.String("name", temporaryMember.Name))
+		ec.Log().Debug("Waiting for running temporary member", zap.String("name", temporaryMember.Pod.Name))
 	}
 
 	return nil
@@ -478,16 +480,16 @@ func (ec *EtcdController) statePreparingUpdate(ctx context.Context, cluster *Etc
 func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *EtcdCluster) error {
 	members := cluster.AllMembers()
 
-	var targetMember *corev1.Pod
+	var targetMember *EtcdMember
 	for _, p := range members {
-		if p.CreationTimestamp.IsZero() {
+		if p.Pod.CreationTimestamp.IsZero() {
 			targetMember = p
 			break
 		}
 	}
 	if targetMember == nil {
 		for _, p := range members {
-			if cluster.ShouldUpdate(p) {
+			if cluster.ShouldUpdate(p.Pod) {
 				targetMember = p
 				break
 			}
@@ -498,7 +500,7 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 		return nil
 	}
 
-	if targetMember.CreationTimestamp.IsZero() {
+	if targetMember.Pod.CreationTimestamp.IsZero() {
 		ctx, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
 		defer cancelFunc()
 		return ec.startMember(ctx, cluster, targetMember)
@@ -506,13 +508,13 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 
 	clusterReady := true
 	for _, p := range members {
-		if p.CreationTimestamp.IsZero() {
+		if p.Pod.CreationTimestamp.IsZero() {
 			continue
 		}
-		if p.Name == targetMember.Name {
+		if p.Pod.Name == targetMember.Pod.Name {
 			continue
 		}
-		if !cluster.IsPodReady(p) {
+		if !cluster.IsPodReady(p.Pod) {
 			clusterReady = false
 		}
 	}
@@ -521,7 +523,7 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 			return xerrors.Errorf(": %w", err)
 		}
 	} else {
-		ec.Log().Debug("Waiting update", zap.String("name", targetMember.Name))
+		ec.Log().Debug("Waiting update", zap.String("name", targetMember.Pod.Name))
 	}
 
 	return nil
@@ -669,12 +671,19 @@ func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdClus
 	return certS, nil
 }
 
-func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod) error {
-	ec.Log().Debug("Start member", zap.String("pod.name", pod.Name))
+func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {
+	ec.Log().Debug("Start member", zap.String("pod.name", member.Pod.Name))
 
-	if pod.CreationTimestamp.IsZero() {
-		cluster.SetAnnotationForPod(pod)
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, resetPod(pod), metav1.CreateOptions{})
+	if member.PersistentVolumeClaim != nil && member.PersistentVolumeClaim.CreationTimestamp.IsZero() {
+		_, err := ec.coreClient.CoreV1().PersistentVolumeClaims(cluster.Namespace).Create(ctx, member.PersistentVolumeClaim, metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	if member.Pod.CreationTimestamp.IsZero() {
+		cluster.SetAnnotationForPod(member.Pod)
+		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, resetPod(member.Pod), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -684,8 +693,8 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 	return nil
 }
 
-func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod) error {
-	ec.Log().Debug("Delete the member", zap.String("pod.name", pod.Name))
+func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {
+	ec.Log().Debug("Delete the member", zap.String("pod.name", member.Pod.Name))
 
 	eClient, forwarder, err := ec.etcdClient(cluster)
 	if forwarder != nil {
@@ -705,24 +714,24 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 			return xerrors.Errorf(": %w", err)
 		}
 
-		var member *etcdserverpb.Member
+		var memberStatus *etcdserverpb.Member
 		for _, v := range mList.Members {
 			ec.Log().Debug("Found the member", zap.String("name", v.Name), zap.Strings("peerURLs", v.PeerURLs))
 			if len(v.PeerURLs) == 0 {
 				ec.Log().Warn("The member hasn't any peer url", zap.Uint64("id", v.ID), zap.String("name", v.Name))
 				continue
 			}
-			if strings.HasPrefix(v.PeerURLs[0], "https://"+strings.Replace(pod.Status.PodIP, ".", "-", -1)) {
-				member = v
+			if strings.HasPrefix(v.PeerURLs[0], "https://"+strings.Replace(member.Pod.Status.PodIP, ".", "-", -1)) {
+				memberStatus = v
 			}
 		}
 
-		if member != nil {
-			_, err = eClient.MemberRemove(ctx, member.ID)
+		if memberStatus != nil {
+			_, err = eClient.MemberRemove(ctx, memberStatus.ID)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-			ec.Log().Debug("Remove the member from cluster", zap.String("name", member.Name), zap.Strings("peerURLs", member.PeerURLs))
+			ec.Log().Debug("Remove the member from cluster", zap.String("name", memberStatus.Name), zap.Strings("peerURLs", memberStatus.PeerURLs))
 		}
 
 		if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
@@ -739,18 +748,18 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 		forwarder.Close()
 	}
 
-	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(ctx, member.Pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func (ec *EtcdController) updateMember(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod) error {
-	ec.Log().Debug("Delete and start", zap.String("pod.name", pod.Name))
+func (ec *EtcdController) updateMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {
+	ec.Log().Debug("Delete and start", zap.String("pod.name", member.Pod.Name))
 
-	if !pod.CreationTimestamp.IsZero() && cluster.ShouldUpdate(pod) {
-		if err := ec.deleteMember(ctx, cluster, pod); err != nil {
+	if !member.Pod.CreationTimestamp.IsZero() && cluster.ShouldUpdate(member.Pod) {
+		if err := ec.deleteMember(ctx, cluster, member); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -833,20 +842,6 @@ func (ec *EtcdController) ensureClientService(ctx context.Context, cluster *Etcd
 	}
 
 	return nil
-}
-
-func (ec *EtcdController) getOwnedPods(cluster *EtcdCluster) ([]*corev1.Pod, error) {
-	r, err := labels.NewRequirement(etcd.LabelNameClusterName, selection.Equals, []string{cluster.Name})
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	pods, err := ec.podLister.Pods(cluster.Namespace).List(labels.NewSelector().Add(*r))
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	return pods, nil
 }
 
 func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdCluster) error {
@@ -1331,15 +1326,15 @@ func (ec *EtcdController) etcdClient(cluster *EtcdCluster) (*etcdv3Client, *port
 	if ec.runOutsideCluster {
 		pods := cluster.AllMembers()
 		for _, v := range pods {
-			if cluster.IsPodReady(v) {
-				f, port, err := ec.portForward(v, EtcdClientPort)
+			if cluster.IsPodReady(v.Pod) {
+				f, port, err := ec.portForward(v.Pod, EtcdClientPort)
 				if err != nil {
 					return nil, nil, xerrors.Errorf(": %w", err)
 				}
 				forwarder = f
 
 				endpoints = []string{fmt.Sprintf("https://127.0.0.1:%d", port)}
-				ec.Log().Debug("Port forward", zap.String("to", v.Name))
+				ec.Log().Debug("Port forward", zap.String("to", v.Pod.Name))
 				break
 			}
 		}

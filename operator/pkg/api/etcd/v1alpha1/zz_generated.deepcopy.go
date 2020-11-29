@@ -30,6 +30,7 @@ SOFTWARE.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -241,6 +242,11 @@ func (in *EtcdClusterSpec) DeepCopyInto(out *EtcdClusterSpec) {
 	if in.Backup != nil {
 		in, out := &in.Backup, &out.Backup
 		*out = new(BackupSpec)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.VolumeClaimTemplate != nil {
+		in, out := &in.VolumeClaimTemplate, &out.VolumeClaimTemplate
+		*out = new(v1.PersistentVolumeClaimTemplate)
 		(*in).DeepCopyInto(*out)
 	}
 	return
