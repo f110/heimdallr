@@ -311,10 +311,16 @@ func (ec *EtcdController) Finalize(_ context.Context, _ interface{}) error {
 
 func (ec *EtcdController) stateCreatingFirstMember(ctx context.Context, cluster *EtcdCluster) error {
 	if cluster.Status.RestoreFrom == "" {
-		return ec.createNewCluster(ctx, cluster)
+		if err := ec.createNewCluster(ctx, cluster); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 	} else {
-		return ec.createNewClusterWithBackup(ctx, cluster)
+		if err := ec.createNewClusterWithBackup(ctx, cluster); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 	}
+
+	return nil
 }
 
 func (ec *EtcdController) createNewCluster(ctx context.Context, cluster *EtcdCluster) error {

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
@@ -408,8 +409,10 @@ type etcdClusterOpt func(e *etcdv1alpha1.EtcdCluster)
 func etcdClusterFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase, opt ...etcdClusterOpt) *etcdv1alpha1.EtcdCluster {
 	ec := &etcdv1alpha1.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      normalizeName(t.Name()),
-			Namespace: metav1.NamespaceDefault,
+			Name:              normalizeName(t.Name()),
+			Namespace:         metav1.NamespaceDefault,
+			UID:               uuid.NewUUID(),
+			CreationTimestamp: metav1.Now(),
 		},
 		Spec: etcdv1alpha1.EtcdClusterSpec{
 			Members:      3,
