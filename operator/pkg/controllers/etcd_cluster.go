@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -414,7 +415,13 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 			}
 			pvc := c.ownedPVC[v.Name]
 
-			result = append(result, &EtcdMember{Pod: v, PersistentVolumeClaim: pvc})
+			oldVersion := false
+			_, err := strconv.Atoi(strings.TrimPrefix(v.Name, c.Name+"-"))
+			if err != nil {
+				oldVersion = true
+			}
+
+			result = append(result, &EtcdMember{Pod: v, PersistentVolumeClaim: pvc, OldVersion: oldVersion})
 			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodRunning {
 				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.pod.%s:%d", v.Name, strings.Replace(v.Status.PodIP, ".", "-", -1), c.Namespace, c.ClusterDomain, EtcdPeerPort))
 			}
@@ -454,6 +461,15 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 		}
 
 		sort.Slice(result, func(i, j int) bool {
+			if result[i].OldVersion {
+				if !result[j].OldVersion {
+					return true
+				}
+			} else {
+				if result[j].OldVersion {
+					return false
+				}
+			}
 			return result[i].Pod.Name < result[j].Pod.Name
 		})
 		c.expectedPods = result
@@ -1289,4 +1305,6 @@ func (c *Certificate) MarshalCertificate() []byte {
 type EtcdMember struct {
 	Pod                   *corev1.Pod
 	PersistentVolumeClaim *corev1.PersistentVolumeClaim
+	// TODO: Remove after v0.12
+	OldVersion bool
 }

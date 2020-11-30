@@ -488,6 +488,11 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 
 	var targetMember *EtcdMember
 	for _, p := range members {
+		if p.OldVersion {
+			targetMember = p
+			break
+		}
+
 		if p.Pod.CreationTimestamp.IsZero() {
 			targetMember = p
 			break
@@ -501,18 +506,12 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 			}
 		}
 	}
-
 	if targetMember == nil {
 		return nil
 	}
 
-	if targetMember.Pod.CreationTimestamp.IsZero() {
-		ctx, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
-		defer cancelFunc()
-		return ec.startMember(ctx, cluster, targetMember)
-	}
-
 	clusterReady := true
+	readyMembers := 0
 	for _, p := range members {
 		if p.Pod.CreationTimestamp.IsZero() {
 			continue
@@ -523,8 +522,24 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 		if !cluster.IsPodReady(p.Pod) {
 			clusterReady = false
 		}
+		readyMembers++
 	}
+	if readyMembers < cluster.Spec.Members {
+		for _, v := range members {
+			if v.Pod.CreationTimestamp.IsZero() {
+				targetMember = v
+				break
+			}
+		}
+	}
+
 	if clusterReady {
+		if targetMember.Pod.CreationTimestamp.IsZero() {
+			ctx, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
+			defer cancelFunc()
+			return ec.startMember(ctx, cluster, targetMember)
+		}
+
 		if err := ec.updateMember(ctx, cluster, targetMember); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
