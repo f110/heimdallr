@@ -130,7 +130,7 @@ container_push(
 
 sh_binary(
     name = "tag_proxy",
-    srcs = ["//script/container-release"],
+    srcs = ["//cmd/container-release"],
     args = [
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["proxy"],
@@ -146,7 +146,7 @@ sh_binary(
 
 sh_binary(
     name = "tag_rpcserver",
-    srcs = ["//script/container-release"],
+    srcs = ["//cmd/container-release"],
     args = [
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
@@ -162,7 +162,7 @@ sh_binary(
 
 sh_binary(
     name = "tag_dashboard",
-    srcs = ["//script/container-release"],
+    srcs = ["//cmd/container-release"],
     args = [
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["dashboard"],
@@ -178,7 +178,7 @@ sh_binary(
 
 sh_binary(
     name = "tag_ctl",
-    srcs = ["//script/container-release"],
+    srcs = ["//cmd/container-release"],
     args = [
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["ctl"],
@@ -194,7 +194,7 @@ sh_binary(
 
 sh_binary(
     name = "tag_operator",
-    srcs = ["//script/container-release"],
+    srcs = ["//cmd/container-release"],
     args = [
         "--repository",
         REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["operator"],
