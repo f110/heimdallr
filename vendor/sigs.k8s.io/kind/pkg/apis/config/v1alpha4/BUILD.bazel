@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "v1alpha4",
+    srcs = [
+        "default.go",
+        "doc.go",
+        "types.go",
+        "yaml.go",
+        "zz_generated.deepcopy.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/sigs.k8s.io/kind/pkg/apis/config/v1alpha4",
+    importpath = "sigs.k8s.io/kind/pkg/apis/config/v1alpha4",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/sigs.k8s.io/kind/pkg/apis/config/defaults",
+        "//vendor/sigs.k8s.io/kind/pkg/errors",
+    ],
+)

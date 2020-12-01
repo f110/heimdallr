@@ -1,4 +1,4 @@
-package heimctl
+package heimdev
 
 import (
 	"crypto/x509"

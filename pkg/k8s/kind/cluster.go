@@ -1,4 +1,4 @@
-package e2eutil
+package kind
 
 import (
 	"archive/tar"
@@ -14,30 +14,29 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"text/template"
 	"time"
 
 	"golang.org/x/xerrors"
+	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsClientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	configv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
-	"go.f110.dev/heimdallr/operator/e2e/data"
+	"go.f110.dev/heimdallr/manifest/certmanager"
 )
 
-var kindNodeImageHash = map[string]string{
+var KindNodeImageHash = map[string]string{
 	"v1.19.3":  "e1ac015e061da4b931cc4f693e22d7bc1110f031faf7b2af4c4fefac9e65565d",
 	"v1.19.1":  "98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600",
 	"v1.19.0":  "3b0289b2d1bab2cb9108645a006939d2f447a10ad2bb21919c332d06b548bbc6",
@@ -45,103 +44,116 @@ var kindNodeImageHash = map[string]string{
 	"v1.17.11": "5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555",
 }
 
-type kindConfigBinding struct {
-	ClusterVersion string
-	ImageHash      string
-}
-
-const kindConfigTemplate = `apiVersion: kind.x-k8s.io/v1alpha4
-kind: Cluster
-nodes:
-  - role: control-plane
-    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
-  - role: worker
-    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
-  - role: worker
-    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
-  - role: worker
-    image: kindest/node:{{ .ClusterVersion }}@sha256:{{ .ImageHash }}
-`
-
 type Cluster struct {
-	kind       string
-	id         string
-	kubeconfig string
+	kind          string
+	name          string
+	kubeConfig    string
+	tmpKubeConfig bool
+
+	clientset kubernetes.Interface
 }
 
-func NewCluster(kind, id string) *Cluster {
-	return &Cluster{kind: kind, id: id}
-}
-
-func (c *Cluster) Create(clusterVersion string) error {
-	_, err := exec.LookPath("kind")
+func NewCluster(kind, name, kubeConfig string) (*Cluster, error) {
+	_, err := exec.LookPath(kind)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	imageHash, ok := kindNodeImageHash[clusterVersion]
+	return &Cluster{kind: kind, name: name, kubeConfig: kubeConfig}, nil
+}
+
+func (c *Cluster) IsExist(name string) (bool, error) {
+	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "clusters")
+	buf, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, xerrors.Errorf(": %w", err)
+	}
+	s := bufio.NewScanner(bytes.NewReader(buf))
+	for s.Scan() {
+		line := s.Text()
+		if line == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (c *Cluster) Create(clusterVersion string, workerNum int) error {
+	kindConfFile, err := ioutil.TempFile("", "kind.config.yaml")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	defer os.Remove(kindConfFile.Name())
+
+	imageHash, ok := KindNodeImageHash[clusterVersion]
 	if !ok {
-		return xerrors.Errorf("%s is not supported", clusterVersion)
+		return xerrors.Errorf("Not supported k8s version: %s", clusterVersion)
+	}
+	image := fmt.Sprintf("kindest/node:%s@sha256:%s", clusterVersion, imageHash)
+
+	clusterConf := &configv1alpha4.Cluster{
+		TypeMeta: configv1alpha4.TypeMeta{
+			APIVersion: "kind.x-k8s.io/v1alpha4",
+			Kind:       "Cluster",
+		},
+		Nodes: []configv1alpha4.Node{
+			{Role: configv1alpha4.ControlPlaneRole, Image: image},
+		},
+	}
+	for i := 0; i < workerNum; i++ {
+		clusterConf.Nodes = append(clusterConf.Nodes,
+			configv1alpha4.Node{Role: configv1alpha4.WorkerRole, Image: image})
+	}
+	if buf, err := goyaml.Marshal(clusterConf); err != nil {
+		return xerrors.Errorf(": %w", err)
+	} else {
+		if _, err := kindConfFile.Write(buf); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 	}
 
-	kf, err := ioutil.TempFile("", "kind.yaml")
-	if err != nil {
-		return err
-	}
-	t := template.Must(template.New("").Parse(kindConfigTemplate))
-	if err := t.Execute(kf, kindConfigBinding{
-		ClusterVersion: clusterVersion,
-		ImageHash:      imageHash,
-	}); err != nil {
-		return err
-	}
-
-	f, err := ioutil.TempFile("", "config")
-	if err != nil {
-		return err
+	if c.kubeConfig == "" {
+		f, err := ioutil.TempFile("", "config")
+		if err != nil {
+			return err
+		}
+		c.kubeConfig = f.Name()
+		c.tmpKubeConfig = true
 	}
 	cmd := exec.CommandContext(
 		context.TODO(),
 		c.kind, "create", "cluster",
-		"--name", fmt.Sprintf("e2e-%s", c.id),
-		"--kubeconfig", f.Name(),
-		"--config", kf.Name(),
+		"--name", c.name,
+		"--kubeconfig", c.kubeConfig,
+		"--config", kindConfFile.Name(),
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	c.kubeconfig = f.Name()
 
 	return nil
 }
 
 func (c *Cluster) KubeConfig() string {
-	return c.kubeconfig
+	return c.kubeConfig
 }
 
 func (c *Cluster) Delete() error {
-	cmd := exec.CommandContext(context.TODO(), "kind", "get", "clusters")
-	out, err := cmd.CombinedOutput()
+	found, err := c.IsExist(c.name)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
-
-	found := false
-	s := bufio.NewScanner(bytes.NewReader(out))
-	for s.Scan() {
-		t := s.Text()
-		if strings.HasPrefix(t, fmt.Sprintf("e2e-%s", c.id)) {
-			found = true
-		}
-	}
-
 	if !found {
 		return nil
 	}
 
-	cmd = exec.CommandContext(context.TODO(), c.kind, "delete", "cluster", "--name", fmt.Sprintf("e2e-%s", c.id))
+	if c.tmpKubeConfig {
+		defer os.Remove(c.kubeConfig)
+	}
+	cmd := exec.CommandContext(context.TODO(), c.kind, "delete", "cluster", "--name", c.name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -166,13 +178,13 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 		}
 
 		log.Printf("Load image file: %s", v.repoTags)
-		cmd := exec.CommandContext(context.TODO(), c.kind, "load", "image-archive", "--name", "e2e-"+c.id, v.File)
+		cmd := exec.CommandContext(context.TODO(), c.kind, "load", "image-archive", "--name", c.name, v.File)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
 	}
 
-	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "nodes", "--name", "e2e-"+c.id)
+	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "nodes", "--name", c.name)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
@@ -200,6 +212,75 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 	}
 
 	return nil
+}
+
+func (c *Cluster) RESTConfig() (*rest.Config, error) {
+	if c.kubeConfig == "" {
+		return nil, xerrors.New("The cluster is not created yet")
+	}
+
+	cfg, err := clientcmd.LoadFromFile(c.kubeConfig)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	clientConfig := clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{})
+	restCfg, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return restCfg, nil
+}
+
+func (c *Cluster) Clientset() (kubernetes.Interface, error) {
+	if c.kubeConfig == "" {
+		return nil, xerrors.New("The cluster is not created yet")
+	}
+	if c.clientset != nil {
+		return c.clientset, nil
+	}
+
+	restCfg, err := c.RESTConfig()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	cs, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return nil, err
+	}
+	c.clientset = cs
+
+	return cs, nil
+}
+
+func (c *Cluster) WaitReady(ctx context.Context) error {
+	client, err := c.Clientset()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return wait.PollImmediate(1*time.Second, 3*time.Minute, func() (done bool, err error) {
+		nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		notReadyNodes := make(map[string]struct{})
+	Nodes:
+		for _, v := range nodes.Items {
+			for _, c := range v.Status.Conditions {
+				if c.Type == corev1.NodeReady && c.Status == corev1.ConditionTrue {
+					continue Nodes
+				}
+			}
+			notReadyNodes[v.Name] = struct{}{}
+		}
+		if len(notReadyNodes) == 0 {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }
 
 func readManifest(image *ContainerImageFile) error {
@@ -237,83 +318,12 @@ func readManifest(image *ContainerImageFile) error {
 	return nil
 }
 
-func WaitForReady(ctx context.Context, client *kubernetes.Clientset) error {
-	return wait.PollImmediate(1*time.Second, 3*time.Minute, func() (done bool, err error) {
-		nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		ready := false
-	Nodes:
-		for _, v := range nodes.Items {
-			for _, c := range v.Status.Conditions {
-				if c.Type == corev1.NodeReady && c.Status == corev1.ConditionTrue {
-					ready = true
-					break Nodes
-				}
-			}
-		}
-
-		return ready, nil
-	})
-}
-
-func ReadCRDFiles(dir string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	crdFiles := make([][]byte, 0)
-	//filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if info.IsDir() {
-	//		return nil
-	//	}
-
-	f, err := ioutil.ReadFile(dir)
-	if err != nil {
-		return nil, err
-	}
-	crdFiles = append(crdFiles, f)
-
-	//return nil
-	//})
-
-	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
-	sch := runtime.NewScheme()
-	_ = apiextensionsv1.AddToScheme(sch)
-	codecs := serializer.NewCodecFactory(sch)
-	for _, v := range crdFiles {
-		d := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(v), 4096)
-		for {
-			ext := &runtime.RawExtension{}
-			err := d.Decode(ext)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return nil, err
-			}
-			obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
-			if err != nil {
-				continue
-			}
-			c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
-			if !ok {
-				continue
-			}
-			crd = append(crd, c)
-		}
-	}
-
-	return crd, nil
-}
-
-func EnsureCertManager(cfg *rest.Config) error {
-	if err := StartCertManager(cfg, data.Data["operator/e2e/data/cert-manager.yaml"]); err != nil {
+func InstallCertManager(cfg *rest.Config) error {
+	if err := StartCertManager(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"]); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(data.Data["operator/e2e/data/cluster-issuer.yaml"]), 4096)
+	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(certmanager.Data["manifest/certmanager/cluster-issuer.yaml"]), 4096)
 	ext := runtime.RawExtension{}
 	if err := d.Decode(&ext); err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -466,42 +476,6 @@ func StartCertManager(cfg *rest.Config, manifest string) error {
 
 			return xerrors.Errorf(": %w", err)
 		}
-	}
-
-	return nil
-}
-
-func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinition, timeout time.Duration) error {
-	apiextensionsClient, err := apiextensionsClientset.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	createdCRD := make(map[string]struct{})
-	for _, v := range crd {
-		_, err = apiextensionsClient.CustomResourceDefinitions().Create(context.TODO(), v, metav1.CreateOptions{})
-		if err != nil {
-			return err
-		}
-		createdCRD[v.Name] = struct{}{}
-	}
-
-	err = wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {
-		for name := range createdCRD {
-			_, err := apiextensionsClient.CustomResourceDefinitions().Get(context.TODO(), name, metav1.GetOptions{})
-			if err == nil {
-				delete(createdCRD, name)
-			}
-		}
-
-		if len(createdCRD) == 0 {
-			return true, nil
-		}
-
-		return false, nil
-	})
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil

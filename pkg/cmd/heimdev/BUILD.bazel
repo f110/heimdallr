@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "heimdev",
+    srcs = [
+        "cluster.go",
+        "testserver.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/heimdev",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/auth",
+        "//pkg/frontproxy",
+        "//pkg/k8s/kind",
+        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/gorilla/websocket",
+        "//vendor/github.com/spf13/cobra",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)

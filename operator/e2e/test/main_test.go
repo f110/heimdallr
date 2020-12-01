@@ -16,7 +16,6 @@ import (
 	_ "github.com/smartystreets/goconvey/convey"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
@@ -27,6 +26,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
+	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -58,21 +58,24 @@ func TestMain(m *testing.M) {
 
 	log.Printf("%+v", framework.Config)
 
-	var cluster *e2eutil.Cluster
+	var cluster *kind.Cluster
 	framework.BeforeSuite(func() {
 		crd, err := e2eutil.ReadCRDFiles(framework.Config.CRDDir)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		cluster = e2eutil.NewCluster(framework.Config.KindFile, id)
-		if err := cluster.Create(framework.Config.ClusterVersion); err != nil {
+		cluster, err = kind.NewCluster(framework.Config.KindFile, "e2e-"+id, "")
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		if err := cluster.Create(framework.Config.ClusterVersion, 3); err != nil {
 			log.Fatalf("Could not create a cluster: %v", err)
 		}
 		kubeConfig = cluster.KubeConfig()
 		log.Printf("KubeConfig: %s", kubeConfig)
 
-		cfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
+		cfg, err := cluster.RESTConfig()
 		if err != nil {
 			log.Fatalf("Could not build config: %v", err)
 		}
@@ -87,11 +90,11 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 
-		if err := e2eutil.WaitForReady(context.TODO(), kubeClient); err != nil {
+		if err := cluster.WaitReady(context.TODO()); err != nil {
 			log.Fatal(err)
 		}
 		if framework.Config.ProxyImageFile != "" || framework.Config.RPCImageFile != "" || framework.Config.DashboardImageFile != "" {
-			images := []*e2eutil.ContainerImageFile{
+			images := []*kind.ContainerImageFile{
 				{
 					File:       framework.Config.ProxyImageFile,
 					Repository: controllers.ProxyImageRepository,
@@ -115,7 +118,7 @@ func TestMain(m *testing.M) {
 			framework.Config.ProxyVersion = "e2e"
 		}
 
-		if err := e2eutil.EnsureCertManager(cfg); err != nil {
+		if err := kind.InstallCertManager(cfg); err != nil {
 			log.Fatalf("%+v", err)
 		}
 

@@ -10,5 +10,6 @@
 /internal_token
 /access.log
 /operator/bin
+/.kubeconfig
 
 /bazel-*

@@ -34,6 +34,9 @@ gen-operator:
 	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
 	bazel run //operator/pkg/controllers:rbac
 
+create-cluster:
+	bazel run //:create_cluster
+
 push:
 	bazel query 'kind(container_push, //...)' | xargs -n1 bazel run
 

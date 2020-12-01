@@ -19,14 +19,14 @@ go_embed_data(
 go_library(
     name = "embed_crd",
     srcs = [":embed"],
-    importpath = "go.f110.dev/heimdallr/operator/e2e/data",
+    importpath = "go.f110.dev/heimdallr/third_party/certmanager",
     visibility = ["//visibility:private"],
 )
 
 go_library(
-    name = "data",
+    name = "certmanager",
     srcs = [],  # keep
     embed = [":embed_crd"],  # keep
-    importpath = "go.f110.dev/heimdallr/operator/e2e/data",
+    importpath = "go.f110.dev/heimdallr/manifest/certmanager",
     visibility = ["//visibility:public"],
 )

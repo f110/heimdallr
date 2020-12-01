@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "errors",
+    srcs = [
+        "aggregate.go",
+        "concurrent.go",
+        "doc.go",
+        "errors.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/sigs.k8s.io/kind/pkg/errors",
+    importpath = "sigs.k8s.io/kind/pkg/errors",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/pkg/errors",
+        "//vendor/k8s.io/apimachinery/pkg/util/errors",
+    ],
+)

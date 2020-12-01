@@ -62,3 +62,15 @@ job(
     github_status = True,
     targets = "//...",
 )
+
+sh_binary(
+    name = "create_cluster",
+    srcs = ["//cmd/heimdev"],
+    args = [
+        "cluster",
+        "setup",
+        "--kind=$(location @kind//:file)",
+        "--k8s-version=v1.19.1",
+    ],
+    data = ["@kind//:file"],
+)

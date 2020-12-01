@@ -1,3 +1,3 @@
-package data
+package certmanager
 
 var Data map[string]string

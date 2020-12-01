@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "heimdev_lib",
+    srcs = ["main.go"],
+    importpath = "go.f110.dev/heimdallr/cmd/heimdev",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/cmd/heimdev",
+        "//vendor/github.com/spf13/cobra",
+    ],
+)
+
+go_binary(
+    name = "heimdev",
+    embed = [":heimdev_lib"],
+    visibility = ["//visibility:public"],
+)
