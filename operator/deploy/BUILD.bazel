@@ -11,7 +11,7 @@ kustomization(
     ],
 )
 
-load("//operator/hack/manifest-finalizer:def.bzl", "finalize_manifest")
+load("//build/rules:manifest-finalizer.bzl", "finalize_manifest")
 load("//:RELEASE.bzl", "VERSION")
 
 finalize_manifest(

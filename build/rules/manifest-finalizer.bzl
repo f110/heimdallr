@@ -21,7 +21,7 @@ finalize_manifest = rule(
         "_bin": attr.label(
             executable = True,
             cfg = "host",
-            default = "//operator/hack/manifest-finalizer:manifest-finalizer",
+            default = "//cmd/manifest-finalizer:manifest-finalizer",
         ),
     },
 )
