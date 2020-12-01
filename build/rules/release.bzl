@@ -48,7 +48,7 @@ github_release = rule(
         "_bin": attr.label(
             executable = True,
             cfg = "host",
-            default = "//script/github-release",
+            default = "//cmd/github-release",
         ),
         "_template": attr.label(default = "//build/rules:release.bash", allow_single_file = True),
     },
