@@ -251,6 +251,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	case InternalStateRestore:
 		handler = ec.stateRestore
 	case InternalStateRunning:
+		handler = ec.stateRunning
 	default:
 		return xerrors.Errorf("Unknown internal state: %s", cluster.CurrentInternalState())
 	}
@@ -262,10 +263,6 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	if err := ec.ensureService(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	if err := ec.setupDefragmentJob(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -448,6 +445,14 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 		if err := ec.deleteMember(ctx, cluster, targetMember); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) stateRunning(ctx context.Context, cluster *EtcdCluster) error {
+	if err := ec.setupDefragmentJob(ctx, cluster); err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
