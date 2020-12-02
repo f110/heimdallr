@@ -6,12 +6,13 @@ spec:
   members: 3
   version: v3.4.4
   defragmentSchedule: "*/10 * * * *"
-  volumeClaimTemplate:
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 1Gi
+  antiAffinity: true
+#  volumeClaimTemplate:
+#    spec:
+#      accessModes: ["ReadWriteOnce"]
+#      resources:
+#        requests:
+#          storage: 1Gi
   #backup:
     #intervalInSeconds: 600
     #maxBackups: 5

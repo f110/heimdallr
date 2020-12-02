@@ -71,6 +71,19 @@ do
 done
 `
 
+const addMemberScript = `
+ETCDCTL_OPT="--cacert={{ .CACert }} --cert={{ .Cert }} --key={{ .Key }} --endpoints={{ .Endpoint }}"
+MEMBER_LIST=$(/usr/local/bin/etcdctl ${ETCDCTL_OPT} member list)
+if echo "${MEMBER_LIST}" | grep -sq "{{ .Name }}"; then
+	MEMBER_ID=$(echo "${MEMBER_LIST}" | grep "{{ .Name }}" | cut -d, -f1)
+	/usr/local/bin/etcdctl ${ETCDCTL_OPT} member update "${MEMBER_ID}" --peer-urls={{ .PeerUrl }}
+else
+/usr/local/bin/etcdctl ${ETCDCTL_OPT} \
+	member add {{ .Name }} \
+	--peer-urls={{ .PeerUrl }}
+fi
+`
+
 const (
 	caSecretCertName               = "ca.crt"
 	caSecretPrivateKeyName         = "ca.key"
@@ -926,6 +939,7 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
 	initContainers := make([]corev1.Container, 0)
 	dnsPropagationScript := template.Must(template.New("").Parse(waitDNSPropagationScript))
+	memberManipulateScript := template.Must(template.New("").Parse(addMemberScript))
 
 	dnsPropagationScriptBuf := new(bytes.Buffer)
 	err := dnsPropagationScript.Execute(dnsPropagationScriptBuf, struct {
@@ -1014,36 +1028,32 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 		},
 	)
 	if clusterState == "existing" {
-		// If Pod is not scheduled, The name will not be determined.
-		// Therefore, Can not add the member by controller.
+		buf := new(bytes.Buffer)
+		err := memberManipulateScript.Execute(buf, struct {
+			Name     string
+			CACert   string
+			Cert     string
+			Key      string
+			Endpoint string
+			PeerUrl  string
+		}{
+			Name:     podName,
+			CACert:   clientCertVolume.PathJoin(clientCertSecretCACertName),
+			Cert:     clientCertVolume.PathJoin(clientCertSecretCertName),
+			Key:      clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
+			Endpoint: fmt.Sprintf("%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
+			PeerUrl:  fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+		})
+		if err != nil {
+			panic(err)
+		}
 		// Add cluster member will execute init container.
 		initContainers = append(initContainers,
 			corev1.Container{
 				Name:    "add-member",
 				Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
-				Command: []string{"/bin/sh"},
-				Args: []string{
-					"-c",
-					strings.Join([]string{
-						"/usr/local/bin/etcdctl",
-						"--cacert=" + clientCertVolume.PathJoin(clientCertSecretCACertName),
-						"--cert=" + clientCertVolume.PathJoin(clientCertSecretCertName),
-						"--key=" + clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
-						fmt.Sprintf("--endpoints=%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
-						"member", "add",
-						"$(MY_POD_NAME)", // The name of the member
-						fmt.Sprintf("--peer-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
-					}, " "),
-				},
+				Command: []string{"/bin/sh", "-c", buf.String()},
 				Env: []corev1.EnvVar{
-					{
-						Name: "MY_POD_NAME",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.name",
-							},
-						},
-					},
 					{
 						Name: "MY_POD_IP",
 						ValueFrom: &corev1.EnvVarSource{
