@@ -48,7 +48,7 @@ github_release = rule(
         "_bin": attr.label(
             executable = True,
             cfg = "host",
-            default = "//cmd/github-release",
+            default = "//cmd/release",
         ),
         "_template": attr.label(default = "//build/rules:release.bash", allow_single_file = True),
     },
@@ -60,7 +60,7 @@ def _template_string_impl(ctx):
 
     data = {}
     for k in ctx.attr.data.keys():
-        data["{"+k+"}"] = ctx.attr.data[k]
+        data["{" + k + "}"] = ctx.attr.data[k]
 
     out = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.expand_template(
@@ -77,5 +77,5 @@ template_string = rule(
     attrs = {
         "data": attr.string_dict(),
         "template": attr.string(),
-    }
+    },
 )

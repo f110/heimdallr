@@ -1,28 +1,17 @@
-package main
+package release
 
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func containerRelease(args []string) error {
-	repository := "quay.io/f110"
-	sha256File := ""
-	tag := ""
-	fs := pflag.NewFlagSet("container-release", pflag.ContinueOnError)
-	fs.StringVar(&repository, "repository", repository, "Container repository name")
-	fs.StringVar(&sha256File, "sha256", sha256File, "A file that contains a hash of container (e,g, sha256:4041a17506561283c28f168a0a84608bfcfe4847f7ac71cbb0c2fd354d7d4a5b)")
-	fs.StringVar(&tag, "tag", tag, "Tag name")
-	if err := fs.Parse(args); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
+func containerReleaseCmd(repository, sha256File, tag string) error {
 	if tag == "" || sha256File == "" {
 		return xerrors.New("tag and sha256 is mandatory")
 	}
@@ -60,13 +49,22 @@ func containerRelease(args []string) error {
 	if err := remote.Tag(t, desc, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-
 	return nil
 }
 
-func main() {
-	if err := containerRelease(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
-		os.Exit(1)
+func Container(rootCmd *cobra.Command) {
+	repository := "quay.io/f110"
+	sha256File := ""
+	tag := ""
+	containerRelease := &cobra.Command{
+		Use: "container",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return containerReleaseCmd(repository, sha256File, tag)
+		},
 	}
+	containerRelease.Flags().StringVar(&repository, "repository", repository, "Container repository name")
+	containerRelease.Flags().StringVar(&sha256File, "sha256", sha256File, "A file that contains a hash of container (e,g, sha256:4041a17506561283c28f168a0a84608bfcfe4847f7ac71cbb0c2fd354d7d4a5b)")
+	containerRelease.Flags().StringVar(&tag, "tag", tag, "Tag name")
+
+	rootCmd.AddCommand(containerRelease)
 }

@@ -1,4 +1,4 @@
-package main
+package release
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v32/github"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
 )
 
-type commandOpt struct {
+type githubOpt struct {
 	Version          string
 	From             string
 	Attach           []string
@@ -23,19 +23,7 @@ type commandOpt struct {
 	ReleaseCandidate bool
 }
 
-func githubRelease(args []string) error {
-	opt := commandOpt{}
-	fs := pflag.NewFlagSet("github-release", pflag.ContinueOnError)
-	fs.StringVar(&opt.Version, "version", "", "")
-	fs.StringVar(&opt.From, "from", "", "")
-	fs.StringArrayVar(&opt.Attach, "attach", []string{}, "")
-	fs.StringVar(&opt.GithubRepo, "repo", "", "")
-	fs.StringVar(&opt.BodyFile, "body", "", "Release body")
-	fs.BoolVar(&opt.ReleaseCandidate, "release-candidate", false, "This release is the candidate")
-	if err := fs.Parse(args); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
+func githubRelease(opt *githubOpt) error {
 	token := os.Getenv("GITHUB_APITOKEN")
 	if token == "" {
 		return xerrors.New("GITHUB_APITOKEN is mandatory")
@@ -124,9 +112,22 @@ func githubRelease(args []string) error {
 	return nil
 }
 
-func main() {
-	if err := githubRelease(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
-		os.Exit(1)
+func GitHub(rootCmd *cobra.Command) {
+	opt := githubOpt{}
+
+	ghRelease := &cobra.Command{
+		Use:   "github",
+		Short: "Create GitHub Release",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return githubRelease(&opt)
+		},
 	}
+	ghRelease.Flags().StringVar(&opt.Version, "version", "", "")
+	ghRelease.Flags().StringVar(&opt.From, "from", "", "")
+	ghRelease.Flags().StringArrayVar(&opt.Attach, "attach", []string{}, "")
+	ghRelease.Flags().StringVar(&opt.GithubRepo, "repo", "", "")
+	ghRelease.Flags().StringVar(&opt.BodyFile, "body", "", "Release body")
+	ghRelease.Flags().BoolVar(&opt.ReleaseCandidate, "release-candidate", false, "This release is the candidate")
+
+	rootCmd.AddCommand(ghRelease)
 }
