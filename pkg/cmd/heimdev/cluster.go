@@ -13,7 +13,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
 
-func setupCluster(kindPath, name, k8sVersion, kubeConfig string) error {
+func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig string) error {
 	if kubeConfig == "" {
 		if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" {
 			// Running on bazel
@@ -36,7 +36,7 @@ func setupCluster(kindPath, name, k8sVersion, kubeConfig string) error {
 		return xerrors.New("Cluster already exists. abort.")
 	}
 
-	if err := kindCluster.Create(k8sVersion, 3); err != nil {
+	if err := kindCluster.Create(k8sVersion, workerNum); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Minute)
@@ -62,6 +62,7 @@ func Cluster(rootCmd *cobra.Command) {
 	clusterName := ""
 	k8sVersion := ""
 	kubeConfig := ""
+	workerNum := 3
 
 	clusterCmd := &cobra.Command{
 		Use:   "cluster",
@@ -72,13 +73,14 @@ func Cluster(rootCmd *cobra.Command) {
 		Use:   "setup",
 		Short: "Create and setup the cluster for develop the operator",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return setupCluster(kindPath, clusterName, k8sVersion, kubeConfig)
+			return setupCluster(kindPath, clusterName, k8sVersion, workerNum, kubeConfig)
 		},
 	}
 	setup.Flags().StringVarP(&clusterName, "name", "n", "", "Cluster name")
 	setup.Flags().StringVar(&kindPath, "kind", "", "kind command path")
 	setup.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
 	setup.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
+	setup.Flags().IntVar(&workerNum, "worker-num", 3, "The number of k8s workers")
 	clusterCmd.AddCommand(setup)
 
 	rootCmd.AddCommand(clusterCmd)
