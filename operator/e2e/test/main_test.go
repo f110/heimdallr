@@ -203,10 +203,6 @@ func TestMain(m *testing.M) {
 	})
 
 	framework.AfterSuite(func() {
-		if kubeConfig != "" && !framework.Config.Retain {
-			os.Remove(kubeConfig)
-		}
-
 		if cluster != nil && !framework.Config.Retain {
 			if err := cluster.Delete(); err != nil {
 				log.Fatalf("Could not delete a cluster: %v", err)

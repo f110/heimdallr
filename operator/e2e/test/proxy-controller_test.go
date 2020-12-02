@@ -3,8 +3,11 @@ package test
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"testing"
@@ -58,6 +61,7 @@ func TestProxyController(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: proxyv1alpha1.ProxySpec{
+					Development: true,
 					Version:     framework.Config.ProxyVersion,
 					EtcdVersion: "v3.4.8",
 					Domain:      "e2e.f110.dev",
@@ -174,41 +178,87 @@ func TestProxyController(t *testing.T) {
 			}
 			port := ports[0].Local
 
-			testReq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			testReq.Host = fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain)
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
-				RootCAs:      proxyCertPool,
-				ServerName:   testReq.Host,
-				Certificates: []tls.Certificate{*clientCert},
-			}
-			res, err := http.DefaultClient.Do(testReq)
-			if err != nil {
-				b, _ := httputil.DumpRequest(testReq, true)
-				log.Print(string(b))
-				t.Fatal(err)
-			}
-
+			// Request testService which is nginx with client credential
+			testReq := newRequest(
+				t,
+				http.MethodGet,
+				fmt.Sprintf("https://127.0.0.1:%d", port),
+				fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain),
+				nil,
+			)
+			res := doRequest(t, testReq, proxyCertPool, clientCert)
 			convey.So(res.StatusCode, convey.ShouldEqual, http.StatusOK)
 			convey.So(res.Header.Get("Server"), convey.ShouldContainSubstring, "nginx")
 
-			testReq, err = http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			testReq.Host = fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain)
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
-				RootCAs:    proxyCertPool,
-				ServerName: testReq.Host,
-			}
-			res, err = http.DefaultClient.Do(testReq)
-			if err != nil {
-				b, _ := httputil.DumpRequest(testReq, true)
-				log.Print(string(b))
-				t.Fatal(err)
-			}
+			// Request testService which is nginx without client credential
+			testReq = newRequest(
+				t,
+				http.MethodGet,
+				fmt.Sprintf("https://127.0.0.1:%d", port),
+				fmt.Sprintf("%s.%s.%s", testServiceBackend.Name, testServiceBackend.Spec.Layer, proxy.Spec.Domain),
+				nil,
+			)
+			res = doRequest(t, testReq, proxyCertPool, nil)
+			convey.So(res.StatusCode, convey.ShouldEqual, http.StatusSeeOther)
+
+			// Request dashboard
+			testReq = newRequest(
+				t,
+				http.MethodGet,
+				fmt.Sprintf("https://127.0.0.1:%d", port),
+				fmt.Sprintf("%s.%s", "dashboard", proxy.Spec.Domain),
+				nil,
+			)
+			res = doRequest(t, testReq, proxyCertPool, clientCert)
+			convey.So(res.StatusCode, convey.ShouldEqual, http.StatusOK)
 		})
 	})
+}
+
+func newRequest(t *testing.T, method, url, host string, body io.Reader) *http.Request {
+	testReq, err := http.NewRequest(method, url, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testReq.Host = host
+
+	return testReq
+}
+
+func doRequest(t *testing.T, req *http.Request, ca *x509.CertPool, clientCert *tls.Certificate) *http.Response {
+	tlsConfig := &tls.Config{
+		RootCAs:    ca,
+		ServerName: req.Host,
+	}
+	if clientCert != nil {
+		tlsConfig.Certificates = []tls.Certificate{*clientCert}
+	}
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig,
+	}
+	client := &http.Client{
+		Transport: transport,
+		// Do not follow redirect
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		b, _ := httputil.DumpRequest(req, true)
+		log.Print(string(b))
+		t.Fatal(err)
+	}
+
+	return res
 }
