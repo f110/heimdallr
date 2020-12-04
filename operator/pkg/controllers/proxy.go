@@ -429,7 +429,7 @@ func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1
 }
 
 func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
-	etcdVersion := r.Spec.EtcdVersion
+	etcdVersion := r.Spec.DataStore.Etcd.Version
 	if etcdVersion == "" {
 		etcdVersion = EtcdVersion
 	}
@@ -444,7 +444,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 		Spec: etcdv1alpha1.EtcdClusterSpec{
 			Members:            3,
 			Version:            etcdVersion,
-			DefragmentSchedule: r.Spec.Defragment.Schedule,
+			DefragmentSchedule: r.Spec.DataStore.Etcd.Defragment.Schedule,
 		},
 	}
 }

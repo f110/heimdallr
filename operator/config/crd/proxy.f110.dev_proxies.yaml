@@ -139,7 +139,21 @@ spec:
                   "3".
                 format: int32
                 type: integer
+              dataStore:
+                properties:
+                  etcd:
+                    properties:
+                      defragment:
+                        properties:
+                          schedule:
+                            type: string
+                        type: object
+                      version:
+                        type: string
+                    type: object
+                type: object
               defragment:
+                description: 'Deprecated: Use DataStore instead.'
                 properties:
                   schedule:
                     type: string
@@ -153,6 +167,7 @@ spec:
               domain:
                 type: string
               etcdVersion:
+                description: 'Deprecated: Use DataStore instead.'
                 type: string
               httpPort:
                 format: int32

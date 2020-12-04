@@ -63,9 +63,13 @@ func TestProxyController(t *testing.T) {
 				Spec: proxyv1alpha1.ProxySpec{
 					Development: true,
 					Version:     framework.Config.ProxyVersion,
-					EtcdVersion: "v3.4.8",
-					Domain:      "e2e.f110.dev",
-					Replicas:    3,
+					DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
+						Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+							Version: "v3.4.8",
+						},
+					},
+					Domain:   "e2e.f110.dev",
+					Replicas: 3,
 					BackendSelector: proxyv1alpha1.LabelSelector{
 						LabelSelector: metav1.LabelSelector{},
 					},

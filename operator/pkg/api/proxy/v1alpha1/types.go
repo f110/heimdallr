@@ -18,12 +18,14 @@ type LabelSelector struct {
 
 // ProxySpec defines the desired state of Proxy
 type ProxySpec struct {
-	Domain         string `json:"domain"`
-	Port           int32  `json:"port,omitempty"`
-	HttpPort       int32  `json:"httpPort,omitempty"`
-	Version        string `json:"version,omitempty"`
-	EtcdVersion    string `json:"etcdVersion,omitempty"`
-	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
+	Domain   string `json:"domain"`
+	Port     int32  `json:"port,omitempty"`
+	HttpPort int32  `json:"httpPort,omitempty"`
+	Version  string `json:"version,omitempty"`
+	// Deprecated: Use DataStore instead.
+	EtcdVersion    string              `json:"etcdVersion,omitempty"`
+	DataStore      *ProxyDataStoreSpec `json:"dataStore,omitempty"`
+	LoadBalancerIP string              `json:"loadBalancerIP,omitempty"`
 	// Name of proxy. if not present, uses "Heimdallr CA".
 	Name              string                 `json:"name,omitempty"`
 	Organization      string                 `json:"organization"`
@@ -36,13 +38,14 @@ type ProxySpec struct {
 	// The number of replicas of front proxy.
 	Replicas int32 `json:"replicas"`
 	// The number of replicas of dashboard. Default value is "3".
-	DashboardReplicas     int32          `json:"dashboardReplicas,omitempty"`
-	BackendSelector       LabelSelector  `json:"backendSelector,omitempty"`
-	RoleSelector          LabelSelector  `json:"roleSelector,omitempty"`
-	RpcPermissionSelector LabelSelector  `json:"rpcPermissionSelector,omitempty"`
-	Defragment            DefragmentSpec `json:"defragment,omitempty"`
-	Monitor               MonitorSpec    `json:"monitor,omitempty"`
-	Backup                BackupSpec     `json:"backup,omitempty"`
+	DashboardReplicas     int32         `json:"dashboardReplicas,omitempty"`
+	BackendSelector       LabelSelector `json:"backendSelector,omitempty"`
+	RoleSelector          LabelSelector `json:"roleSelector,omitempty"`
+	RpcPermissionSelector LabelSelector `json:"rpcPermissionSelector,omitempty"`
+	// Deprecated: Use DataStore instead.
+	Defragment DefragmentSpec `json:"defragment,omitempty"`
+	Monitor    MonitorSpec    `json:"monitor,omitempty"`
+	Backup     BackupSpec     `json:"backup,omitempty"`
 	// ProxyResources field is able to control the resource requirements and limits of front proxy.
 	// If it isn't set, Use the default value.
 	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory: 256Mi)
@@ -56,6 +59,15 @@ type ProxySpec struct {
 	// Debug level outputs many useful logs for development. On the other hand, It is a noisy
 	// when you are an user of proxy.
 	Development bool `json:"development,omitempty"`
+}
+
+type ProxyDataStoreSpec struct {
+	Etcd *ProxyDataStoreEtcdSpec `json:"etcd,omitempty"`
+}
+
+type ProxyDataStoreEtcdSpec struct {
+	Version    string         `json:"version,omitempty"`
+	Defragment DefragmentSpec `json:"defragment,omitempty"`
 }
 
 type IdentityProviderSpec struct {

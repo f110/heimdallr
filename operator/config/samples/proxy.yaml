@@ -5,7 +5,6 @@ metadata:
 spec:
   replicas: 3
   version: v0.10.1
-  etcdVersion: v3.4.9
   domain: local-proxy.f110.dev
   port: 443
   organization: test
@@ -37,8 +36,11 @@ spec:
     prometheusMonitoring: true
     labels:
       k8s-app: etcd
-  defragment:
-    schedule: "18 13 * * *"
+  dataStore:
+    etcd:
+      version: v3.4.9
+      defragment:
+        schedule: "18 13 * * *"
   development: true
 #  backup:
 #    intervalInSecond: 60

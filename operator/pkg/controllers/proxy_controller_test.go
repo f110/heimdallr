@@ -25,8 +25,12 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 			UID:       uuid.NewUUID(),
 		},
 		Spec: proxyv1alpha1.ProxySpec{
-			Domain:      "test-proxy.f110.dev",
-			EtcdVersion: "v3.4.9",
+			Domain: "test-proxy.f110.dev",
+			DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
+				Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+					Version: "v3.4.9",
+				},
+			},
 			BackendSelector: proxyv1alpha1.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
@@ -257,7 +261,7 @@ func TestProxyController(t *testing.T) {
 
 		etcdC, err := f.client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		assert.Equal(t, p.Spec.EtcdVersion, etcdC.Spec.Version)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
 	})
 
 	t.Run("Finish preparing phase", func(t *testing.T) {
