@@ -68,9 +68,20 @@ sh_binary(
     srcs = ["//cmd/heimdev"],
     args = [
         "cluster",
-        "setup",
+        "create",
         "--kind=$(location @kind//:file)",
         "--k8s-version=v1.19.1",
+    ],
+    data = ["@kind//:file"],
+)
+
+sh_binary(
+    name = "delete_cluster",
+    srcs = ["//cmd/heimdev"],
+    args = [
+        "cluster",
+        "delete",
+        "--kind=$(location @kind//:file)",
     ],
     data = ["@kind//:file"],
 )

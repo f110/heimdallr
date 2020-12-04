@@ -17,7 +17,7 @@ const (
 	defaultClusterName = "heimdallr"
 )
 
-func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig string) error {
+func getKubeConfig(kubeConfig string) string {
 	if kubeConfig == "" {
 		if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" {
 			// Running on bazel
@@ -25,11 +25,17 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig s
 		} else {
 			cwd, err := os.Getwd()
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return ""
 			}
 			kubeConfig = filepath.Join(cwd, ".kubeconfig")
 		}
 	}
+
+	return kubeConfig
+}
+
+func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig string) error {
+	kubeConfig = getKubeConfig(kubeConfig)
 	kindCluster, err := kind.NewCluster(kindPath, name, kubeConfig)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -61,6 +67,25 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig s
 	return nil
 }
 
+func deleteCluster(kindPath, name, kubeConfig string) error {
+	kubeConfig = getKubeConfig(kubeConfig)
+	kindCluster, err := kind.NewCluster(kindPath, name, kubeConfig)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if exists, err := kindCluster.IsExist(name); err != nil {
+		return xerrors.Errorf(": %w", err)
+	} else if !exists {
+		return nil
+	}
+
+	if err := kindCluster.Delete(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
 func Cluster(rootCmd *cobra.Command) {
 	kindPath := ""
 	clusterName := ""
@@ -73,19 +98,31 @@ func Cluster(rootCmd *cobra.Command) {
 		Short: "Manage the cluster for development",
 	}
 
-	setup := &cobra.Command{
-		Use:   "setup",
-		Short: "Create and setup the cluster for develop the operator",
+	create := &cobra.Command{
+		Use:   "create",
+		Short: "Create the cluster for develop the operator",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return setupCluster(kindPath, clusterName, k8sVersion, workerNum, kubeConfig)
 		},
 	}
-	setup.Flags().StringVarP(&clusterName, "name", "n", defaultClusterName, "Cluster name")
-	setup.Flags().StringVar(&kindPath, "kind", "", "kind command path")
-	setup.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
-	setup.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
-	setup.Flags().IntVar(&workerNum, "worker-num", 3, "The number of k8s workers")
-	clusterCmd.AddCommand(setup)
+	create.Flags().StringVarP(&clusterName, "name", "n", defaultClusterName, "Cluster name")
+	create.Flags().StringVar(&kindPath, "kind", "", "kind command path")
+	create.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
+	create.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
+	create.Flags().IntVar(&workerNum, "worker-num", 3, "The number of k8s workers")
+	clusterCmd.AddCommand(create)
+
+	del := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete the cluster",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return deleteCluster(kindPath, clusterName, kubeConfig)
+		},
+	}
+	del.Flags().StringVarP(&clusterName, "name", "n", defaultClusterName, "Cluster name")
+	del.Flags().StringVar(&kindPath, "kind", "", "kind command path")
+	del.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
+	clusterCmd.AddCommand(del)
 
 	rootCmd.AddCommand(clusterCmd)
 }
