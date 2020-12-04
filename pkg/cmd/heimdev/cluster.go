@@ -13,6 +13,10 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
 
+const (
+	defaultClusterName = "heimdallr"
+)
+
 func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig string) error {
 	if kubeConfig == "" {
 		if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" {
@@ -76,7 +80,7 @@ func Cluster(rootCmd *cobra.Command) {
 			return setupCluster(kindPath, clusterName, k8sVersion, workerNum, kubeConfig)
 		},
 	}
-	setup.Flags().StringVarP(&clusterName, "name", "n", "", "Cluster name")
+	setup.Flags().StringVarP(&clusterName, "name", "n", defaultClusterName, "Cluster name")
 	setup.Flags().StringVar(&kindPath, "kind", "", "kind command path")
 	setup.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
 	setup.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
