@@ -65,7 +65,8 @@ func TestProxyController(t *testing.T) {
 					Version:     framework.Config.ProxyVersion,
 					DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
 						Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
-							Version: "v3.4.8",
+							Version:      "v3.4.8",
+							AntiAffinity: true,
 						},
 					},
 					Domain:   "e2e.f110.dev",

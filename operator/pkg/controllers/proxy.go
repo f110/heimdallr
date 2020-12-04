@@ -445,6 +445,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 			Members:            3,
 			Version:            etcdVersion,
 			DefragmentSchedule: r.Spec.DataStore.Etcd.Defragment.Schedule,
+			AntiAffinity:       r.Spec.DataStore.Etcd.AntiAffinity,
 		},
 	}
 }

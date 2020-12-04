@@ -143,6 +143,8 @@ spec:
                 properties:
                   etcd:
                     properties:
+                      antiAffinity:
+                        type: boolean
                       defragment:
                         properties:
                           schedule:

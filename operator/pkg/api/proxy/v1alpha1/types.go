@@ -66,8 +66,9 @@ type ProxyDataStoreSpec struct {
 }
 
 type ProxyDataStoreEtcdSpec struct {
-	Version    string         `json:"version,omitempty"`
-	Defragment DefragmentSpec `json:"defragment,omitempty"`
+	Version      string         `json:"version,omitempty"`
+	Defragment   DefragmentSpec `json:"defragment,omitempty"`
+	AntiAffinity bool           `json:"antiAffinity,omitempty"`
 }
 
 type IdentityProviderSpec struct {
