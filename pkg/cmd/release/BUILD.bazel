@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "release",
+    srcs = [
+        "container.go",
+        "github.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/release",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/go-containerregistry/pkg/authn",
+        "//vendor/github.com/google/go-containerregistry/pkg/name",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/remote",
+        "//vendor/github.com/google/go-github/v32/github",
+        "//vendor/github.com/spf13/cobra",
+        "//vendor/golang.org/x/oauth2",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)
