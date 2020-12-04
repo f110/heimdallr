@@ -39,6 +39,7 @@ go_test(
         "//operator/pkg/informers/externalversions",
         "//pkg/config",
         "//pkg/config/configv2",
+        "//pkg/k8s",
         "//pkg/k8s/kind",
         "//pkg/logger",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:meta",

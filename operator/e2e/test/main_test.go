@@ -26,6 +26,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
+	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -60,7 +61,7 @@ func TestMain(m *testing.M) {
 
 	var cluster *kind.Cluster
 	framework.BeforeSuite(func() {
-		crd, err := e2eutil.ReadCRDFiles(framework.Config.CRDDir)
+		crd, err := k8s.ReadCRDFile(framework.Config.CRDDir)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -123,7 +124,7 @@ func TestMain(m *testing.M) {
 		}
 
 		// Create CustomResourceDefinition
-		if err := e2eutil.EnsureCRD(cfg, crd, 3*time.Minute); err != nil {
+		if err := k8s.EnsureCRD(cfg, crd, 3*time.Minute); err != nil {
 			log.Fatal(err)
 		}
 

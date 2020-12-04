@@ -53,15 +53,17 @@ def _kustomization_impl(ctx):
         arguments = [args],
     )
 
+    data_runfiles = ctx.runfiles(files = [out])
     return [
         DefaultInfo(
             files = depset([out]),
+            data_runfiles = data_runfiles,
         ),
         Kustomization(
             name = ctx.label.name,
             generated_manifest = out,
             srcs = [ctx.file.src] + depset(ctx.files.resources).to_list(),
-        )
+        ),
     ]
 
 kustomization = rule(
@@ -74,5 +76,5 @@ kustomization = rule(
             cfg = "host",
             default = "@kustomize//:bin",
         ),
-    }
+    },
 )

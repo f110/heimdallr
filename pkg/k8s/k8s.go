@@ -1,4 +1,4 @@
-package e2eutil
+package k8s
 
 import (
 	"bytes"
@@ -18,40 +18,35 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func ReadCRDFiles(dir string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	crdFiles := make([][]byte, 0)
-
-	f, err := ioutil.ReadFile(dir)
+func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
+	f, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
-	crdFiles = append(crdFiles, f)
 
 	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
 	sch := runtime.NewScheme()
 	_ = apiextensionsv1.AddToScheme(sch)
 	codecs := serializer.NewCodecFactory(sch)
-	for _, v := range crdFiles {
-		d := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(v), 4096)
-		for {
-			ext := &runtime.RawExtension{}
-			err := d.Decode(ext)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return nil, err
-			}
-			obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
-			if err != nil {
-				continue
-			}
-			c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
-			if !ok {
-				continue
-			}
-			crd = append(crd, c)
+	d := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(f), 4096)
+	for {
+		ext := &runtime.RawExtension{}
+		err := d.Decode(ext)
+		if err == io.EOF {
+			break
 		}
+		if err != nil {
+			return nil, err
+		}
+		obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
+		if err != nil {
+			continue
+		}
+		c, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+		if !ok {
+			continue
+		}
+		crd = append(crd, c)
 	}
 
 	return crd, nil

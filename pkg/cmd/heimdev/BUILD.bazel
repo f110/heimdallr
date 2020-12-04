@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//pkg/auth",
         "//pkg/frontproxy",
+        "//pkg/k8s",
         "//pkg/k8s/kind",
         "//vendor/github.com/dgrijalva/jwt-go",
         "//vendor/github.com/gorilla/websocket",

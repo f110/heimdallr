@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
 
@@ -34,7 +35,7 @@ func getKubeConfig(kubeConfig string) string {
 	return kubeConfig
 }
 
-func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig string) error {
+func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig, crdFile string) error {
 	kubeConfig = getKubeConfig(kubeConfig)
 	kindCluster, err := kind.NewCluster(kindPath, name, kubeConfig)
 	if err != nil {
@@ -61,6 +62,14 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig s
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := kind.InstallCertManager(restCfg); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	crds, err := k8s.ReadCRDFile(crdFile)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := k8s.EnsureCRD(restCfg, crds, 3*time.Minute); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -91,6 +100,7 @@ func Cluster(rootCmd *cobra.Command) {
 	clusterName := ""
 	k8sVersion := ""
 	kubeConfig := ""
+	crdFile := ""
 	workerNum := 3
 
 	clusterCmd := &cobra.Command{
@@ -102,13 +112,14 @@ func Cluster(rootCmd *cobra.Command) {
 		Use:   "create",
 		Short: "Create the cluster for develop the operator",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return setupCluster(kindPath, clusterName, k8sVersion, workerNum, kubeConfig)
+			return setupCluster(kindPath, clusterName, k8sVersion, workerNum, kubeConfig, crdFile)
 		},
 	}
 	create.Flags().StringVarP(&clusterName, "name", "n", defaultClusterName, "Cluster name")
 	create.Flags().StringVar(&kindPath, "kind", "", "kind command path")
 	create.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
 	create.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
+	create.Flags().StringVar(&crdFile, "crd", "", "Applying manifest file after create the cluster")
 	create.Flags().IntVar(&workerNum, "worker-num", 3, "The number of k8s workers")
 	clusterCmd.AddCommand(create)
 

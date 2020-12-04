@@ -71,8 +71,12 @@ sh_binary(
         "create",
         "--kind=$(location @kind//:file)",
         "--k8s-version=v1.19.1",
+        "--crd=$(location //operator/config/crd:crd)",
     ],
-    data = ["@kind//:file"],
+    data = [
+        "//operator/config/crd",
+        "@kind//:file",
+    ],
 )
 
 sh_binary(
