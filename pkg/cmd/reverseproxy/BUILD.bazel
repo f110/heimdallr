@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth",
+        "//pkg/authproxy",
         "//pkg/cert",
         "//pkg/config",
         "//pkg/config/configutil",
@@ -18,7 +19,6 @@ go_library(
         "//pkg/database/mysql",
         "//pkg/database/mysql/dao",
         "//pkg/database/mysql/entity",
-        "//pkg/frontproxy",
         "//pkg/logger",
         "//pkg/netutil",
         "//pkg/rpc",

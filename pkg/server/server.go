@@ -13,10 +13,10 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
-	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -72,7 +72,7 @@ type Server struct {
 	clusterDatabase database.ClusterDatabase
 }
 
-func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *frontproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
+func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *authproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
@@ -86,8 +86,8 @@ func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *fr
 			IdleTimeout: 10 * time.Minute,
 			Handler:     hostMultiplexer,
 			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
-				connector.ProtocolName:          c.Accept,
-				frontproxy.SocketProxyNextProto: frontProxy.Accept,
+				connector.ProtocolName:         c.Accept,
+				authproxy.SocketProxyNextProto: frontProxy.Accept,
 			},
 		},
 		connector:       c,
@@ -106,7 +106,7 @@ func (s *Server) Start() error {
 		GetCertificate: s.Config.AccessProxy.HTTP.Certificate.GetCertificate,
 		ClientAuth:     tls.RequestClientCert,
 		ClientCAs:      s.Config.CertificateAuthority.Local.CertPool,
-		NextProtos:     []string{connector.ProtocolName, frontproxy.SocketProxyNextProto, http2.NextProtoTLS},
+		NextProtos:     []string{connector.ProtocolName, authproxy.SocketProxyNextProto, http2.NextProtoTLS},
 	})
 
 	if err := http2.ConfigureServer(s.server, nil); err != nil {

@@ -34,11 +34,11 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
-	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/netutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
@@ -292,7 +292,7 @@ func (p *Proxy) syncUsers() error {
 		StandardClaims: jwt.StandardClaims{
 			Id:        "root@e2e.f110.dev",
 			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(frontproxy.TokenExpiration).Unix(),
+			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
 		},
 	})
 	token, err := claim.SignedString(p.signPrivateKey)

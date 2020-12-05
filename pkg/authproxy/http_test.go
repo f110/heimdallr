@@ -1,4 +1,4 @@
-package frontproxy
+package authproxy
 
 import (
 	"context"

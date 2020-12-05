@@ -1,13 +1,13 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "frontproxy",
+    name = "authproxy",
     srcs = [
         "http.go",
         "server.go",
         "socket.go",
     ],
-    importpath = "go.f110.dev/heimdallr/pkg/frontproxy",
+    importpath = "go.f110.dev/heimdallr/pkg/authproxy",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth",
@@ -28,14 +28,14 @@ go_library(
 )
 
 go_test(
-    name = "frontproxy_test",
+    name = "authproxy_test",
     srcs = [
         "http_test.go",
         "main_test.go",
         "server_test.go",
         "socket_test.go",
     ],
-    embed = [":frontproxy"],
+    embed = [":authproxy"],
     deps = [
         "//pkg/auth",
         "//pkg/cert",

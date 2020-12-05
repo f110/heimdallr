@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/frontproxy"
+	"go.f110.dev/heimdallr/pkg/authproxy"
 )
 
 func testServer(publicKeyFile string) error {
@@ -53,9 +53,9 @@ func testServer(publicKeyFile string) error {
 			return
 		}
 
-		token := req.Header.Get(frontproxy.TokenHeaderName)
+		token := req.Header.Get(authproxy.TokenHeaderName)
 		if token == "" {
-			fmt.Printf("%s is empty\n", frontproxy.TokenHeaderName)
+			fmt.Printf("%s is empty\n", authproxy.TokenHeaderName)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

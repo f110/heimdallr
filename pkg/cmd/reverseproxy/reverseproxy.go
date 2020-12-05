@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
@@ -35,7 +36,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/database/mysql"
 	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
 	"go.f110.dev/heimdallr/pkg/database/mysql/entity"
-	"go.f110.dev/heimdallr/pkg/frontproxy"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/netutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -338,7 +338,7 @@ func (m *mainProcess) startServer() {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
-	front := frontproxy.NewFrontendProxy(m.config, m.connector, rpcClient)
+	front := authproxy.NewFrontendProxy(m.config, m.connector, rpcClient)
 
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {

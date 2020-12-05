@@ -12,7 +12,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
-	"go.f110.dev/heimdallr/pkg/frontproxy"
+	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/version"
 )
 
@@ -52,11 +52,11 @@ func proxy(args []string) error {
 		host = args[0]
 		port = "443"
 	}
-	client := frontproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
+	client := authproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
 Retry:
 	err = client.Dial(host, port, to)
 	if err != nil {
-		e, ok := err.(*frontproxy.ErrorTokenAuthorization)
+		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
 			t, err := tokenClient.RequestToken(e.Endpoint)
 			if err != nil {

@@ -12,11 +12,11 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth",
+        "//pkg/authproxy",
         "//pkg/cert",
         "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/database",
-        "//pkg/frontproxy",
         "//pkg/netutil",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",

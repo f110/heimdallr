@@ -9,10 +9,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/server",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/authproxy",
         "//pkg/config/configv2",
         "//pkg/connector",
         "//pkg/database",
-        "//pkg/frontproxy",
         "//pkg/logger",
         "//vendor/github.com/julienschmidt/httprouter",
         "//vendor/go.uber.org/zap",
