@@ -5,14 +5,16 @@ k8s_code_generator(
     srcs = [
         "//operator/pkg/api/etcd/v1alpha1",
         "//operator/pkg/api/proxy/v1alpha1",
+    ],
+    clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
+    crd = "operator/config/crd",
+    embed = [
         "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1",
     ],
-    clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
-    crd = "operator/config/crd",
     header = "//operator/hack:boilerplate.go.txt",
     informerpackage = "go.f110.dev/heimdallr/operator/pkg/informers",
     listerpackage = "go.f110.dev/heimdallr/operator/pkg/listers",
