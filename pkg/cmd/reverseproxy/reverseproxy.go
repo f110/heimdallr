@@ -338,7 +338,7 @@ func (m *mainProcess) startServer() {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
-	front := authproxy.NewFrontendProxy(m.config, m.connector, rpcClient)
+	front := authproxy.NewAuthProxy(m.config, m.connector, rpcClient)
 
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {

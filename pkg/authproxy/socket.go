@@ -80,7 +80,7 @@ func NewMessageError(code int, message string) MessageError {
 }
 
 func (e *messageError) Error() string {
-	return fmt.Sprintf("frontproxy: %s (code=%d)", e.message, e.code)
+	return fmt.Sprintf("authproxy: %s (code=%d)", e.message, e.code)
 }
 
 func (e *messageError) Code() int {
@@ -212,7 +212,7 @@ func (st *Stream) handshake() error {
 	buf := msg.Bytes()
 	if buf[0] != TypeOpen {
 		st.sendMessage(SocketErrorInvalidProtocol)
-		return xerrors.New("frontproxy: invalid packet header in handshake")
+		return xerrors.New("authproxy: invalid packet header in handshake")
 	}
 	l := binary.BigEndian.Uint32(buf[1:5])
 	v, err := url.ParseQuery(string(buf[5 : 5+l]))
@@ -331,7 +331,7 @@ func (st *Stream) readConn() error {
 			return xerrors.Errorf(": %v", err)
 		}
 		if n != 5 {
-			return xerrors.New("frontproxy: invalid header")
+			return xerrors.New("authproxy: invalid header")
 		}
 
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
@@ -340,7 +340,7 @@ func (st *Stream) readConn() error {
 		}
 		n, err = io.ReadAtLeast(r, readBuffer, bodySize)
 		if n != bodySize {
-			return xerrors.Errorf("frontproxy: invalid body size")
+			return xerrors.Errorf("authproxy: invalid body size")
 		}
 
 		switch header[0] {
@@ -349,7 +349,7 @@ func (st *Stream) readConn() error {
 		case TypePong:
 			st.conn.SetReadDeadline(time.Now().Add(1 * time.Minute))
 		default:
-			return xerrors.New("frontproxy: unknown packet type")
+			return xerrors.New("authproxy: unknown packet type")
 		}
 	}
 }
@@ -406,7 +406,7 @@ type ErrorTokenAuthorization struct {
 }
 
 func (e *ErrorTokenAuthorization) Error() string {
-	return "frontproxy: token is not available"
+	return "authproxy: token is not available"
 }
 
 type Client struct {

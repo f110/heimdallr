@@ -21,18 +21,18 @@ type httpProxy interface {
 	ServeSlackWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request)
 }
 
-type FrontendProxy struct {
+type AuthProxy struct {
 	Config *configv2.Config
 
 	httpProxy   httpProxy
 	socketProxy *SocketProxy
 }
 
-func NewFrontendProxy(conf *configv2.Config, ct *connector.Server, c *rpcclient.Client) *FrontendProxy {
+func NewAuthProxy(conf *configv2.Config, ct *connector.Server, c *rpcclient.Client) *AuthProxy {
 	s := NewSocketProxy(conf, ct)
 	h := NewHttpProxy(conf, ct, c)
 
-	p := &FrontendProxy{
+	p := &AuthProxy{
 		Config:      conf,
 		httpProxy:   h,
 		socketProxy: s,
@@ -41,11 +41,11 @@ func NewFrontendProxy(conf *configv2.Config, ct *connector.Server, c *rpcclient.
 	return p
 }
 
-func (p *FrontendProxy) Accept(server *http.Server, conn *tls.Conn, handler http.Handler) {
+func (p *AuthProxy) Accept(server *http.Server, conn *tls.Conn, handler http.Handler) {
 	p.socketProxy.Accept(server, conn, handler)
 }
 
-func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (p *AuthProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	requestId := p.requestId()
 	ctx := context.WithValue(req.Context(), "dispatch_time", time.Now())
 	ctx = context.WithValue(ctx, "request_id", requestId)
@@ -60,7 +60,7 @@ func (p *FrontendProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *FrontendProxy) requestId() string {
+func (p *AuthProxy) requestId() string {
 	buf := make([]byte, requestIdLength/2)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 		return ""

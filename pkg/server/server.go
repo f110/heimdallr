@@ -41,12 +41,12 @@ type ChildServer interface {
 type HostMultiplexer struct {
 	Config *configv2.Config
 
-	frontProxy http.Handler
-	utilities  http.Handler
+	authProxy http.Handler
+	utilities http.Handler
 }
 
-func NewHostMultiplexer(conf *configv2.Config, frontProxy, utilities http.Handler) *HostMultiplexer {
-	return &HostMultiplexer{Config: conf, frontProxy: frontProxy, utilities: utilities}
+func NewHostMultiplexer(conf *configv2.Config, authProxy, utilities http.Handler) *HostMultiplexer {
+	return &HostMultiplexer{Config: conf, authProxy: authProxy, utilities: utilities}
 }
 
 func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -61,7 +61,7 @@ func (h *HostMultiplexer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	h.frontProxy.ServeHTTP(w, req)
+	h.authProxy.ServeHTTP(w, req)
 }
 
 type Server struct {
@@ -72,13 +72,13 @@ type Server struct {
 	clusterDatabase database.ClusterDatabase
 }
 
-func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *authproxy.FrontendProxy, c *connector.Server, child ...ChildServer) *Server {
+func New(conf *configv2.Config, cluster database.ClusterDatabase, authProxy *authproxy.AuthProxy, c *connector.Server, child ...ChildServer) *Server {
 	mux := httprouter.New()
 	for _, v := range child {
 		v.Route(mux)
 	}
 
-	hostMultiplexer := NewHostMultiplexer(conf, frontProxy, mux)
+	hostMultiplexer := NewHostMultiplexer(conf, authProxy, mux)
 	return &Server{
 		Config: conf,
 		server: &http.Server{
@@ -87,7 +87,7 @@ func New(conf *configv2.Config, cluster database.ClusterDatabase, frontProxy *au
 			Handler:     hostMultiplexer,
 			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
 				connector.ProtocolName:         c.Accept,
-				authproxy.SocketProxyNextProto: frontProxy.Accept,
+				authproxy.SocketProxyNextProto: authProxy.Accept,
 			},
 		},
 		connector:       c,
