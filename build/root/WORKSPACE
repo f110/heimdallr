@@ -3,19 +3,19 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "ac03931e56c3b229c145f1a8b2a2ad3e8d8f1af57e43ef28a26123362a1e3c7e",
+    sha256 = "6f111c57fd50baf5b8ee9d63024874dd2a014b069426156c55adbf6d3d22cb7b",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.4/rules_go-v0.24.4.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.4/rules_go-v0.24.4.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.25.0/rules_go-v0.25.0.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.25.0/rules_go-v0.25.0.tar.gz",
     ],
 )
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "72d339ff874a382f819aaea80669be049069f502d6c726a07759fdca99653c48",
+    sha256 = "b85f48fa105c4403326e9525ad2b2cc437babaa6e15a3fc0b1dbab0ab064bc7c",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.1/bazel-gazelle-v0.22.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.1/bazel-gazelle-v0.22.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.2/bazel-gazelle-v0.22.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.2/bazel-gazelle-v0.22.2.tar.gz",
     ],
 )
 
@@ -43,37 +43,31 @@ git_repository(
 
 git_repository(
     name = "dev_f110_protoc_ddl",
-    commit = "19d1c708b75b39e1b0c87eb7ba4a6eb3363afb12",
+    commit = "95db40d2d124e72b3714d6c3bbfd08a8a68616a1",
     remote = "https://github.com/f110/protoc-ddl",
 )
 
 http_archive(
     name = "dev_f110_rules_k8s_controller",
-    sha256 = "7a93e8740884ffd71764ea374fceeed1d49432fa92f82ab7b0ae0608cbdccd0e",
-    strip_prefix = "rules_k8s_controller-0.4.0",
+    sha256 = "ef41886cf0082db21455d00c5b2e99b1fed034a8df1d721b20bf0fb6bb90e367",
+    strip_prefix = "rules_k8s_controller-0.5.0",
     urls = [
-        "https://github.com/f110/rules_k8s_controller/archive/v0.4.0.tar.gz",
+        "https://github.com/f110/rules_k8s_controller/archive/v0.5.0.tar.gz",
     ],
 )
 
 #git_repository(
 #    name = "dev_f110_rules_k8s_controller",
-#    commit = "f59ba88edfbc2129d016aff5830dc1672ec87922",
+#    commit = "461f0a6ecbfec1287d5542d2c54575c9a0bdd1a8",
 #    remote = "https://github.com/f110/rules_k8s_controller",
 #)
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_toolchains", "go_rules_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-load("//build:go_sdk.bzl", "GO_SDK")
-
-go_download_sdk(
-    name = "go_sdk",
-    sdks = GO_SDK["1.15.5"],
-)
 
 go_rules_dependencies()
 
-go_register_toolchains()
+go_register_toolchains(version = "1.15.6")
 
 gazelle_dependencies()
 
