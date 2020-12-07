@@ -19,13 +19,9 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestClient_GetToken(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
-	err = os.Mkdir(filepath.Join(tmpDir, Directory), 0755)
+	err := os.Mkdir(filepath.Join(tmpDir, Directory), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,11 +47,7 @@ func TestClient_GetToken(t *testing.T) {
 
 func TestClient_RequestToken(t *testing.T) {
 	forTestMock = true
-	tmpHome, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpHome)
+	tmpHome := t.TempDir()
 	os.Setenv("HOME", tmpHome)
 
 	u, err := url.Parse(ClientRedirectUrl)

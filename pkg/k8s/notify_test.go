@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,11 +32,7 @@ func TestNewVolumeWatcher(t *testing.T) {
 
 func TestCanWatchVolume(t *testing.T) {
 	t.Run("Dir", func(t *testing.T) {
-		d, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(d)
+		d := t.TempDir()
 
 		if err := os.Mkdir(filepath.Join(d, "data"), 0755); err != nil {
 			t.Fatal(err)
@@ -65,11 +60,7 @@ func TestCanWatchVolume(t *testing.T) {
 	})
 
 	t.Run("File", func(t *testing.T) {
-		d, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(d)
+		d := t.TempDir()
 
 		if err := os.Mkdir(filepath.Join(d, "data"), 0755); err != nil {
 			t.Fatal(err)
@@ -103,11 +94,7 @@ func TestFindMountPath(t *testing.T) {
 		t.Fatal("expected return error")
 	}
 
-	d, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
 	_, err = FindMountPath(filepath.Join(d, "data/memo.txt"))
 	if err == nil {

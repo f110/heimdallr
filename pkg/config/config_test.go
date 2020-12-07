@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -136,11 +136,11 @@ func TestLogger_ZapConfig(t *testing.T) {
 }
 
 func TestDatastore_GetEtcdClient(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
+	tmpDir := t.TempDir()
+	dataDir := filepath.Join(tmpDir, "data")
+	if err := os.Mkdir(dataDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
 
 	clientPort, err := netutil.FindUnusedPort()
 	if err != nil {
@@ -155,7 +155,7 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 
 	u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", clientPort)}
 	c := embed.NewConfig()
-	c.Dir = tmpDir
+	c.Dir = dataDir
 	c.LogLevel = "fatal"
 	c.LPUrls[0].Host = fmt.Sprintf("localhost:%d", peerPort)
 	c.LCUrls[0] = *u

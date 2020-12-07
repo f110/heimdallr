@@ -23,11 +23,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestLoader_Render(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	if err := os.MkdirAll(filepath.Join(dir, "data"), 0755); err != nil {
 		t.Fatal(err)
