@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"google.golang.org/grpc/metadata"
@@ -15,7 +14,7 @@ import (
 func TestMain(m *testing.M) {
 	logger.Init(&configv2.Logger{Level: "debug"})
 
-	os.Exit(m.Run())
+	m.Run()
 }
 
 type testRevokedCertClient struct {

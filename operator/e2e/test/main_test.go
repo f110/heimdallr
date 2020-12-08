@@ -211,5 +211,5 @@ func TestMain(m *testing.M) {
 		}
 	})
 
-	os.Exit(framework.RunSpec(m))
+	framework.RunSpec(m)
 }

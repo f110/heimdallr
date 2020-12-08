@@ -14,5 +14,5 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failure initialize logger: %+v\n", err)
 		os.Exit(1)
 	}
-	os.Exit(m.Run())
+	m.Run()
 }
