@@ -67,6 +67,19 @@ type User struct {
 	conn *sql.DB
 }
 
+type UserInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.User, error)
+	SelectIdentity(ctx context.Context, identity string) (*entity.User, error)
+	ListIdentityByLoginName(ctx context.Context, loginName string, opt ...ListOption) ([]*entity.User, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error)
+	Create(ctx context.Context, user *entity.User, opt ...ExecOption) (*entity.User, error)
+	Update(ctx context.Context, user *entity.User, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ UserInterface = &User{}
+
 func NewUser(conn *sql.DB) *User {
 	return &User{
 		conn: conn,
@@ -88,6 +101,7 @@ func (d *User) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
@@ -100,6 +114,7 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.User, error) {
@@ -115,6 +130,7 @@ func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.Use
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, opt ...ListOption) ([]*entity.User, error) {
@@ -147,6 +163,7 @@ func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, op
 	}
 
 	return res, nil
+
 }
 
 func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error) {
@@ -178,9 +195,10 @@ func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, 
 	}
 
 	return res, nil
+
 }
 
-func (d *User) Create(ctx context.Context, v *entity.User, opt ...ExecOption) (*entity.User, error) {
+func (d *User) Create(ctx context.Context, user *entity.User, opt ...ExecOption) (*entity.User, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -191,7 +209,8 @@ func (d *User) Create(ctx context.Context, v *entity.User, opt ...ExecOption) (*
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `user` (`identity`, `login_name`, `admin`, `type`, `comment`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)", v.Identity, v.LoginName, v.Admin, v.Type, v.Comment, time.Now(),
+		"INSERT INTO `user` (`identity`, `login_name`, `admin`, `type`, `comment`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)",
+		user.Identity, user.LoginName, user.Admin, user.Type, user.Comment, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -203,15 +222,16 @@ func (d *User) Create(ctx context.Context, v *entity.User, opt ...ExecOption) (*
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	user = user.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	user.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	user.ResetMark()
+	return user, nil
+
 }
 
 func (d *User) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -235,10 +255,11 @@ func (d *User) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
+
 }
 
-func (d *User) Update(ctx context.Context, v *entity.User, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *User) Update(ctx context.Context, user *entity.User, opt ...ExecOption) error {
+	if !user.IsChanged() {
 		return nil
 	}
 
@@ -250,7 +271,7 @@ func (d *User) Update(ctx context.Context, v *entity.User, opt ...ExecOption) er
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := user.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -264,7 +285,7 @@ func (d *User) Update(ctx context.Context, v *entity.User, opt ...ExecOption) er
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, user.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -275,13 +296,25 @@ func (d *User) Update(ctx context.Context, v *entity.User, opt ...ExecOption) er
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	user.ResetMark()
 	return nil
+
 }
 
 type UserState struct {
 	conn *sql.DB
 }
+
+type UserStateInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.UserState, error)
+	SelectState(ctx context.Context, state string) (*entity.UserState, error)
+	Create(ctx context.Context, userState *entity.UserState, opt ...ExecOption) (*entity.UserState, error)
+	Update(ctx context.Context, userState *entity.UserState, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ UserStateInterface = &UserState{}
 
 func NewUserState(conn *sql.DB) *UserState {
 	return &UserState{
@@ -304,6 +337,7 @@ func (d *UserState) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, error) {
@@ -316,6 +350,7 @@ func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, er
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *UserState) SelectState(ctx context.Context, state string) (*entity.UserState, error) {
@@ -331,9 +366,10 @@ func (d *UserState) SelectState(ctx context.Context, state string) (*entity.User
 
 	v.ResetMark()
 	return v, nil
+
 }
 
-func (d *UserState) Create(ctx context.Context, v *entity.UserState, opt ...ExecOption) (*entity.UserState, error) {
+func (d *UserState) Create(ctx context.Context, userState *entity.UserState, opt ...ExecOption) (*entity.UserState, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -344,7 +380,8 @@ func (d *UserState) Create(ctx context.Context, v *entity.UserState, opt ...Exec
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `user_state` (`state`, `unique`, `created_at`) VALUES (?, ?, ?)", v.State, v.Unique, time.Now(),
+		"INSERT INTO `user_state` (`state`, `unique`, `created_at`) VALUES (?, ?, ?)",
+		userState.State, userState.Unique, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -356,15 +393,16 @@ func (d *UserState) Create(ctx context.Context, v *entity.UserState, opt ...Exec
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	userState = userState.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	userState.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	userState.ResetMark()
+	return userState, nil
+
 }
 
 func (d *UserState) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -388,10 +426,11 @@ func (d *UserState) Delete(ctx context.Context, id int32, opt ...ExecOption) err
 	}
 
 	return nil
+
 }
 
-func (d *UserState) Update(ctx context.Context, v *entity.UserState, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *UserState) Update(ctx context.Context, userState *entity.UserState, opt ...ExecOption) error {
+	if !userState.IsChanged() {
 		return nil
 	}
 
@@ -403,7 +442,7 @@ func (d *UserState) Update(ctx context.Context, v *entity.UserState, opt ...Exec
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := userState.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -417,7 +456,7 @@ func (d *UserState) Update(ctx context.Context, v *entity.UserState, opt ...Exec
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, userState.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -428,8 +467,9 @@ func (d *UserState) Update(ctx context.Context, v *entity.UserState, opt ...Exec
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	userState.ResetMark()
 	return nil
+
 }
 
 type SSHKey struct {
@@ -437,6 +477,16 @@ type SSHKey struct {
 
 	user *User
 }
+
+type SSHKeyInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, userId int32) (*entity.SSHKey, error)
+	Create(ctx context.Context, sSHKey *entity.SSHKey, opt ...ExecOption) (*entity.SSHKey, error)
+	Update(ctx context.Context, sSHKey *entity.SSHKey, opt ...ExecOption) error
+	Delete(ctx context.Context, userId int32, opt ...ExecOption) error
+}
+
+var _ SSHKeyInterface = &SSHKey{}
 
 func NewSSHKey(conn *sql.DB) *SSHKey {
 	return &SSHKey{
@@ -460,6 +510,7 @@ func (d *SSHKey) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *SSHKey) Select(ctx context.Context, userId int32) (*entity.SSHKey, error) {
@@ -480,9 +531,10 @@ func (d *SSHKey) Select(ctx context.Context, userId int32) (*entity.SSHKey, erro
 
 	v.ResetMark()
 	return v, nil
+
 }
 
-func (d *SSHKey) Create(ctx context.Context, v *entity.SSHKey, opt ...ExecOption) (*entity.SSHKey, error) {
+func (d *SSHKey) Create(ctx context.Context, sSHKey *entity.SSHKey, opt ...ExecOption) (*entity.SSHKey, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -493,7 +545,8 @@ func (d *SSHKey) Create(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `ssh_key` (`user_id`, `key`, `created_at`) VALUES (?, ?, ?)", v.UserId, v.Key, time.Now(),
+		"INSERT INTO `ssh_key` (`user_id`, `key`, `created_at`) VALUES (?, ?, ?)",
+		sSHKey.UserId, sSHKey.Key, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -505,10 +558,11 @@ func (d *SSHKey) Create(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	sSHKey = sSHKey.Copy()
 
-	v.ResetMark()
-	return v, nil
+	sSHKey.ResetMark()
+	return sSHKey, nil
+
 }
 
 func (d *SSHKey) Delete(ctx context.Context, userId int32, opt ...ExecOption) error {
@@ -532,10 +586,11 @@ func (d *SSHKey) Delete(ctx context.Context, userId int32, opt ...ExecOption) er
 	}
 
 	return nil
+
 }
 
-func (d *SSHKey) Update(ctx context.Context, v *entity.SSHKey, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *SSHKey) Update(ctx context.Context, sSHKey *entity.SSHKey, opt ...ExecOption) error {
+	if !sSHKey.IsChanged() {
 		return nil
 	}
 
@@ -547,7 +602,7 @@ func (d *SSHKey) Update(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := sSHKey.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -561,7 +616,7 @@ func (d *SSHKey) Update(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.UserId)...,
+		append(values, sSHKey.UserId)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -572,8 +627,9 @@ func (d *SSHKey) Update(ctx context.Context, v *entity.SSHKey, opt ...ExecOption
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	sSHKey.ResetMark()
 	return nil
+
 }
 
 type GPGKey struct {
@@ -581,6 +637,16 @@ type GPGKey struct {
 
 	user *User
 }
+
+type GPGKeyInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, userId int32) (*entity.GPGKey, error)
+	Create(ctx context.Context, gPGKey *entity.GPGKey, opt ...ExecOption) (*entity.GPGKey, error)
+	Update(ctx context.Context, gPGKey *entity.GPGKey, opt ...ExecOption) error
+	Delete(ctx context.Context, userId int32, opt ...ExecOption) error
+}
+
+var _ GPGKeyInterface = &GPGKey{}
 
 func NewGPGKey(conn *sql.DB) *GPGKey {
 	return &GPGKey{
@@ -604,6 +670,7 @@ func (d *GPGKey) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *GPGKey) Select(ctx context.Context, userId int32) (*entity.GPGKey, error) {
@@ -624,9 +691,10 @@ func (d *GPGKey) Select(ctx context.Context, userId int32) (*entity.GPGKey, erro
 
 	v.ResetMark()
 	return v, nil
+
 }
 
-func (d *GPGKey) Create(ctx context.Context, v *entity.GPGKey, opt ...ExecOption) (*entity.GPGKey, error) {
+func (d *GPGKey) Create(ctx context.Context, gPGKey *entity.GPGKey, opt ...ExecOption) (*entity.GPGKey, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -637,7 +705,8 @@ func (d *GPGKey) Create(ctx context.Context, v *entity.GPGKey, opt ...ExecOption
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `gpg_key` (`user_id`, `key`, `created_at`) VALUES (?, ?, ?)", v.UserId, v.Key, time.Now(),
+		"INSERT INTO `gpg_key` (`user_id`, `key`, `created_at`) VALUES (?, ?, ?)",
+		gPGKey.UserId, gPGKey.Key, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -649,10 +718,11 @@ func (d *GPGKey) Create(ctx context.Context, v *entity.GPGKey, opt ...ExecOption
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	gPGKey = gPGKey.Copy()
 
-	v.ResetMark()
-	return v, nil
+	gPGKey.ResetMark()
+	return gPGKey, nil
+
 }
 
 func (d *GPGKey) Delete(ctx context.Context, userId int32, opt ...ExecOption) error {
@@ -676,10 +746,11 @@ func (d *GPGKey) Delete(ctx context.Context, userId int32, opt ...ExecOption) er
 	}
 
 	return nil
+
 }
 
-func (d *GPGKey) Update(ctx context.Context, v *entity.GPGKey, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *GPGKey) Update(ctx context.Context, gPGKey *entity.GPGKey, opt ...ExecOption) error {
+	if !gPGKey.IsChanged() {
 		return nil
 	}
 
@@ -691,7 +762,7 @@ func (d *GPGKey) Update(ctx context.Context, v *entity.GPGKey, opt ...ExecOption
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := gPGKey.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -705,7 +776,7 @@ func (d *GPGKey) Update(ctx context.Context, v *entity.GPGKey, opt ...ExecOption
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.UserId)...,
+		append(values, gPGKey.UserId)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -716,8 +787,9 @@ func (d *GPGKey) Update(ctx context.Context, v *entity.GPGKey, opt ...ExecOption
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	gPGKey.ResetMark()
 	return nil
+
 }
 
 type RoleBinding struct {
@@ -725,6 +797,19 @@ type RoleBinding struct {
 
 	user *User
 }
+
+type RoleBindingInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.RoleBinding, error)
+	ListUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.RoleBinding, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RoleBinding, error)
+	SelectUserRole(ctx context.Context, userId int32, role string) (*entity.RoleBinding, error)
+	Create(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) (*entity.RoleBinding, error)
+	Update(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ RoleBindingInterface = &RoleBinding{}
 
 func NewRoleBinding(conn *sql.DB) *RoleBinding {
 	return &RoleBinding{
@@ -748,6 +833,7 @@ func (d *RoleBinding) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding, error) {
@@ -768,6 +854,7 @@ func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.RoleBinding, error) {
@@ -812,6 +899,7 @@ func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOpt
 	}
 
 	return res, nil
+
 }
 
 func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RoleBinding, error) {
@@ -855,6 +943,7 @@ func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity
 	}
 
 	return res, nil
+
 }
 
 func (d *RoleBinding) SelectUserRole(ctx context.Context, userId int32, role string) (*entity.RoleBinding, error) {
@@ -879,9 +968,10 @@ func (d *RoleBinding) SelectUserRole(ctx context.Context, userId int32, role str
 
 	v.ResetMark()
 	return v, nil
+
 }
 
-func (d *RoleBinding) Create(ctx context.Context, v *entity.RoleBinding, opt ...ExecOption) (*entity.RoleBinding, error) {
+func (d *RoleBinding) Create(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) (*entity.RoleBinding, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -892,7 +982,8 @@ func (d *RoleBinding) Create(ctx context.Context, v *entity.RoleBinding, opt ...
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `role_binding` (`user_id`, `role`, `maintainer`, `created_at`) VALUES (?, ?, ?, ?)", v.UserId, v.Role, v.Maintainer, time.Now(),
+		"INSERT INTO `role_binding` (`user_id`, `role`, `maintainer`, `created_at`) VALUES (?, ?, ?, ?)",
+		roleBinding.UserId, roleBinding.Role, roleBinding.Maintainer, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -904,15 +995,16 @@ func (d *RoleBinding) Create(ctx context.Context, v *entity.RoleBinding, opt ...
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	roleBinding = roleBinding.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	roleBinding.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	roleBinding.ResetMark()
+	return roleBinding, nil
+
 }
 
 func (d *RoleBinding) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -936,10 +1028,11 @@ func (d *RoleBinding) Delete(ctx context.Context, id int32, opt ...ExecOption) e
 	}
 
 	return nil
+
 }
 
-func (d *RoleBinding) Update(ctx context.Context, v *entity.RoleBinding, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *RoleBinding) Update(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) error {
+	if !roleBinding.IsChanged() {
 		return nil
 	}
 
@@ -951,7 +1044,7 @@ func (d *RoleBinding) Update(ctx context.Context, v *entity.RoleBinding, opt ...
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := roleBinding.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -965,7 +1058,7 @@ func (d *RoleBinding) Update(ctx context.Context, v *entity.RoleBinding, opt ...
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, roleBinding.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -976,8 +1069,9 @@ func (d *RoleBinding) Update(ctx context.Context, v *entity.RoleBinding, opt ...
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	roleBinding.ResetMark()
 	return nil
+
 }
 
 type AccessToken struct {
@@ -985,6 +1079,18 @@ type AccessToken struct {
 
 	user *User
 }
+
+type AccessTokenInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.AccessToken, error)
+	SelectAccessToken(ctx context.Context, value string) (*entity.AccessToken, error)
+	ListByUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.AccessToken, error)
+	Create(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) (*entity.AccessToken, error)
+	Update(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ AccessTokenInterface = &AccessToken{}
 
 func NewAccessToken(conn *sql.DB) *AccessToken {
 	return &AccessToken{
@@ -1008,6 +1114,7 @@ func (d *AccessToken) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken, error) {
@@ -1035,6 +1142,7 @@ func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*entity.AccessToken, error) {
@@ -1065,6 +1173,7 @@ func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*ent
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.AccessToken, error) {
@@ -1116,9 +1225,10 @@ func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListO
 	}
 
 	return res, nil
+
 }
 
-func (d *AccessToken) Create(ctx context.Context, v *entity.AccessToken, opt ...ExecOption) (*entity.AccessToken, error) {
+func (d *AccessToken) Create(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) (*entity.AccessToken, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -1129,7 +1239,8 @@ func (d *AccessToken) Create(ctx context.Context, v *entity.AccessToken, opt ...
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `access_token` (`name`, `value`, `user_id`, `issuer_id`, `created_at`) VALUES (?, ?, ?, ?, ?)", v.Name, v.Value, v.UserId, v.IssuerId, time.Now(),
+		"INSERT INTO `access_token` (`name`, `value`, `user_id`, `issuer_id`, `created_at`) VALUES (?, ?, ?, ?, ?)",
+		accessToken.Name, accessToken.Value, accessToken.UserId, accessToken.IssuerId, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -1141,15 +1252,16 @@ func (d *AccessToken) Create(ctx context.Context, v *entity.AccessToken, opt ...
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	accessToken = accessToken.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	accessToken.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	accessToken.ResetMark()
+	return accessToken, nil
+
 }
 
 func (d *AccessToken) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1173,10 +1285,11 @@ func (d *AccessToken) Delete(ctx context.Context, id int32, opt ...ExecOption) e
 	}
 
 	return nil
+
 }
 
-func (d *AccessToken) Update(ctx context.Context, v *entity.AccessToken, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *AccessToken) Update(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) error {
+	if !accessToken.IsChanged() {
 		return nil
 	}
 
@@ -1188,7 +1301,7 @@ func (d *AccessToken) Update(ctx context.Context, v *entity.AccessToken, opt ...
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := accessToken.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -1202,7 +1315,7 @@ func (d *AccessToken) Update(ctx context.Context, v *entity.AccessToken, opt ...
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, accessToken.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -1213,8 +1326,9 @@ func (d *AccessToken) Update(ctx context.Context, v *entity.AccessToken, opt ...
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	accessToken.ResetMark()
 	return nil
+
 }
 
 type Token struct {
@@ -1222,6 +1336,18 @@ type Token struct {
 
 	user *User
 }
+
+type TokenInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.Token, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token, error)
+	ListToken(ctx context.Context, token string, opt ...ListOption) ([]*entity.Token, error)
+	Create(ctx context.Context, token *entity.Token, opt ...ExecOption) (*entity.Token, error)
+	Update(ctx context.Context, token *entity.Token, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ TokenInterface = &Token{}
 
 func NewToken(conn *sql.DB) *Token {
 	return &Token{
@@ -1245,6 +1371,7 @@ func (d *Token) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
@@ -1265,6 +1392,7 @@ func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token, error) {
@@ -1308,6 +1436,7 @@ func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token
 	}
 
 	return res, nil
+
 }
 
 func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) ([]*entity.Token, error) {
@@ -1352,9 +1481,10 @@ func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) 
 	}
 
 	return res, nil
+
 }
 
-func (d *Token) Create(ctx context.Context, v *entity.Token, opt ...ExecOption) (*entity.Token, error) {
+func (d *Token) Create(ctx context.Context, token *entity.Token, opt ...ExecOption) (*entity.Token, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -1365,7 +1495,8 @@ func (d *Token) Create(ctx context.Context, v *entity.Token, opt ...ExecOption) 
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `token` (`token`, `user_id`, `issued_at`) VALUES (?, ?, ?)", v.Token, v.UserId, v.IssuedAt,
+		"INSERT INTO `token` (`token`, `user_id`, `issued_at`) VALUES (?, ?, ?)",
+		token.Token, token.UserId, token.IssuedAt,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -1377,15 +1508,16 @@ func (d *Token) Create(ctx context.Context, v *entity.Token, opt ...ExecOption) 
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	token = token.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	token.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	token.ResetMark()
+	return token, nil
+
 }
 
 func (d *Token) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1409,10 +1541,11 @@ func (d *Token) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
+
 }
 
-func (d *Token) Update(ctx context.Context, v *entity.Token, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *Token) Update(ctx context.Context, token *entity.Token, opt ...ExecOption) error {
+	if !token.IsChanged() {
 		return nil
 	}
 
@@ -1424,7 +1557,7 @@ func (d *Token) Update(ctx context.Context, v *entity.Token, opt ...ExecOption) 
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := token.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -1436,7 +1569,7 @@ func (d *Token) Update(ctx context.Context, v *entity.Token, opt ...ExecOption) 
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, token.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -1447,8 +1580,9 @@ func (d *Token) Update(ctx context.Context, v *entity.Token, opt ...ExecOption) 
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	token.ResetMark()
 	return nil
+
 }
 
 type Code struct {
@@ -1456,6 +1590,18 @@ type Code struct {
 
 	user *User
 }
+
+type CodeInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.Code, error)
+	SelectCode(ctx context.Context, code string) (*entity.Code, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, error)
+	Create(ctx context.Context, code *entity.Code, opt ...ExecOption) (*entity.Code, error)
+	Update(ctx context.Context, code *entity.Code, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ CodeInterface = &Code{}
 
 func NewCode(conn *sql.DB) *Code {
 	return &Code{
@@ -1479,6 +1625,7 @@ func (d *Code) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
@@ -1499,6 +1646,7 @@ func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error) {
@@ -1522,6 +1670,7 @@ func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, error) {
@@ -1565,9 +1714,10 @@ func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, 
 	}
 
 	return res, nil
+
 }
 
-func (d *Code) Create(ctx context.Context, v *entity.Code, opt ...ExecOption) (*entity.Code, error) {
+func (d *Code) Create(ctx context.Context, code *entity.Code, opt ...ExecOption) (*entity.Code, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -1578,7 +1728,8 @@ func (d *Code) Create(ctx context.Context, v *entity.Code, opt ...ExecOption) (*
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `code` (`code`, `challenge`, `challenge_method`, `user_id`, `issued_at`) VALUES (?, ?, ?, ?, ?)", v.Code, v.Challenge, v.ChallengeMethod, v.UserId, v.IssuedAt,
+		"INSERT INTO `code` (`code`, `challenge`, `challenge_method`, `user_id`, `issued_at`) VALUES (?, ?, ?, ?, ?)",
+		code.Code, code.Challenge, code.ChallengeMethod, code.UserId, code.IssuedAt,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -1590,15 +1741,16 @@ func (d *Code) Create(ctx context.Context, v *entity.Code, opt ...ExecOption) (*
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	code = code.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	code.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	code.ResetMark()
+	return code, nil
+
 }
 
 func (d *Code) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1622,10 +1774,11 @@ func (d *Code) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
+
 }
 
-func (d *Code) Update(ctx context.Context, v *entity.Code, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *Code) Update(ctx context.Context, code *entity.Code, opt ...ExecOption) error {
+	if !code.IsChanged() {
 		return nil
 	}
 
@@ -1637,7 +1790,7 @@ func (d *Code) Update(ctx context.Context, v *entity.Code, opt ...ExecOption) er
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := code.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -1649,7 +1802,7 @@ func (d *Code) Update(ctx context.Context, v *entity.Code, opt ...ExecOption) er
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, code.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -1660,13 +1813,27 @@ func (d *Code) Update(ctx context.Context, v *entity.Code, opt ...ExecOption) er
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	code.ResetMark()
 	return nil
+
 }
 
 type Relay struct {
 	conn *sql.DB
 }
+
+type RelayInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.Relay, error)
+	ListName(ctx context.Context, name string, opt ...ListOption) ([]*entity.Relay, error)
+	SelectEndpoint(ctx context.Context, name string, addr string) (*entity.Relay, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay, error)
+	Create(ctx context.Context, relay *entity.Relay, opt ...ExecOption) (*entity.Relay, error)
+	Update(ctx context.Context, relay *entity.Relay, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ RelayInterface = &Relay{}
 
 func NewRelay(conn *sql.DB) *Relay {
 	return &Relay{
@@ -1689,6 +1856,7 @@ func (d *Relay) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
@@ -1701,6 +1869,7 @@ func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([]*entity.Relay, error) {
@@ -1733,6 +1902,7 @@ func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([
 	}
 
 	return res, nil
+
 }
 
 func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*entity.Relay, error) {
@@ -1749,6 +1919,7 @@ func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay, error) {
@@ -1780,9 +1951,10 @@ func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay
 	}
 
 	return res, nil
+
 }
 
-func (d *Relay) Create(ctx context.Context, v *entity.Relay, opt ...ExecOption) (*entity.Relay, error) {
+func (d *Relay) Create(ctx context.Context, relay *entity.Relay, opt ...ExecOption) (*entity.Relay, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -1793,7 +1965,8 @@ func (d *Relay) Create(ctx context.Context, v *entity.Relay, opt ...ExecOption) 
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `relay` (`name`, `addr`, `from_addr`, `connected_at`, `created_at`) VALUES (?, ?, ?, ?, ?)", v.Name, v.Addr, v.FromAddr, v.ConnectedAt, time.Now(),
+		"INSERT INTO `relay` (`name`, `addr`, `from_addr`, `connected_at`, `created_at`) VALUES (?, ?, ?, ?, ?)",
+		relay.Name, relay.Addr, relay.FromAddr, relay.ConnectedAt, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -1805,15 +1978,16 @@ func (d *Relay) Create(ctx context.Context, v *entity.Relay, opt ...ExecOption) 
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	relay = relay.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	relay.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	relay.ResetMark()
+	return relay, nil
+
 }
 
 func (d *Relay) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1837,10 +2011,11 @@ func (d *Relay) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
+
 }
 
-func (d *Relay) Update(ctx context.Context, v *entity.Relay, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *Relay) Update(ctx context.Context, relay *entity.Relay, opt ...ExecOption) error {
+	if !relay.IsChanged() {
 		return nil
 	}
 
@@ -1852,7 +2027,7 @@ func (d *Relay) Update(ctx context.Context, v *entity.Relay, opt ...ExecOption) 
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := relay.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -1866,7 +2041,7 @@ func (d *Relay) Update(ctx context.Context, v *entity.Relay, opt ...ExecOption) 
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, relay.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -1877,13 +2052,25 @@ func (d *Relay) Update(ctx context.Context, v *entity.Relay, opt ...ExecOption) 
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	relay.ResetMark()
 	return nil
+
 }
 
 type SerialNumber struct {
 	conn *sql.DB
 }
+
+type SerialNumberInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int64) (*entity.SerialNumber, error)
+	SelectSerialNumber(ctx context.Context, serialNumber []byte) (*entity.SerialNumber, error)
+	Create(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) (*entity.SerialNumber, error)
+	Update(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) error
+	Delete(ctx context.Context, id int64, opt ...ExecOption) error
+}
+
+var _ SerialNumberInterface = &SerialNumber{}
 
 func NewSerialNumber(conn *sql.DB) *SerialNumber {
 	return &SerialNumber{
@@ -1906,6 +2093,7 @@ func (d *SerialNumber) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error 
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumber, error) {
@@ -1918,6 +2106,7 @@ func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumb
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *SerialNumber) SelectSerialNumber(ctx context.Context, serialNumber []byte) (*entity.SerialNumber, error) {
@@ -1933,9 +2122,10 @@ func (d *SerialNumber) SelectSerialNumber(ctx context.Context, serialNumber []by
 
 	v.ResetMark()
 	return v, nil
+
 }
 
-func (d *SerialNumber) Create(ctx context.Context, v *entity.SerialNumber, opt ...ExecOption) (*entity.SerialNumber, error) {
+func (d *SerialNumber) Create(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) (*entity.SerialNumber, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -1946,7 +2136,8 @@ func (d *SerialNumber) Create(ctx context.Context, v *entity.SerialNumber, opt .
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `serial_number` (`serial_number`) VALUES (?)", v.SerialNumber,
+		"INSERT INTO `serial_number` (`serial_number`) VALUES (?)",
+		serialNumber.SerialNumber,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -1958,15 +2149,16 @@ func (d *SerialNumber) Create(ctx context.Context, v *entity.SerialNumber, opt .
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	serialNumber = serialNumber.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int64(insertedId)
+	serialNumber.Id = int64(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	serialNumber.ResetMark()
+	return serialNumber, nil
+
 }
 
 func (d *SerialNumber) Delete(ctx context.Context, id int64, opt ...ExecOption) error {
@@ -1990,10 +2182,11 @@ func (d *SerialNumber) Delete(ctx context.Context, id int64, opt ...ExecOption) 
 	}
 
 	return nil
+
 }
 
-func (d *SerialNumber) Update(ctx context.Context, v *entity.SerialNumber, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *SerialNumber) Update(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) error {
+	if !serialNumber.IsChanged() {
 		return nil
 	}
 
@@ -2005,7 +2198,7 @@ func (d *SerialNumber) Update(ctx context.Context, v *entity.SerialNumber, opt .
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := serialNumber.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -2017,7 +2210,7 @@ func (d *SerialNumber) Update(ctx context.Context, v *entity.SerialNumber, opt .
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, serialNumber.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -2028,8 +2221,9 @@ func (d *SerialNumber) Update(ctx context.Context, v *entity.SerialNumber, opt .
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	serialNumber.ResetMark()
 	return nil
+
 }
 
 type SignedCertificate struct {
@@ -2037,6 +2231,18 @@ type SignedCertificate struct {
 
 	serialNumber *SerialNumber
 }
+
+type SignedCertificateInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.SignedCertificate, error)
+	ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error)
+	Create(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) (*entity.SignedCertificate, error)
+	Update(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ SignedCertificateInterface = &SignedCertificate{}
 
 func NewSignedCertificate(conn *sql.DB) *SignedCertificate {
 	return &SignedCertificate{
@@ -2060,6 +2266,7 @@ func (d *SignedCertificate) Tx(ctx context.Context, fn func(tx *sql.Tx) error) e
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.SignedCertificate, error) {
@@ -2080,6 +2287,7 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error) {
@@ -2124,6 +2332,7 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 	}
 
 	return res, nil
+
 }
 
 func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error) {
@@ -2167,9 +2376,10 @@ func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*
 	}
 
 	return res, nil
+
 }
 
-func (d *SignedCertificate) Create(ctx context.Context, v *entity.SignedCertificate, opt ...ExecOption) (*entity.SignedCertificate, error) {
+func (d *SignedCertificate) Create(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) (*entity.SignedCertificate, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -2180,7 +2390,8 @@ func (d *SignedCertificate) Create(ctx context.Context, v *entity.SignedCertific
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `signed_certificate` (`certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at`) VALUES (?, ?, ?, ?, ?, ?)", v.Certificate, v.SerialNumberId, v.P12, v.Agent, v.Comment, v.IssuedAt,
+		"INSERT INTO `signed_certificate` (`certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at`) VALUES (?, ?, ?, ?, ?, ?)",
+		signedCertificate.Certificate, signedCertificate.SerialNumberId, signedCertificate.P12, signedCertificate.Agent, signedCertificate.Comment, signedCertificate.IssuedAt,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -2192,15 +2403,16 @@ func (d *SignedCertificate) Create(ctx context.Context, v *entity.SignedCertific
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	signedCertificate = signedCertificate.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	signedCertificate.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	signedCertificate.ResetMark()
+	return signedCertificate, nil
+
 }
 
 func (d *SignedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2224,10 +2436,11 @@ func (d *SignedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOpt
 	}
 
 	return nil
+
 }
 
-func (d *SignedCertificate) Update(ctx context.Context, v *entity.SignedCertificate, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *SignedCertificate) Update(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) error {
+	if !signedCertificate.IsChanged() {
 		return nil
 	}
 
@@ -2239,7 +2452,7 @@ func (d *SignedCertificate) Update(ctx context.Context, v *entity.SignedCertific
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := signedCertificate.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -2251,7 +2464,7 @@ func (d *SignedCertificate) Update(ctx context.Context, v *entity.SignedCertific
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, signedCertificate.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -2262,13 +2475,26 @@ func (d *SignedCertificate) Update(ctx context.Context, v *entity.SignedCertific
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	signedCertificate.ResetMark()
 	return nil
+
 }
 
 type RevokedCertificate struct {
 	conn *sql.DB
 }
+
+type RevokedCertificateInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.RevokedCertificate, error)
+	ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error)
+	Create(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) (*entity.RevokedCertificate, error)
+	Update(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ RevokedCertificateInterface = &RevokedCertificate{}
 
 func NewRevokedCertificate(conn *sql.DB) *RevokedCertificate {
 	return &RevokedCertificate{
@@ -2291,6 +2517,7 @@ func (d *RevokedCertificate) Tx(ctx context.Context, fn func(tx *sql.Tx) error) 
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.RevokedCertificate, error) {
@@ -2303,6 +2530,7 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
@@ -2335,6 +2563,7 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 	}
 
 	return res, nil
+
 }
 
 func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
@@ -2366,9 +2595,10 @@ func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]
 	}
 
 	return res, nil
+
 }
 
-func (d *RevokedCertificate) Create(ctx context.Context, v *entity.RevokedCertificate, opt ...ExecOption) (*entity.RevokedCertificate, error) {
+func (d *RevokedCertificate) Create(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) (*entity.RevokedCertificate, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -2379,7 +2609,8 @@ func (d *RevokedCertificate) Create(ctx context.Context, v *entity.RevokedCertif
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `revoked_certificate` (`common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?)", v.CommonName, v.SerialNumber, v.Agent, v.Comment, v.RevokedAt, v.IssuedAt, time.Now(),
+		"INSERT INTO `revoked_certificate` (`common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		revokedCertificate.CommonName, revokedCertificate.SerialNumber, revokedCertificate.Agent, revokedCertificate.Comment, revokedCertificate.RevokedAt, revokedCertificate.IssuedAt, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -2391,15 +2622,16 @@ func (d *RevokedCertificate) Create(ctx context.Context, v *entity.RevokedCertif
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	revokedCertificate = revokedCertificate.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	revokedCertificate.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	revokedCertificate.ResetMark()
+	return revokedCertificate, nil
+
 }
 
 func (d *RevokedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2423,10 +2655,11 @@ func (d *RevokedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOp
 	}
 
 	return nil
+
 }
 
-func (d *RevokedCertificate) Update(ctx context.Context, v *entity.RevokedCertificate, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *RevokedCertificate) Update(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) error {
+	if !revokedCertificate.IsChanged() {
 		return nil
 	}
 
@@ -2438,7 +2671,7 @@ func (d *RevokedCertificate) Update(ctx context.Context, v *entity.RevokedCertif
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := revokedCertificate.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -2452,7 +2685,7 @@ func (d *RevokedCertificate) Update(ctx context.Context, v *entity.RevokedCertif
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, revokedCertificate.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -2463,13 +2696,26 @@ func (d *RevokedCertificate) Update(ctx context.Context, v *entity.RevokedCertif
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	revokedCertificate.ResetMark()
 	return nil
+
 }
 
 type Node struct {
 	conn *sql.DB
 }
+
+type NodeInterface interface {
+	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
+	Select(ctx context.Context, id int32) (*entity.Node, error)
+	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, error)
+	ListHostname(ctx context.Context, hostname string, opt ...ListOption) ([]*entity.Node, error)
+	Create(ctx context.Context, node *entity.Node, opt ...ExecOption) (*entity.Node, error)
+	Update(ctx context.Context, node *entity.Node, opt ...ExecOption) error
+	Delete(ctx context.Context, id int32, opt ...ExecOption) error
+}
+
+var _ NodeInterface = &Node{}
 
 func NewNode(conn *sql.DB) *Node {
 	return &Node{
@@ -2492,6 +2738,7 @@ func (d *Node) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	return nil
+
 }
 
 func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
@@ -2504,6 +2751,7 @@ func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
 
 	v.ResetMark()
 	return v, nil
+
 }
 
 func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, error) {
@@ -2535,6 +2783,7 @@ func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, 
 	}
 
 	return res, nil
+
 }
 
 func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOption) ([]*entity.Node, error) {
@@ -2567,9 +2816,10 @@ func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOpt
 	}
 
 	return res, nil
+
 }
 
-func (d *Node) Create(ctx context.Context, v *entity.Node, opt ...ExecOption) (*entity.Node, error) {
+func (d *Node) Create(ctx context.Context, node *entity.Node, opt ...ExecOption) (*entity.Node, error) {
 	execOpts := newExecOpt(opt...)
 	var conn execConn
 	if execOpts.tx != nil {
@@ -2580,7 +2830,8 @@ func (d *Node) Create(ctx context.Context, v *entity.Node, opt ...ExecOption) (*
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `node` (`hostname`, `created_at`) VALUES (?, ?)", v.Hostname, time.Now(),
+		"INSERT INTO `node` (`hostname`, `created_at`) VALUES (?, ?)",
+		node.Hostname, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -2592,15 +2843,16 @@ func (d *Node) Create(ctx context.Context, v *entity.Node, opt ...ExecOption) (*
 		return nil, sql.ErrNoRows
 	}
 
-	v = v.Copy()
+	node = node.Copy()
 	insertedId, err := res.LastInsertId()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	v.Id = int32(insertedId)
+	node.Id = int32(insertedId)
 
-	v.ResetMark()
-	return v, nil
+	node.ResetMark()
+	return node, nil
+
 }
 
 func (d *Node) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2624,10 +2876,11 @@ func (d *Node) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
+
 }
 
-func (d *Node) Update(ctx context.Context, v *entity.Node, opt ...ExecOption) error {
-	if !v.IsChanged() {
+func (d *Node) Update(ctx context.Context, node *entity.Node, opt ...ExecOption) error {
+	if !node.IsChanged() {
 		return nil
 	}
 
@@ -2639,7 +2892,7 @@ func (d *Node) Update(ctx context.Context, v *entity.Node, opt ...ExecOption) er
 		conn = d.conn
 	}
 
-	changedColumn := v.ChangedColumn()
+	changedColumn := node.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
 	values := make([]interface{}, len(changedColumn)+1)
 	for i := range changedColumn {
@@ -2653,7 +2906,7 @@ func (d *Node) Update(ctx context.Context, v *entity.Node, opt ...ExecOption) er
 	res, err := conn.ExecContext(
 		ctx,
 		query,
-		append(values, v.Id)...,
+		append(values, node.Id)...,
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -2664,6 +2917,7 @@ func (d *Node) Update(ctx context.Context, v *entity.Node, opt ...ExecOption) er
 		return sql.ErrNoRows
 	}
 
-	v.ResetMark()
+	node.ResetMark()
 	return nil
+
 }
