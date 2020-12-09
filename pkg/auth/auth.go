@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -83,11 +82,11 @@ func InitInterceptor(conf *configv2.Config, user database.UserDatabase, token da
 	defaultAuthInterceptor.publicKey = conf.AccessProxy.Credential.SigningPublicKey
 }
 
-func Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
+func Authenticate(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
 	return defaultAuthenticator.Authenticate(ctx, req)
 }
 
-func AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
+func AuthenticateForSocket(ctx context.Context, token, host string) (*configv2.Backend, *database.User, error) {
 	return defaultAuthenticator.AuthenticateForSocket(ctx, token, host)
 }
 
@@ -99,112 +98,59 @@ func StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamS
 	return defaultAuthInterceptor.StreamInterceptor(srv, ss, info, handler)
 }
 
-func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*database.User, error) {
+func (a *authenticator) Authenticate(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
 	backend, ok := a.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
-		return nil, ErrHostnameNotFound
+		return nil, nil, ErrHostnameNotFound
 	}
 	if backend.DisableAuthn {
 		if len(backend.Permissions) == 0 {
-			return &database.User{}, nil
+			return &database.User{}, nil, nil
 		}
 
 		matched := backend.MatchList(req)
 		if len(matched) == 0 {
-			return nil, ErrNotAllowed
+			return nil, nil, ErrNotAllowed
 		}
-		return &database.User{}, nil
+		return &database.User{}, nil, nil
 	}
 
 	user, sess, err := a.findUser(ctx, req)
-	if backend.AllowRootUser && err == ErrUserNotFound {
-		u, err := a.findRootUser(req)
-		if err != nil {
-			return nil, err
+	if err == ErrUserNotFound {
+		u, s, rErr := a.findRootUser(req)
+		if rErr != nil {
+			return nil, nil, err
 		}
-		return u, nil
+		return u, s, nil
 	} else if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	checkPermission := false
-	matched := backend.MatchList(req)
-	if len(matched) == 0 {
-		return nil, ErrNotAllowed
-	}
-	for _, r := range user.Roles {
-		role, err := a.Config.AuthorizationEngine.GetRole(r)
-		if err == config.ErrRoleNotFound {
-			continue
-		}
-		if err != nil {
-			continue
-		}
-		for _, b := range role.Bindings {
-			if b.Backend == backend.Name {
-				if _, ok := matched[b.Permission]; ok {
-					checkPermission = true
-					break
-				}
-			}
-		}
-	}
-	if !checkPermission {
-		logger.Log.Debug("User not permitted", zap.String("user", user.Id), zap.Strings("roles", user.Roles))
-		return nil, ErrNotAllowed
-	}
-
-	if backend.MaxSessionDuration != nil {
-		if sess == nil {
-			return nil, ErrSessionNotFound
-		}
-
-		if time.Now().After(sess.IssuedAt.Add(backend.MaxSessionDuration.Duration)) {
-			logger.Log.Debug("User authenticated but session is expired", zap.Time("issued_at", sess.IssuedAt))
-			return nil, ErrSessionNotFound
-		}
-	}
-
-	return user, nil
+	return user, sess, nil
 }
 
-func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host string) (*database.User, error) {
+func (a *authenticator) AuthenticateForSocket(ctx context.Context, token, host string) (*configv2.Backend, *database.User, error) {
 	if token == "" {
-		return nil, ErrInvalidToken
+		return nil, nil, ErrInvalidToken
 	}
 	if host == "" {
-		return nil, ErrHostnameNotFound
+		return nil, nil, ErrHostnameNotFound
 	}
 	backend, ok := a.Config.AccessProxy.GetBackendByHostname(host)
 	if !ok {
-		return nil, ErrHostnameNotFound
+		return nil, nil, ErrHostnameNotFound
 	}
 
 	t, err := a.tokenDatabase.FindToken(ctx, token)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, nil, ErrInvalidToken
 	}
 	user, err := a.userDatabase.Get(t.UserId)
 	if err != nil {
-		return nil, ErrUserNotFound
+		return nil, nil, ErrUserNotFound
 	}
 
-	for _, r := range user.Roles {
-		role, err := a.Config.AuthorizationEngine.GetRole(r)
-		if err == config.ErrRoleNotFound {
-			continue
-		}
-		if err != nil {
-			continue
-		}
-		for _, b := range role.Bindings {
-			if b.Backend == backend.Name {
-				return user, nil
-			}
-		}
-	}
-
-	return nil, ErrNotAllowed
+	return backend, user, nil
 }
 
 func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
@@ -284,13 +230,13 @@ func (a *authenticator) findUser(ctx context.Context, req *http.Request) (*datab
 	return u, s, nil
 }
 
-func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) {
+func (a *authenticator) findRootUser(req *http.Request) (*database.User, *session.Session, error) {
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
-		return nil, ErrSessionNotFound
+		return nil, nil, ErrSessionNotFound
 	}
 
 	asRootUser := false
@@ -301,13 +247,13 @@ func (a *authenticator) findRootUser(req *http.Request) (*database.User, error) 
 		}
 	}
 	if !asRootUser {
-		return nil, ErrUserNotFound
+		return nil, nil, ErrUserNotFound
 	}
 
 	return &database.User{
 		Id:       s.Id,
 		RootUser: true,
-	}, nil
+	}, s, nil
 }
 
 func (a *authInterceptor) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

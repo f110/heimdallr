@@ -20,6 +20,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -226,7 +227,7 @@ func (st *Stream) handshake() error {
 }
 
 func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
-	user, err := auth.AuthenticateForSocket(ctx, st.token, st.host)
+	backend, user, err := auth.AuthenticateForSocket(ctx, st.token, st.host)
 	switch err {
 	case auth.ErrNotAllowed, auth.ErrUserNotFound, auth.ErrHostnameNotFound:
 		st.sendMessage(SocketErrorNotAccessible)
@@ -241,12 +242,16 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 		logger.Log.Error("Unhandled error", zap.Error(err))
 		return xerrors.Errorf(": %v", err)
 	}
-	st.user = user
 
-	// AuthenticateForSocket is already check the host parameter inside AuthenticateForSocket.
-	// Thus skip error check here.
-	b, _ := st.parent.Config.AccessProxy.GetBackendByHostname(st.host)
-	st.backend = b
+	err = authz.AuthorizationSocket(ctx, backend, user)
+	switch err {
+	case authz.ErrNotAllowed:
+		st.sendMessage(SocketErrorNotAccessible)
+		return err
+	}
+
+	st.user = user
+	st.backend = backend
 
 	return nil
 }

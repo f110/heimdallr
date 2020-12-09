@@ -10,7 +10,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/auth",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
@@ -45,6 +44,8 @@ go_test(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/metadata",
     ],

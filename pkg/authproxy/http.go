@@ -18,6 +18,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -191,21 +192,13 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		}
 	}
 
-	user, err := auth.Authenticate(ctx, req)
+	user, sess, err := auth.Authenticate(ctx, req)
 	defer p.accessLog(ctx, w, req, user)
 
 	switch err {
 	case auth.ErrSessionNotFound:
 		logger.Log.Info("Session not found", logger.WithRequestId(ctx))
-		u := &url.URL{}
-		*u = *req.URL
-		u.Scheme = "https"
-		u.Host = req.Host
-		redirectUrl, _ := url.Parse(p.Config.AccessProxy.AuthEndpoint)
-		v := &url.Values{}
-		v.Set("from", u.String())
-		redirectUrl.RawQuery = v.Encode()
-		http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
+		p.redirectToIdP(w, req)
 		return
 	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
 		logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
@@ -222,6 +215,21 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		return
 	}
 
+	err = authz.Authorization(ctx, req, user, sess)
+	switch err {
+	case authz.ErrSessionNotFound:
+		logger.Log.Info("Session not found", logger.WithRequestId(ctx))
+		p.redirectToIdP(w, req)
+		return
+	case authz.ErrNotAllowed:
+		logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	case authz.ErrHostnameNotFound:
+		logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
+		panic(http.ErrAbortHandler)
+	}
+
 	if err := p.setHeader(req, user); err != nil {
 		logger.Log.Warn("Failed to set headers to request of backend", zap.Error(err), logger.WithRequestId(ctx))
 		return
@@ -234,6 +242,18 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 			w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.AccessProxy.HTTP.ServerName+"/ct/report\"")
 		}
 	}
+}
+
+func (p *HttpProxy) redirectToIdP(w http.ResponseWriter, req *http.Request) {
+	u := &url.URL{}
+	*u = *req.URL
+	u.Scheme = "https"
+	u.Host = req.Host
+	redirectUrl, _ := url.Parse(p.Config.AccessProxy.AuthEndpoint)
+	v := &url.Values{}
+	v.Set("from", u.String())
+	redirectUrl.RawQuery = v.Encode()
+	http.Redirect(w, req, redirectUrl.String(), http.StatusSeeOther)
 }
 
 func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWriter, req *http.Request) {

@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth",
+        "//pkg/auth/authz",
         "//pkg/config/configv2",
         "//pkg/connector",
         "//pkg/database",
@@ -38,6 +39,7 @@ go_test(
     embed = [":authproxy"],
     deps = [
         "//pkg/auth",
+        "//pkg/auth/authz",
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/database",

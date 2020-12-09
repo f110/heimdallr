@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "authz",
+    srcs = ["authorization.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/auth/authz",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/config",
+        "//pkg/config/configv2",
+        "//pkg/database",
+        "//pkg/logger",
+        "//pkg/session",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)
+
+go_test(
+    name = "authz_test",
+    srcs = [
+        "authorization_test.go",
+        "util_test.go",
+    ],
+    embed = [":authz"],
+    deps = [
+        "//pkg/cert",
+        "//pkg/config/configv2",
+        "//pkg/database",
+        "//pkg/logger",
+        "//pkg/session",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
+)

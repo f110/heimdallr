@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -108,6 +109,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	auth.Init(conf, s, u, nil, nil)
+	authz.Init(conf)
 	if err := logger.Init(conf.Logger); err != nil {
 		t.Fatal(err)
 	}
