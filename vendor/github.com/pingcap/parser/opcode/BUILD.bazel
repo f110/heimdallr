@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "opcode",
+    srcs = ["opcode.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/parser/opcode",
+    importpath = "github.com/pingcap/parser/opcode",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/pingcap/parser/format"],
+)

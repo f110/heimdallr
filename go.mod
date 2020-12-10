@@ -36,11 +36,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200518175753-732df43cf85b
-	go.f110.dev/protoc-ddl v0.0.0-20200823082125-88eabc7ca14c
+	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.opencensus.io v0.22.4 // indirect
 	go.uber.org/zap v1.14.1
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200821140526-fda516888d29 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect

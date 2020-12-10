@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "errors",
+    srcs = [
+        "errors.go",
+        "group.go",
+        "juju_adaptor.go",
+        "stack.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/errors",
+    importpath = "github.com/pingcap/errors",
+    visibility = ["//visibility:public"],
+)

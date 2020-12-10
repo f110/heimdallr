@@ -120,7 +120,7 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.User, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, identity, login_name, admin, type, `comment`, created_at, updated_at from user where identity = ?",
+		"SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `created_at`, `updated_at` FROM `user` WHERE `identity` = ?",
 		identity,
 	)
 	v := &entity.User{}
@@ -135,7 +135,7 @@ func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.Use
 
 func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, opt ...ListOption) ([]*entity.User, error) {
 	listOpts := newListOpt(opt...)
-	query := "select identity from user where login_name = ?"
+	query := "SELECT `identity` FROM `user` WHERE `login_name` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -168,7 +168,7 @@ func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, op
 
 func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, identity, login_name, admin, type, `comment`, created_at, updated_at from user"
+	query := "SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `created_at`, `updated_at` FROM `user`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -356,7 +356,7 @@ func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, er
 func (d *UserState) SelectState(ctx context.Context, state string) (*entity.UserState, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, state, `unique`, created_at, updated_at from user_state where state = ?",
+		"SELECT `id`, `state`, `unique`, `created_at`, `updated_at` FROM `user_state` WHERE `state` = ?",
 		state,
 	)
 	v := &entity.UserState{}
@@ -859,7 +859,7 @@ func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding
 
 func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.RoleBinding, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, user_id, role, maintainer, created_at, updated_at from role_binding where user_id = ?"
+	query := "SELECT `id`, `user_id`, `role`, `maintainer`, `created_at`, `updated_at` FROM `role_binding` WHERE `user_id` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -904,7 +904,7 @@ func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOpt
 
 func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RoleBinding, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, user_id, role, maintainer, created_at, updated_at from role_binding"
+	query := "SELECT `id`, `user_id`, `role`, `maintainer`, `created_at`, `updated_at` FROM `role_binding`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -949,7 +949,7 @@ func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity
 func (d *RoleBinding) SelectUserRole(ctx context.Context, userId int32, role string) (*entity.RoleBinding, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, user_id, role, maintainer, created_at, updated_at from role_binding where user_id = ? and role = ?",
+		"SELECT `id`, `user_id`, `role`, `maintainer`, `created_at`, `updated_at` FROM `role_binding` WHERE `user_id` = ? AND `role` = ?",
 		userId,
 		role,
 	)
@@ -1148,7 +1148,7 @@ func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken
 func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*entity.AccessToken, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, name, value, user_id, issuer_id, created_at, updated_at from access_token where value = ?",
+		"SELECT `id`, `name`, `value`, `user_id`, `issuer_id`, `created_at`, `updated_at` FROM `access_token` WHERE `value` = ?",
 		value,
 	)
 	v := &entity.AccessToken{}
@@ -1178,7 +1178,7 @@ func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*ent
 
 func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.AccessToken, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, name, value, user_id, issuer_id, created_at, updated_at from access_token where user_id = ?"
+	query := "SELECT `id`, `name`, `value`, `user_id`, `issuer_id`, `created_at`, `updated_at` FROM `access_token` WHERE `user_id` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -1397,7 +1397,7 @@ func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
 
 func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, token, user_id, issued_at from token"
+	query := "SELECT `id`, `token`, `user_id`, `issued_at` FROM `token`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -1441,7 +1441,7 @@ func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token
 
 func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) ([]*entity.Token, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, token, user_id, issued_at from token where token = ?"
+	query := "SELECT `id`, `token`, `user_id`, `issued_at` FROM `token` WHERE `token` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -1652,7 +1652,7 @@ func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
 func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, code, challenge, challenge_method, user_id, issued_at from code where code = ?",
+		"SELECT `id`, `code`, `challenge`, `challenge_method`, `user_id`, `issued_at` FROM `code` WHERE `code` = ?",
 		code,
 	)
 	v := &entity.Code{}
@@ -1675,7 +1675,7 @@ func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error
 
 func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, code, challenge, challenge_method, user_id, issued_at from code"
+	query := "SELECT `id`, `code`, `challenge`, `challenge_method`, `user_id`, `issued_at` FROM `code`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -1874,7 +1874,7 @@ func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
 
 func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([]*entity.Relay, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, name, addr, from_addr, connected_at, created_at, updated_at from relay where name = ?"
+	query := "SELECT `id`, `name`, `addr`, `from_addr`, `connected_at`, `created_at`, `updated_at` FROM `relay` WHERE `name` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -1908,7 +1908,7 @@ func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([
 func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*entity.Relay, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, name, addr, from_addr, connected_at, created_at, updated_at from relay where name = ? and addr = ?",
+		"SELECT `id`, `name`, `addr`, `from_addr`, `connected_at`, `created_at`, `updated_at` FROM `relay` WHERE `name` = ? AND `addr` = ?",
 		name,
 		addr,
 	)
@@ -1924,7 +1924,7 @@ func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*
 
 func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, name, addr, from_addr, connected_at, created_at, updated_at from relay"
+	query := "SELECT `id`, `name`, `addr`, `from_addr`, `connected_at`, `created_at`, `updated_at` FROM `relay`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2112,7 +2112,7 @@ func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumb
 func (d *SerialNumber) SelectSerialNumber(ctx context.Context, serialNumber []byte) (*entity.SerialNumber, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"select id, serial_number from serial_number where serial_number = ?",
+		"SELECT `id`, `serial_number` FROM `serial_number` WHERE `serial_number` = ?",
 		serialNumber,
 	)
 	v := &entity.SerialNumber{}
@@ -2292,7 +2292,7 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 
 func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, certificate, serial_number_id, p12, agent, `comment`, issued_at from signed_certificate where serial_number_id = ?"
+	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at` FROM `signed_certificate` WHERE `serial_number_id` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2337,7 +2337,7 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 
 func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, certificate, serial_number_id, p12, agent, `comment`, issued_at from signed_certificate"
+	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at` FROM `signed_certificate`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2535,7 +2535,7 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 
 func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, common_name, serial_number, agent, `comment`, revoked_at, issued_at, created_at, updated_at from revoked_certificate where serial_number = ?"
+	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`, `updated_at` FROM `revoked_certificate` WHERE `serial_number` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2568,7 +2568,7 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 
 func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, common_name, serial_number, agent, `comment`, revoked_at, issued_at, created_at, updated_at from revoked_certificate"
+	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`, `updated_at` FROM `revoked_certificate`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2756,7 +2756,7 @@ func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
 
 func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, hostname, created_at, updated_at from node"
+	query := "SELECT `id`, `hostname`, `created_at`, `updated_at` FROM `node`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2788,7 +2788,7 @@ func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, 
 
 func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOption) ([]*entity.Node, error) {
 	listOpts := newListOpt(opt...)
-	query := "select id, hostname, created_at, updated_at from node where hostname = ?"
+	query := "SELECT `id`, `hostname`, `created_at`, `updated_at` FROM `node` WHERE `hostname` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {

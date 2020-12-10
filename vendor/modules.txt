@@ -68,8 +68,6 @@ github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-github.com/golang/glog
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.4.2
@@ -215,6 +213,22 @@ github.com/mitchellh/go-homedir
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
+# github.com/pingcap/errors v0.11.4
+github.com/pingcap/errors
+# github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9
+github.com/pingcap/log
+# github.com/pingcap/parser v0.0.0-20200623164729-3a18f1e5dceb
+github.com/pingcap/parser
+github.com/pingcap/parser/ast
+github.com/pingcap/parser/auth
+github.com/pingcap/parser/charset
+github.com/pingcap/parser/format
+github.com/pingcap/parser/model
+github.com/pingcap/parser/mysql
+github.com/pingcap/parser/opcode
+github.com/pingcap/parser/terror
+github.com/pingcap/parser/test_driver
+github.com/pingcap/parser/types
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -360,7 +374,7 @@ go.etcd.io/etcd/v3/raft/tracker
 go.etcd.io/etcd/v3/version
 go.etcd.io/etcd/v3/wal
 go.etcd.io/etcd/v3/wal/walpb
-# go.f110.dev/protoc-ddl v0.0.0-20200823082125-88eabc7ca14c
+# go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 ## explicit
 go.f110.dev/protoc-ddl
 go.f110.dev/protoc-ddl/internal/generator
@@ -440,11 +454,23 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20200821140526-fda516888d29
+## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.3
+golang.org/x/text/encoding
+golang.org/x/text/encoding/charmap
+golang.org/x/text/encoding/internal
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/encoding/japanese
+golang.org/x/text/encoding/korean
+golang.org/x/text/encoding/simplifiedchinese
+golang.org/x/text/encoding/traditionalchinese
+golang.org/x/text/encoding/unicode
+golang.org/x/text/internal/utf8internal
+golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
@@ -591,6 +617,8 @@ google.golang.org/protobuf/types/pluginpb
 gopkg.in/inf.v0
 # gopkg.in/ini.v1 v1.52.0
 gopkg.in/ini.v1
+# gopkg.in/natefinch/lumberjack.v2 v2.0.0
+gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/square/go-jose.v2 v2.3.1
 ## explicit
 gopkg.in/square/go-jose.v2
@@ -941,16 +969,4 @@ sigs.k8s.io/yaml
 ## explicit
 software.sslmate.com/src/go-pkcs12
 software.sslmate.com/src/go-pkcs12/internal/rc2
-# vitess.io/vitess v0.0.0-20200822151057-19437510f65b
-vitess.io/vitess/go/bytes2
-vitess.io/vitess/go/hack
-vitess.io/vitess/go/sqltypes
-vitess.io/vitess/go/vt/log
-vitess.io/vitess/go/vt/proto/query
-vitess.io/vitess/go/vt/proto/topodata
-vitess.io/vitess/go/vt/proto/vtrpc
-vitess.io/vitess/go/vt/proto/vttime
-vitess.io/vitess/go/vt/sqlparser
-vitess.io/vitess/go/vt/vterrors
-vitess.io/vitess/go/vt/vtgate/evalengine
 # k8s.io/client-go => k8s.io/client-go v0.19.0

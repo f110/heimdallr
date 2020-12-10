@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "charset",
+    srcs = [
+        "charset.go",
+        "encoding_table.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/parser/charset",
+    importpath = "github.com/pingcap/parser/charset",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/pingcap/errors",
+        "//vendor/github.com/pingcap/parser/mysql",
+        "//vendor/github.com/pingcap/parser/terror",
+        "//vendor/golang.org/x/text/encoding",
+        "//vendor/golang.org/x/text/encoding/charmap",
+        "//vendor/golang.org/x/text/encoding/japanese",
+        "//vendor/golang.org/x/text/encoding/korean",
+        "//vendor/golang.org/x/text/encoding/simplifiedchinese",
+        "//vendor/golang.org/x/text/encoding/traditionalchinese",
+        "//vendor/golang.org/x/text/encoding/unicode",
+    ],
+)
