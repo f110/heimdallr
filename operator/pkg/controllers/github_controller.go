@@ -23,6 +23,7 @@ import (
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
 )
@@ -32,7 +33,7 @@ const (
 )
 
 type GitHubController struct {
-	*Controller
+	*controllerbase.Controller
 
 	proxyLister         proxyListers.ProxyLister
 	proxyListerSynced   cache.InformerSynced
@@ -72,7 +73,7 @@ func NewGitHubController(
 		transport:           transport,
 	}
 
-	c.Controller = NewController(c, coreClient)
+	c.Controller = controllerbase.NewController(c, coreClient)
 	return c, nil
 }
 
@@ -98,7 +99,7 @@ func (c *GitHubController) EventSources() []cache.SharedIndexInformer {
 	}
 }
 
-func (c *GitHubController) ConvertToKeys() ObjectToKeyConverter {
+func (c *GitHubController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
 		case *proxyv1alpha1.Backend:
@@ -215,7 +216,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			}
 
 			updatedB := backend.DeepCopy()
-			RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
+			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
 				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 				return err
@@ -258,7 +259,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		updatedB := backend.DeepCopy()
 		updatedB.Status.WebhookConfigurations = webhookConfigurations
 		if len(updatedB.Status.WebhookConfigurations) == 0 {
-			RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
+			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
 			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})

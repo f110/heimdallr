@@ -35,6 +35,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	etcdListers "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
 	mListers "go.f110.dev/heimdallr/operator/pkg/listers/monitoring/v1"
@@ -49,7 +50,7 @@ var (
 var certManagerGroupVersionOrder = []string{"v1", "v1beta1", "v1alpha3", "v1alpha2"}
 
 type ProxyController struct {
-	*Controller
+	*controllerbase.Controller
 
 	client                 kubernetes.Interface
 	serviceLister          listers.ServiceLister
@@ -135,7 +136,7 @@ func NewProxyController(
 		coreSharedInformer:     coreSharedInformerFactory,
 		certManagerVersion:     certManagerGroupVersionOrder[len(certManagerGroupVersionOrder)-1],
 	}
-	c.Controller = NewController(c, client)
+	c.Controller = controllerbase.NewController(c, client)
 
 	groups, apiList, err := client.Discovery().ServerGroupsAndResources()
 	if err != nil {
@@ -192,7 +193,7 @@ func (c *ProxyController) EventSources() []cache.SharedIndexInformer {
 	}
 }
 
-func (c *ProxyController) ConvertToKeys() ObjectToKeyConverter {
+func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
 		case *proxyv1alpha1.Proxy:
@@ -439,7 +440,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	if !rpcReady {
-		return xerrors.Errorf(": %w", WrapRetryError(ErrRPCServerIsNotReady))
+		return xerrors.Errorf(": %w", controllerbase.WrapRetryError(ErrRPCServerIsNotReady))
 	}
 
 	if err := c.reconcileProxyProcess(ctx, lp); err != nil {
@@ -550,14 +551,14 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 				return xerrors.Errorf(": %w", err)
 			}
 
-			return WrapRetryError(ErrEtcdClusterIsNotReady)
+			return controllerbase.WrapRetryError(ErrEtcdClusterIsNotReady)
 		}
 
 		return xerrors.Errorf(": %w", err)
 	}
 
 	if !cluster.Status.Ready {
-		return WrapRetryError(ErrEtcdClusterIsNotReady)
+		return controllerbase.WrapRetryError(ErrEtcdClusterIsNotReady)
 	}
 
 	var podMonitor *monitoringv1.PodMonitor

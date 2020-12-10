@@ -36,6 +36,7 @@ import (
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -660,7 +661,7 @@ func (r *HeimdallrProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 
 func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
-		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
@@ -788,7 +789,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 
 func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
-		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
@@ -928,7 +929,7 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 
 func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	if r.Datastore == nil {
-		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
 
 	conf, err := r.ConfigForMain()
@@ -1355,7 +1356,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 
 func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	if r.Datastore == nil {
-		return nil, WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
 	}
 
 	conf, err := r.ConfigForRPCServer()

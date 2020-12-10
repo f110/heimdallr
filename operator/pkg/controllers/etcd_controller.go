@@ -40,6 +40,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	etcdlisters "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -50,7 +51,7 @@ const (
 )
 
 type EtcdController struct {
-	*Controller
+	*controllerbase.Controller
 
 	config            *rest.Config
 	coreClient        kubernetes.Interface
@@ -116,7 +117,7 @@ func NewEtcdController(
 		etcdClientMockOpt:   mockOpt,
 	}
 
-	c.Controller = NewController(c, coreClient)
+	c.Controller = controllerbase.NewController(c, coreClient)
 	return c, nil
 }
 
@@ -145,7 +146,7 @@ func (ec *EtcdController) EventSources() []cache.SharedIndexInformer {
 	}
 }
 
-func (ec *EtcdController) ConvertToKeys() ObjectToKeyConverter {
+func (ec *EtcdController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
 		case *etcdv1alpha1.EtcdCluster:

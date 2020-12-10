@@ -20,6 +20,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
 )
@@ -30,7 +31,7 @@ const (
 )
 
 type IngressController struct {
-	*Controller
+	*controllerbase.Controller
 
 	ingressInformer          cache.SharedIndexInformer
 	ingressLister            networkinglisters.IngressLister
@@ -72,7 +73,7 @@ func NewIngressController(
 		client:                   client,
 	}
 
-	ic.Controller = NewController(ic, coreClient)
+	ic.Controller = controllerbase.NewController(ic, coreClient)
 	return ic
 }
 
@@ -99,7 +100,7 @@ func (ic *IngressController) EventSources() []cache.SharedIndexInformer {
 	}
 }
 
-func (ic *IngressController) ConvertToKeys() ObjectToKeyConverter {
+func (ic *IngressController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
 		case *networkingv1.Ingress:
@@ -229,7 +230,7 @@ func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) erro
 		}
 
 		updatedI := ig.DeepCopy()
-		RemoveFinalizer(&updatedI.ObjectMeta, ingressControllerFinalizerName)
+		controllerbase.RemoveFinalizer(&updatedI.ObjectMeta, ingressControllerFinalizerName)
 		if !reflect.DeepEqual(updatedI.Finalizers, ig.Finalizers) {
 			_, err = ic.coreClient.NetworkingV1().Ingresses(updatedI.Namespace).Update(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
