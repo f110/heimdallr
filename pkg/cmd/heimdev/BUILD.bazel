@@ -9,7 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heimdev",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/auth",
+        "//pkg/auth/authn",
         "//pkg/authproxy",
         "//pkg/k8s",
         "//pkg/k8s/kind",

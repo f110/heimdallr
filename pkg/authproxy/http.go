@@ -18,6 +18,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
@@ -355,7 +356,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 	req.Header.Set("X-Forwarded-Proto", "https")
 
 	if user.Id != "" {
-		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &auth.TokenClaims{
+		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
 			StandardClaims: jwt.StandardClaims{
 				Id:        user.Id,
 				IssuedAt:  time.Now().Unix(),

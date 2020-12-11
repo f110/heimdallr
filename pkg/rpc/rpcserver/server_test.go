@@ -188,7 +188,7 @@ func TestServicesViaServer(t *testing.T) {
 	token := memory.NewTokenDatabase()
 	cluster := memory.NewClusterDatabase()
 	relay := memory.NewRelayLocator()
-	auth.InitInterceptor(conf, u, token)
+	auth.Init(conf, nil, u, token, nil)
 
 	testUser := &database.User{
 		Id:    "test@example.com",

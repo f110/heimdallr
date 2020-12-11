@@ -1,57 +1,6 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
-    <inspection_tool class="GoUnhandledErrorResult" enabled="true" level="WARNING" enabled_by_default="true">
-      <functions>
-        <function importPath="fmt" name="Printf" />
-        <function importPath="fmt" name="Errorf" />
-        <function importPath="math/rand" name="Read" />
-        <function importPath="fmt" name="Println" />
-        <function importPath="fmt" name="Print" />
-        <function importPath="fmt" name="Fprintln" />
-        <function importPath="fmt" name="Fprintf" />
-        <function importPath="os" name="Remove" />
-        <function importPath="os" name="Setenv" />
-        <function importPath="os" name="Unsetenv" />
-        <function importPath="io" name="WriteString" />
-        <function importPath="os" name="RemoveAll" />
-      </functions>
-      <methods>
-        <method importPath="hash" receiver="Hash" name="Write" />
-        <method importPath="strings" receiver="*Builder" name="Write" />
-        <method importPath="strings" receiver="*Builder" name="WriteByte" />
-        <method importPath="bytes" receiver="*Buffer" name="WriteRune" />
-        <method importPath="bytes" receiver="*Buffer" name="Write" />
-        <method importPath="bytes" receiver="*Buffer" name="WriteString" />
-        <method importPath="strings" receiver="*Builder" name="WriteString" />
-        <method importPath="bytes" receiver="*Buffer" name="WriteByte" />
-        <method importPath="strings" receiver="*Builder" name="WriteRune" />
-        <method importPath="math/rand" receiver="*Rand" name="Read" />
-        <method importPath="os" receiver="*File" name="Close" />
-        <method importPath="github.com/f110/lagrangian-proxy/pkg/connector" receiver="*Frame" name="Write" />
-        <method importPath="github.com/f110/lagrangian-proxy/pkg/connector" receiver="*Frame" name="EncodeTo" />
-        <method importPath="io" receiver="Writer" name="Write" />
-        <method importPath="github.com/f110/lagrangian-proxy/pkg/connector" receiver="*ConnThroughRelay" name="Close" />
-        <method importPath="io" receiver="ReadCloser" name="Close" />
-        <method importPath="os" receiver="*File" name="WriteString" />
-        <method importPath="os" receiver="*File" name="Sync" />
-        <method importPath="crypto/tls" receiver="*Conn" name="Close" />
-        <method importPath="os" receiver="*File" name="Write" />
-        <method importPath="net" receiver="Listener" name="Close" />
-        <method importPath="net" receiver="Conn" name="Close" />
-        <method importPath="crypto/tls" receiver="*Conn" name="Write" />
-        <method importPath="net" receiver="Conn" name="Write" />
-        <method importPath="crypto/tls" receiver="*Conn" name="SetWriteDeadline" />
-        <method importPath="google.golang.org/grpc" receiver="*ClientConn" name="Close" />
-        <method importPath="net" receiver="Conn" name="SetWriteDeadline" />
-        <method importPath="net" receiver="Conn" name="SetReadDeadline" />
-        <method importPath="net/http" receiver="ResponseWriter" name="Write" />
-        <method importPath="bytes" receiver="*Buffer" name="WriteTo" />
-        <method importPath="crypto/tls" receiver="*Conn" name="SetReadDeadline" />
-        <method importPath="gopkg.in/yaml.v2" receiver="*Encoder" name="Close" />
-        <method importPath="github.com/fsnotify/fsnotify" receiver="*Watcher" name="Close" />
-      </methods>
-    </inspection_tool>
     <inspection_tool class="MsBuiltinInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MsOrderByInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="MysqlLoadDataPathInspection" enabled="false" level="WARNING" enabled_by_default="false" />

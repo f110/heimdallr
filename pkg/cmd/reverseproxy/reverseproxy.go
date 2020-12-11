@@ -483,7 +483,7 @@ func (m *mainProcess) Setup() error {
 		}
 	}
 
-	auth.InitInterceptor(m.config, m.userDatabase, m.tokenDatabase)
+	auth.Init(m.config, nil, m.userDatabase, m.tokenDatabase, nil)
 	return m.NextState(stateStartRPCServer)
 }
 

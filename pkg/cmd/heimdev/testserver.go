@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 )
 
@@ -60,7 +60,7 @@ func testServer(publicKeyFile string) error {
 			return
 		}
 
-		claim := &auth.TokenClaims{}
+		claim := &authn.TokenClaims{}
 		_, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (interface{}, error) {
 			if t.Method != jwt.SigningMethodES256 {
 				return nil, xerrors.New("heimctl: invalid signing method")

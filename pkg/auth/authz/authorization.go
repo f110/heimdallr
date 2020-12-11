@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -21,22 +22,22 @@ var (
 	ErrNotAllowed       = xerrors.New("authz: not allowed")
 )
 
-var defaultAuthorization = &authorization{}
+var DefaultAuthorization = &authorization{}
 
 type authorization struct {
 	Config *configv2.Config
 }
 
 func Init(conf *configv2.Config) {
-	defaultAuthorization.Config = conf
+	DefaultAuthorization.Config = conf
 }
 
 func Authorization(ctx context.Context, req *http.Request, user *database.User, sess *session.Session) error {
-	return defaultAuthorization.Authorization(ctx, req, user, sess)
+	return DefaultAuthorization.Authorization(ctx, req, user, sess)
 }
 
 func AuthorizationSocket(ctx context.Context, backend *configv2.Backend, user *database.User) error {
-	return defaultAuthorization.AuthorizationSocket(ctx, backend, user)
+	return DefaultAuthorization.AuthorizationSocket(ctx, backend, user)
 }
 
 func (a *authorization) Authorization(_ context.Context, req *http.Request, user *database.User, sess *session.Session) error {
@@ -119,4 +120,27 @@ func (a *authorization) AuthorizationSocket(_ context.Context, backend *configv2
 	}
 
 	return ErrNotAllowed
+}
+
+func (a *authorization) UnaryCall(info *grpc.UnaryServerInfo, user *database.User) error {
+	ok := false
+	for _, v := range user.Roles {
+		role, err := a.Config.AuthorizationEngine.GetRole(v)
+		if err != nil {
+			continue
+		}
+		if v := role.RPCMethodMatcher.Match(info.FullMethod); v {
+			ok = true
+			break
+		}
+	}
+	if !ok && user.RootUser {
+		ok = true
+	}
+	if !ok {
+		logger.Log.Info("User doesn't have privilege", zap.String("user_id", user.Id), zap.String("method", info.FullMethod))
+		return ErrNotAllowed
+	}
+
+	return nil
 }

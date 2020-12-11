@@ -1,36 +1,35 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "auth",
+    name = "authn",
     srcs = [
-        "access_token.go",
-        "auth.go",
+        "authentication.go",
+        "claim.go",
     ],
-    importpath = "go.f110.dev/heimdallr/pkg/auth",
+    importpath = "go.f110.dev/heimdallr/pkg/auth/authn",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/auth/authn",
-        "//pkg/auth/authz",
         "//pkg/config/configv2",
         "//pkg/database",
+        "//pkg/logger",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
+        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/codes",
-        "//vendor/google.golang.org/grpc/status",
+        "//vendor/google.golang.org/grpc/metadata",
     ],
 )
 
 go_test(
-    name = "auth_test",
+    name = "authn_test",
     srcs = [
-        "access_token_test.go",
-        "auth_test.go",
+        "authentication_test.go",
         "util_test.go",
     ],
-    embed = [":auth"],
+    embed = [":authn"],
     deps = [
         "//pkg/cert",
         "//pkg/config/configv2",
@@ -43,7 +42,6 @@ go_test(
         "//vendor/github.com/dgrijalva/jwt-go",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/stretchr/testify/require",
-        "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/metadata",
     ],
 )

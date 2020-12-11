@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth",
+        "//pkg/auth/authn",
         "//pkg/auth/authz",
         "//pkg/config/configv2",
         "//pkg/connector",

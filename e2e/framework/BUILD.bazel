@@ -11,7 +11,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/e2e/framework",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/auth",
+        "//pkg/auth/authn",
         "//pkg/authproxy",
         "//pkg/cert",
         "//pkg/config",

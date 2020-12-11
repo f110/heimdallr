@@ -13,6 +13,7 @@ go_library(
         "//pkg/session",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
+        "//vendor/google.golang.org/grpc",
     ],
 )
 

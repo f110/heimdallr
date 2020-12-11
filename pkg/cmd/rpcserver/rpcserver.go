@@ -163,7 +163,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 
 	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
 
-	auth.InitInterceptor(m.Config, m.userDatabase, m.tokenDatabase)
+	auth.Init(m.Config, nil, m.userDatabase, m.tokenDatabase, nil)
 	return stateStart, nil
 }
 

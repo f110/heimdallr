@@ -33,7 +33,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"sigs.k8s.io/yaml"
 
-	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
@@ -288,7 +288,7 @@ func (p *Proxy) syncUsers() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &auth.TokenClaims{
+	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
 		StandardClaims: jwt.StandardClaims{
 			Id:        "root@e2e.f110.dev",
 			IssuedAt:  time.Now().Unix(),
