@@ -36,7 +36,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -73,8 +72,8 @@ type Proxy struct {
 	caCert         *x509.Certificate
 	caPrivateKey   crypto.PrivateKey
 	signPrivateKey *ecdsa.PrivateKey
-	backends       []*config.Backend
-	roles          []*config.Role
+	backends       []*configv2.Backend
+	roles          []*configv2.Role
 	users          []*database.User
 
 	configBuf                []byte
@@ -221,11 +220,11 @@ func (p *Proxy) URL(subdomain string, pathAnd ...string) string {
 	}
 }
 
-func (p *Proxy) Backend(b *config.Backend) {
+func (p *Proxy) Backend(b *configv2.Backend) {
 	p.backends = append(p.backends, b)
 }
 
-func (p *Proxy) Role(r *config.Role) {
+func (p *Proxy) Role(r *configv2.Role) {
 	p.roles = append(p.roles, r)
 }
 
@@ -489,7 +488,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	rpcPermission := make([]*config.RpcPermission, 0)
+	rpcPermission := make([]*configv2.RPCPermission, 0)
 	b, err = yaml.Marshal(rpcPermission)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)

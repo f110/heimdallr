@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"go.f110.dev/heimdallr/e2e/framework"
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/session"
 )
@@ -21,8 +21,8 @@ func TestProxy(t *testing.T) {
 
 		s.Context("authorization flow", func(s *framework.Scenario) {
 			s.BeforeAll(func(m *framework.Matcher) {
-				f.Proxy.Backend(&config.Backend{Name: "test", Permissions: []*config.Permission{{Name: "all", Locations: []config.Location{{Any: "/"}}}}})
-				f.Proxy.Role(&config.Role{Name: "test", Bindings: []*config.Binding{{Backend: "test", Permission: "all"}}})
+				f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
 				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 			})
 
@@ -108,8 +108,8 @@ func TestProxy(t *testing.T) {
 		s.Context("access to the unknown backend", func(s *framework.Scenario) {
 			s.Context("by authenticated user", func(s *framework.Scenario) {
 				s.BeforeAll(func(m *framework.Matcher) {
-					f.Proxy.Backend(&config.Backend{Name: "test", Permissions: []*config.Permission{{Name: "all", Locations: []config.Location{{Any: "/"}}}}})
-					f.Proxy.Role(&config.Role{Name: "test", Bindings: []*config.Binding{{Backend: "test", Permission: "all"}}})
+					f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+					f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
 					f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 				})
 
@@ -131,9 +131,9 @@ func TestProxy(t *testing.T) {
 
 		s.Context("access to the backend", func(s *framework.Scenario) {
 			s.BeforeAll(func(m *framework.Matcher) {
-				f.Proxy.Backend(&config.Backend{Name: "test", Permissions: []*config.Permission{{Name: "all", Locations: []config.Location{{Any: "/"}}}}})
-				f.Proxy.Role(&config.Role{Name: "test", Bindings: []*config.Binding{{Backend: "test", Permission: "all"}}})
-				f.Proxy.Role(&config.Role{Name: "test2"})
+				f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
+				f.Proxy.Role(&configv2.Role{Name: "test2"})
 				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 				f.Proxy.User(&database.User{Id: "test2@f110.dev", Roles: []string{"test2"}})
 			})

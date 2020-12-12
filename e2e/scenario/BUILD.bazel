@@ -8,7 +8,7 @@ go_test(
     visibility = ["//visibility:public"],
     deps = [
         "//e2e/framework",
-        "//pkg/config",
+        "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/session",
     ],
