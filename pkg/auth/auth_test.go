@@ -398,7 +398,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 			Backends: []*configv2.Backend{
 				{
 					Name:   "test",
-					Socket: true,
+					Socket: &configv2.SocketBackend{},
 					Permissions: []*configv2.Permission{
 						{Name: "ok", Locations: []configv2.Location{{Get: "/ok"}}},
 						{Name: "ok_but_nobind", Locations: []configv2.Location{{Get: "/no_bind"}}},

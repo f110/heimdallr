@@ -92,7 +92,7 @@ func (s *MockServer) Start() error {
 	s.server = server
 	go server.ListenAndServe()
 
-	if *verbose {
+	if *e2eDebug {
 		log.Print("Start test server")
 	}
 	return nil
@@ -461,7 +461,7 @@ func (p *Proxy) Reload() error {
 		return nil
 	}
 
-	if *verbose {
+	if *e2eDebug {
 		log.Print("Start main process")
 	}
 	if p.running {
@@ -497,7 +497,7 @@ func (p *Proxy) Reload() error {
 	}
 
 	for _, v := range p.connectors {
-		if *verbose {
+		if *e2eDebug {
 			log.Print("Start connector")
 		}
 		if err := v.Start(p.rpcClient, fmt.Sprintf("127.0.0.1:%d", p.proxyPort), p.DomainHost); err != nil {

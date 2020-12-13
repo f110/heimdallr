@@ -941,9 +941,9 @@ func (b *Backend) inflate() error {
 		p.inflate()
 	}
 
+	selector := NewHTTPBackendSelector()
 	if len(b.HTTP) > 0 {
 		agent := false
-		selector := NewHTTPBackendSelector()
 		for _, v := range b.HTTP {
 			if v.Path[0] != '/' {
 				return xerrors.Errorf("Path must start with a slash: %s", b.Name)
@@ -982,9 +982,10 @@ func (b *Backend) inflate() error {
 				TLSClientConfig:       tlsConfig,
 			}
 		}
-		b.BackendSelector = selector
 		b.Agent = agent
 	}
+	b.BackendSelector = selector
+
 	if b.Socket != nil {
 		u, err := url.Parse(b.Socket.Upstream)
 		if err != nil {

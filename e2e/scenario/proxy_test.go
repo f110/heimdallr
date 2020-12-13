@@ -11,7 +11,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/session"
 )
 
-func TestProxy(t *testing.T) {
+func TestL7ReverseProxy(t *testing.T) {
 	f := framework.New(t)
 	defer f.Execute()
 

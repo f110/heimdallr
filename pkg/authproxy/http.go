@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -278,6 +279,7 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 		return
 	}
 	if !perm.Match(req) {
+		log.Print(perm)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

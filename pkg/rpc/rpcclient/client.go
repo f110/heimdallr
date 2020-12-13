@@ -300,8 +300,11 @@ func (c *Client) NewAgentCertByCSR(csr string, commonName string) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
+	if res.Certificate != nil {
+		return res.Certificate.Certificate, nil
+	}
 
-	return res.Certificate.Certificate, nil
+	return nil, nil
 }
 
 func (c *Client) NewServerCert(csr []byte) ([]byte, error) {

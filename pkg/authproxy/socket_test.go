@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -147,7 +146,6 @@ func TestSocketProxy_Accept(t *testing.T) {
 	_ = user.Set(nil, &database.User{Id: "test@example.com", Roles: []string{"test"}})
 	userToken, _ := token.SetUser("test@example.com")
 	auth.Init(v.Config, nil, user, token, nil)
-	authz.Init(v.Config)
 
 	t.Run("Handshake failure", func(t *testing.T) {
 		conn := newTLSConn(tls.ConnectionState{

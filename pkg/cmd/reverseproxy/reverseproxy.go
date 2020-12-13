@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
@@ -513,7 +512,6 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 	}
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.tokenDatabase, m.revokedCert)
-	authz.Init(m.config)
 	return m.NextState(stateRun)
 }
 

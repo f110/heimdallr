@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"go.f110.dev/heimdallr/pkg/auth"
-	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -49,20 +48,23 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	backends := []*configv2.Backend{
 		{
 			Name: "test",
+			HTTP: []*configv2.HTTPBackend{},
 			Permissions: []*configv2.Permission{
 				{Name: "all", Locations: []configv2.Location{{Get: "/"}}},
 			},
 		},
 		{
 			Name: "webhook",
+			HTTP: []*configv2.HTTPBackend{{Path: "/github"}},
 			Permissions: []*configv2.Permission{
 				{Name: "github", WebHook: "github", Locations: []configv2.Location{{Post: "/github"}}},
 			},
 		},
 		{
 			Name: "slack",
+			HTTP: []*configv2.HTTPBackend{{Path: "/command"}},
 			Permissions: []*configv2.Permission{
-				{Name: "github", WebHook: "github", Locations: []configv2.Location{{Post: "/command"}}},
+				{Name: "slack", WebHook: "slack", Locations: []configv2.Location{{Post: "/command"}}},
 			},
 		},
 		{
@@ -111,7 +113,6 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	auth.Init(conf, s, u, nil, nil)
-	authz.Init(conf)
 	if err := logger.Init(conf.Logger); err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +231,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		t.Parallel()
 
 		recoder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "http://webhook.example.com/github", nil)
+		req := httptest.NewRequest(http.MethodPost, "http://webhook.example.com/github", nil)
 		p.ServeGithubWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
@@ -244,7 +245,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		body := strings.NewReader("{}")
 		recoder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "https://webhook.example.com/github", body)
+		req := httptest.NewRequest(http.MethodPost, "https://webhook.example.com/github", body)
 		// req.TLS = newTLSConnectionState()
 		mac := hmac.New(sha1.New, conf.AccessProxy.Credential.GithubWebhookSecret)
 		mac.Write([]byte("{}"))
