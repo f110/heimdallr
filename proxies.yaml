@@ -1,61 +1,78 @@
 - name: test
-  upstream: http://localhost:4501
-  webhook: github
-  webhook_path: ["/webhook"]
+  http:
+    - path: /test1
+      default: true
+      upstream: http://localhost:4501
+    - path: /test2
+      upstream: http://localhost:4502
   permissions:
     - name: all
       locations:
         - any: /
+    - name: github
+      webhook: github
+      locations:
+        - post: /webhook
 - name: topsecret
-  upstream: http://localhost:4501
   max_session_duration: 1m
+  http:
+    - path: /
+      upstream: http://localhost:4501
   permissions:
     - name: all
       locations:
         - any: /
 - name: http
-  upstream: http://localhost:4501
   allow_http: true
+  http:
+    - path: /
+      upstream: http://localhost:4501
   permissions:
     - name: all
       locations:
         - any: /
 - name: content
-  upstream: http://localhost:4502
+  http:
+    - path: /
+      upstream: http://localhost:4502
   permissions:
     - name: all
       locations:
         - get: /
 - name: dashboard
-  upstream: http://localhost:4100
   allow_root_user: true
+  http:
+    - path: /
+      upstream: http://localhost:4100
   permissions:
     - name: all
       locations:
         - any: /
 - name: ssh
-  upstream: tcp://localhost:22
-  socket_timeout: 1m
-  permissions:
-    - name: all
-      locations:
-        - any: /
+  socket:
+    upstream: tcp://localhost:22
+    timeout: 1m
 - name: ssh-agent
-  agent: true
-  socket: true
+  socket:
+    agent: true
   permissions:
     - name: all
       locations:
         - any: /
 - name: agent
-  agent: true
+  http:
+    - path: /
+      agent: true
+    - path: /api
+      agent: true
   permissions:
     - name: all
       locations:
         - any: /
 - name: test-agent
-  upstream: http://localhost:4501
-  agent: true
+  http:
+    - path: /
+      agent: true
   permissions:
     - name: all
       locations:
@@ -63,17 +80,24 @@
 - name: short
   fqdn: short.f110.dev
   disable_authn: true
-  upstream: http://localhost:4501
+  http:
+    - path: /
+      upstream: http://localhost:4501
   permissions:
     - name: all
       locations:
         - any: /
 - name: webhook
-  agent: true
   webhook: github
-  upstream: http://127.0.0.1:5000
   webhook_path: ["/github"]
+  http:
+    - path: /
+      upstream: http://127.0.0.1:5000
   permissions:
     - name: all
       locations:
         - any: /
+    - name: github
+      webhook: github
+      locations:
+        - post: /github

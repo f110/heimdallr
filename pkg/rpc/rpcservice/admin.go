@@ -331,9 +331,22 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 			continue
 		}
 
+		var httpBackends []*rpc.HTTPBackend
+		if v.HTTP != nil {
+			for _, h := range v.HTTP {
+				httpBackends = append(httpBackends, &rpc.HTTPBackend{Path: h.Path, Agent: h.Agent})
+			}
+		}
+		var socketBackend *rpc.SocketBackend
+		if v.Socket != nil {
+			socketBackend = &rpc.SocketBackend{Agent: v.Socket.Agent}
+		}
+
 		res = append(res, &rpc.BackendItem{
-			Name: v.Name,
-			Fqdn: v.FQDN,
+			Name:          v.Name,
+			Fqdn:          v.FQDN,
+			HttpBackends:  httpBackends,
+			SocketBackend: socketBackend,
 		})
 	}
 

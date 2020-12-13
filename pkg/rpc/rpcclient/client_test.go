@@ -99,7 +99,7 @@ func TestNewWithClient(t *testing.T) {
 	if ca.NewClientCertCall != 3 {
 		t.Error("Expect call NewClientCert")
 	}
-	_ = c.NewAgentCertByCSR("", "'")
+	_, _ = c.NewAgentCertByCSR("", "'")
 	if ca.NewClientCertCall != 4 {
 		t.Error("Expect call NewClientCert")
 	}

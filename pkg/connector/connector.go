@@ -330,8 +330,10 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 		logger.Log.Info("Not agent host", zap.String("name", b.Name))
 		return
 	}
-	s.setUpstreamConn(b.Name, conn)
-	defer s.deleteUpstreamConn(b.Name)
+	name := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+
+	s.setUpstreamConn(name, conn)
+	defer s.deleteUpstreamConn(name)
 
 	stat.Value.NewAgent()
 	defer stat.Value.RemoveAgent()
@@ -340,7 +342,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 	defer cancelFunc()
 	go s.heartbeat(ctx, conn)
 
-	relay, err := NewRelay(s.client, b.Name, s, conn)
+	relay, err := NewRelay(s.client, name, s, conn)
 	if err != nil {
 		logger.Log.Warn("Can not start relay", zap.Error(err))
 		return
@@ -424,13 +426,9 @@ func (s *Server) Serve(conn net.Conn) error {
 }
 
 func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error) {
-	b, ok := s.Config.AccessProxy.GetBackend(name)
+	conn, ok := s.getUpstreamConn(name)
 	if !ok {
-		return nil, xerrors.New("connector: backend not found")
-	}
-	conn, ok := s.getUpstreamConn(b.Name)
-	if !ok {
-		c, err := s.dialUpstreamViaRelay(ctx, b)
+		c, err := s.dialUpstreamViaRelay(ctx, name)
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
@@ -469,8 +467,8 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 	}
 }
 
-func (s *Server) dialUpstreamViaRelay(ctx context.Context, b *configv2.Backend) (net.Conn, error) {
-	conn, err := s.Pool.GetConn(b.Name)
+func (s *Server) dialUpstreamViaRelay(ctx context.Context, name string) (net.Conn, error) {
+	conn, err := s.Pool.GetConn(name)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -512,15 +510,15 @@ func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Wri
 	}
 }
 
-func (s *Server) RoundTrip(backend *configv2.Backend, req *http.Request) (*http.Response, error) {
+func (s *Server) RoundTrip(httpBackend *configv2.HTTPBackend, req *http.Request) (*http.Response, error) {
 	s.mu.Lock()
-	rt, ok := s.roundTrippers[backend.Name]
+	rt, ok := s.roundTrippers[httpBackend.Name]
 	s.mu.Unlock()
 	if ok {
 		return rt.RoundTrip(req)
 	}
 
-	d := NewDialer(s, backend.Name)
+	d := NewDialer(s, httpBackend.Name)
 	rt = &http.Transport{
 		DialContext:           d.DialContext,
 		ForceAttemptHTTP2:     true,
@@ -532,7 +530,7 @@ func (s *Server) RoundTrip(backend *configv2.Backend, req *http.Request) (*http.
 	}
 
 	s.mu.Lock()
-	s.roundTrippers[backend.Name] = rt
+	s.roundTrippers[httpBackend.Name] = rt
 	s.mu.Unlock()
 
 	return rt.RoundTrip(req)

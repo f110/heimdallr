@@ -257,14 +257,14 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 }
 
 func (st *Stream) dialBackend(ctx context.Context) error {
-	logger.Log.Debug("dial backend", zap.String("addr", st.backend.Url.Host))
+	logger.Log.Debug("dial backend", zap.String("addr", st.backend.Socket.Url.Host))
 	var conn net.Conn
 	var err error
-	if st.backend.Agent {
+	if st.backend.Socket.Agent {
 		d := connector.NewDialer(st.parent.connector, st.backend.Name)
 		conn, err = d.DialContext(ctx, "", "")
 	} else {
-		conn, err = (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", st.backend.Url.Host)
+		conn, err = (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", st.backend.Socket.Url.Host)
 	}
 	if err != nil {
 		st.sendMessage(SocketErrorServerUnavailable)
@@ -288,12 +288,12 @@ func (st *Stream) pipe() error {
 	}()
 	go st.heartbeat()
 
-	if st.backend.SocketTimeout != nil {
+	if st.backend.Socket.Timeout != nil {
 		go func() {
 			select {
 			case <-st.closeCh:
 				break
-			case <-time.After(st.backend.SocketTimeout.Duration):
+			case <-time.After(st.backend.Socket.Timeout.Duration):
 				logger.Log.Info("Close a connection due to timeout", zap.String("host", st.host), zap.String("user", st.user.Id))
 				st.close()
 			}

@@ -21,6 +21,7 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/gorilla/securecookie",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
         "//vendor/github.com/stretchr/testify/assert",

@@ -17,14 +17,16 @@ import (
 )
 
 var (
-	format  *string
-	verbose *bool
+	format   *string
+	verbose  *bool
+	e2eDebug *bool
 )
 
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	format = flag.String("e2e.format", "", "Output format. (json, doc)")
 	verbose = flag.Bool("e2e.verbose", false, "Verbose output. include stdout and stderr of all child processes.")
+	e2eDebug = flag.Bool("e2e.debug", false, "Debug e2e framework")
 }
 
 type Framework struct {
@@ -157,6 +159,9 @@ type node struct {
 }
 
 func (n *node) execute(t *testing.T) {
+	if *e2eDebug {
+		log.Print(n.name)
+	}
 	if n.deferFunc != nil {
 		defer n.deferFunc()
 	}
@@ -408,12 +413,14 @@ type Matcher struct {
 	lastResponse *http.Response
 	lastHttpErr  error
 
+	mockServers map[string]*MockServer
+
 	failed   bool
 	messages []string
 }
 
 func NewMatcher(t *testing.T, route string) *Matcher {
-	return &Matcher{t: t, route: route}
+	return &Matcher{t: t, route: route, mockServers: make(map[string]*MockServer)}
 }
 
 func (m *Matcher) Must(err error) {
@@ -442,6 +449,10 @@ func (m *Matcher) LastResponse() *HttpResponse {
 	}
 
 	return &HttpResponse{Response: m.lastResponse}
+}
+
+func (m *Matcher) MockServer(name string) *MockServer {
+	return m.mockServers[name]
 }
 
 func (m *Matcher) ResetConnection() {
@@ -484,6 +495,10 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 
 func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
 	assert.Equal(m.t, expected, actual, msgAndArgs...)
+}
+
+func (m *Matcher) Len(object interface{}, len int, msgAndArgs ...interface{}) {
+	assert.Len(m.t, object, len, msgAndArgs...)
 }
 
 func (m *Matcher) True(value bool, msgAndArgs ...interface{}) {

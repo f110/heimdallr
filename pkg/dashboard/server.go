@@ -847,7 +847,12 @@ func (s *Server) handleNewAgent(w http.ResponseWriter, req *http.Request, _ http
 
 	names := make([]string, 0, len(backends))
 	for _, v := range backends {
-		names = append(names, v.Name)
+		for _, h := range v.HttpBackends {
+			names = append(names, v.Name+h.Path)
+		}
+		if v.SocketBackend != nil {
+			names = append(names, v.Name)
+		}
 	}
 
 	s.RenderTemplate(w, "agent/new.tmpl", struct {
@@ -866,7 +871,7 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		err := client.NewAgentCertByCSR(req.FormValue("csr"), req.FormValue("id"))
+		_, err := client.NewAgentCertByCSR(req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
 			logger.Log.Info("Failed sign a CSR", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)

@@ -59,21 +59,19 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister li
 			}
 		}
 		b := &configv2.Backend{
-			Name:             name,
-			FQDN:             v.Spec.FQDN,
-			Upstream:         upstream,
-			Permissions:      toConfigPermissions(v.Spec.Permissions),
-			WebHook:          v.Spec.Webhook,
-			WebHookPath:      v.Spec.WebhookPath,
-			Agent:            v.Spec.Agent,
-			Socket:           v.Spec.Socket,
-			AllowRootUser:    v.Spec.AllowRootUser,
-			DisableAuthn:     v.Spec.DisableAuthn,
-			InsecureUpstream: v.Spec.Insecure,
-			AllowHttp:        v.Spec.AllowHttp,
+			Name: name,
+			FQDN: v.Spec.FQDN,
+			HTTP: []*configv2.HTTPBackend{
+				{Path: "/", Upstream: upstream, Insecure: v.Spec.Insecure},
+			},
+			Permissions:   toConfigPermissions(v.Spec),
+			Agent:         v.Spec.Agent,
+			AllowRootUser: v.Spec.AllowRootUser,
+			DisableAuthn:  v.Spec.DisableAuthn,
+			AllowHttp:     v.Spec.AllowHttp,
 		}
 		if v.Spec.SocketTimeout != nil {
-			b.SocketTimeout = &configv2.Duration{Duration: v.Spec.SocketTimeout.Duration}
+			b.Socket.Timeout = &configv2.Duration{Duration: v.Spec.SocketTimeout.Duration}
 		}
 		if v.Spec.MaxSessionDuration != nil {
 			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.Duration}

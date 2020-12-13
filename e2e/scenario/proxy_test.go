@@ -25,6 +25,7 @@ func TestProxy(t *testing.T) {
 				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
 				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 			})
+			s.AfterAll(func(m *framework.Matcher) { f.Proxy.ClearConf() })
 
 			s.Step("request backend url", func(s *framework.Scenario) {
 				s.Subject(func(m *framework.Matcher) {
@@ -112,6 +113,7 @@ func TestProxy(t *testing.T) {
 					f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
 					f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 				})
+				s.AfterAll(func(m *framework.Matcher) { f.Proxy.ClearConf() })
 
 				s.It("should close connection", func(m *framework.Matcher) {
 					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("unknown"))
@@ -131,12 +133,19 @@ func TestProxy(t *testing.T) {
 
 		s.Context("access to the backend", func(s *framework.Scenario) {
 			s.BeforeAll(func(m *framework.Matcher) {
-				f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+				f.Proxy.Backend(&configv2.Backend{
+					Name: "test",
+					HTTP: []*configv2.HTTPBackend{{Path: "/"}},
+					Permissions: []*configv2.Permission{
+						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+					},
+				})
 				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
 				f.Proxy.Role(&configv2.Role{Name: "test2"})
 				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
 				f.Proxy.User(&database.User{Id: "test2@f110.dev", Roles: []string{"test2"}})
 			})
+			s.AfterAll(func(m *framework.Matcher) { f.Proxy.ClearConf() })
 
 			s.Context("by unauthenticated agent", func(s *framework.Scenario) {
 				s.Subject(func(m *framework.Matcher) {
@@ -170,6 +179,41 @@ func TestProxy(t *testing.T) {
 					s.It("should not proxy to the backend", func(m *framework.Matcher) {
 						m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
 					})
+				})
+			})
+		})
+
+		s.Context("access to the backend which via connector", func(s *framework.Scenario) {
+			var api1, api2 *framework.MockServer
+			s.BeforeAll(func(m *framework.Matcher) {
+				api1 = f.Proxy.MockServer(m, "api1")
+				api2 = f.Proxy.MockServer(m, "api2")
+				f.Proxy.Backend(&configv2.Backend{
+					Name: "test",
+					HTTP: []*configv2.HTTPBackend{
+						{Path: "/api1", Agent: true},
+						{Path: "/api2", Agent: true},
+					},
+					Permissions: []*configv2.Permission{
+						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+					},
+				})
+				f.Proxy.Connector("test/api1", api1)
+				f.Proxy.Connector("test/api2", api2)
+				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
+				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
+			})
+			s.AfterAll(func(m *framework.Matcher) { f.Proxy.ClearConf() })
+
+			s.Context("by authenticated user", func(s *framework.Scenario) {
+				s.Subject(func(m *framework.Matcher) {
+					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("test", "/api1"))
+				})
+
+				s.It("should proxy to backend", func(m *framework.Matcher) {
+					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
+					m.Len(api1.Requests(), 1)
+					m.Len(api2.Requests(), 0)
 				})
 			})
 		})

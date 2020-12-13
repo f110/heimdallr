@@ -54,14 +54,16 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
-			Name:        "webhook",
-			WebHook:     "github",
-			WebHookPath: []string{"/github"},
+			Name: "webhook",
+			Permissions: []*configv2.Permission{
+				{Name: "github", WebHook: "github", Locations: []configv2.Location{{Post: "/github"}}},
+			},
 		},
 		{
-			Name:        "slack",
-			WebHook:     "slack",
-			WebHookPath: []string{"/command"},
+			Name: "slack",
+			Permissions: []*configv2.Permission{
+				{Name: "github", WebHook: "github", Locations: []configv2.Location{{Post: "/command"}}},
+			},
 		},
 		{
 			Name:      "http",

@@ -44,7 +44,7 @@ func NewAgent(cert *x509.Certificate, privateKey crypto.PrivateKey, caCert []*x5
 	}
 }
 
-func (a *Agent) Connect(host string) error {
+func (a *Agent) Connect(host, serverName string) error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
@@ -59,6 +59,7 @@ func (a *Agent) Connect(host string) error {
 				PrivateKey:  a.privateKey,
 			},
 		},
+		ServerName: serverName,
 		RootCAs:    caPool,
 		NextProtos: []string{ProtocolName},
 	})
@@ -94,7 +95,7 @@ func (a *Agent) Serve() error {
 			dialId := binary.BigEndian.Uint32(buf[:4])
 			conn, err := net.Dial("tcp", a.backend)
 			if err != nil {
-				logger.Log.Debug("Failed dial backend", zap.Error(err))
+				logger.Log.Error("Failed dial backend", zap.Error(err), zap.String("addr", a.backend))
 				continue
 			}
 			streamId := atomic.AddUint32(&a.id, 1)

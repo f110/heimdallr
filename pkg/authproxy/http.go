@@ -12,14 +12,12 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/go-github/v32/github"
-	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/auth/authn"
-	"go.f110.dev/heimdallr/pkg/auth/authz"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -138,11 +136,18 @@ func NewTransport(conf *configv2.Config, ct *connector.Server) *Transport {
 
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	b, ok := t.config.AccessProxy.GetBackendByHost(req.Host)
-	if ok && b.Agent {
-		return t.connector.RoundTrip(b, req)
+	httpBackend := b.BackendSelector.Find(req.URL.Path)
+	req.URL.Path = strings.TrimPrefix(req.URL.Path, httpBackend.Path)
+	if len(req.URL.Path) == 0 {
+		req.URL.Path = "/"
+	} else if req.URL.Path[0] != '/' {
+		req.URL.Path = "/" + req.URL.Path
+	}
+	if ok && httpBackend.Agent {
+		return t.connector.RoundTrip(httpBackend, req)
 	}
 
-	return b.Transport.RoundTrip(req)
+	return httpBackend.Transport.RoundTrip(req)
 }
 
 type HttpProxy struct {
@@ -193,7 +198,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		}
 	}
 
-	user, sess, err := auth.Authenticate(ctx, req)
+	user, _, err := auth.Authenticate(ctx, req)
 	defer p.accessLog(ctx, w, req, user)
 
 	switch err {
@@ -209,26 +214,21 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
 		panic(http.ErrAbortHandler)
 	}
-
 	if user == nil {
 		logger.Log.Warn("Unhandled error", zap.Error(err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	err = authz.Authorization(ctx, req, user, sess)
-	switch err {
-	case authz.ErrSessionNotFound:
-		logger.Log.Info("Session not found", logger.WithRequestId(ctx))
-		p.redirectToIdP(w, req)
-		return
-	case authz.ErrNotAllowed:
-		logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	case authz.ErrHostnameNotFound:
-		logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
+	backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
+	if !ok {
+		logger.Log.Error("Unreachable")
 		panic(http.ErrAbortHandler)
+	}
+	httpBackend := backend.BackendSelector.Find(req.URL.Path)
+	if httpBackend == nil {
+		logger.Log.Info("Couldn't find a suitable backend", logger.WithRequestId(ctx))
+		w.WriteHeader(http.StatusBadGateway)
+		return
 	}
 
 	if err := p.setHeader(req, user); err != nil {
@@ -266,12 +266,18 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 	w = &loggedResponseWriter{ResponseWriter: w}
 	defer p.accessLog(ctx, w, req, &database.User{})
 
-	if backend.WebHook != "github" {
+	var perm *configv2.Permission
+	for _, v := range backend.Permissions {
+		if v.WebHook == "github" {
+			perm = v
+			break
+		}
+	}
+	if perm == nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	ok = backend.WebHookRouter.Match(req, &mux.RouteMatch{})
-	if !ok {
+	if !perm.Match(req) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -301,12 +307,18 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 	w = &loggedResponseWriter{ResponseWriter: w}
 	defer p.accessLog(ctx, w, req, &database.User{})
 
-	if backend.WebHook != "slack" {
+	var perm *configv2.Permission
+	for _, v := range backend.Permissions {
+		if v.WebHook == "slack" {
+			perm = v
+			break
+		}
+	}
+	if perm == nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	ok = backend.WebHookRouter.Match(req, &mux.RouteMatch{})
-	if !ok {
+	if !perm.Match(req) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -335,10 +347,19 @@ func (p *HttpProxy) ServeSlackWebHook(ctx context.Context, w http.ResponseWriter
 
 func (p *HttpProxy) director(req *http.Request) {
 	if backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host); ok {
-		q := backend.Url.RawQuery
-		req.URL.Host = backend.Url.Host
-		req.URL.Scheme = backend.Url.Scheme
-		req.URL.Path = joinPath(backend.Url.Path, req.URL.Path)
+		httpBackend := backend.BackendSelector.Find(req.URL.Path)
+		if httpBackend == nil {
+			return
+		}
+
+		q := httpBackend.Url.RawQuery
+		orig := url.URL{}
+		orig = *req.URL
+		req.URL.Host = httpBackend.Url.Host
+		req.URL.Scheme = httpBackend.Url.Scheme
+		if req.URL.Path[0] != '/' {
+			req.URL.Path = "/" + req.URL.Path
+		}
 		if q == "" || req.URL.RawQuery == "" {
 			req.URL.RawQuery = q + req.URL.RawQuery
 		} else {
@@ -347,7 +368,12 @@ func (p *HttpProxy) director(req *http.Request) {
 		if _, ok := req.Header["User-Agent"]; !ok {
 			req.Header.Set("User-Agent", "")
 		}
-		logger.Log.Debug("Backend is ", zap.String("url", req.URL.String()), zap.String("name", backend.Name))
+		logger.Log.Debug(
+			"Backend is ",
+			zap.String("name", backend.Name),
+			zap.String("before", orig.String()),
+			zap.String("after", req.URL.String()),
+		)
 	}
 }
 
@@ -429,17 +455,4 @@ func (p *HttpProxy) accessLog(ctx context.Context, w http.ResponseWriter, req *h
 		UserId:    id,
 	}
 	p.accessLogger.Log(l)
-}
-
-func joinPath(base, path string) string {
-	baseSuffixSlash := strings.HasSuffix(base, "/")
-	addingPrefixSlash := strings.HasPrefix(path, "/")
-	switch {
-	case baseSuffixSlash && addingPrefixSlash:
-		return base + path[1:]
-	case !baseSuffixSlash && !addingPrefixSlash:
-		return base + "/" + path
-	}
-
-	return base + path
 }

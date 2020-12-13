@@ -1630,9 +1630,9 @@ func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxy
 	return n
 }
 
-func toConfigPermissions(in []proxyv1alpha1.Permission) []*configv2.Permission {
-	permissions := make([]*configv2.Permission, 0, len(in))
-	for _, p := range in {
+func toConfigPermissions(in proxyv1alpha1.BackendSpec) []*configv2.Permission {
+	permissions := make([]*configv2.Permission, 0, len(in.Permissions))
+	for _, p := range in.Permissions {
 		locations := make([]configv2.Location, len(p.Locations))
 		for j, u := range p.Locations {
 			locations[j] = configv2.Location{
@@ -1651,6 +1651,18 @@ func toConfigPermissions(in []proxyv1alpha1.Permission) []*configv2.Permission {
 		permissions = append(permissions, &configv2.Permission{
 			Name:      p.Name,
 			Locations: locations,
+		})
+	}
+	if in.Webhook != "" {
+		loc := make([]configv2.Location, len(in.WebhookPath))
+		for i, v := range in.WebhookPath {
+			loc[i] = configv2.Location{
+				Any: v,
+			}
+		}
+		permissions = append(permissions, &configv2.Permission{
+			Name:      in.Webhook,
+			Locations: loc,
 		})
 	}
 

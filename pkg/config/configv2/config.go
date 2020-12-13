@@ -75,12 +75,12 @@ type AccessProxy struct {
 	RPCServer  string         `json:"rpc_server,omitempty"`
 	Credential *Credential    `json:"credential,omitempty"`
 
-	mu       sync.RWMutex `json:"-"`
-	Backends []*Backend   `json:"-"`
+	mu       sync.RWMutex
+	Backends []*Backend `json:"-"`
 
-	hostnameToBackend map[string]*Backend `json:"-"`
-	nameToBackend     map[string]*Backend `json:"-"`
-	watcher           *k8s.VolumeWatcher  `json:"-"`
+	hostnameToBackend map[string]*Backend
+	nameToBackend     map[string]*Backend
+	watcher           *k8s.VolumeWatcher
 
 	AuthEndpoint   string `json:"-"`
 	TokenEndpoint  string `json:"-"`
@@ -92,12 +92,12 @@ type AuthorizationEngine struct {
 	RPCPermissionFile string   `json:"rpc_permission_file,omitempty"`
 	RootUsers         []string `json:"root_users,omitempty"`
 
-	mu                  sync.RWMutex              `json:"-"`
-	Roles               []*Role                   `json:"-"`
-	RPCPermissions      []*RPCPermission          `json:"-"`
-	roleNameToRole      map[string]*Role          `json:"-"`
-	nameToRpcPermission map[string]*RPCPermission `json:"-"`
-	watcher             *k8s.VolumeWatcher        `json:"-"`
+	mu                  sync.RWMutex
+	Roles               []*Role          `json:"-"`
+	RPCPermissions      []*RPCPermission `json:"-"`
+	roleNameToRole      map[string]*Role
+	nameToRpcPermission map[string]*RPCPermission
+	watcher             *k8s.VolumeWatcher
 }
 
 type CertificateAuthority struct {
@@ -174,7 +174,7 @@ type DatastoreEtcd struct {
 	Certificate tls.Certificate `json:"-"`
 	CertPool    *x509.CertPool  `json:"-"`
 
-	etcdClient *clientv3.Client `json:"-"`
+	etcdClient *clientv3.Client
 }
 
 type DatastoreMySQL struct {
@@ -193,7 +193,7 @@ type Certificate struct {
 	KeyFile  string `json:"key_file"`
 
 	mu          sync.RWMutex
-	certificate *tls.Certificate `json:"-"`
+	certificate *tls.Certificate
 }
 
 type Role struct {
@@ -213,11 +213,10 @@ type Binding struct {
 }
 
 type Backend struct {
-	Name             string `json:"name"` // Name is an identifier
-	FQDN             string `json:"fqdn,omitempty"`
-	Upstream         string `json:"upstream"`
-	InsecureUpstream bool   `json:"insecure_upstream,omitempty"`
-	Agent            bool   `json:"agent,omitempty"`
+	Name  string         `json:"name"` // Name is an identifier
+	FQDN  string         `json:"fqdn,omitempty"`
+	HTTP  []*HTTPBackend `json:"http,omitempty"`
+	Agent bool           `json:"agent,omitempty"`
 
 	Permissions   []*Permission `json:"permissions"`
 	AllowRootUser bool          `json:"allow_root_user,omitempty"`
@@ -226,22 +225,38 @@ type Backend struct {
 	// When MaxSessionDuration is not empty, OIDC authentication is required even if the user submits a client certificate.
 	MaxSessionDuration *Duration `json:"max_session_duration,omitempty"`
 
-	WebHook       string    `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
-	WebHookPath   []string  `json:"webhook_path,omitempty"`
-	AllowHttp     bool      `json:"allow_http,omitempty"`
-	Socket        bool      `json:"socket,omitempty"`
-	SocketTimeout *Duration `json:"socket_timeout,omitempty"`
+	AllowHttp bool           `json:"allow_http,omitempty"`
+	Socket    *SocketBackend `json:"socket,omitempty"`
 
-	Url           *url.URL        `json:"-"`
-	WebHookRouter *mux.Router     `json:"-"`
-	Transport     *http.Transport `json:"-"`
+	BackendSelector *HTTPBackendSelector `json:"-"`
+}
+
+type HTTPBackend struct {
+	Path     string `json:"path"`
+	Default  bool   `json:"default,omitempty"`
+	Upstream string `json:"upstream,omitempty"`
+	Insecure bool   `json:"insecure,omitempty"`
+	Agent    bool   `json:"agent,omitempty"`
+
+	Name      string          `json:"-"`
+	Url       *url.URL        `json:"-"`
+	Transport *http.Transport `json:"-"`
+}
+
+type SocketBackend struct {
+	Upstream string    `json:"upstream,omitempty"`
+	Timeout  *Duration `json:"timeout,omitempty"`
+	Agent    bool      `json:"agent,omitempty"`
+
+	Url *url.URL `json:"-"`
 }
 
 type Permission struct {
-	Name      string     `json:"name"` // Name is an identifier
+	Name      string     `json:"name"`              // Name is an identifier
+	WebHook   string     `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
 	Locations []Location `json:"locations"`
 
-	router *mux.Router `json:"-"`
+	router *mux.Router
 }
 
 type RPCPermission struct {
@@ -417,6 +432,15 @@ func (p *Permission) inflate() {
 	p.router = r
 }
 
+func (p *Permission) Match(req *http.Request) bool {
+	match := &mux.RouteMatch{}
+	if p.router.Match(req, match) {
+		return true
+	}
+
+	return false
+}
+
 func (g *AccessProxy) GetBackendByHostname(hostname string) (*Backend, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -444,6 +468,10 @@ func (g *AccessProxy) GetBackend(name string) (*Backend, bool) {
 }
 
 func (g *AccessProxy) getBackend(name string) (*Backend, bool) {
+	if strings.Contains(name, "/") {
+		s := strings.Split(name, "/")
+		name = s[0]
+	}
 	v, ok := g.nameToBackend[name]
 	return v, ok
 }
@@ -912,42 +940,60 @@ func (b *Backend) inflate() error {
 	for _, p := range b.Permissions {
 		p.inflate()
 	}
-	u, err := url.Parse(b.Upstream)
-	if err != nil {
-		return xerrors.Errorf("%s: %v", b.Name, err)
-	}
-	b.Url = u
 
-	if b.Agent && b.Upstream == "" {
-		b.Url = &url.URL{Scheme: "http", Host: "via-agent"}
-	}
+	if len(b.HTTP) > 0 {
+		agent := false
+		selector := NewHTTPBackendSelector()
+		for _, v := range b.HTTP {
+			if v.Path[0] != '/' {
+				return xerrors.Errorf("Path must start with a slash: %s", b.Name)
+			}
 
-	if u.Scheme == "tcp" {
-		b.Socket = true
-	}
+			selector.Add(v)
 
-	if len(b.WebHookPath) > 0 {
-		m := mux.NewRouter()
-		for _, v := range b.WebHookPath {
-			m.PathPrefix(v)
+			if v.Agent {
+				agent = true
+			}
+			v.Name = b.Name + v.Path
+
+			upstream := v.Upstream
+			if upstream == "" {
+				upstream = "http://:0"
+			}
+			u, err := url.Parse(upstream)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			v.Url = u
+
+			var tlsConfig *tls.Config
+			if v.Insecure {
+				tlsConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+			}
+			v.Transport = &http.Transport{
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				MaxConnsPerHost:       16,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig:       tlsConfig,
+			}
 		}
-		b.WebHookRouter = m
+		b.BackendSelector = selector
+		b.Agent = agent
 	}
-
-	var tlsConfig *tls.Config
-	if b.InsecureUpstream {
-		tlsConfig = &tls.Config{
-			InsecureSkipVerify: true,
+	if b.Socket != nil {
+		u, err := url.Parse(b.Socket.Upstream)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
 		}
-	}
-	b.Transport = &http.Transport{
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		MaxConnsPerHost:       16,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       tlsConfig,
+		b.Socket.Url = u
+		if b.Socket.Agent {
+			b.Agent = true
+		}
 	}
 
 	return nil

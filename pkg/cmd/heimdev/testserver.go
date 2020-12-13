@@ -21,17 +21,17 @@ import (
 	"go.f110.dev/heimdallr/pkg/authproxy"
 )
 
-func testServer(publicKeyFile string) error {
+func testServer(port int, publicKeyFile string) error {
 	fBuf, err := ioutil.ReadFile(publicKeyFile)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	block, rest := pem.Decode(fBuf)
 	if len(rest) != 0 {
-		return xerrors.New("heimctl: invalid pem file")
+		return xerrors.New("heimdev: invalid pem file")
 	}
 	if block.Type != "PUBLIC KEY" {
-		return xerrors.Errorf("heimctl: PEM file type is not PUBLIC KEY: %s", block.Type)
+		return xerrors.Errorf("heimdev: PEM file type is not PUBLIC KEY: %s", block.Type)
 	}
 
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
@@ -63,7 +63,7 @@ func testServer(publicKeyFile string) error {
 		claim := &authn.TokenClaims{}
 		_, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (interface{}, error) {
 			if t.Method != jwt.SigningMethodES256 {
-				return nil, xerrors.New("heimctl: invalid signing method")
+				return nil, xerrors.New("heimdev: invalid signing method")
 			}
 			return publicKey, nil
 		})
@@ -146,22 +146,24 @@ window.onload = function () {
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(5 * time.Millisecond)
-		io.WriteString(w, "It's working!")
+		fmt.Fprint(w, "It's working!")
 	})
-	fmt.Println("Listen :4501")
-	return http.ListenAndServe(":4501", nil)
+	fmt.Printf("Listen :%d\n", port)
+	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 func TestServer(rootCmd *cobra.Command) {
+	port := 4501
 	publicKeyFile := ""
 
 	testServerCmd := &cobra.Command{
 		Use:   "testserver",
 		Short: "Start a http server for testing",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return testServer(publicKeyFile)
+			return testServer(port, publicKeyFile)
 		},
 	}
+	testServerCmd.Flags().IntVar(&port, "port", 4501, "Listen port")
 	testServerCmd.Flags().StringVar(&publicKeyFile, "public-key", publicKeyFile, "public key file")
 
 	rootCmd.AddCommand(testServerCmd)

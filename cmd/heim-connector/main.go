@@ -131,6 +131,7 @@ func agent(args []string) error {
 	name := ""
 	caCertPath := ""
 	host := "127.0.0.1:443"
+	serverName := ""
 	debug := false
 	v := false
 	fs := pflag.NewFlagSet("heim-connector", pflag.ExitOnError)
@@ -140,6 +141,7 @@ func agent(args []string) error {
 	fs.StringVar(&caCertPath, "ca-cert", caCertPath, "CA Certificate file path")
 	fs.StringVarP(&backend, "backend", "b", backend, "Backend address")
 	fs.StringVarP(&host, "host", "h", host, "Proxy host")
+	fs.StringVar(&serverName, "server-name", "", "Name of server")
 	fs.StringVarP(&name, "name", "n", name, "Name of this agent")
 	fs.BoolVar(&debug, "debug", debug, "Show debug log")
 	fs.BoolVarP(&v, "version", "v", v, "Show version")
@@ -190,7 +192,7 @@ func agent(args []string) error {
 	}
 
 	agent := connector.NewAgent(myCert, privKey, caCerts, backend)
-	if err := agent.Connect(host); err != nil {
+	if err := agent.Connect(host, serverName); err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
 	return agent.Serve()

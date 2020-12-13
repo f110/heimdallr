@@ -2,12 +2,14 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -15,6 +17,7 @@ import (
 	"log"
 	mrand "math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -25,6 +28,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/securecookie"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/xerrors"
@@ -46,12 +50,159 @@ import (
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+const (
+	RootUserId = "root@e2e.f110.dev"
+)
+
 var (
-	binaryPath *string
+	binaryPath          *string
+	connectorBinaryPath *string
 )
 
 func init() {
 	binaryPath = flag.String("e2e.binary", "", "")
+	connectorBinaryPath = flag.String("e2e.connector-binary", "", "")
+}
+
+type MockServer struct {
+	Port int
+
+	server      *http.Server
+	gotRequests []*http.Request
+}
+
+func NewMockServer() (*MockServer, error) {
+	port, err := netutil.FindUnusedPort()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return &MockServer{Port: port}, nil
+}
+
+func (s *MockServer) Start() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		s.gotRequests = append(s.gotRequests, req)
+	})
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.Port),
+		Handler: mux,
+	}
+	s.server = server
+	go server.ListenAndServe()
+
+	if *verbose {
+		log.Print("Start test server")
+	}
+	return nil
+}
+
+func (s *MockServer) Stop() error {
+	return s.server.Shutdown(context.Background())
+}
+
+func (s *MockServer) Requests() []*http.Request {
+	return s.gotRequests
+}
+
+type Connector struct {
+	name   string
+	target *MockServer
+
+	dir        string
+	csr        []byte
+	privateKey crypto.PrivateKey
+	cmd        *exec.Cmd
+	running    bool
+}
+
+func NewConnector(name string, m *MockServer, proxyCACert *x509.Certificate) (*Connector, error) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	csr, privateKey, err := cert.CreateCertificateRequest(pkix.Name{CommonName: name}, nil)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	b, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return nil, xerrors.Errorf(": %v", err)
+	}
+	err = cert.PemEncode(filepath.Join(dir, "agent.key"), "EC PRIVATE KEY", b, nil)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	err = cert.PemEncode(filepath.Join(dir, "ca.crt"), "CERTIFICATE", proxyCACert.Raw, nil)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return &Connector{name: name, target: m, privateKey: privateKey, csr: csr, dir: dir}, nil
+}
+
+func (c *Connector) Start(client *rpcclient.ClientWithUserToken, host, serverName string) error {
+	if c.dir == "" {
+		return xerrors.New("already ran and stopped")
+	}
+
+	cer, err := client.NewAgentCertByCSR(string(c.csr), c.name)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	err = cert.PemEncode(filepath.Join(c.dir, "agent.crt"), "CERTIFICATE", cer, nil)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	c.cmd = exec.Command(*connectorBinaryPath,
+		fmt.Sprintf("--ca-cert=%s", filepath.Join(c.dir, "ca.crt")),
+		fmt.Sprintf("--certificate=%s", filepath.Join(c.dir, "agent.crt")),
+		fmt.Sprintf("--privatekey=%s", filepath.Join(c.dir, "agent.key")),
+		fmt.Sprintf("--name=%s", c.name),
+		fmt.Sprintf("--backend=localhost:%d", c.target.Port),
+		fmt.Sprintf("--host=%s", host),
+		fmt.Sprintf("--server-name=%s", serverName),
+		"--debug",
+	)
+	if *verbose {
+		c.cmd.Stdout = os.Stdout
+		c.cmd.Stderr = os.Stderr
+	}
+	err = c.cmd.Start()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	c.running = true
+	time.Sleep(1 * time.Second)
+
+	return nil
+}
+
+func (c *Connector) Stop() error {
+	if err := os.RemoveAll(c.dir); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	c.dir = ""
+
+	doneCh := make(chan struct{})
+	go func() {
+		c.cmd.Process.Wait()
+		close(doneCh)
+	}()
+	if err := c.cmd.Process.Signal(os.Interrupt); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	select {
+	case <-time.After(3 * time.Second):
+		return c.cmd.Process.Signal(os.Kill)
+	case <-doneCh:
+	}
+
+	return nil
 }
 
 type Proxy struct {
@@ -61,20 +212,23 @@ type Proxy struct {
 
 	sessionStore *session.SecureCookieStore
 
-	t              *testing.T
-	running        bool
-	dir            string
-	proxyPort      int
-	internalPort   int
-	rpcPort        int
-	dashboardPort  int
-	internalToken  string
-	caCert         *x509.Certificate
-	caPrivateKey   crypto.PrivateKey
-	signPrivateKey *ecdsa.PrivateKey
-	backends       []*configv2.Backend
-	roles          []*configv2.Role
-	users          []*database.User
+	t                  *testing.T
+	running            bool
+	dir                string
+	proxyPort          int
+	internalPort       int
+	rpcPort            int
+	dashboardPort      int
+	internalToken      string
+	caPrivateKey       crypto.PrivateKey
+	signPrivateKey     *ecdsa.PrivateKey
+	backends           []*configv2.Backend
+	roles              []*configv2.Role
+	rpcPermissions     []*configv2.RPCPermission
+	users              []*database.User
+	mockServers        []*MockServer
+	runningMockServers []*MockServer
+	connectors         []*Connector
 
 	configBuf                []byte
 	proxyConfBuf             []byte
@@ -88,6 +242,7 @@ type Proxy struct {
 	identityProvider *IdentityProvider
 	proxyCmd         *exec.Cmd
 	err              error
+	rpcClient        *rpcclient.ClientWithUserToken
 }
 
 func NewProxy(t *testing.T) (*Proxy, error) {
@@ -189,7 +344,6 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 		dir:              dir,
 		identityProvider: idp,
 		signPrivateKey:   signReqKey,
-		caCert:           caCert,
 		caPrivateKey:     caPrivateKey,
 		proxyPort:        proxyPort,
 		internalPort:     internalPort,
@@ -228,16 +382,72 @@ func (p *Proxy) Role(r *configv2.Role) {
 	p.roles = append(p.roles, r)
 }
 
+func (p *Proxy) RPCPermission(v *configv2.RPCPermission) {
+	p.rpcPermissions = append(p.rpcPermissions, v)
+}
+
 func (p *Proxy) User(u *database.User) {
 	p.users = append(p.users, u)
 }
 
+func (p *Proxy) MockServer(m *Matcher, name string) *MockServer {
+	s, err := NewMockServer()
+	if err != nil {
+		return nil
+	}
+	m.mockServers[name] = s
+	p.mockServers = append(p.mockServers, s)
+
+	return s
+}
+
+func (p *Proxy) Connector(name string, m *MockServer) {
+	c, err := NewConnector(name, m, p.CA)
+	if err != nil {
+		return
+	}
+	p.connectors = append(p.connectors, c)
+}
+
+func (p *Proxy) DashboardBackend() *configv2.Backend {
+	return &configv2.Backend{
+		Name:          "dashboard",
+		AllowRootUser: true,
+		HTTP: []*configv2.HTTPBackend{
+			{Path: "/", Upstream: fmt.Sprintf("http://localhost:%d", p.dashboardPort)},
+		},
+		Permissions: []*configv2.Permission{
+			{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+		},
+	}
+}
+
 func (p *Proxy) Cleanup() error {
+	for _, v := range p.connectors {
+		if err := v.Stop(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
 	if err := p.stop(); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
+	for _, v := range p.runningMockServers {
+		if err := v.Stop(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
 	return os.RemoveAll(p.dir)
+}
+
+func (p *Proxy) ClearConf() {
+	p.backends = nil
+	p.roles = nil
+	p.rpcPermissions = nil
+	p.users = nil
+	p.mockServers = nil
 }
 
 func (p *Proxy) Reload() error {
@@ -251,13 +461,34 @@ func (p *Proxy) Reload() error {
 		return nil
 	}
 
+	if *verbose {
+		log.Print("Start main process")
+	}
 	if p.running {
+		for _, v := range p.runningMockServers {
+			if err := v.Stop(); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+		p.runningMockServers = nil
+
 		if err := p.stop(); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
 
+	for _, v := range p.mockServers {
+		if err := v.Start(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		p.runningMockServers = append(p.runningMockServers, v)
+	}
+
 	if err := p.start(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	if err := p.setupRPCClient(); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -265,15 +496,24 @@ func (p *Proxy) Reload() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
+	for _, v := range p.connectors {
+		if *verbose {
+			log.Print("Start connector")
+		}
+		if err := v.Start(p.rpcClient, fmt.Sprintf("127.0.0.1:%d", p.proxyPort), p.DomainHost); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
 	return nil
 }
 
-func (p *Proxy) syncUsers() error {
+func (p *Proxy) setupRPCClient() error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	caPool.AddCert(p.caCert)
+	caPool.AddCert(p.CA)
 
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
 	conn, err := grpc.Dial(
@@ -289,7 +529,42 @@ func (p *Proxy) syncUsers() error {
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
 		StandardClaims: jwt.StandardClaims{
-			Id:        "root@e2e.f110.dev",
+			Id:        RootUserId,
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
+		},
+	})
+	token, err := claim.SignedString(p.signPrivateKey)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	p.rpcClient = rpcclient.NewClientWithUserToken(conn).WithToken(token)
+	return nil
+}
+
+func (p *Proxy) syncUsers() error {
+	caPool, err := x509.SystemCertPool()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	caPool.AddCert(p.CA)
+
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
+	conn, err := grpc.Dial(
+		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
+		grpc.WithTransportCredentials(cred),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
+		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+	)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
+		StandardClaims: jwt.StandardClaims{
+			Id:        RootUserId,
 			IssuedAt:  time.Now().Unix(),
 			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
 		},
@@ -333,15 +608,28 @@ func (p *Proxy) isChangedConfig() (bool, error) {
 	}
 
 	if !bytes.Equal(p.prevConfigBuf, p.configBuf) {
+		if *e2eDebug {
+			log.Print("Changed config.yaml")
+		}
 		return true, nil
 	}
 	if !bytes.Equal(p.prevProxyConfBuf, p.proxyConfBuf) {
+		if *e2eDebug {
+			log.Print("Changed proxies.yaml")
+			log.Print(cmp.Diff(string(p.prevProxyConfBuf), string(p.proxyConfBuf)))
+		}
 		return true, nil
 	}
 	if !bytes.Equal(p.prevRoleConfBuf, p.roleConfBuf) {
+		if *e2eDebug {
+			log.Print("Changed roles.yaml")
+		}
 		return true, nil
 	}
 	if !bytes.Equal(p.prevRpcPermissionConfBuf, p.rpcPermissionConfBuf) {
+		if *e2eDebug {
+			log.Print("Changed rpc_permissions.yaml")
+		}
 		return true, nil
 	}
 
@@ -444,7 +732,7 @@ func (p *Proxy) setup(dir string) error {
 			continue
 		}
 	}
-	c, privateKey, err := cert.GenerateServerCertificate(p.caCert, p.caPrivateKey, hosts)
+	c, privateKey, err := cert.GenerateServerCertificate(p.CA, p.caPrivateKey, hosts)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -469,6 +757,15 @@ func (p *Proxy) buildConfig() error {
 	p.prevRpcPermissionConfBuf = p.rpcPermissionConfBuf
 
 	proxy := p.backends
+	foundDashboard := false
+	for _, v := range p.backends {
+		if v.Name == "dashboard" {
+			foundDashboard = true
+		}
+	}
+	if !foundDashboard {
+		proxy = append(proxy, p.DashboardBackend())
+	}
 	b, err := yaml.Marshal(proxy)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -488,7 +785,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	rpcPermission := make([]*configv2.RPCPermission, 0)
+	rpcPermission := p.rpcPermissions
 	b, err = yaml.Marshal(rpcPermission)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -532,7 +829,7 @@ func (p *Proxy) buildConfig() error {
 		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RoleFile:          "./roles.yaml",
 			RPCPermissionFile: "./rpc_permissions.yaml",
-			RootUsers:         []string{"root@e2e.f110.dev"},
+			RootUsers:         []string{RootUserId},
 		},
 		Logger: &configv2.Logger{
 			Encoding: "console",

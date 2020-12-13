@@ -123,8 +123,8 @@ func TestSocketProxy_Accept(t *testing.T) {
 			ServerNameHost: "example.com",
 			TokenEndpoint:  "http://token.example.com",
 			Backends: []*configv2.Backend{
-				{Name: "socket", Socket: true},
-				{Name: "success", Socket: true, Upstream: fmt.Sprintf("tcp://:%d", backendAddr.Port)},
+				{Name: "socket", Socket: &configv2.SocketBackend{}},
+				{Name: "success", Socket: &configv2.SocketBackend{Upstream: fmt.Sprintf("tcp://:%d", backendAddr.Port)}},
 			},
 		},
 		AuthorizationEngine: &configv2.AuthorizationEngine{
