@@ -39,7 +39,6 @@ go_test(
     embed = [":authproxy"],
     deps = [
         "//pkg/auth",
-        "//pkg/auth/authz",
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/database",

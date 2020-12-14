@@ -61,7 +61,12 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig, 
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
+	log.Print("Install cert-manager")
 	if err := kind.InstallCertManager(restCfg); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	log.Print("Install minio")
+	if err := kind.InstallMinIO(restCfg); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 

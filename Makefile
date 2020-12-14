@@ -37,6 +37,9 @@ gen-operator:
 create-cluster:
 	bazel run //:create_cluster
 
+delete-cluster:
+	bazel run //:delete_cluster
+
 push:
 	bazel query 'kind(container_push, //...)' | xargs -n1 bazel run
 

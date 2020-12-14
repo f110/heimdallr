@@ -2,31 +2,29 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
 
 filegroup(
-    name = "crd",
+    name = "yaml",
     srcs = glob(["*.yaml"]),
     visibility = ["//visibility:public"],
 )
 
 go_embed_data(
     name = "embed",
-    srcs = [
-        ":crd",
-    ],
+    srcs = [":yaml"],
     string = True,
     visibility = ["//visibility:private"],
 )
 
 go_library(
-    name = "embed_crd",
+    name = "embed_lib",
     srcs = [":embed"],
-    importpath = "go.f110.dev/heimdallr/manifest/certmanager",
+    importpath = "go.f110.dev/heimdallr/manifest/minio",
     visibility = ["//visibility:private"],
 )
 
 go_library(
-    name = "certmanager",
+    name = "minio",
     srcs = [],  # keep
-    embed = [":embed_crd"],  # keep
-    importpath = "go.f110.dev/heimdallr/manifest/certmanager",
+    embed = [":embed_lib"],  # keep
+    importpath = "go.f110.dev/heimdallr/manifest/minio",
     visibility = ["//visibility:public"],
 )

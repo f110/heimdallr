@@ -34,6 +34,7 @@ import (
 	configv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
 	"go.f110.dev/heimdallr/manifest/certmanager"
+	"go.f110.dev/heimdallr/manifest/minio"
 )
 
 var KindNodeImageHash = map[string]string{
@@ -319,72 +320,18 @@ func readManifest(image *ContainerImageFile) error {
 }
 
 func InstallCertManager(cfg *rest.Config) error {
-	if err := StartCertManager(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"]); err != nil {
+	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"]); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"]); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(certmanager.Data["manifest/certmanager/cluster-issuer.yaml"]), 4096)
-	ext := runtime.RawExtension{}
-	if err := d.Decode(&ext); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	obj, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	gv := gvk.GroupVersion()
+	return nil
+}
 
-	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	var apiResource *metav1.APIResource
-	err = wait.PollImmediate(3*time.Second, 10*time.Second, func() (bool, error) {
-		_, apiResourcesList, err := disClient.ServerGroupsAndResources()
-		if err != nil {
-			return false, xerrors.Errorf(": %w", err)
-		}
-
-		for _, v := range apiResourcesList {
-			if v.GroupVersion == gv.String() {
-				for _, v := range v.APIResources {
-					if v.Kind == gvk.Kind && !strings.HasSuffix(v.Name, "/status") {
-						apiResource = &v
-						return true, nil
-					}
-				}
-			}
-		}
-
-		return false, nil
-	})
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	conf := *cfg
-	conf.GroupVersion = &gv
-	conf.APIPath = "/apis"
-	conf.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-	client, err := rest.RESTClientFor(&conf)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
-		res := client.Post().
-			Resource(apiResource.Name).
-			Body(obj).
-			Do(context.TODO())
-
-		if res.Error() == nil {
-			return true, nil
-		}
-
-		return false, nil
-	})
-	if err != nil {
+func InstallMinIO(cfg *rest.Config) error {
+	if err := applyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"]); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -396,7 +343,7 @@ type object struct {
 	GroupVersionKind *schema.GroupVersionKind
 }
 
-func StartCertManager(cfg *rest.Config, manifest string) error {
+func applyManifestFromString(cfg *rest.Config, manifest string) error {
 	objs := make([]object, 0)
 	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
 	for {
@@ -458,22 +405,27 @@ func StartCertManager(cfg *rest.Config, manifest string) error {
 			continue
 		}
 
-		req := client.Post()
-		if apiResource.Namespaced {
-			o := obj.Object.(*unstructured.Unstructured)
-			req.Namespace(o.GetNamespace())
-		}
-
-		res := req.Resource(apiResource.Name).
-			Body(obj.Object).
-			Do(context.TODO())
-
-		if err := res.Error(); err != nil {
-			switch {
-			case apierrors.IsAlreadyExists(err):
-				continue
+		err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
+			req := client.Post()
+			if apiResource.Namespaced {
+				o := obj.Object.(*unstructured.Unstructured)
+				req.Namespace(o.GetNamespace())
 			}
+			res := req.Resource(apiResource.Name).
+				Body(obj.Object).
+				Do(context.TODO())
+			if err := res.Error(); err != nil {
+				switch {
+				case apierrors.IsAlreadyExists(err):
+					return true, nil
+				}
 
+				log.Print(err)
+				return false, nil
+			}
+			return true, nil
+		})
+		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
