@@ -1,5 +1,9 @@
 load("//build/rules/kind:assets.bzl", "KIND_ASSETS")
 
+BUILD_FILE = """filegroup(name = "file", srcs = [\"{file}\"], visibility = [\"//visibility:public\"])
+sh_binary(name = "bin", srcs = [":file"], visibility = ["//visibility:public"])
+"""
+
 def _kind_binary_impl(ctx):
     os = ""
     if ctx.os.name == "linux":
@@ -22,7 +26,7 @@ def _kind_binary_impl(ctx):
     )
 
     ctx.file("WORKSPACE", "workspace(name = \"{name}\")".format(name = ctx.name))
-    ctx.file("BUILD", "filegroup(name = \"file\", srcs = [\"{file}\"], visibility = [\"//visibility:public\"])".format(file = "kind"))
+    ctx.file("BUILD", BUILD_FILE.format(file = "kind"))
 
 kind_binary = repository_rule(
     implementation = _kind_binary_impl,

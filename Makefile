@@ -36,6 +36,7 @@ gen-operator:
 
 create-cluster:
 	bazel run //:create_cluster
+	bazel run @kind//:bin -- export kubeconfig --name heimdallr
 
 delete-cluster:
 	bazel run //:delete_cluster
