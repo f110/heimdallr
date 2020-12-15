@@ -103,12 +103,3 @@ spec:
   selector:
     v1beta1.min.io/instance: minio
   type: ClusterIP
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-token
-  namespace: default
-stringData:
-  accesskey: 05s43pHf7C7s
-  secretkey: N/m6YdhZs0qiSxQ5etSQ6JTDgBcus4ZN

@@ -8,12 +8,14 @@ go_library(
     deps = [
         "//manifest/certmanager",
         "//manifest/minio",
+        "//vendor/github.com/minio/minio-go/v6:minio-go",
         "//vendor/golang.org/x/xerrors",
         "//vendor/gopkg.in/yaml.v2:yaml_v2",
         "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/apimachinery/pkg/api/errors",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
+        "//vendor/k8s.io/apimachinery/pkg/labels",
         "//vendor/k8s.io/apimachinery/pkg/runtime",
         "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
         "//vendor/k8s.io/apimachinery/pkg/util/wait",
@@ -23,6 +25,8 @@ go_library(
         "//vendor/k8s.io/client-go/kubernetes/scheme",
         "//vendor/k8s.io/client-go/rest",
         "//vendor/k8s.io/client-go/tools/clientcmd",
+        "//vendor/k8s.io/client-go/tools/portforward",
+        "//vendor/k8s.io/client-go/transport/spdy",
         "//vendor/sigs.k8s.io/kind/pkg/apis/config/v1alpha4",
     ],
 )

@@ -11,17 +11,20 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	minioclient "github.com/minio/minio-go/v6"
 	"golang.org/x/xerrors"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -31,6 +34,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 	configv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
 	"go.f110.dev/heimdallr/manifest/certmanager"
@@ -44,6 +49,12 @@ var KindNodeImageHash = map[string]string{
 	"v1.18.8":  "f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb",
 	"v1.17.11": "5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555",
 }
+
+const (
+	minioBucketName = "heimdallr"
+	minioAccessKey  = "05s43pHf7C7s"
+	minioSecretKey  = "N/m6YdhZs0qiSxQ5etSQ6JTDgBcus4ZN"
+)
 
 type Cluster struct {
 	kind          string
@@ -331,11 +342,126 @@ func InstallCertManager(cfg *rest.Config) error {
 }
 
 func InstallMinIO(cfg *rest.Config) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "minio-token",
+		},
+		StringData: map[string]string{
+			"accesskey": minioAccessKey,
+			"secretkey": minioSecretKey,
+		},
+	}
+	client, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	_, err = client.CoreV1().Secrets(metav1.NamespaceDefault).Create(context.Background(), secret, metav1.CreateOptions{})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
 	if err := applyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"]); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
+	if err := createMinIOBucket(cfg); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
 	return nil
+}
+
+func createMinIOBucket(cfg *rest.Config) error {
+	client, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
+		svc, err := client.CoreV1().Services(metav1.NamespaceDefault).Get(context.Background(), "minio", metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+
+		var forwarder *portforward.PortForwarder
+		forwarder, err = portForward(context.TODO(), cfg, client, svc, int(svc.Spec.Ports[0].Port))
+		if err != nil {
+			return false, nil
+		}
+		defer forwarder.Close()
+
+		ports, err := forwarder.GetPorts()
+		if err != nil {
+			return false, nil
+		}
+		instanceEndpoint := fmt.Sprintf("127.0.0.1:%d", ports[0].Local)
+		mc, err := minioclient.New(instanceEndpoint, minioAccessKey, minioSecretKey, false)
+		if err != nil {
+			return false, nil
+		}
+		if exists, err := mc.BucketExists(minioBucketName); err != nil {
+			return false, nil
+		} else if exists {
+			return true, nil
+		}
+
+		if err := mc.MakeBucket(minioBucketName, ""); err != nil {
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interface, svc *corev1.Service, port int) (*portforward.PortForwarder, error) {
+	selector := labels.SelectorFromSet(svc.Spec.Selector)
+	podList, err := client.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+	var pod *corev1.Pod
+	for i, v := range podList.Items {
+		if v.Status.Phase == corev1.PodRunning {
+			pod = &podList.Items[i]
+			break
+		}
+	}
+	if pod == nil {
+		return nil, errors.New("all pods are not running yet")
+	}
+
+	req := client.CoreV1().RESTClient().Post().Resource("pods").Namespace(svc.Namespace).Name(pod.Name).SubResource("portforward")
+	transport, upgrader, err := spdy.RoundTripperFor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
+
+	readyCh := make(chan struct{})
+	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		err := pf.ForwardPorts()
+		if err != nil {
+			log.Print(err)
+		}
+	}()
+
+	select {
+	case <-readyCh:
+	case <-time.After(5 * time.Second):
+		return nil, errors.New("timed out")
+	}
+
+	return pf, nil
 }
 
 type object struct {
@@ -420,7 +546,6 @@ func applyManifestFromString(cfg *rest.Config, manifest string) error {
 					return true, nil
 				}
 
-				log.Print(err)
 				return false, nil
 			}
 			return true, nil
