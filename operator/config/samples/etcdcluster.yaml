@@ -13,25 +13,25 @@ spec:
 #      resources:
 #        requests:
 #          storage: 1Gi
-  #backup:
-    #intervalInSeconds: 600
-    #maxBackups: 5
-    #storage:
+  backup:
+    intervalInSeconds: 600
+    maxBackups: 5
+    storage:
       #gcs:
         #bucket: etcd-controller-backup-test
         #path: backup
         #credentialSelector:
           #name: gcp-service-account
           #serviceAccountJSONKey: serviceaccount.json
-#      minio:
-#        path: backup
-#        bucket: etcdcluster
-#        secure: false
-#        serviceSelector:
-#          name: object-storage-hl-svc
-#          namespace: default
-#        credentialSelector:
-#          name: object-storage-token
-#          namespace: default
-#          accessKeyIDKey: accesskey
-#          secretAccessKeyKey: secretkey
+      minio:
+        path: backup
+        bucket: heimdallr
+        secure: false
+        serviceSelector:
+          name: minio
+          namespace: default
+        credentialSelector:
+          name: minio-token
+          namespace: default
+          accessKeyIDKey: accesskey
+          secretAccessKeyKey: secretkey

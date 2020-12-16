@@ -325,6 +325,19 @@ spec:
                 type: boolean
               restoreFrom:
                 type: string
+              restored:
+                properties:
+                  backupTime:
+                    format: date-time
+                    type: string
+                  completed:
+                    type: boolean
+                  path:
+                    type: string
+                  restoredTime:
+                    format: date-time
+                    type: string
+                type: object
             required:
             - ready
             type: object

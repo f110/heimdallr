@@ -125,6 +125,14 @@ func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string, log *zap.
 	}
 }
 
+func (c *EtcdCluster) EtcdVersion() string {
+	if c.Spec.Version != "" {
+		return c.Spec.Version
+	} else {
+		return defaultEtcdVersion
+	}
+}
+
 func (c *EtcdCluster) SetOwnedPods(pods []*corev1.Pod) {
 	sort.Slice(pods, func(i, j int) bool {
 		return pods[i].Name < pods[j].Name
@@ -261,6 +269,7 @@ func (c *EtcdCluster) DNSNames() []string {
 	dnsNames = append(dnsNames,
 		fmt.Sprintf("%s.%s.svc.%s", c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
 		fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
+		fmt.Sprintf("%s.%s.svc", c.ClientServiceName(), c.Namespace),
 		fmt.Sprintf("*.%s.pod.%s", c.Namespace, c.ClusterDomain),
 	)
 
@@ -299,7 +308,9 @@ func (c *EtcdCluster) ClientCertSecret(ca *corev1.Secret) (*corev1.Secret, error
 
 	clientCert, clientPrivateKey, err := cert.GenerateMutualTLSCertificate(
 		certPair.Cert, certPair.PrivateKey,
-		[]string{fmt.Sprintf("%s.%s.%s.svc.%s", c.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain)},
+		[]string{
+			fmt.Sprintf("%s.%s.%s.svc.%s", c.Name, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
+		},
 		nil,
 	)
 	if err != nil {

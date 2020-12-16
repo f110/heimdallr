@@ -102,6 +102,7 @@ type EtcdClusterStatus struct {
 	ClientCertSecretName    string           `json:"clientCertSecretName,omitempty"`
 	Backup                  *BackupStatus    `json:"backup,omitempty"`
 	RestoreFrom             string           `json:"restoreFrom,omitempty"`
+	Restored                *RestoredStatus  `json:"restored,omitempty"`
 }
 
 type MemberStatus struct {
@@ -110,6 +111,13 @@ type MemberStatus struct {
 	PodName string `json:"podName,omitempty"`
 	Leader  bool   `json:"leader,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type RestoredStatus struct {
+	Completed    bool         `json:"completed,omitempty"`
+	Path         string       `json:"path,omitempty"`
+	BackupTime   *metav1.Time `json:"backupTime,omitempty"`
+	RestoredTime *metav1.Time `json:"restoredTime,omitempty"`
 }
 
 type BackupStatus struct {

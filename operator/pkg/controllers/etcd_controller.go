@@ -570,6 +570,10 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 	for _, v := range cluster.Status.Backup.History {
 		if v.Succeeded {
 			cluster.Status.RestoreFrom = v.Path
+			cluster.Status.Restored = &etcdv1alpha1.RestoredStatus{
+				Path:       v.Path,
+				BackupTime: v.ExecuteTime,
+			}
 			break
 		}
 	}
@@ -962,6 +966,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 			if p.StatusResponse.Leader == p.StatusResponse.Header.MemberId {
 				ms.Leader = true
 			}
+			ms.PodName = p.Name
 		}
 
 		cluster.Status.Members = append(cluster.Status.Members, ms)
@@ -983,6 +988,14 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 			cluster.Status.LastReadyTransitionTime = &now
 		}
 		cluster.Status.Ready = true
+
+		if cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
+			cluster.Status.Restored.Completed = true
+			if cluster.Status.Restored.RestoredTime == nil {
+				now := metav1.Now()
+				cluster.Status.Restored.RestoredTime = &now
+			}
+		}
 	default:
 		cluster.Status.Ready = false
 	}
