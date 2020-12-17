@@ -308,12 +308,12 @@ func (ec *EtcdController) Finalize(_ context.Context, _ interface{}) error {
 }
 
 func (ec *EtcdController) stateCreatingFirstMember(ctx context.Context, cluster *EtcdCluster) error {
-	if cluster.Status.RestoreFrom == "" {
-		if err := ec.createNewCluster(ctx, cluster); err != nil {
+	if cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
+		if err := ec.createNewClusterWithBackup(ctx, cluster); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	} else {
-		if err := ec.createNewClusterWithBackup(ctx, cluster); err != nil {
+		if err := ec.createNewCluster(ctx, cluster); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -343,16 +343,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 	if members[0].Pod.CreationTimestamp.IsZero() {
 		ec.Log().Debug("Create first member", zap.String("name", members[0].Pod.Name))
 		cluster.SetAnnotationForPod(members[0].Pod)
-		receiverContainer := corev1.Container{
-			Name:         "receive-backup-file",
-			Image:        "busybox:latest",
-			Command:      []string{"/bin/sh", "-c", "nc -l -p 2900 > /data/backup"},
-			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
-		}
-		members[0].Pod.Spec.InitContainers = append(
-			members[0].Pod.Spec.InitContainers,
-			receiverContainer,
-		)
+		cluster.InjectRestoreContainer(members[0].Pod)
 
 		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0].Pod, metav1.CreateOptions{})
 		if err != nil {
@@ -372,7 +363,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 		}
 	}
 	if readyReceiver {
-		if err := ec.sendBackupToContainer(cluster, members[0].Pod, cluster.Status.RestoreFrom); err != nil {
+		if err := ec.sendBackupToContainer(cluster, members[0].Pod, cluster.Status.Restored.Path); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 

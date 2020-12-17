@@ -71,3 +71,7 @@ func Context(description string, action func()) {
 func It(description string, action func()) {
 	convey.Convey(description, action)
 }
+
+func XIt(description string, action func()) {
+	convey.SkipConvey(description, action)
+}

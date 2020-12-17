@@ -51,7 +51,7 @@ var KindNodeImageHash = map[string]string{
 }
 
 const (
-	minioBucketName = "heimdallr"
+	MinIOBucketName = "heimdallr"
 	minioAccessKey  = "05s43pHf7C7s"
 	minioSecretKey  = "N/m6YdhZs0qiSxQ5etSQ6JTDgBcus4ZN"
 )
@@ -399,13 +399,13 @@ func createMinIOBucket(cfg *rest.Config) error {
 		if err != nil {
 			return false, nil
 		}
-		if exists, err := mc.BucketExists(minioBucketName); err != nil {
+		if exists, err := mc.BucketExists(MinIOBucketName); err != nil {
 			return false, nil
 		} else if exists {
 			return true, nil
 		}
 
-		if err := mc.MakeBucket(minioBucketName, ""); err != nil {
+		if err := mc.MakeBucket(MinIOBucketName, ""); err != nil {
 			return false, nil
 		}
 

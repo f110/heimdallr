@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -18,6 +19,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
 
 var (
@@ -220,6 +222,131 @@ func TestEtcdController(t *testing.T) {
 				if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
 					t.Fatal(err)
 				}
+			})
+		})
+
+		framework.Context("restore from backup", func() {
+			framework.It("should have same data", func() {
+				client, err := clientset.NewForConfig(RESTConfig)
+				if err != nil {
+					t.Fatal(err)
+				}
+				kubeClient, err := kubernetes.NewForConfig(RESTConfig)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				etcdCluster := &etcdv1alpha1.EtcdCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "restore",
+						Namespace: metav1.NamespaceDefault,
+					},
+					Spec: etcdv1alpha1.EtcdClusterSpec{
+						Members:      3,
+						Version:      "v3.4.4",
+						AntiAffinity: true,
+						Backup: &etcdv1alpha1.BackupSpec{
+							IntervalInSecond: 60,
+							MaxBackups:       5,
+							Storage: etcdv1alpha1.BackupStorageSpec{
+								MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
+									Bucket: kind.MinIOBucketName,
+									Path:   "restore-test",
+									ServiceSelector: etcdv1alpha1.ObjectSelector{
+										Name:      "minio",
+										Namespace: metav1.NamespaceDefault,
+									},
+									CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+										Name:               "minio-token",
+										Namespace:          metav1.NamespaceDefault,
+										AccessKeyIDKey:     "accesskey",
+										SecretAccessKeyKey: "secretkey",
+									},
+								},
+							},
+						},
+					},
+				}
+				_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+					t.Fatal(err)
+				}
+
+				const testDataKey = "e2e-test-data"
+				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ecClient, err := e2eutil.NewEtcdClient(kubeClient, RESTConfig, etcdCluster)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = ecClient.Put(context.TODO(), testDataKey, "ok-test")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := ecClient.Close(); err != nil {
+					t.Fatal(err)
+				}
+				dataPutTime := time.Now()
+
+				err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
+					e, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					if err != nil {
+						return false, nil
+					}
+					if e.Status.Backup == nil {
+						return false, nil
+					}
+					if e.Status.Backup.Succeeded && dataPutTime.Before(e.Status.Backup.LastSucceededTime.Time) {
+						return true, nil
+					}
+
+					return false, nil
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				for _, v := range etcdCluster.Status.Members {
+					err = kubeClient.CoreV1().Pods(etcdCluster.Namespace).Delete(context.TODO(), v.PodName, metav1.DeleteOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
+					e, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					if err != nil {
+						return false, nil
+					}
+					if e.Status.Restored != nil && !e.Status.Restored.Completed {
+						return true, nil
+					}
+
+					return false, nil
+				})
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+					t.Fatal(err)
+				}
+
+				ecClient, err = e2eutil.NewEtcdClient(kubeClient, RESTConfig, etcdCluster)
+				if err != nil {
+					t.Fatal(err)
+				}
+				res, err := ecClient.Get(context.TODO(), testDataKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				convey.So(res.Count, convey.ShouldEqual, 1)
+				convey.So(string(res.Kvs[0].Value), convey.ShouldEqual, "ok-test")
 			})
 		})
 	})

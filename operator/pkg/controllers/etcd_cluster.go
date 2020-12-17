@@ -36,6 +36,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 type InternalState string
@@ -82,6 +83,15 @@ else
 	member add {{ .Name }} \
 	--peer-urls={{ .PeerUrl }}
 fi
+`
+
+const restoreDataScript = `
+ETCDCTL_OPT="--cacert={{ .CACert }} --cert={{ .Cert }} --key={{ .Key }} --endpoints={{ .Endpoint }}"
+/usr/local/bin/etcdctl ${ETCDCTL_OPT} snapshot restore {{ .DataFile }} \
+	--data-dir=/data/{{ .Name }}.etcd \
+	--name={{ .Name }} \
+	--initial-cluster={{ .Name }}={{ .PeerUrl }} \
+	--initial-advertise-peer-urls={{ .AdvertisePeerUrl }}
 `
 
 const (
@@ -1189,6 +1199,85 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 			dataVolume.ToVolume(),
 		},
 	}
+}
+
+func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
+	dataVolume := &podVolume{
+		Name: "data",
+		Path: "/data",
+		Source: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
+
+	receiverContainer := corev1.Container{
+		Name:         "receive-backup-file",
+		Image:        "busybox:latest",
+		Command:      []string{"/bin/sh", "-c", "nc -l -p 2900 > /data/backup.db"},
+		VolumeMounts: []corev1.VolumeMount{dataVolume.ToMount()},
+	}
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, receiverContainer)
+
+	clientCertVolume := &podVolume{
+		Name: "client-cert",
+		Path: "/etc/etcd-client-cert",
+		Source: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: c.ClientCertSecretName(),
+			},
+		},
+	}
+
+	buf := new(bytes.Buffer)
+	templateRestoreData := template.Must(template.New("").Parse(restoreDataScript))
+	err := templateRestoreData.Execute(buf, struct {
+		Name             string
+		CACert           string
+		Cert             string
+		Key              string
+		Endpoint         string
+		DataFile         string
+		PeerUrl          string
+		AdvertisePeerUrl string
+	}{
+		CACert:           clientCertVolume.PathJoin(clientCertSecretCACertName),
+		Cert:             clientCertVolume.PathJoin(clientCertSecretCertName),
+		Key:              clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
+		Endpoint:         fmt.Sprintf("%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
+		DataFile:         "/data/backup.db",
+		Name:             pod.Name,
+		PeerUrl:          fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+		AdvertisePeerUrl: fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+	})
+	if err != nil {
+		logger.Log.Error("Failed render script", zap.Error(err))
+		return
+	}
+	etcdVersion := c.Spec.Version
+	if etcdVersion == "" {
+		etcdVersion = defaultEtcdVersion
+	}
+
+	restoreContainer := corev1.Container{
+		Name:    "restore-data",
+		Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
+		Command: []string{"/bin/sh", "-c", buf.String()},
+		Env: []corev1.EnvVar{
+			{
+				Name: "MY_POD_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "status.podIP",
+					},
+				},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			clientCertVolume.ToMount(),
+			dataVolume.ToMount(),
+		},
+	}
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, restoreContainer)
 }
 
 type podVolume struct {
