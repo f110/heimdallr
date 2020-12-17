@@ -101,8 +101,10 @@ type EtcdClusterStatus struct {
 	ClientEndpoint          string           `json:"clientEndpoint,omitempty"`
 	ClientCertSecretName    string           `json:"clientCertSecretName,omitempty"`
 	Backup                  *BackupStatus    `json:"backup,omitempty"`
-	RestoreFrom             string           `json:"restoreFrom,omitempty"`
 	Restored                *RestoredStatus  `json:"restored,omitempty"`
+	// Deprecated.
+	// Do not use this field.
+	RestoreFrom string `json:"restoreFrom,omitempty"`
 }
 
 type MemberStatus struct {
@@ -110,6 +112,7 @@ type MemberStatus struct {
 	Name    string `json:"name,omitempty"`
 	PodName string `json:"podName,omitempty"`
 	Leader  bool   `json:"leader,omitempty"`
+	Learner bool   `json:"leaner,omitempty"`
 	Version string `json:"version,omitempty"`
 }
 

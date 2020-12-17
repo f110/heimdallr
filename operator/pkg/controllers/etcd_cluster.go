@@ -849,7 +849,7 @@ func (c *EtcdCluster) currentInternalStateUpdating() InternalState {
 }
 
 func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
-	// for test hack
+	// hack for test
 	if c.mockOpt != nil {
 		ctx, _ := context.WithCancel(context.Background())
 		client := clientv3.NewCtxClient(ctx)

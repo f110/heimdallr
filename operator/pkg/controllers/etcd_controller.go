@@ -367,7 +367,6 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 			return xerrors.Errorf(": %w", err)
 		}
 
-		cluster.Status.RestoreFrom = ""
 		return nil
 	}
 
@@ -560,7 +559,6 @@ func (ec *EtcdController) stateTeardownUpdating(ctx context.Context, cluster *Et
 func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster) error {
 	for _, v := range cluster.Status.Backup.History {
 		if v.Succeeded {
-			cluster.Status.RestoreFrom = v.Path
 			cluster.Status.Restored = &etcdv1alpha1.RestoredStatus{
 				Path:       v.Path,
 				BackupTime: v.ExecuteTime,
@@ -867,6 +865,8 @@ func (ec *EtcdController) ensureClientService(ctx context.Context, cluster *Etcd
 }
 
 func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdCluster) error {
+	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
+
 	etcdPods := make([]*etcdPod, 0)
 	forwarder := make([]*portforward.PortForwarder, 0)
 	for _, v := range cluster.AllExistMembers() {
@@ -938,7 +938,6 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	}
 	cancel()
 
-	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
 	for _, m := range memberList.Members {
 		ms := etcdv1alpha1.MemberStatus{
 			Name: m.Name,
@@ -958,6 +957,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 				ms.Leader = true
 			}
 			ms.PodName = p.Name
+			ms.Learner = p.IsLearner
 		}
 
 		cluster.Status.Members = append(cluster.Status.Members, ms)
@@ -967,6 +967,23 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 		return cluster.Status.Members[i].Name < cluster.Status.Members[j].Name
 	})
 
+	if cluster.Spec.Members == 1 && len(cluster.Status.Members) == 1 && cluster.Status.Members[0].Leader {
+		if !cluster.Status.Ready {
+			now := metav1.Now()
+			cluster.Status.LastReadyTransitionTime = &now
+		}
+		cluster.Status.Ready = true
+		return nil
+	}
+
+	if len(cluster.Status.Members) > cluster.Spec.Members/2 {
+		if !cluster.Status.Ready {
+			now := metav1.Now()
+			cluster.Status.LastReadyTransitionTime = &now
+		}
+		cluster.Status.Ready = true
+	}
+
 	return nil
 }
 
@@ -974,21 +991,13 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 	cluster.Status.Phase = cluster.CurrentPhase()
 	switch cluster.Status.Phase {
 	case etcdv1alpha1.ClusterPhaseRunning, etcdv1alpha1.ClusterPhaseUpdating, etcdv1alpha1.ClusterPhaseDegrading:
-		if !cluster.Status.Ready {
-			now := metav1.Now()
-			cluster.Status.LastReadyTransitionTime = &now
-		}
-		cluster.Status.Ready = true
-
-		if cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
+		if cluster.Status.Ready && cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
 			cluster.Status.Restored.Completed = true
 			if cluster.Status.Restored.RestoredTime == nil {
 				now := metav1.Now()
 				cluster.Status.Restored.RestoredTime = &now
 			}
 		}
-	default:
-		cluster.Status.Ready = false
 	}
 	ec.Log().Debug("Current Phase", zap.String("phase", string(cluster.Status.Phase)), zap.String("cluster.name", cluster.Name))
 

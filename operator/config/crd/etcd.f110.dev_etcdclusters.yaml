@@ -311,6 +311,8 @@ spec:
                       type: integer
                     leader:
                       type: boolean
+                    leaner:
+                      type: boolean
                     name:
                       type: string
                     podName:
@@ -324,6 +326,7 @@ spec:
               ready:
                 type: boolean
               restoreFrom:
+                description: Deprecated. Do not use this field.
                 type: string
               restored:
                 properties:

@@ -401,7 +401,9 @@ func TestEtcdController_Restore(t *testing.T) {
 	updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	assert.Equal(t, "backup/latest", updatedEC.Status.RestoreFrom)
+	require.NotNil(t, updatedEC.Status.Restored)
+	assert.Equal(t, "backup/latest", updatedEC.Status.Restored.Path)
+	assert.False(t, updatedEC.Status.Restored.Completed)
 }
 
 type etcdClusterOpt func(e *etcdv1alpha1.EtcdCluster)
