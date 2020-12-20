@@ -117,6 +117,7 @@ container_image(
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heimdallrcontroller"],
     tars = [":bin_operator"],
+    visibility = ["//visibility:public"],
 )
 
 container_push(

@@ -11,7 +11,12 @@ def _finalize_manifest_impl(ctx):
         arguments = [args],
     )
 
-    return [DefaultInfo(files = depset([out]))]
+    return [
+        DefaultInfo(
+            files = depset([out]),
+            data_runfiles = ctx.runfiles(files = [out]),
+        )
+    ]
 
 finalize_manifest = rule(
     implementation = _finalize_manifest_impl,

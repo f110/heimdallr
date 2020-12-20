@@ -1,0 +1,8 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "namespace",
+    src = "kustomization.yaml",
+    resources = ["namespace.yaml"],
+    visibility = ["//visibility:public"],
+)

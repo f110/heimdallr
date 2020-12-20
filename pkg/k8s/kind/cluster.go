@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
@@ -185,7 +186,7 @@ type manifest struct {
 
 func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 	for _, v := range images {
-		if err := readManifest(v); err != nil {
+		if err := readImageManifest(v); err != nil {
 			return err
 		}
 
@@ -213,7 +214,9 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 			cmd = exec.CommandContext(
 				context.TODO(),
 				"docker", "exec", node,
-				"ctr", "-n", "k8s.io", "images", "tag",
+				"ctr", "-n", "k8s.io",
+				"images", "tag",
+				"--force",
 				"docker.io/"+image.repoTags,
 				fmt.Sprintf("%s:%s", image.Repository, image.Tag),
 			)
@@ -227,8 +230,30 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 }
 
 func (c *Cluster) RESTConfig() (*rest.Config, error) {
-	if c.kubeConfig == "" {
+	if exist, err := c.IsExist(c.name); err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	} else if !exist {
 		return nil, xerrors.New("The cluster is not created yet")
+	}
+	if c.kubeConfig == "" {
+		kubeConf, err := ioutil.TempFile("", "kubeconfig")
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		cmd := exec.CommandContext(
+			context.TODO(),
+			c.kind, "export", "kubeconfig",
+			"--kubeconfig", kubeConf.Name(),
+			"--name", c.name,
+		)
+		if err := cmd.Run(); err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		c.kubeConfig = kubeConf.Name()
+		defer func() {
+			os.Remove(kubeConf.Name())
+			c.kubeConfig = ""
+		}()
 	}
 
 	cfg, err := clientcmd.LoadFromFile(c.kubeConfig)
@@ -245,9 +270,6 @@ func (c *Cluster) RESTConfig() (*rest.Config, error) {
 }
 
 func (c *Cluster) Clientset() (kubernetes.Interface, error) {
-	if c.kubeConfig == "" {
-		return nil, xerrors.New("The cluster is not created yet")
-	}
 	if c.clientset != nil {
 		return c.clientset, nil
 	}
@@ -295,7 +317,24 @@ func (c *Cluster) WaitReady(ctx context.Context) error {
 	})
 }
 
-func readManifest(image *ContainerImageFile) error {
+func (c *Cluster) Apply(f, fieldManager string) error {
+	buf, err := ioutil.ReadFile(f)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	cfg, err := c.RESTConfig()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	if err := applyManifestFromString(cfg, string(buf), fieldManager); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func readImageManifest(image *ContainerImageFile) error {
 	f, err := os.Open(image.File)
 	if err != nil {
 		return err
@@ -330,18 +369,18 @@ func readManifest(image *ContainerImageFile) error {
 	return nil
 }
 
-func InstallCertManager(cfg *rest.Config) error {
-	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"]); err != nil {
+func InstallCertManager(cfg *rest.Config, fieldManager string) error {
+	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"], fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"]); err != nil {
+	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"], fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func InstallMinIO(cfg *rest.Config) error {
+func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "minio-token",
@@ -360,7 +399,7 @@ func InstallMinIO(cfg *rest.Config) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := applyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"]); err != nil {
+	if err := applyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"], fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -469,7 +508,7 @@ type object struct {
 	GroupVersionKind *schema.GroupVersionKind
 }
 
-func applyManifestFromString(cfg *rest.Config, manifest string) error {
+func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
 	objs := make([]object, 0)
 	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
 	for {
@@ -531,22 +570,39 @@ func applyManifestFromString(cfg *rest.Config, manifest string) error {
 			continue
 		}
 
-		err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
-			req := client.Post()
-			if apiResource.Namespaced {
-				o := obj.Object.(*unstructured.Unstructured)
-				req.Namespace(o.GetNamespace())
+		unstructuredObj := obj.Object.(*unstructured.Unstructured)
+		method := http.MethodPatch
+		err = wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+			var req *rest.Request
+			switch method {
+			case http.MethodPatch:
+				req = client.Patch(types.ApplyPatchType)
+			default:
+				req = client.Post()
 			}
-			res := req.Resource(apiResource.Name).
-				Body(obj.Object).
+			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj.Object)
+			if err != nil {
+				log.Print(err)
+				return true, nil
+			}
+			force := true
+			res := req.
+				NamespaceIfScoped(unstructuredObj.GetNamespace(), apiResource.Namespaced).
+				Resource(apiResource.Name).
+				Name(unstructuredObj.GetName()).
+				VersionedParams(&metav1.PatchOptions{FieldManager: fieldManager, Force: &force}, metav1.ParameterCodec).
+				Body(data).
 				Do(context.TODO())
 			if err := res.Error(); err != nil {
 				switch {
 				case apierrors.IsAlreadyExists(err):
-					return true, nil
+					log.Print(err)
+					method = http.MethodPatch
+					return false, nil
 				}
 
-				return false, nil
+				log.Print(err)
+				return true, nil
 			}
 			return true, nil
 		})

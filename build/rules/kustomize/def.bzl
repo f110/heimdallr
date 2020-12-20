@@ -62,7 +62,7 @@ def _kustomization_impl(ctx):
         Kustomization(
             name = ctx.label.name,
             generated_manifest = out,
-            srcs = [ctx.file.src] + depset(ctx.files.resources).to_list(),
+            srcs = [ctx.file.src] + srcs,
         ),
     ]
 

@@ -79,10 +79,10 @@ func setupSuite(id string) (*kind.Cluster, error) {
 		framework.Config.ProxyVersion = "e2e"
 	}
 
-	if err := kind.InstallCertManager(cfg); err != nil {
+	if err := kind.InstallCertManager(cfg, "operator-e2e"); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	if err := kind.InstallMinIO(cfg); err != nil {
+	if err := kind.InstallMinIO(cfg, "operator-e2e"); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 

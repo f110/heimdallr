@@ -1,0 +1,19 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "prod",
+    src = "kustomization.yaml",
+    resources = [
+        "//operator/deploy/base:base",
+    ],
+)
+
+load("//build/rules:manifest-finalizer.bzl", "finalize_manifest")
+load("//:RELEASE.bzl", "VERSION")
+
+finalize_manifest(
+    name = "all-in-one",
+    src = ":prod",
+    version = VERSION,
+    visibility = ["//visibility:public"],
+)

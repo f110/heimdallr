@@ -1,0 +1,30 @@
+sh_binary(
+    name = "run",
+    srcs = ["//cmd/heimdev"],
+    args = [
+        "cluster",
+        "run-operator",
+        "--kind=$(location @kind//:file)",
+        "--manifest=$(location //operator/deploy/dev:all-in-one)",
+        "--controller-image=$(location //container:image_operator.tar)",
+    ],
+    data = [
+        "//container:image_operator.tar",
+        "//operator/deploy/dev:all-in-one",
+        "@kind//:file",
+    ],
+)
+
+
+sh_binary(
+    name = "log",
+    srcs = ["//cmd/heimdev"],
+    args = [
+        "cluster",
+        "log-operator",
+        "--kind=$(location @kind//:file)",
+    ],
+    data = [
+        "@kind//:file",
+    ],
+)

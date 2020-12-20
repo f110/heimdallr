@@ -1,0 +1,24 @@
+load("//build/rules/kustomize:def.bzl", "kustomization")
+
+kustomization(
+    name = "base",
+    src = "kustomization.yaml",
+    resources = [
+        "//operator/config/crd",
+        "//operator/config/manager",
+        "//operator/config/namespace",
+        "//operator/config/rbac",
+        "//operator/config/webhook",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+load("//build/rules:manifest-finalizer.bzl", "finalize_manifest")
+load("//:RELEASE.bzl", "VERSION")
+
+finalize_manifest(
+    name = "all-in-one",
+    src = ":base",
+    version = VERSION,
+    visibility = ["//visibility:public"],
+)

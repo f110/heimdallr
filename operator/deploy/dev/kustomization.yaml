@@ -1,0 +1,15 @@
+namespace: heimdallr
+
+resources:
+  - ../base
+
+patchesJson6902:
+  - target:
+      version: v1
+      group: apps
+      kind: Deployment
+      name: heimdallr-operator
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --log-level=debug

@@ -37,7 +37,7 @@ template_string(
 github_release(
     name = "github_release",
     assets = [
-        "//operator/deploy:all-in-one",
+        "//operator/deploy/prod:all-in-one",
         "//cmd/heim-connector:heim-connector_darwin_amd64",
         "//cmd/heim-connector:heim-connector_linux_amd64",
         "//cmd/heim-connector:heim-connector_windows_amd64",

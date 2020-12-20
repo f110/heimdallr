@@ -1,0 +1,7 @@
+namespace: heimdallr
+resources:
+  - ../../config/manager
+  - ../../config/namespace
+  - ../../config/crd
+  - ../../config/rbac
+  - ../../config/webhook

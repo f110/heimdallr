@@ -1,13 +1,10 @@
 load("//build/rules/kustomize:def.bzl", "kustomization")
 
 kustomization(
-    name = "deploy",
+    name = "dev",
     src = "kustomization.yaml",
     resources = [
-        "//operator/config/crd",
-        "//operator/config/manager",
-        "//operator/config/rbac",
-        "//operator/config/webhook",
+        "//operator/deploy/base:base",
     ],
 )
 
@@ -16,7 +13,7 @@ load("//:RELEASE.bzl", "VERSION")
 
 finalize_manifest(
     name = "all-in-one",
-    src = ":deploy",
+    src = ":dev",
     version = VERSION,
     visibility = ["//visibility:public"],
 )
