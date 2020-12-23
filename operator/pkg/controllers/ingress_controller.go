@@ -163,12 +163,18 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 
 	backends := make([]*proxyv1alpha2.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
-		if len(rule.HTTP.Paths) != 1 {
-			ic.Log().Info("Not support multiple paths", zap.String("ingress.name", ingress.Name))
-			continue
+		httpRouting := make([]*proxyv1alpha2.BackendHTTPRoutingSpec, 0)
+		for _, v := range rule.HTTP.Paths {
+			httpRouting = append(httpRouting, &proxyv1alpha2.BackendHTTPRoutingSpec{
+				Path: v.Path,
+				ServiceSelector: &proxyv1alpha2.ServiceSelector{
+					Name:      v.Backend.Service.Name,
+					Namespace: ingress.Namespace,
+					Port:      v.Backend.Service.Port.Name,
+				},
+			})
 		}
 
-		p := rule.HTTP.Paths[0]
 		backends = append(backends,
 			&proxyv1alpha2.Backend{
 				ObjectMeta: metav1.ObjectMeta{
@@ -185,16 +191,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 				Spec: proxyv1alpha2.BackendSpec{
 					FQDN:         rule.Host,
 					DisableAuthn: true,
-					HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
-						{
-							Path: "/",
-							ServiceSelector: &proxyv1alpha2.ServiceSelector{
-								Name:      p.Backend.Service.Name,
-								Namespace: ingress.Namespace,
-								Port:      p.Backend.Service.Port.Name,
-							},
-						},
-					},
+					HTTPRouting:  httpRouting,
 				},
 			},
 		)

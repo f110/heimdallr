@@ -155,9 +155,11 @@ func (f *commonTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1beta1
 	f.coreSharedInformerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
 }
 
-func (f *commonTestRunner) RegisterServiceFixture(s *corev1.Service) {
-	f.coreClient.Tracker().Add(s)
-	f.coreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(s)
+func (f *commonTestRunner) RegisterServiceFixture(s ...*corev1.Service) {
+	for _, v := range s {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(v)
+	}
 }
 
 func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
