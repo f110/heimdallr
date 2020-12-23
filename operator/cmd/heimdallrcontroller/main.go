@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
 
+	_ "go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	_ "go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"

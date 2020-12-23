@@ -6,6 +6,8 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/cmd/heimdallrcontroller",
     visibility = ["//visibility:private"],
     deps = [
+        "//operator/pkg/api/etcd",
+        "//operator/pkg/api/proxy",
         "//operator/pkg/client/versioned",
         "//operator/pkg/controllers",
         "//operator/pkg/informers/externalversions",

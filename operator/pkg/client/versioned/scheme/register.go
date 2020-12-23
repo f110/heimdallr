@@ -34,7 +34,9 @@ import (
 	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
 	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,8 +53,10 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	certmanagerv1alpha3.AddToScheme,
 	certmanagerv1beta1.AddToScheme,
 	etcdv1alpha1.AddToScheme,
+	etcdv1alpha2.AddToScheme,
 	monitoringv1.AddToScheme,
 	proxyv1alpha1.AddToScheme,
+	proxyv1alpha2.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

@@ -18,11 +18,11 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
-	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
+	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha2"
 )
 
 const (
@@ -57,7 +57,7 @@ func NewIngressController(
 	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
 	ingressClassInformer := coreSharedInformerFactory.Networking().V1().IngressClasses()
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
-	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
+	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
 
 	ic := &IngressController{
 		ingressInformer:          ingressInformer.Informer(),
@@ -161,7 +161,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		return err
 	}
 
-	backends := make([]*proxyv1alpha1.Backend, 0)
+	backends := make([]*proxyv1alpha2.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
 		if len(rule.HTTP.Paths) != 1 {
 			ic.Log().Info("Not support multiple paths", zap.String("ingress.name", ingress.Name))
@@ -170,7 +170,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 
 		p := rule.HTTP.Paths[0]
 		backends = append(backends,
-			&proxyv1alpha1.Backend{
+			&proxyv1alpha2.Backend{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      ingress.Name,
 					Namespace: ingress.Namespace,
@@ -182,13 +182,18 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 					},
 					Labels: ingClass.Labels,
 				},
-				Spec: proxyv1alpha1.BackendSpec{
+				Spec: proxyv1alpha2.BackendSpec{
 					FQDN:         rule.Host,
 					DisableAuthn: true,
-					ServiceSelector: proxyv1alpha1.ServiceSelector{
-						Name:      p.Backend.Service.Name,
-						Namespace: ingress.Namespace,
-						Port:      p.Backend.Service.Port.Name,
+					HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+						{
+							Path: "/",
+							ServiceSelector: &proxyv1alpha2.ServiceSelector{
+								Name:      p.Backend.Service.Name,
+								Namespace: ingress.Namespace,
+								Port:      p.Backend.Service.Port.Name,
+							},
+						},
 					},
 				},
 			},
@@ -198,7 +203,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 	for _, b := range backends {
 		backend, err := ic.backendLister.Backends(b.Namespace).Get(b.Name)
 		if err != nil && apierrors.IsNotFound(err) {
-			_, err = ic.client.ProxyV1alpha1().Backends(b.Namespace).Create(ctx, b, metav1.CreateOptions{})
+			_, err = ic.client.ProxyV1alpha2().Backends(b.Namespace).Create(ctx, b, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -210,7 +215,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		updatedB := backend.DeepCopy()
 		updatedB.Spec = b.Spec
 		if !reflect.DeepEqual(updatedB, backend) {
-			_, err = ic.client.ProxyV1alpha1().Backends(backend.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+			_, err = ic.client.ProxyV1alpha2().Backends(backend.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}

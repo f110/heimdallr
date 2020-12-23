@@ -38,11 +38,11 @@ import (
 	"k8s.io/client-go/transport/spdy"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
-	etcdlisters "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
+	etcdlisters "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -93,7 +93,7 @@ func NewEtcdController(
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 	pvcInformer := coreSharedInformerFactory.Core().V1().PersistentVolumeClaims()
 
-	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
+	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha2().EtcdClusters()
 
 	c := &EtcdController{
 		config:              cfg,
@@ -149,7 +149,7 @@ func (ec *EtcdController) EventSources() []cache.SharedIndexInformer {
 func (ec *EtcdController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
-		case *etcdv1alpha1.EtcdCluster:
+		case *etcdv1alpha2.EtcdCluster:
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err != nil {
 				return nil, err
@@ -192,12 +192,12 @@ func (ec *EtcdController) GetObject(key string) (interface{}, error) {
 }
 
 func (ec *EtcdController) UpdateObject(ctx context.Context, obj interface{}) error {
-	etcdCluster, ok := obj.(*etcdv1alpha1.EtcdCluster)
+	etcdCluster, ok := obj.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return nil
 	}
 
-	_, err := ec.client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Update(ctx, etcdCluster, metav1.UpdateOptions{})
+	_, err := ec.client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Update(ctx, etcdCluster, metav1.UpdateOptions{})
 	return err
 }
 
@@ -205,11 +205,11 @@ type internalStateHandleFunc func(ctx context.Context, cluster *EtcdCluster) err
 
 func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error {
 	ec.Log().Debug("syncEtcdCluster")
-	c := obj.(*etcdv1alpha1.EtcdCluster)
+	c := obj.(*etcdv1alpha2.EtcdCluster)
 
-	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha1.ClusterPhasePending {
-		c.Status.Phase = etcdv1alpha1.ClusterPhaseInitializing
-		_, err := ec.client.EtcdV1alpha1().EtcdClusters(c.Namespace).UpdateStatus(ctx, c, metav1.UpdateOptions{})
+	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha2.ClusterPhasePending {
+		c.Status.Phase = etcdv1alpha2.ClusterPhaseInitializing
+		_, err := ec.client.EtcdV1alpha2().EtcdClusters(c.Namespace).UpdateStatus(ctx, c, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -273,7 +273,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	ec.updateStatus(ctx, cluster)
 
-	if cluster.Status.Phase == etcdv1alpha1.ClusterPhaseRunning && ec.shouldBackup(cluster) {
+	if cluster.Status.Phase == etcdv1alpha2.ClusterPhaseRunning && ec.shouldBackup(cluster) {
 		err := ec.doBackup(ctx, cluster)
 		if err != nil {
 			cluster.Status.Backup.Succeeded = false
@@ -294,7 +294,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		ec.Log().Debug("Update EtcdCluster")
-		_, err = ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
+		_, err = ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -559,14 +559,14 @@ func (ec *EtcdController) stateTeardownUpdating(ctx context.Context, cluster *Et
 func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster) error {
 	for _, v := range cluster.Status.Backup.History {
 		if v.Succeeded {
-			cluster.Status.Restored = &etcdv1alpha1.RestoredStatus{
+			cluster.Status.Restored = &etcdv1alpha2.RestoredStatus{
 				Path:       v.Path,
 				BackupTime: v.ExecuteTime,
 			}
 			break
 		}
 	}
-	_, err := ec.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
+	_, err := ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -865,7 +865,7 @@ func (ec *EtcdController) ensureClientService(ctx context.Context, cluster *Etcd
 }
 
 func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdCluster) error {
-	cluster.Status.Members = make([]etcdv1alpha1.MemberStatus, 0)
+	cluster.Status.Members = make([]etcdv1alpha2.MemberStatus, 0)
 
 	etcdPods := make([]*etcdPod, 0)
 	forwarder := make([]*portforward.PortForwarder, 0)
@@ -939,7 +939,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	cancel()
 
 	for _, m := range memberList.Members {
-		ms := etcdv1alpha1.MemberStatus{
+		ms := etcdv1alpha2.MemberStatus{
 			Name: m.Name,
 		}
 
@@ -990,7 +990,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster) {
 	cluster.Status.Phase = cluster.CurrentPhase()
 	switch cluster.Status.Phase {
-	case etcdv1alpha1.ClusterPhaseRunning, etcdv1alpha1.ClusterPhaseUpdating, etcdv1alpha1.ClusterPhaseDegrading:
+	case etcdv1alpha2.ClusterPhaseRunning, etcdv1alpha2.ClusterPhaseUpdating, etcdv1alpha2.ClusterPhaseDegrading:
 		if cluster.Status.Ready && cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
 			cluster.Status.Restored.Completed = true
 			if cluster.Status.Restored.RestoredTime == nil {
@@ -1063,12 +1063,12 @@ func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
 
 func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) error {
 	now := metav1.Now()
-	backupStatus := &etcdv1alpha1.BackupStatusHistory{ExecuteTime: &now}
+	backupStatus := &etcdv1alpha2.BackupStatusHistory{ExecuteTime: &now}
 	defer func() {
 		if cluster.Status.Backup == nil {
-			cluster.Status.Backup = &etcdv1alpha1.BackupStatus{}
+			cluster.Status.Backup = &etcdv1alpha2.BackupStatus{}
 		}
-		cluster.Status.Backup.History = append([]etcdv1alpha1.BackupStatusHistory{*backupStatus}, cluster.Status.Backup.History...)
+		cluster.Status.Backup.History = append([]etcdv1alpha2.BackupStatusHistory{*backupStatus}, cluster.Status.Backup.History...)
 	}()
 
 	client, forwarder, err := ec.etcdClient(cluster)
@@ -1124,7 +1124,7 @@ func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) er
 	return nil
 }
 
-func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdCluster, backupStatus *etcdv1alpha1.BackupStatusHistory, data io.Reader, dataSize int64, t metav1.Time) error {
+func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdCluster, backupStatus *etcdv1alpha2.BackupStatusHistory, data io.Reader, dataSize int64, t metav1.Time) error {
 	switch {
 	case cluster.Spec.Backup.Storage.MinIO != nil:
 		spec := cluster.Spec.Backup.Storage.MinIO
@@ -1299,7 +1299,7 @@ func (ec *EtcdController) getBackupFile(cluster *EtcdCluster, path string) (io.R
 	}
 }
 
-func (ec *EtcdController) minioClient(spec *etcdv1alpha1.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
+func (ec *EtcdController) minioClient(spec *etcdv1alpha2.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
 	svc, err := ec.serviceLister.Services(spec.ServiceSelector.Namespace).Get(spec.ServiceSelector.Name)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)

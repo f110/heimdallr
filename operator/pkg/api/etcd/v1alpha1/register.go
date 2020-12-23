@@ -4,11 +4,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 )
 
-var SchemeGroupVersion = schema.GroupVersion{Group: etcd.GroupName, Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: "etcd.f110.dev", Version: "v1alpha1"}
 
 func Kind(kind string) schema.GroupKind {
 	return SchemeGroupVersion.WithKind(kind).GroupKind()

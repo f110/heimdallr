@@ -12,46 +12,46 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/config"
 )
 
-func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alpha1.Backend, []*proxyv1alpha1.Role, []*proxyv1alpha1.RpcPermission, []*proxyv1alpha1.RoleBinding, []corev1.Service) {
-	proxy := &proxyv1alpha1.Proxy{
+func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alpha2.Backend, []*proxyv1alpha2.Role, []*proxyv1alpha2.RpcPermission, []*proxyv1alpha2.RoleBinding, []corev1.Service) {
+	proxy := &proxyv1alpha2.Proxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 			UID:       uuid.NewUUID(),
 		},
-		Spec: proxyv1alpha1.ProxySpec{
+		Spec: proxyv1alpha2.ProxySpec{
 			Domain: "test-proxy.f110.dev",
-			DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
-				Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+			DataStore: &proxyv1alpha2.ProxyDataStoreSpec{
+				Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{
 					Version: "v3.4.9",
 				},
 			},
-			BackendSelector: proxyv1alpha1.LabelSelector{
+			BackendSelector: proxyv1alpha2.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			RoleSelector: proxyv1alpha1.LabelSelector{
+			RoleSelector: proxyv1alpha2.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			RpcPermissionSelector: proxyv1alpha1.LabelSelector{
+			RpcPermissionSelector: proxyv1alpha2.LabelSelector{
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"instance": "test"},
 				},
 			},
-			Session: proxyv1alpha1.SessionSpec{
+			Session: proxyv1alpha2.SessionSpec{
 				Type: config.SessionTypeSecureCookie,
 			},
-			IdentityProvider: proxyv1alpha1.IdentityProviderSpec{
+			IdentityProvider: proxyv1alpha2.IdentityProviderSpec{
 				Provider: "google",
-				ClientSecretRef: proxyv1alpha1.SecretSelector{
+				ClientSecretRef: proxyv1alpha2.SecretSelector{
 					Name: "client-secret",
 					Key:  "client-secret",
 				},
@@ -67,7 +67,7 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 		Data: map[string][]byte{"client-secret": []byte("hidden")},
 	}
 
-	backends := []*proxyv1alpha1.Backend{
+	backends := []*proxyv1alpha2.Backend{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test",
@@ -75,21 +75,26 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 				CreationTimestamp: metav1.Now(),
 				Labels:            map[string]string{"instance": "test"},
 			},
-			Spec: proxyv1alpha1.BackendSpec{
+			Spec: proxyv1alpha2.BackendSpec{
 				Layer: "test",
-				ServiceSelector: proxyv1alpha1.ServiceSelector{
-					LabelSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{"app": "test"},
+				HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+					{
+						Path: "/",
+						ServiceSelector: &proxyv1alpha2.ServiceSelector{
+							LabelSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{"app": "test"},
+							},
+						},
 					},
 				},
-				Permissions: []proxyv1alpha1.Permission{
-					{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
+				Permissions: []proxyv1alpha2.Permission{
+					{Name: "all", Locations: []proxyv1alpha2.Location{{Any: "/"}}},
 				},
 			},
 		},
 	}
 
-	roles := []*proxyv1alpha1.Role{
+	roles := []*proxyv1alpha2.Role{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test",
@@ -97,24 +102,24 @@ func newProxy(name string) (*proxyv1alpha1.Proxy, *corev1.Secret, []*proxyv1alph
 				CreationTimestamp: metav1.Now(),
 				Labels:            map[string]string{"instance": "test"},
 			},
-			Spec: proxyv1alpha1.RoleSpec{
+			Spec: proxyv1alpha2.RoleSpec{
 				Title:       "test",
 				Description: "for testing",
 			},
 		},
 	}
-	rpcPermissions := []*proxyv1alpha1.RpcPermission{}
-	roleBindings := []*proxyv1alpha1.RoleBinding{
+	rpcPermissions := []*proxyv1alpha2.RpcPermission{}
+	roleBindings := []*proxyv1alpha2.RoleBinding{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test-test",
 				Namespace:         metav1.NamespaceDefault,
 				CreationTimestamp: metav1.Now(),
 			},
-			Subjects: []proxyv1alpha1.Subject{
+			Subjects: []proxyv1alpha2.Subject{
 				{Kind: "Backend", Name: "test", Namespace: metav1.NamespaceDefault, Permission: "all"},
 			},
-			RoleRef: proxyv1alpha1.RoleRef{
+			RoleRef: proxyv1alpha2.RoleRef{
 				Name:      "test",
 				Namespace: metav1.NamespaceDefault,
 			},
@@ -287,7 +292,7 @@ func TestProxyController(t *testing.T) {
 		})
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
-		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning
+		ec.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
 			s, err := v.Create()
@@ -307,7 +312,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.Run(t, p)
 
-		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		updatedP, err := f.client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(proxy.Namespace).Get(context.TODO(), proxy.ReverseProxyConfigName(), metav1.GetOptions{})
 		require.NoError(t, err)
@@ -363,7 +368,7 @@ func TestProxyController(t *testing.T) {
 		})
 		ec, _ := proxy.EtcdCluster()
 		ec.Status.Ready = true
-		ec.Status.Phase = etcdv1alpha1.ClusterPhaseRunning
+		ec.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
 		proxy.Datastore = ec
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
@@ -396,13 +401,13 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.Run(t, p)
 
-		updatedP, err := f.client.ProxyV1alpha1().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		updatedP, err := f.client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.False(t, updatedP.Status.Ready)
-		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha1.ProxyPhaseRunning)
+		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha2.ProxyPhaseRunning)
 
 		for _, backend := range backends {
-			updatedB, err := f.client.ProxyV1alpha1().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+			updatedB, err := f.client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

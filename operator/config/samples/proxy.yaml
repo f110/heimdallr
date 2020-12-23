@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1alpha1
+apiVersion: proxy.f110.dev/v1alpha2
 kind: Proxy
 metadata:
   name: proxy-sample
@@ -7,8 +7,10 @@ spec:
   version: v0.10.1
   domain: local-proxy.f110.dev
   port: 443
-  organization: test
-  administratorUnit: super
+  certificateAuthority:
+    local:
+      organization: test
+      administratorUnit: super
   backendSelector:
     matchLabels:
       instance: proxy-sample
@@ -33,9 +35,7 @@ spec:
     keySecretRef:
       name: cookie-secret
   monitor:
-    prometheusMonitoring: true
-    labels:
-      k8s-app: etcd
+    prometheusMonitoring: false
   dataStore:
     etcd:
       version: v3.4.9

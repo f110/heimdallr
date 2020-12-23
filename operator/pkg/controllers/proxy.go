@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/cert"
@@ -106,9 +106,9 @@ type process struct {
 type HeimdallrProxy struct {
 	Name                string
 	Namespace           string
-	Object              *proxyv1alpha1.Proxy
-	Spec                proxyv1alpha1.ProxySpec
-	Datastore           *etcdv1alpha1.EtcdCluster
+	Object              *proxyv1alpha2.Proxy
+	Spec                proxyv1alpha2.ProxySpec
+	Datastore           *etcdv1alpha2.EtcdCluster
 	CASecret            *corev1.Secret
 	SigningPrivateKey   *corev1.Secret
 	GithubWebhookSecret *corev1.Secret
@@ -122,22 +122,22 @@ type HeimdallrProxy struct {
 	clientset     clientset.Interface
 	serviceLister listers.ServiceLister
 
-	backends           []*proxyv1alpha1.Backend
-	roles              []*proxyv1alpha1.Role
-	rpcPermissions     []*proxyv1alpha1.RpcPermission
-	roleBindings       []*proxyv1alpha1.RoleBinding
+	backends           []*proxyv1alpha2.Backend
+	roles              []*proxyv1alpha2.Role
+	rpcPermissions     []*proxyv1alpha2.RpcPermission
+	roleBindings       []*proxyv1alpha2.RoleBinding
 	selfSignedIssuer   bool
 	certManagerVersion string
 }
 
 type HeimdallrProxyParams struct {
-	Spec               *proxyv1alpha1.Proxy
+	Spec               *proxyv1alpha2.Proxy
 	Clientset          clientset.Interface
 	ServiceLister      listers.ServiceLister
-	Backends           []*proxyv1alpha1.Backend
-	Roles              []*proxyv1alpha1.Role
-	RpcPermissions     []*proxyv1alpha1.RpcPermission
-	RoleBindings       []*proxyv1alpha1.RoleBinding
+	Backends           []*proxyv1alpha2.Backend
+	Roles              []*proxyv1alpha2.Role
+	RpcPermissions     []*proxyv1alpha2.RpcPermission
+	RoleBindings       []*proxyv1alpha2.RoleBinding
 	CertManagerVersion string
 }
 
@@ -165,7 +165,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	}
 
 	if !found {
-		r.backends = append(r.backends, &proxyv1alpha1.Backend{
+		r.backends = append(r.backends, &proxyv1alpha2.Backend{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dashboard",
 				Namespace: opt.Spec.Namespace,
@@ -173,13 +173,18 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 					labelKeyVirtualDashboard: "yes",
 				},
 			},
-			Spec: proxyv1alpha1.BackendSpec{
-				Upstream:      fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
+			Spec: proxyv1alpha2.BackendSpec{
 				AllowRootUser: true,
-				Permissions: []proxyv1alpha1.Permission{
+				HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+					{
+						Path:     "/",
+						Upstream: fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
+					},
+				},
+				Permissions: []proxyv1alpha2.Permission{
 					{
 						Name: "all",
-						Locations: []proxyv1alpha1.Location{
+						Locations: []proxyv1alpha2.Location{
 							{Any: "/"},
 						},
 					},
@@ -196,12 +201,12 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		}
 	}
 	if !found {
-		r.roles = append(r.roles, &proxyv1alpha1.Role{
+		r.roles = append(r.roles, &proxyv1alpha2.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
 			},
-			Spec: proxyv1alpha1.RoleSpec{
+			Spec: proxyv1alpha2.RoleSpec{
 				Title:          "administrator",
 				Description:    fmt.Sprintf("%s administrators", r.Name),
 				AllowDashboard: true,
@@ -217,12 +222,12 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		}
 	}
 	if !found {
-		r.rpcPermissions = append(r.rpcPermissions, &proxyv1alpha1.RpcPermission{
+		r.rpcPermissions = append(r.rpcPermissions, &proxyv1alpha2.RpcPermission{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "admin",
 				Namespace: r.Namespace,
 			},
-			Spec: proxyv1alpha1.RpcPermissionSpec{
+			Spec: proxyv1alpha2.RpcPermissionSpec{
 				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
 			},
 		})
@@ -233,7 +238,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 
 func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
 	if !metav1.IsControlledBy(obj, r.Object) {
-		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy"))})
+		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy"))})
 	}
 }
 
@@ -338,19 +343,19 @@ func (r *HeimdallrProxy) ServiceNameForInternalApi() string {
 	return r.Name + "-internal"
 }
 
-func (r *HeimdallrProxy) Backends() []*proxyv1alpha1.Backend {
+func (r *HeimdallrProxy) Backends() []*proxyv1alpha2.Backend {
 	return r.backends
 }
 
-func (r *HeimdallrProxy) Roles() []*proxyv1alpha1.Role {
+func (r *HeimdallrProxy) Roles() []*proxyv1alpha2.Role {
 	return r.roles
 }
 
-func (r *HeimdallrProxy) RoleBindings() []*proxyv1alpha1.RoleBinding {
+func (r *HeimdallrProxy) RoleBindings() []*proxyv1alpha2.RoleBinding {
 	return r.roleBindings
 }
 
-func (r *HeimdallrProxy) RpcPermissions() []*proxyv1alpha1.RpcPermission {
+func (r *HeimdallrProxy) RpcPermissions() []*proxyv1alpha2.RpcPermission {
 	return r.rpcPermissions
 }
 
@@ -424,25 +429,25 @@ func (r *HeimdallrProxy) Certificate() runtime.Object {
 	return nil
 }
 
-func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha1.EtcdCluster, *monitoringv1.PodMonitor) {
+func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha2.EtcdCluster, *monitoringv1.PodMonitor) {
 	cluster := r.newEtcdCluster()
 	return cluster, r.newPodMonitorForEtcdCluster(cluster)
 }
 
-func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
+func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 	etcdVersion := r.Spec.DataStore.Etcd.Version
 	if etcdVersion == "" {
 		etcdVersion = EtcdVersion
 	}
-	return &etcdv1alpha1.EtcdCluster{
+	return &etcdv1alpha2.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
 			Name:      r.EtcdClusterName(),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
-		Spec: etcdv1alpha1.EtcdClusterSpec{
+		Spec: etcdv1alpha2.EtcdClusterSpec{
 			Members:            3,
 			Version:            etcdVersion,
 			DefragmentSchedule: r.Spec.DataStore.Etcd.Defragment.Schedule,
@@ -451,14 +456,14 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha1.EtcdCluster {
 	}
 }
 
-func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha1.EtcdCluster) *monitoringv1.PodMonitor {
+func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdCluster) *monitoringv1.PodMonitor {
 	return &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: r.Namespace,
 			Labels:    r.Spec.Monitor.Labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
@@ -523,14 +528,27 @@ func (r *HeimdallrProxy) Secrets() []CreateSecret {
 
 func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 	caName := "Heimdallr CA"
-	if r.Spec.Name != "" {
-		caName = r.Spec.Name
-	}
 	country := "jp"
-	if r.Spec.Country != "" {
-		country = r.Spec.Country
+	organization := ""
+	administratorUnit := ""
+	if r.Spec.CertificateAuthority != nil {
+		if r.Spec.CertificateAuthority.Local != nil {
+			if r.Spec.CertificateAuthority.Local.Name != "" {
+				caName = r.Spec.CertificateAuthority.Local.Name
+			}
+			if r.Spec.CertificateAuthority.Local.Country != "" {
+				country = r.Spec.CertificateAuthority.Local.Country
+			}
+			if r.Spec.CertificateAuthority.Local.Organization != "" {
+				organization = r.Spec.CertificateAuthority.Local.Organization
+			}
+			if r.Spec.CertificateAuthority.Local.AdministratorUnit != "" {
+				administratorUnit = r.Spec.CertificateAuthority.Local.AdministratorUnit
+			}
+		}
 	}
-	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, r.Spec.Organization, r.Spec.AdministratorUnit, country)
+
+	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, organization, administratorUnit, country)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -820,13 +838,7 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			RootUsers:         r.Spec.RootUsers,
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			Local: &configv2.CertificateAuthorityLocal{
-				CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-				KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
-				Organization:     r.Spec.Organization,
-				OrganizationUnit: r.Spec.AdministratorUnit,
-				Country:          r.Spec.Country,
-			},
+			Local: &configv2.CertificateAuthorityLocal{},
 		},
 		Datastore: &configv2.Datastore{
 			DatastoreEtcd: &configv2.DatastoreEtcd{
@@ -840,6 +852,15 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 		RPCServer: &configv2.RPCServer{
 			Bind: fmt.Sprintf(":%d", rpcServerPort),
 		},
+	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Local != nil {
+		conf.CertificateAuthority.Local = &configv2.CertificateAuthorityLocal{
+			CertFile:         fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+			KeyFile:          fmt.Sprintf("%s/%s", caCertMountPath, caPrivateKeyFilename),
+			Organization:     r.Spec.CertificateAuthority.Local.Organization,
+			OrganizationUnit: r.Spec.CertificateAuthority.Local.AdministratorUnit,
+			Country:          r.Spec.CertificateAuthority.Local.Country,
+		}
 	}
 	if r.Spec.Monitor.PrometheusMonitoring {
 		conf.RPCServer.MetricsBind = fmt.Sprintf(":%d", rpcMetricsServerPort)
@@ -1384,7 +1405,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 			Name:      r.DeploymentNameForRPCServer(),
 			Namespace: r.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha1.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -1617,10 +1638,10 @@ func intOrStringFromInt(val int) *intstr.IntOrString {
 	return &v
 }
 
-type RoleBindings []*proxyv1alpha1.RoleBinding
+type RoleBindings []*proxyv1alpha2.RoleBinding
 
-func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxyv1alpha1.RoleBinding {
-	n := make([]*proxyv1alpha1.RoleBinding, 0)
+func (rb RoleBindings) Select(fn func(*proxyv1alpha2.RoleBinding) bool) []*proxyv1alpha2.RoleBinding {
+	n := make([]*proxyv1alpha2.RoleBinding, 0)
 	for _, v := range rb {
 		if fn(v) {
 			n = append(n, v)
@@ -1630,7 +1651,7 @@ func (rb RoleBindings) Select(fn func(*proxyv1alpha1.RoleBinding) bool) []*proxy
 	return n
 }
 
-func toConfigPermissions(in proxyv1alpha1.BackendSpec) []*configv2.Permission {
+func toConfigPermissions(in proxyv1alpha2.BackendSpec) []*configv2.Permission {
 	permissions := make([]*configv2.Permission, 0, len(in.Permissions))
 	for _, p := range in.Permissions {
 		locations := make([]configv2.Location, len(p.Locations))
@@ -1651,25 +1672,14 @@ func toConfigPermissions(in proxyv1alpha1.BackendSpec) []*configv2.Permission {
 		permissions = append(permissions, &configv2.Permission{
 			Name:      p.Name,
 			Locations: locations,
-		})
-	}
-	if in.Webhook != "" {
-		loc := make([]configv2.Location, len(in.WebhookPath))
-		for i, v := range in.WebhookPath {
-			loc[i] = configv2.Location{
-				Any: v,
-			}
-		}
-		permissions = append(permissions, &configv2.Permission{
-			Name:      in.Webhook,
-			Locations: loc,
+			WebHook:   p.Webhook,
 		})
 	}
 
 	return permissions
 }
 
-func findService(lister listers.ServiceLister, sel proxyv1alpha1.ServiceSelector, namespace string) (*corev1.Service, error) {
+func findService(lister listers.ServiceLister, sel *proxyv1alpha2.ServiceSelector, namespace string) (*corev1.Service, error) {
 	ns := sel.Namespace
 	if ns == "" {
 		ns = namespace

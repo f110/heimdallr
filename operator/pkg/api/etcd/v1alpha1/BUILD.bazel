@@ -11,7 +11,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/pkg/api/etcd",
         "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/runtime",

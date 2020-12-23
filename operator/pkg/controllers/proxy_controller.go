@@ -31,15 +31,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
-	etcdListers "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha1"
+	etcdListers "go.f110.dev/heimdallr/operator/pkg/listers/etcd/v1alpha2"
 	mListers "go.f110.dev/heimdallr/operator/pkg/listers/monitoring/v1"
-	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
+	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha2"
 )
 
 var (
@@ -94,12 +94,12 @@ func NewProxyController(
 	client kubernetes.Interface,
 	proxyClient clientset.Interface,
 ) (*ProxyController, error) {
-	proxyInformer := sharedInformerFactory.Proxy().V1alpha1().Proxies()
-	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
-	roleInformer := sharedInformerFactory.Proxy().V1alpha1().Roles()
-	roleBindingInformer := sharedInformerFactory.Proxy().V1alpha1().RoleBindings()
-	rpcPermissionInformer := sharedInformerFactory.Proxy().V1alpha1().RpcPermissions()
-	ecInformer := sharedInformerFactory.Etcd().V1alpha1().EtcdClusters()
+	proxyInformer := sharedInformerFactory.Proxy().V1alpha2().Proxies()
+	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
+	roleInformer := sharedInformerFactory.Proxy().V1alpha2().Roles()
+	roleBindingInformer := sharedInformerFactory.Proxy().V1alpha2().RoleBindings()
+	rpcPermissionInformer := sharedInformerFactory.Proxy().V1alpha2().RpcPermissions()
+	ecInformer := sharedInformerFactory.Etcd().V1alpha2().EtcdClusters()
 
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
@@ -196,20 +196,20 @@ func (c *ProxyController) EventSources() []cache.SharedIndexInformer {
 func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
-		case *proxyv1alpha1.Proxy:
+		case *proxyv1alpha2.Proxy:
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err != nil {
 				return nil, err
 			}
 			return []string{key}, nil
-		case *proxyv1alpha1.Backend, *proxyv1alpha1.Role, *proxyv1alpha1.RpcPermission:
+		case *proxyv1alpha2.Backend, *proxyv1alpha2.Role, *proxyv1alpha2.RpcPermission:
 			metaObj, err := meta.Accessor(obj)
 			if err != nil {
 				return nil, err
 			}
 			return c.subordinateResourceKeys(metaObj)
-		case *proxyv1alpha1.RoleBinding:
-			roleBinding := obj.(*proxyv1alpha1.RoleBinding)
+		case *proxyv1alpha2.RoleBinding:
+			roleBinding := obj.(*proxyv1alpha2.RoleBinding)
 			role, err := c.roleLister.Roles(roleBinding.RoleRef.Namespace).Get(roleBinding.RoleRef.Name)
 			if err != nil {
 				return nil, err
@@ -241,13 +241,13 @@ func (c *ProxyController) subordinateResourceKeys(m metav1.Object) ([]string, er
 	return keys, nil
 }
 
-func (c *ProxyController) dependentProxyKeys(role *proxyv1alpha1.Role) ([]string, error) {
+func (c *ProxyController) dependentProxyKeys(role *proxyv1alpha2.Role) ([]string, error) {
 	proxies, err := c.proxyLister.List(labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	target := make(map[string]*proxyv1alpha1.Proxy)
+	target := make(map[string]*proxyv1alpha2.Proxy)
 NextProxy:
 	for _, p := range proxies {
 		selector, err := metav1.LabelSelectorAsSelector(&p.Spec.RoleSelector.LabelSelector)
@@ -323,22 +323,22 @@ func (c *ProxyController) GetObject(key string) (interface{}, error) {
 }
 
 func (c *ProxyController) UpdateObject(ctx context.Context, obj interface{}) error {
-	p, ok := obj.(*proxyv1alpha1.Proxy)
+	p, ok := obj.(*proxyv1alpha2.Proxy)
 	if !ok {
 		return nil
 	}
 
-	_, err := c.clientset.ProxyV1alpha1().Proxies(p.Namespace).Update(ctx, p, metav1.UpdateOptions{})
+	_, err := c.clientset.ProxyV1alpha2().Proxies(p.Namespace).Update(ctx, p, metav1.UpdateOptions{})
 	return err
 }
 
 func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error {
 	c.Log().Debug("Reconcile Proxy")
-	proxy := obj.(*proxyv1alpha1.Proxy)
+	proxy := obj.(*proxyv1alpha2.Proxy)
 
 	if proxy.Status.Phase == "" {
-		proxy.Status.Phase = proxyv1alpha1.ProxyPhaseCreating
-		updateProxy, err := c.clientset.ProxyV1alpha1().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
+		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
+		updateProxy, err := c.clientset.ProxyV1alpha2().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -372,7 +372,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		return xerrors.Errorf(": %w", err)
 	}
 
-	rolesMap := make(map[string]*proxyv1alpha1.Role)
+	rolesMap := make(map[string]*proxyv1alpha2.Role)
 	for _, v := range roles {
 		rolesMap[fmt.Sprintf("%s/%s", v.Namespace, v.Name)] = v
 	}
@@ -380,7 +380,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
+	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1alpha2.RoleBinding) bool {
 		_, ok := rolesMap[fmt.Sprintf("%s/%s", binding.RoleRef.Namespace, binding.RoleRef.Name)]
 		return ok
 	})
@@ -406,9 +406,9 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 			c.EventRecorder().Eventf(lp.Object, corev1.EventTypeWarning, "InvalidSpec", "Failure pre-check %v", err)
 		}
 		newP := lp.Object.DeepCopy()
-		newP.Status.Phase = proxyv1alpha1.ProxyPhaseError
+		newP.Status.Phase = proxyv1alpha2.ProxyPhaseError
 		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-			_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+			_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -428,7 +428,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -462,7 +462,7 @@ func (c *ProxyController) Finalize(_ context.Context, _ interface{}) error {
 	return nil
 }
 
-func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha1.EtcdCluster, error) {
+func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha2.EtcdCluster, error) {
 	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 }
 
@@ -546,7 +546,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 	cluster, err := c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			cluster, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Create(ctx, newC, metav1.CreateOptions{})
+			cluster, err = c.clientset.EtcdV1alpha2().EtcdClusters(lp.Namespace).Create(ctx, newC, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -579,7 +579,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 
 	if !reflect.DeepEqual(newC.Spec, cluster.Spec) {
 		cluster.Spec = newC.Spec
-		_, err = c.clientset.EtcdV1alpha1().EtcdClusters(lp.Namespace).Update(ctx, cluster, metav1.UpdateOptions{})
+		_, err = c.clientset.EtcdV1alpha2().EtcdClusters(lp.Namespace).Update(ctx, cluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -651,10 +651,14 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 
 	for _, backend := range lp.Backends() {
 		skipProvision := false
-		_, err := findService(c.serviceLister, backend.Spec.ServiceSelector, backend.Namespace)
-		if err != nil && !backend.CreationTimestamp.IsZero() {
-			skipProvision = true
-			c.EventRecorder().Event(backend, corev1.EventTypeWarning, "FindServiceError", err.Error())
+		for _, v := range backend.Spec.HTTPRouting {
+			if v.ServiceSelector != nil {
+				_, err := findService(c.serviceLister, v.ServiceSelector, backend.Namespace)
+				if err != nil && !backend.CreationTimestamp.IsZero() {
+					skipProvision = true
+					c.EventRecorder().Event(backend, corev1.EventTypeWarning, "FindServiceError", err.Error())
+				}
+			}
 		}
 
 		found := false
@@ -676,13 +680,13 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 					return err
 				}
 
-				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha1.ProxyReference{
+				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha2.ProxyReference{
 					Name:      lp.Name,
 					Namespace: lp.Namespace,
 					Url:       fmt.Sprintf("https://%s", hostname),
 				})
 
-				_, err = c.clientset.ProxyV1alpha1().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
+				_, err = c.clientset.ProxyV1alpha2().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -733,7 +737,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProxy) error {
 	newP := lp.Object.DeepCopy()
 	newP.Status.Ready = c.isReady(lp)
-	newP.Status.Phase = proxyv1alpha1.ProxyPhaseRunning
+	newP.Status.Phase = proxyv1alpha2.ProxyPhaseRunning
 	newP.Status.CASecretName = lp.CASecretName()
 	newP.Status.SigningPrivateKeySecretName = lp.PrivateKeySecretName()
 	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()
@@ -741,7 +745,7 @@ func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProx
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1alpha1().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1072,13 +1076,13 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 	return nil
 }
 
-func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha1.Proxy, error) {
+func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha2.Proxy, error) {
 	ret, err := c.proxyLister.List(labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	targets := make([]*proxyv1alpha1.Proxy, 0)
+	targets := make([]*proxyv1alpha2.Proxy, 0)
 Item:
 	for _, v := range ret {
 		if m.GetLabels() != nil {

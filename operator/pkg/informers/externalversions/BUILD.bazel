@@ -10,7 +10,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//operator/pkg/api/etcd/v1alpha1",
+        "//operator/pkg/api/etcd/v1alpha2",
         "//operator/pkg/api/proxy/v1alpha1",
+        "//operator/pkg/api/proxy/v1alpha2",
         "//operator/pkg/client/versioned",
         "//operator/pkg/informers/externalversions/certmanager",
         "//operator/pkg/informers/externalversions/etcd",

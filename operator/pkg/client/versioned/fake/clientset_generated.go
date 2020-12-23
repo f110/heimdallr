@@ -39,10 +39,14 @@ import (
 	fakecertmanagerv1beta1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1beta1/fake"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
 	fakeetcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1/fake"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha2"
+	fakeetcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha2/fake"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
 	fakemonitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1/fake"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
 	fakeproxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1/fake"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha2"
+	fakeproxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -122,6 +126,11 @@ func (c *Clientset) EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface {
 	return &fakeetcdv1alpha1.FakeEtcdV1alpha1{Fake: &c.Fake}
 }
 
+// EtcdV1alpha2 retrieves the EtcdV1alpha2Client
+func (c *Clientset) EtcdV1alpha2() etcdv1alpha2.EtcdV1alpha2Interface {
+	return &fakeetcdv1alpha2.FakeEtcdV1alpha2{Fake: &c.Fake}
+}
+
 // MonitoringV1 retrieves the MonitoringV1Client
 func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 	return &fakemonitoringv1.FakeMonitoringV1{Fake: &c.Fake}
@@ -130,4 +139,9 @@ func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 // ProxyV1alpha1 retrieves the ProxyV1alpha1Client
 func (c *Clientset) ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface {
 	return &fakeproxyv1alpha1.FakeProxyV1alpha1{Fake: &c.Fake}
+}
+
+// ProxyV1alpha2 retrieves the ProxyV1alpha2Client
+func (c *Clientset) ProxyV1alpha2() proxyv1alpha2.ProxyV1alpha2Interface {
+	return &fakeproxyv1alpha2.FakeProxyV1alpha2{Fake: &c.Fake}
 }

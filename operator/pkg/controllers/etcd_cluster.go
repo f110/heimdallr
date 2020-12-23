@@ -34,7 +34,7 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -110,7 +110,7 @@ type MockOption struct {
 }
 
 type EtcdCluster struct {
-	*etcdv1alpha1.EtcdCluster
+	*etcdv1alpha2.EtcdCluster
 
 	ClusterDomain string
 
@@ -126,7 +126,7 @@ type EtcdCluster struct {
 	mockOpt *MockOption
 }
 
-func NewEtcdCluster(c *etcdv1alpha1.EtcdCluster, clusterDomain string, log *zap.Logger, mockOpt *MockOption) *EtcdCluster {
+func NewEtcdCluster(c *etcdv1alpha2.EtcdCluster, clusterDomain string, log *zap.Logger, mockOpt *MockOption) *EtcdCluster {
 	return &EtcdCluster{
 		EtcdCluster:   c.DeepCopy(),
 		ClusterDomain: clusterDomain,
@@ -235,7 +235,7 @@ func (c *EtcdCluster) CA(s *corev1.Secret) (*corev1.Secret, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.CASecretName(),
 			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
 		Data: map[string][]byte{
 			caSecretCertName:       caCertBuf,
@@ -296,7 +296,7 @@ func (c *EtcdCluster) ServerCertSecret(ca *corev1.Secret) (*corev1.Secret, error
 	s.ObjectMeta = metav1.ObjectMeta{
 		Name:            c.ServerCertSecretName(),
 		Namespace:       c.Namespace,
-		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 	}
 
 	return s, nil
@@ -337,7 +337,7 @@ func (c *EtcdCluster) ClientCertSecret(ca *corev1.Secret) (*corev1.Secret, error
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.ClientCertSecretName(),
 			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
 		Data: map[string][]byte{
 			clientCertSecretCACertName:     ca.Data[caSecretCertName],
@@ -405,7 +405,7 @@ func (c *EtcdCluster) DefragmentCronJob() *batchv1beta1.CronJob {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.DefragmentCronJobName(),
 			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
 		Spec: batchv1beta1.CronJobSpec{
 			Schedule: c.Spec.DefragmentSchedule,
@@ -626,7 +626,7 @@ func (c *EtcdCluster) DiscoveryService() *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.ServerDiscoveryServiceName(),
 			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 			Labels: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
 			},
@@ -663,7 +663,7 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.ClientServiceName(),
 			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 			Labels: map[string]string{
 				etcd.LabelNameClusterName: c.Name,
 			},
@@ -684,45 +684,45 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 	}
 }
 
-func (c *EtcdCluster) CurrentPhase() etcdv1alpha1.EtcdClusterPhase {
+func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 	if len(c.ownedPods) == 0 {
-		return etcdv1alpha1.ClusterPhasePending
+		return etcdv1alpha2.ClusterPhasePending
 	}
 
 	if len(c.ownedPods) == 1 && !c.IsPodReady(c.ownedPods[0]) {
-		return etcdv1alpha1.ClusterPhaseInitializing
+		return etcdv1alpha2.ClusterPhaseInitializing
 	}
 
 	if len(c.ownedPods) < c.Spec.Members {
 		if c.Status.LastReadyTransitionTime.IsZero() {
-			return etcdv1alpha1.ClusterPhaseCreating
+			return etcdv1alpha2.ClusterPhaseCreating
 		} else {
 			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", zap.Int("ownedPods.len", len(c.ownedPods)))
-			return etcdv1alpha1.ClusterPhaseDegrading
+			return etcdv1alpha2.ClusterPhaseDegrading
 		}
 	}
 
 	if c.HasTemporaryMember() {
-		return etcdv1alpha1.ClusterPhaseUpdating
+		return etcdv1alpha2.ClusterPhaseUpdating
 	}
 
 	for _, pod := range c.ownedPods {
 		if c.NeedRepair(pod) {
 			c.log.Debug("Need repair pod", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
-			return etcdv1alpha1.ClusterPhaseDegrading
+			return etcdv1alpha2.ClusterPhaseDegrading
 		}
 
 		if !c.IsPodReady(pod) {
 			if c.Status.LastReadyTransitionTime.IsZero() {
-				return etcdv1alpha1.ClusterPhaseCreating
+				return etcdv1alpha2.ClusterPhaseCreating
 			} else {
 				c.log.Debug("Pod is not ready", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
-				return etcdv1alpha1.ClusterPhaseDegrading
+				return etcdv1alpha2.ClusterPhaseDegrading
 			}
 		}
 	}
 
-	return etcdv1alpha1.ClusterPhaseRunning
+	return etcdv1alpha2.ClusterPhaseRunning
 }
 
 func (c *EtcdCluster) CurrentInternalState() InternalState {
@@ -951,7 +951,7 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 			Annotations: map[string]string{
 				etcd.AnnotationKeyServerCertificate: string(c.serverCertSecret.MarshalCertificate()),
 			},
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
 		},
 		Spec: c.etcdPodSpec(podName, etcdVersion, clusterState, initialCluster, antiAffinity),
 	}
@@ -1358,7 +1358,7 @@ func (c *EtcdCluster) newEtcdMember(pod *corev1.Pod) *EtcdMember {
 					Labels:      l,
 					Annotations: tmpl.ObjectMeta.Annotations,
 					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha1.SchemeGroupVersion.WithKind("EtcdCluster")),
+						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster")),
 					},
 				},
 				Spec: tmpl.Spec,

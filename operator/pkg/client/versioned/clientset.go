@@ -35,8 +35,10 @@ import (
 	certmanagerv1alpha3 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1alpha3"
 	certmanagerv1beta1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/certmanager/v1beta1"
 	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/etcd/v1alpha2"
 	monitoringv1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/monitoring/v1"
 	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/client/versioned/typed/proxy/v1alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -49,8 +51,10 @@ type Interface interface {
 	CertmanagerV1alpha3() certmanagerv1alpha3.CertmanagerV1alpha3Interface
 	CertmanagerV1beta1() certmanagerv1beta1.CertmanagerV1beta1Interface
 	EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface
+	EtcdV1alpha2() etcdv1alpha2.EtcdV1alpha2Interface
 	MonitoringV1() monitoringv1.MonitoringV1Interface
 	ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface
+	ProxyV1alpha2() proxyv1alpha2.ProxyV1alpha2Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -62,8 +66,10 @@ type Clientset struct {
 	certmanagerV1alpha3 *certmanagerv1alpha3.CertmanagerV1alpha3Client
 	certmanagerV1beta1  *certmanagerv1beta1.CertmanagerV1beta1Client
 	etcdV1alpha1        *etcdv1alpha1.EtcdV1alpha1Client
+	etcdV1alpha2        *etcdv1alpha2.EtcdV1alpha2Client
 	monitoringV1        *monitoringv1.MonitoringV1Client
 	proxyV1alpha1       *proxyv1alpha1.ProxyV1alpha1Client
+	proxyV1alpha2       *proxyv1alpha2.ProxyV1alpha2Client
 }
 
 // CertmanagerV1 retrieves the CertmanagerV1Client
@@ -91,6 +97,11 @@ func (c *Clientset) EtcdV1alpha1() etcdv1alpha1.EtcdV1alpha1Interface {
 	return c.etcdV1alpha1
 }
 
+// EtcdV1alpha2 retrieves the EtcdV1alpha2Client
+func (c *Clientset) EtcdV1alpha2() etcdv1alpha2.EtcdV1alpha2Interface {
+	return c.etcdV1alpha2
+}
+
 // MonitoringV1 retrieves the MonitoringV1Client
 func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 	return c.monitoringV1
@@ -99,6 +110,11 @@ func (c *Clientset) MonitoringV1() monitoringv1.MonitoringV1Interface {
 // ProxyV1alpha1 retrieves the ProxyV1alpha1Client
 func (c *Clientset) ProxyV1alpha1() proxyv1alpha1.ProxyV1alpha1Interface {
 	return c.proxyV1alpha1
+}
+
+// ProxyV1alpha2 retrieves the ProxyV1alpha2Client
+func (c *Clientset) ProxyV1alpha2() proxyv1alpha2.ProxyV1alpha2Interface {
+	return c.proxyV1alpha2
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -142,11 +158,19 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.etcdV1alpha2, err = etcdv1alpha2.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.monitoringV1, err = monitoringv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
 	cs.proxyV1alpha1, err = proxyv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+	cs.proxyV1alpha2, err = proxyv1alpha2.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +191,10 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.certmanagerV1alpha3 = certmanagerv1alpha3.NewForConfigOrDie(c)
 	cs.certmanagerV1beta1 = certmanagerv1beta1.NewForConfigOrDie(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.NewForConfigOrDie(c)
+	cs.etcdV1alpha2 = etcdv1alpha2.NewForConfigOrDie(c)
 	cs.monitoringV1 = monitoringv1.NewForConfigOrDie(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.NewForConfigOrDie(c)
+	cs.proxyV1alpha2 = proxyv1alpha2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -182,8 +208,10 @@ func New(c rest.Interface) *Clientset {
 	cs.certmanagerV1alpha3 = certmanagerv1alpha3.New(c)
 	cs.certmanagerV1beta1 = certmanagerv1beta1.New(c)
 	cs.etcdV1alpha1 = etcdv1alpha1.New(c)
+	cs.etcdV1alpha2 = etcdv1alpha2.New(c)
 	cs.monitoringV1 = monitoringv1.New(c)
 	cs.proxyV1alpha1 = proxyv1alpha1.New(c)
+	cs.proxyV1alpha2 = proxyv1alpha2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

@@ -9,69 +9,99 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
 
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 type ConfigConverter struct {
 }
 
-func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
+func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
 	proxies := make([]*configv2.Backend, 0, len(backends))
 	for _, v := range backends {
 		_, virtualDashboard := v.Labels[labelKeyVirtualDashboard]
-
-		var service *corev1.Service
-		if !virtualDashboard && v.Spec.Upstream == "" {
-			svc, err := findService(serviceLister, v.Spec.ServiceSelector, v.Namespace)
-			if err != nil {
-				// At this time, ignore error
-				continue
-			}
-			if svc == nil {
-				continue
-			}
-			service = svc
-		}
-		if v.Spec.Upstream == "" && service == nil {
-			continue
-		}
 
 		name := v.Name + "." + v.Spec.Layer
 		if v.Spec.Layer == "" {
 			name = v.Name
 		}
-		upstream := v.Spec.Upstream
-		if upstream == "" {
-			for _, p := range service.Spec.Ports {
-				if p.Name == v.Spec.ServiceSelector.Port {
-					scheme := v.Spec.ServiceSelector.Scheme
-					if scheme == "" {
-						switch p.Name {
-						case "http", "https":
-							scheme = p.Name
-						}
-					}
 
-					upstream = fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, p.Port)
-					break
+		routing := make([]*configv2.HTTPBackend, 0)
+		for _, r := range v.Spec.HTTPRouting {
+			var service *corev1.Service
+			if !virtualDashboard && r.Upstream == "" {
+				svc, err := findService(serviceLister, r.ServiceSelector, v.Namespace)
+				if err != nil {
+					// At this time, ignore error
+					continue
+				}
+				if svc == nil {
+					continue
+				}
+				service = svc
+			}
+			if r.Upstream == "" && service == nil {
+				continue
+			}
+
+			upstream := r.Upstream
+			if upstream == "" {
+				for _, p := range service.Spec.Ports {
+					if p.Name == r.ServiceSelector.Port {
+						scheme := r.ServiceSelector.Scheme
+						if scheme == "" {
+							switch p.Name {
+							case "http", "https":
+								scheme = p.Name
+							}
+						}
+
+						upstream = fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, p.Port)
+						break
+					}
 				}
 			}
+
+			routing = append(routing, &configv2.HTTPBackend{
+				Path:     r.Path,
+				Upstream: upstream,
+				Insecure: r.Insecure,
+				Agent:    r.Agent,
+			})
 		}
+
+		var socket *configv2.SocketBackend
+		if v.Spec.Socket != nil {
+			upstream := v.Spec.Socket.Upstream
+			if v.Spec.Socket.ServiceSelector != nil {
+				svc, err := findService(serviceLister, v.Spec.Socket.ServiceSelector, v.Namespace)
+				if err != nil {
+					return nil, xerrors.Errorf(": %w", err)
+				}
+				for _, p := range svc.Spec.Ports {
+					if p.Name == v.Spec.Socket.ServiceSelector.Port {
+						upstream = fmt.Sprintf("tcp://%s.%s.svc:%d", svc.Name, svc.Namespace, p.Port)
+						break
+					}
+				}
+			}
+
+			socket = &configv2.SocketBackend{
+				Upstream: upstream,
+				Agent:    v.Spec.Socket.Agent,
+				Timeout:  &configv2.Duration{Duration: v.Spec.Socket.Timeout.Duration},
+			}
+		}
+
 		b := &configv2.Backend{
-			Name: name,
-			FQDN: v.Spec.FQDN,
-			HTTP: []*configv2.HTTPBackend{
-				{Path: "/", Upstream: upstream, Insecure: v.Spec.Insecure},
-			},
+			Name:          name,
+			FQDN:          v.Spec.FQDN,
+			HTTP:          routing,
+			Socket:        socket,
 			Permissions:   toConfigPermissions(v.Spec),
-			Agent:         v.Spec.Agent,
 			AllowRootUser: v.Spec.AllowRootUser,
 			DisableAuthn:  v.Spec.DisableAuthn,
 			AllowHttp:     v.Spec.AllowHttp,
-		}
-		if v.Spec.SocketTimeout != nil {
-			b.Socket.Timeout = &configv2.Duration{Duration: v.Spec.SocketTimeout.Duration}
 		}
 		if v.Spec.MaxSessionDuration != nil {
 			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.Duration}
@@ -89,8 +119,8 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha1.Backend, serviceLister li
 	return proxyBinary, nil
 }
 
-func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxyv1alpha1.Role, roleBindings []*proxyv1alpha1.RoleBinding) ([]byte, error) {
-	backendMap := make(map[string]*proxyv1alpha1.Backend)
+func (ConfigConverter) Role(backends []*proxyv1alpha2.Backend, roleList []*proxyv1alpha2.Role, roleBindings []*proxyv1alpha2.RoleBinding) ([]byte, error) {
+	backendMap := make(map[string]*proxyv1alpha2.Backend)
 	for _, v := range backends {
 		backendMap[v.Namespace+"/"+v.Name] = v
 	}
@@ -99,7 +129,7 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 	for i, role := range roleList {
 		bindings := make([]*configv2.Binding, 0)
 
-		matchedBindings := RoleBindings(roleBindings).Select(func(binding *proxyv1alpha1.RoleBinding) bool {
+		matchedBindings := RoleBindings(roleBindings).Select(func(binding *proxyv1alpha2.RoleBinding) bool {
 			if binding.RoleRef.Name != role.Name {
 				return false
 			}
@@ -113,8 +143,8 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 			return false
 		})
 		if role.Spec.AllowDashboard {
-			matchedBindings = append(matchedBindings, &proxyv1alpha1.RoleBinding{
-				Subjects: []proxyv1alpha1.Subject{
+			matchedBindings = append(matchedBindings, &proxyv1alpha2.RoleBinding{
+				Subjects: []proxyv1alpha2.Subject{
 					{
 						Kind:       "Backend",
 						Name:       "dashboard",
@@ -175,7 +205,7 @@ func (ConfigConverter) Role(backends []*proxyv1alpha1.Backend, roleList []*proxy
 	return roleBinary, nil
 }
 
-func (ConfigConverter) RPCPermission(permissions []*proxyv1alpha1.RpcPermission) ([]byte, error) {
+func (ConfigConverter) RPCPermission(permissions []*proxyv1alpha2.RpcPermission) ([]byte, error) {
 	rpcPermissions := make([]*configv2.RPCPermission, len(permissions))
 	for i, v := range permissions {
 		rpcPermissions[i] = &configv2.RPCPermission{

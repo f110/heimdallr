@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -27,7 +27,7 @@ func TestEtcdController(t *testing.T) {
 		// In this case, we don't need mocking etcd client.
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhasePending)
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhasePending)
 		f.RegisterEtcdClusterFixture(e)
 
 		// Setup
@@ -56,7 +56,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseCreating)
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseCreating)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
@@ -98,7 +98,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning, etcdClusterReady)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
@@ -137,7 +137,7 @@ func TestEtcdController(t *testing.T) {
 
 			f, _ := newEtcdControllerTestRunner(t)
 
-			e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
+			e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning, etcdClusterReady)
 			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
@@ -160,7 +160,7 @@ func TestEtcdController(t *testing.T) {
 
 			f, _ := newEtcdControllerTestRunner(t)
 
-			e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseUpdating, etcdClusterReady)
+			e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseUpdating, etcdClusterReady)
 			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
@@ -184,7 +184,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseUpdating, etcdClusterReady)
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseUpdating, etcdClusterReady)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
@@ -206,7 +206,7 @@ func TestEtcdController(t *testing.T) {
 
 		f, _ := newEtcdControllerTestRunner(t)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning, etcdClusterReady)
 		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
@@ -236,13 +236,13 @@ func TestEtcdController_Backup(t *testing.T) {
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
-		e.Spec.Backup = &etcdv1alpha1.BackupSpec{
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning)
+		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
 			IntervalInSecond: 30,
-			Storage: etcdv1alpha1.BackupStorageSpec{
-				MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
-					ServiceSelector: etcdv1alpha1.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
-					CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+			Storage: etcdv1alpha2.BackupStorageSpec{
+				MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
+					ServiceSelector: etcdv1alpha2.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
+					CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
 						Name:               minIOSecret.Name,
 						Namespace:          minIOSecret.Namespace,
 						AccessKeyIDKey:     "accesskey",
@@ -294,13 +294,13 @@ func TestEtcdController_Backup(t *testing.T) {
 		minIOService, minIOSecret := minIOFixtures()
 		f.RegisterFixtures(minIOService, minIOSecret)
 
-		e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning)
-		e.Spec.Backup = &etcdv1alpha1.BackupSpec{
+		e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning)
+		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
 			IntervalInSecond: 30,
-			Storage: etcdv1alpha1.BackupStorageSpec{
-				MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
-					ServiceSelector: etcdv1alpha1.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
-					CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+			Storage: etcdv1alpha2.BackupStorageSpec{
+				MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
+					ServiceSelector: etcdv1alpha2.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
+					CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
 						Name:               minIOSecret.Name,
 						Namespace:          minIOSecret.Namespace,
 						AccessKeyIDKey:     "accesskey",
@@ -340,13 +340,13 @@ func TestEtcdController_Backup(t *testing.T) {
 func TestEtcdController_Restore(t *testing.T) {
 	f, _ := newEtcdControllerTestRunner(t)
 
-	e := etcdClusterFixtures(t, etcdv1alpha1.ClusterPhaseRunning, etcdClusterReady)
-	e.Spec.Backup = &etcdv1alpha1.BackupSpec{
+	e := etcdClusterFixtures(t, etcdv1alpha2.ClusterPhaseRunning, etcdClusterReady)
+	e.Spec.Backup = &etcdv1alpha2.BackupSpec{
 		IntervalInSecond: 30,
-		Storage: etcdv1alpha1.BackupStorageSpec{
-			MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
-				ServiceSelector: etcdv1alpha1.ObjectSelector{Name: "test", Namespace: metav1.NamespaceDefault},
-				CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+		Storage: etcdv1alpha2.BackupStorageSpec{
+			MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
+				ServiceSelector: etcdv1alpha2.ObjectSelector{Name: "test", Namespace: metav1.NamespaceDefault},
+				CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
 					Name:               "test",
 					Namespace:          metav1.NamespaceDefault,
 					AccessKeyIDKey:     "accesskey",
@@ -358,9 +358,9 @@ func TestEtcdController_Restore(t *testing.T) {
 		},
 		MaxBackups: 5,
 	}
-	e.Status.Backup = &etcdv1alpha1.BackupStatus{
+	e.Status.Backup = &etcdv1alpha2.BackupStatus{
 		Succeeded: true,
-		History: []etcdv1alpha1.BackupStatusHistory{
+		History: []etcdv1alpha2.BackupStatusHistory{
 			{
 				Succeeded: true,
 				Path:      "backup/latest",
@@ -406,21 +406,21 @@ func TestEtcdController_Restore(t *testing.T) {
 	assert.False(t, updatedEC.Status.Restored.Completed)
 }
 
-type etcdClusterOpt func(e *etcdv1alpha1.EtcdCluster)
+type etcdClusterOpt func(e *etcdv1alpha2.EtcdCluster)
 
-func etcdClusterFixtures(t *testing.T, phase etcdv1alpha1.EtcdClusterPhase, opt ...etcdClusterOpt) *etcdv1alpha1.EtcdCluster {
-	ec := &etcdv1alpha1.EtcdCluster{
+func etcdClusterFixtures(t *testing.T, phase etcdv1alpha2.EtcdClusterPhase, opt ...etcdClusterOpt) *etcdv1alpha2.EtcdCluster {
+	ec := &etcdv1alpha2.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              normalizeName(t.Name()),
 			Namespace:         metav1.NamespaceDefault,
 			UID:               uuid.NewUUID(),
 			CreationTimestamp: metav1.Now(),
 		},
-		Spec: etcdv1alpha1.EtcdClusterSpec{
+		Spec: etcdv1alpha2.EtcdClusterSpec{
 			Members:      3,
 			AntiAffinity: true,
 		},
-		Status: etcdv1alpha1.EtcdClusterStatus{
+		Status: etcdv1alpha2.EtcdClusterStatus{
 			Phase: phase,
 		},
 	}
@@ -480,7 +480,7 @@ func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunn
 	f.RegisterServiceFixture(c.ClientService())
 }
 
-func etcdClusterReady(e *etcdv1alpha1.EtcdCluster) {
+func etcdClusterReady(e *etcdv1alpha2.EtcdCluster) {
 	now := metav1.Now()
 	e.Status.LastReadyTransitionTime = &now
 }

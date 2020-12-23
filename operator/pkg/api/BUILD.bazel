@@ -4,7 +4,9 @@ k8s_code_generator(
     name = "gen",
     srcs = [
         "//operator/pkg/api/etcd/v1alpha1",
+        "//operator/pkg/api/etcd/v1alpha2",
         "//operator/pkg/api/proxy/v1alpha1",
+        "//operator/pkg/api/proxy/v1alpha2",
     ],
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
     crd = "operator/config/crd",

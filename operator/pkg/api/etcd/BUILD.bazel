@@ -2,7 +2,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "etcd",
-    srcs = ["register.go"],
+    srcs = [
+        "conversion.go",
+        "register.go",
+    ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/api/etcd",
     visibility = ["//visibility:public"],
+    deps = [
+        "//operator/pkg/api/etcd/v1alpha1",
+        "//operator/pkg/api/etcd/v1alpha2",
+        "//operator/pkg/webhook",
+        "//pkg/logger",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+    ],
 )

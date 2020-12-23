@@ -28,8 +28,8 @@ import (
 	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/fake"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 )
@@ -78,11 +78,11 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
 	for _, v := range objs {
 		switch obj := v.(type) {
-		case *proxyv1alpha1.Proxy:
+		case *proxyv1alpha2.Proxy:
 			f.RegisterProxyFixture(obj)
-		case *proxyv1alpha1.Backend:
+		case *proxyv1alpha2.Backend:
 			f.RegisterBackendFixture(obj)
-		case *etcdv1alpha1.EtcdCluster:
+		case *etcdv1alpha2.EtcdCluster:
 			f.RegisterEtcdClusterFixture(obj)
 		case *corev1.Pod:
 			f.RegisterPodFixture(obj)
@@ -100,35 +100,35 @@ func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
 	}
 }
 
-func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1alpha1.Proxy) {
+func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1alpha2.Proxy) {
 	f.client.Tracker().Add(p)
-	f.sharedInformerFactory.Proxy().V1alpha1().Proxies().Informer().GetIndexer().Add(p)
+	f.sharedInformerFactory.Proxy().V1alpha2().Proxies().Informer().GetIndexer().Add(p)
 }
 
-func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1alpha1.Backend) {
+func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1alpha2.Backend) {
 	for _, v := range b {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha1().Backends().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha2().Backends().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1alpha1.Role) {
+func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1alpha2.Role) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha1().Roles().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha2().Roles().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1alpha1.RoleBinding) {
+func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1alpha2.RoleBinding) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha1().RoleBindings().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.Proxy().V1alpha2().RoleBindings().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha1.EtcdCluster) {
+func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha2.EtcdCluster) {
 	f.client.Tracker().Add(ec)
-	f.sharedInformerFactory.Etcd().V1alpha1().EtcdClusters().Informer().GetIndexer().Add(ec)
+	f.sharedInformerFactory.Etcd().V1alpha2().EtcdClusters().Informer().GetIndexer().Add(ec)
 }
 
 func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
@@ -220,13 +220,13 @@ func (f *commonTestRunner) ExpectCreatePodDisruptionBudget() {
 }
 
 func (f *commonTestRunner) ExpectCreateEtcdCluster() {
-	action := core.NewCreateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+	action := core.NewCreateAction(etcdv1alpha2.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha2.EtcdCluster{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectCreateBackend() {
-	action := core.NewCreateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
+	action := core.NewCreateAction(proxyv1alpha2.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha2.Backend{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
@@ -250,39 +250,39 @@ func (f *commonTestRunner) ExpectUpdateIngress() {
 }
 
 func (f *commonTestRunner) ExpectUpdateProxy() {
-	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha1.Proxy{})
+	action := core.NewUpdateAction(proxyv1alpha2.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha2.Proxy{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateProxyStatus() {
-	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha1.Proxy{})
+	action := core.NewUpdateAction(proxyv1alpha2.SchemeGroupVersion.WithResource("proxies"), "", &proxyv1alpha2.Proxy{})
 	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateBackend() {
-	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
+	action := core.NewUpdateAction(proxyv1alpha2.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha2.Backend{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateBackendStatus() {
-	action := core.NewUpdateAction(proxyv1alpha1.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha1.Backend{})
+	action := core.NewUpdateAction(proxyv1alpha2.SchemeGroupVersion.WithResource("backends"), "", &proxyv1alpha2.Backend{})
 	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateEtcdCluster() {
-	action := core.NewUpdateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+	action := core.NewUpdateAction(etcdv1alpha2.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha2.EtcdCluster{})
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateEtcdClusterStatus() {
-	action := core.NewUpdateAction(etcdv1alpha1.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha1.EtcdCluster{})
+	action := core.NewUpdateAction(etcdv1alpha2.SchemeGroupVersion.WithResource("etcdclusters"), "", &etcdv1alpha2.EtcdCluster{})
 	action.Subresource = "status"
 
 	f.actions = append(f.actions, f.expectActionWithCaller(action))
@@ -370,7 +370,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 	return f
 }
 
-func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Proxy) {
+func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha2.Proxy) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)
@@ -383,7 +383,7 @@ func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha1.Proxy) {
 	}
 }
 
-func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha1.Proxy, expectErr error) {
+func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha2.Proxy, expectErr error) {
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)
@@ -416,7 +416,7 @@ func newGitHubControllerTestRunner(t *testing.T) *githubControllerTestRunner {
 	return f
 }
 
-func (f *githubControllerTestRunner) Run(t *testing.T, b *proxyv1alpha1.Backend) {
+func (f *githubControllerTestRunner) Run(t *testing.T, b *proxyv1alpha2.Backend) {
 	key, err := cache.MetaNamespaceKeyFunc(b)
 	if err != nil {
 		t.Fatal(err)
@@ -429,7 +429,7 @@ func (f *githubControllerTestRunner) Run(t *testing.T, b *proxyv1alpha1.Backend)
 	}
 }
 
-func (f *githubControllerTestRunner) RunExpectError(t *testing.T, b *proxyv1alpha1.Backend, expectErr error) {
+func (f *githubControllerTestRunner) RunExpectError(t *testing.T, b *proxyv1alpha2.Backend, expectErr error) {
 	key, err := cache.MetaNamespaceKeyFunc(b)
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +478,7 @@ func newEtcdControllerTestRunner(t *testing.T) (*etcdControllerTestRunner, *Mock
 	return f, mockOpt
 }
 
-func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha1.EtcdCluster) {
+func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha2.EtcdCluster) {
 	key, err := cache.MetaNamespaceKeyFunc(e)
 	if err != nil {
 		t.Fatal(err)

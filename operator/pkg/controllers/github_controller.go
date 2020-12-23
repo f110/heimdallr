@@ -21,11 +21,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
-	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha1"
+	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha2"
 )
 
 const (
@@ -56,8 +56,8 @@ func NewGitHubController(
 	client clientset.Interface,
 	transport http.RoundTripper,
 ) (*GitHubController, error) {
-	backendInformer := sharedInformerFactory.Proxy().V1alpha1().Backends()
-	proxyInformer := sharedInformerFactory.Proxy().V1alpha1().Proxies()
+	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
+	proxyInformer := sharedInformerFactory.Proxy().V1alpha2().Proxies()
 
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
@@ -102,7 +102,7 @@ func (c *GitHubController) EventSources() []cache.SharedIndexInformer {
 func (c *GitHubController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 	return func(obj interface{}) (keys []string, err error) {
 		switch obj.(type) {
-		case *proxyv1alpha1.Backend:
+		case *proxyv1alpha2.Backend:
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err != nil {
 				return nil, err
@@ -122,16 +122,22 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 	}
 
 	backend, err := c.backendLister.Backends(namespace).Get(name)
-	if err != nil {
+	if err != nil && apierrors.IsNotFound(err) {
+		c.Log().Debug("Backend is not found", zap.String("key", key))
+		return nil, nil
+	} else if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	if backend.Spec.Webhook != "github" {
-		c.Log().Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
-		return nil, nil
+	var webhookConf *proxyv1alpha2.WebhookConfiguration
+	for _, v := range backend.Spec.Permissions {
+		if v.Webhook == "github" {
+			webhookConf = v.WebhookConfiguration
+			break
+		}
 	}
-	if backend.Spec.WebhookConfiguration == nil {
-		c.Log().Debug("not set WebhookConfiguration")
+	if webhookConf == nil {
+		c.Log().Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
 		return nil, nil
 	}
 
@@ -139,66 +145,78 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 }
 
 func (c *GitHubController) UpdateObject(ctx context.Context, obj interface{}) error {
-	backend, ok := obj.(*proxyv1alpha1.Backend)
+	backend, ok := obj.(*proxyv1alpha2.Backend)
 	if !ok {
 		return nil
 	}
 
-	_, err := c.client.ProxyV1alpha1().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
+	_, err := c.client.ProxyV1alpha2().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
 	return err
 }
 
 func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error {
 	c.Log().Debug("syncBackend")
-	backend := obj.(*proxyv1alpha1.Backend)
+	backend := obj.(*proxyv1alpha2.Backend)
 
-	ghClient, err := c.newGithubClient(backend)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	updatedB := backend.DeepCopy()
-	for _, ownerAndRepo := range backend.Spec.WebhookConfiguration.Repositories {
-		if backend.Status.IsConfigured(ownerAndRepo) {
+	for _, s := range backend.Spec.Permissions {
+		if s.Webhook != "github" {
+			continue
+		}
+		if s.WebhookConfiguration == nil {
+			continue
+		}
+		if s.WebhookConfiguration.GitHub == nil {
 			continue
 		}
 
-		s := strings.Split(ownerAndRepo, "/")
-		if len(s) != 2 {
-			continue
-		}
-		owner, repo := s[0], s[1]
-
-		found, err := c.checkConfigured(ctx, ghClient, updatedB, owner, repo)
+		ghClient, err := c.newGithubClient(s.WebhookConfiguration, backend.Namespace)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		if found {
-			continue
-		}
 
-		if err := c.setWebHook(ctx, ghClient, updatedB, owner, repo); err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
-	if !reflect.DeepEqual(backend.Status, updatedB.Status) {
-		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			backend, err := c.backendLister.Backends(updatedB.Namespace).Get(updatedB.Name)
-			if err != nil {
-				return err
+		updatedB := backend.DeepCopy()
+		for _, ownerAndRepo := range s.WebhookConfiguration.GitHub.Repositories {
+			if backend.Status.IsConfigured(ownerAndRepo) {
+				continue
 			}
 
-			backend.Status = updatedB.Status
-			_, err = c.client.ProxyV1alpha1().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
-			if err != nil {
-				c.Log().Debug("Failed update backend", zap.Error(err))
-				return err
+			s := strings.Split(ownerAndRepo, "/")
+			if len(s) != 2 {
+				continue
 			}
-			return nil
-		})
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			owner, repo := s[0], s[1]
+
+			found, err := c.checkConfigured(ctx, ghClient, updatedB, owner, repo)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if found {
+				continue
+			}
+
+			if err := c.setWebHook(ctx, ghClient, updatedB, owner, repo); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+
+		if !reflect.DeepEqual(backend.Status, updatedB.Status) {
+			err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				backend, err := c.backendLister.Backends(updatedB.Namespace).Get(updatedB.Name)
+				if err != nil {
+					return err
+				}
+
+				backend.Status = updatedB.Status
+				_, err = c.client.ProxyV1alpha2().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
+				if err != nil {
+					c.Log().Debug("Failed update backend", zap.Error(err))
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
 		}
 	}
 
@@ -206,7 +224,7 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 }
 
 func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error {
-	backend := obj.(*proxyv1alpha1.Backend)
+	backend := obj.(*proxyv1alpha2.Backend)
 
 	if len(backend.Status.WebhookConfigurations) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
@@ -218,7 +236,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			updatedB := backend.DeepCopy()
 			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+				_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			}
 			return nil
@@ -229,51 +247,61 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		return nil
 	}
 
-	ghClient, err := c.newGithubClient(backend)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	webhookConfigurations := make([]*proxyv1alpha1.WebhookConfigurationStatus, 0)
-	for _, v := range backend.Status.WebhookConfigurations {
-		if v.Id == 0 {
+	for _, p := range backend.Spec.Permissions {
+		if p.Webhook != "github" {
 			continue
 		}
-		s := strings.SplitN(v.Repository, "/", 2)
-		owner, repo := s[0], s[1]
+		if p.WebhookConfiguration == nil || p.WebhookConfiguration.GitHub == nil {
+			continue
+		}
 
-		c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
-		_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, v.Id)
+		ghClient, err := c.newGithubClient(p.WebhookConfiguration, backend.Namespace)
 		if err != nil {
-			c.Log().Debug("Failed delete hook", zap.Error(err))
-			webhookConfigurations = append(webhookConfigurations, v)
+			return xerrors.Errorf(": %w", err)
+		}
+
+		webhookConfigurations := make([]*proxyv1alpha2.WebhookConfigurationStatus, 0)
+		for _, v := range backend.Status.WebhookConfigurations {
+			if v.Id == 0 {
+				continue
+			}
+			s := strings.SplitN(v.Repository, "/", 2)
+			owner, repo := s[0], s[1]
+
+			c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
+			_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, v.Id)
+			if err != nil {
+				c.Log().Debug("Failed delete hook", zap.Error(err))
+				webhookConfigurations = append(webhookConfigurations, v)
+			}
+		}
+
+		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			backend, err = c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+			if err != nil {
+				return err
+			}
+
+			updatedB := backend.DeepCopy()
+			updatedB.Status.WebhookConfigurations = webhookConfigurations
+			if len(updatedB.Status.WebhookConfigurations) == 0 {
+				controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
+			}
+			if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
+				_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
 		}
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		backend, err = c.backendLister.Backends(backend.Namespace).Get(backend.Name)
-		if err != nil {
-			return err
-		}
-
-		updatedB := backend.DeepCopy()
-		updatedB.Status.WebhookConfigurations = webhookConfigurations
-		if len(updatedB.Status.WebhookConfigurations) == 0 {
-			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
-		}
-		if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-			_, err = c.client.ProxyV1alpha1().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
 	return nil
 }
 
-func (c *GitHubController) checkConfigured(ctx context.Context, client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) (bool, error) {
+func (c *GitHubController) checkConfigured(ctx context.Context, client *github.Client, backend *proxyv1alpha2.Backend, owner, repo string) (bool, error) {
 	hooks, _, err := client.Repositories.ListHooks(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
 		return false, xerrors.Errorf(": %w", err)
@@ -295,65 +323,75 @@ func (c *GitHubController) checkConfigured(ctx context.Context, client *github.C
 	return false, nil
 }
 
-func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client, backend *proxyv1alpha1.Backend, owner, repo string) error {
+func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client, backend *proxyv1alpha2.Backend, owner, repo string) error {
 	for _, v := range backend.Status.DeployedBy {
 		u, err := url.Parse(v.Url)
 		if err != nil {
 			c.Log().Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
 			continue
 		}
-		u.Path = backend.Spec.WebhookConfiguration.Path
-		proxy, err := c.proxyLister.Proxies(v.Namespace).Get(v.Name)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
+
+		for _, p := range backend.Spec.Permissions {
+			if p.Webhook != "github" {
+				continue
+			}
+			if p.WebhookConfiguration == nil || p.WebhookConfiguration.GitHub == nil {
 				continue
 			}
 
-			c.Log().Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
-			continue
-		}
-		if proxy.Status.GithubWebhookSecretName == "" {
-			c.Log().Debug("Is not ready", zap.String("name", proxy.Name))
-			continue
-		}
-		secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				c.Log().Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
+			u.Path = p.WebhookConfiguration.GitHub.Path
+			proxy, err := c.proxyLister.Proxies(v.Namespace).Get(v.Name)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+
+				c.Log().Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
+				continue
+			}
+			if proxy.Status.GithubWebhookSecretName == "" {
+				c.Log().Debug("Is not ready", zap.String("name", proxy.Name))
+				continue
+			}
+			secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					c.Log().Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
+				}
+
+				continue
 			}
 
-			continue
-		}
+			newHook := &github.Hook{
+				Events: p.WebhookConfiguration.GitHub.Events,
+				Config: map[string]interface{}{
+					"url":          u.String(),
+					"content_type": p.WebhookConfiguration.GitHub.ContentType,
+					"secret":       string(secret.Data[githubWebhookSecretFilename]),
+				},
+			}
+			c.Log().Debug("Create new hook", zap.String("repo", owner+"/"+repo))
+			newHook, _, err = client.Repositories.CreateHook(ctx, owner, repo, newHook)
+			if err != nil {
+				c.Log().Info("Failed create hook", zap.Error(err))
+				continue
+			}
 
-		newHook := &github.Hook{
-			Events: backend.Spec.WebhookConfiguration.Events,
-			Config: map[string]interface{}{
-				"url":          u.String(),
-				"content_type": backend.Spec.WebhookConfiguration.ContentType,
-				"secret":       string(secret.Data[githubWebhookSecretFilename]),
-			},
+			backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
+				&proxyv1alpha2.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: fmt.Sprintf("%s/%s", owner, repo), UpdateTime: metav1.Now()},
+			)
 		}
-		c.Log().Debug("Create new hook", zap.String("repo", owner+"/"+repo))
-		newHook, _, err = client.Repositories.CreateHook(ctx, owner, repo, newHook)
-		if err != nil {
-			c.Log().Info("Failed create hook", zap.Error(err))
-			continue
-		}
-
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
-			&proxyv1alpha1.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: fmt.Sprintf("%s/%s", owner, repo), UpdateTime: metav1.Now()},
-		)
 	}
 
 	return nil
 }
 
-func (c *GitHubController) newGithubClient(backend *proxyv1alpha1.Backend) (*github.Client, error) {
-	secretNamespace := backend.Spec.WebhookConfiguration.CredentialSecretNamespace
+func (c *GitHubController) newGithubClient(conf *proxyv1alpha2.WebhookConfiguration, namespace string) (*github.Client, error) {
+	secretNamespace := conf.GitHub.CredentialSecretNamespace
 	if secretNamespace == "" {
-		secretNamespace = backend.Namespace
+		secretNamespace = namespace
 	}
-	secret, err := c.secretLister.Secrets(secretNamespace).Get(backend.Spec.WebhookConfiguration.CredentialSecretName)
+	secret, err := c.secretLister.Secrets(secretNamespace).Get(conf.GitHub.CredentialSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, xerrors.Errorf(": %w", err)
@@ -361,15 +399,15 @@ func (c *GitHubController) newGithubClient(backend *proxyv1alpha1.Backend) (*git
 
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	appId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.AppIdKey]), 10, 64)
+	appId, err := strconv.ParseInt(string(secret.Data[conf.GitHub.AppIdKey]), 10, 64)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	installationId, err := strconv.ParseInt(string(secret.Data[backend.Spec.WebhookConfiguration.InstallationIdKey]), 10, 64)
+	installationId, err := strconv.ParseInt(string(secret.Data[conf.GitHub.InstallationIdKey]), 10, 64)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[backend.Spec.WebhookConfiguration.PrivateKeyKey])
+	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[conf.GitHub.PrivateKeyKey])
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
