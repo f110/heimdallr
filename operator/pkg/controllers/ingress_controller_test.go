@@ -25,11 +25,12 @@ func TestIngressController(t *testing.T) {
 		f.ExpectCreateBackend()
 		f.Run(t, ing)
 
-		updatedB, err := f.client.ProxyV1alpha1().Backends(ing.Namespace).Get(context.TODO(), ing.Name, metav1.GetOptions{})
+		updatedB, err := f.client.ProxyV1alpha2().Backends(ing.Namespace).Get(context.TODO(), ing.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, ingClass.Labels, updatedB.Labels)
 		assert.Equal(t, ing.Spec.Rules[0].Host, updatedB.Spec.FQDN)
-		assert.Equal(t, svc.Name, updatedB.Spec.ServiceSelector.Name)
+		require.Len(t, updatedB.Spec.HTTPRouting, 1)
+		assert.Equal(t, svc.Name, updatedB.Spec.HTTPRouting[0].ServiceSelector.Name)
 		assert.True(t, updatedB.Spec.DisableAuthn)
 	})
 }

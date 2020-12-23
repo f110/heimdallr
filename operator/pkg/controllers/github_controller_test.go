@@ -54,7 +54,7 @@ func TestGitHubController(t *testing.T) {
 
 		ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
 
-		updatedB, err := f.client.ProxyV1alpha1().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		updatedB, err := f.client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Contains(t, updatedB.Finalizers, githubControllerFinalizerName)
 	})

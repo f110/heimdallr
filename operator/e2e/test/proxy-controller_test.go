@@ -21,7 +21,7 @@ import (
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/config"
 )
@@ -55,29 +55,29 @@ func TestProxyController(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			proxy := &proxyv1alpha1.Proxy{
+			proxy := &proxyv1alpha2.Proxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "create",
 					Namespace: "default",
 				},
-				Spec: proxyv1alpha1.ProxySpec{
+				Spec: proxyv1alpha2.ProxySpec{
 					Development: true,
 					Version:     framework.Config.ProxyVersion,
-					DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
-						Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+					DataStore: &proxyv1alpha2.ProxyDataStoreSpec{
+						Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{
 							Version:      "v3.4.8",
 							AntiAffinity: true,
 						},
 					},
 					Domain:   "e2e.f110.dev",
 					Replicas: 3,
-					BackendSelector: proxyv1alpha1.LabelSelector{
+					BackendSelector: proxyv1alpha2.LabelSelector{
 						LabelSelector: metav1.LabelSelector{},
 					},
-					IdentityProvider: proxyv1alpha1.IdentityProviderSpec{
+					IdentityProvider: proxyv1alpha2.IdentityProviderSpec{
 						Provider: "google",
 						ClientId: "e2e",
-						ClientSecretRef: proxyv1alpha1.SecretSelector{
+						ClientSecretRef: proxyv1alpha2.SecretSelector{
 							Name: clientSecret.Name,
 							Key:  "client-secret",
 						},
@@ -86,7 +86,7 @@ func TestProxyController(t *testing.T) {
 						Kind: "ClusterIssuer",
 						Name: "self-signed",
 					},
-					Session: proxyv1alpha1.SessionSpec{
+					Session: proxyv1alpha2.SessionSpec{
 						Type: config.SessionTypeSecureCookie,
 					},
 					RootUsers: []string{testUserId},
@@ -101,54 +101,54 @@ func TestProxyController(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			role := &proxyv1alpha1.Role{
+			role := &proxyv1alpha2.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 					Labels:    proxy.Spec.RoleSelector.MatchLabels,
 				},
-				Spec: proxyv1alpha1.RoleSpec{
+				Spec: proxyv1alpha2.RoleSpec{
 					Title:       "administrator",
 					Description: "admin",
 				},
 			}
-			role, err = client.ProxyV1alpha1().Roles(role.Namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+			role, err = client.ProxyV1alpha2().Roles(role.Namespace).Create(context.TODO(), role, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			roleBinding := &proxyv1alpha1.RoleBinding{
+			roleBinding := &proxyv1alpha2.RoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 				},
-				RoleRef: proxyv1alpha1.RoleRef{
+				RoleRef: proxyv1alpha2.RoleRef{
 					Name:      "admin",
 					Namespace: proxy.Namespace,
 				},
-				Subjects: []proxyv1alpha1.Subject{
+				Subjects: []proxyv1alpha2.Subject{
 					{Kind: "Backend", Name: "dashboard", Namespace: proxy.Namespace, Permission: "all"},
 					{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
 					{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
 				},
 			}
-			_, err = client.ProxyV1alpha1().RoleBindings(proxy.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+			_, err = client.ProxyV1alpha2().RoleBindings(proxy.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Create(context.TODO(), proxy, metav1.CreateOptions{})
+			_, err = client.ProxyV1alpha2().Proxies(proxy.Namespace).Create(context.TODO(), proxy, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1alpha1.ProxyPhaseRunning, 15*time.Minute); err != nil {
+			if err := e2eutil.WaitForStatusOfProxyBecome(client, proxy, proxyv1alpha2.ProxyPhaseRunning, 15*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 			if err := e2eutil.WaitForReadyOfProxy(client, proxy, 10*time.Minute); err != nil {
 				t.Fatal(err)
 			}
 
-			proxy, err = client.ProxyV1alpha1().Proxies(proxy.Namespace).Get(context.TODO(), proxy.Name, metav1.GetOptions{})
+			proxy, err = client.ProxyV1alpha2().Proxies(proxy.Namespace).Get(context.TODO(), proxy.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

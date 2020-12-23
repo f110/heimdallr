@@ -264,7 +264,7 @@ func TestProxyController(t *testing.T) {
 		f.ExpectUpdateProxyStatus()
 		f.Run(t, p)
 
-		etcdC, err := f.client.EtcdV1alpha1().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
+		etcdC, err := f.client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
 	})

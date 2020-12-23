@@ -277,7 +277,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		f.ExpectUpdateEtcdClusterStatus()
 		f.Run(t, e)
 
-		updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+		updatedEC, err := f.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.NotNil(t, updatedEC.Status.Backup)
@@ -398,7 +398,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	f.ExpectUpdateEtcdClusterStatus()
 	f.Run(t, e)
 
-	updatedEC, err := f.client.EtcdV1alpha1().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+	updatedEC, err := f.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	require.NotNil(t, updatedEC.Status.Restored)

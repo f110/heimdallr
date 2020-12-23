@@ -17,7 +17,7 @@ import (
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha1"
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
@@ -38,12 +38,12 @@ func TestEtcdController(t *testing.T) {
 						t.Fatal(err)
 					}
 
-					etcdCluster := &etcdv1alpha1.EtcdCluster{
+					etcdCluster := &etcdv1alpha2.EtcdCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "pvc",
 							Namespace: "default",
 						},
-						Spec: etcdv1alpha1.EtcdClusterSpec{
+						Spec: etcdv1alpha2.EtcdClusterSpec{
 							Members:      3,
 							Version:      "v3.4.4",
 							AntiAffinity: true,
@@ -59,12 +59,12 @@ func TestEtcdController(t *testing.T) {
 							},
 						},
 					}
-					_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+					_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}
 
-					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 						t.Fatal(err)
 					}
 
@@ -89,13 +89,13 @@ func TestEtcdController(t *testing.T) {
 						t.Fatal("Data volume does not attached")
 					}
 
-					newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					newEC, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}
-					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha2.ClusterPhaseRunning)
 
-					if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+					if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -108,23 +108,23 @@ func TestEtcdController(t *testing.T) {
 						t.Fatal(err)
 					}
 
-					etcdCluster := &etcdv1alpha1.EtcdCluster{
+					etcdCluster := &etcdv1alpha2.EtcdCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "create",
 							Namespace: "default",
 						},
-						Spec: etcdv1alpha1.EtcdClusterSpec{
+						Spec: etcdv1alpha2.EtcdClusterSpec{
 							Members:      3,
 							Version:      "v3.4.4",
 							AntiAffinity: true,
 						},
 					}
-					_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+					_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}
 
-					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 						t.Fatal(err)
 					}
 
@@ -149,13 +149,13 @@ func TestEtcdController(t *testing.T) {
 						t.Fatal("Data volume does not attached")
 					}
 
-					newEC, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					newEC, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}
-					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha1.ClusterPhaseRunning)
+					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha2.ClusterPhaseRunning)
 
-					if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+					if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -169,39 +169,39 @@ func TestEtcdController(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				etcdCluster := &etcdv1alpha1.EtcdCluster{
+				etcdCluster := &etcdv1alpha2.EtcdCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "update",
 						Namespace: "default",
 					},
-					Spec: etcdv1alpha1.EtcdClusterSpec{
+					Spec: etcdv1alpha2.EtcdClusterSpec{
 						Members: 3,
 						Version: "v3.4.3",
 					},
 				}
-				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 					t.Fatal(err)
 				}
 
-				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
 				etcdCluster.Spec.Version = "v3.4.4"
-				_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Update(context.TODO(), etcdCluster, metav1.UpdateOptions{})
+				_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Update(context.TODO(), etcdCluster, metav1.UpdateOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseUpdating, 1*time.Minute); err != nil {
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseUpdating, 1*time.Minute); err != nil {
 					t.Fatal(err)
 				}
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 					t.Fatal(err)
 				}
 
@@ -219,7 +219,7 @@ func TestEtcdController(t *testing.T) {
 					convey.So(v.Labels[etcd.LabelNameEtcdVersion], convey.ShouldEqual, etcdCluster.Spec.Version)
 				}
 
-				if err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
+				if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
 					t.Fatal(err)
 				}
 			})
@@ -236,27 +236,27 @@ func TestEtcdController(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				etcdCluster := &etcdv1alpha1.EtcdCluster{
+				etcdCluster := &etcdv1alpha2.EtcdCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "restore",
 						Namespace: metav1.NamespaceDefault,
 					},
-					Spec: etcdv1alpha1.EtcdClusterSpec{
+					Spec: etcdv1alpha2.EtcdClusterSpec{
 						Members:      3,
 						Version:      "v3.4.4",
 						AntiAffinity: true,
-						Backup: &etcdv1alpha1.BackupSpec{
+						Backup: &etcdv1alpha2.BackupSpec{
 							IntervalInSecond: 60,
 							MaxBackups:       5,
-							Storage: etcdv1alpha1.BackupStorageSpec{
-								MinIO: &etcdv1alpha1.BackupStorageMinIOSpec{
+							Storage: etcdv1alpha2.BackupStorageSpec{
+								MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
 									Bucket: kind.MinIOBucketName,
 									Path:   "restore-test",
-									ServiceSelector: etcdv1alpha1.ObjectSelector{
+									ServiceSelector: etcdv1alpha2.ObjectSelector{
 										Name:      "minio",
 										Namespace: metav1.NamespaceDefault,
 									},
-									CredentialSelector: etcdv1alpha1.AWSCredentialSelector{
+									CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
 										Name:               "minio-token",
 										Namespace:          metav1.NamespaceDefault,
 										AccessKeyIDKey:     "accesskey",
@@ -267,16 +267,16 @@ func TestEtcdController(t *testing.T) {
 						},
 					},
 				}
-				_, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+				_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 					t.Fatal(err)
 				}
 
 				const testDataKey = "e2e-test-data"
-				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -294,7 +294,7 @@ func TestEtcdController(t *testing.T) {
 				dataPutTime := time.Now()
 
 				err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
-					e, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						return false, nil
 					}
@@ -310,7 +310,7 @@ func TestEtcdController(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				etcdCluster, err = client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -323,7 +323,7 @@ func TestEtcdController(t *testing.T) {
 				}
 
 				err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
-					e, err := client.EtcdV1alpha1().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						return false, nil
 					}
@@ -333,7 +333,7 @@ func TestEtcdController(t *testing.T) {
 
 					return false, nil
 				})
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha1.ClusterPhaseRunning, 10*time.Minute); err != nil {
+				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
 					t.Fatal(err)
 				}
 

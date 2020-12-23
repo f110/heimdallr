@@ -11,8 +11,8 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/e2e/e2eutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//operator/pkg/api/etcd/v1alpha1",
-        "//operator/pkg/api/proxy/v1alpha1",
+        "//operator/pkg/api/etcd/v1alpha2",
+        "//operator/pkg/api/proxy/v1alpha2",
         "//operator/pkg/client/versioned",
         "//pkg/cert",
         "//pkg/logger",
