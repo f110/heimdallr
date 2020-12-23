@@ -71,6 +71,11 @@ func TestProxyController(t *testing.T) {
 					},
 					Domain:   "e2e.f110.dev",
 					Replicas: 3,
+					CertificateAuthority: &proxyv1alpha2.CertificateAuthoritySpec{
+						Local: &proxyv1alpha2.LocalCertificateAuthoritySpec{
+							Name: "e2e",
+						},
+					},
 					BackendSelector: proxyv1alpha2.LabelSelector{
 						LabelSelector: metav1.LabelSelector{},
 					},

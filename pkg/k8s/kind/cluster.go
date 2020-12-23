@@ -506,6 +506,7 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 type object struct {
 	Object           runtime.Object
 	GroupVersionKind *schema.GroupVersionKind
+	Raw              []byte
 }
 
 func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
@@ -527,7 +528,7 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		objs = append(objs, object{Object: obj, GroupVersionKind: gvk})
+		objs = append(objs, object{Object: obj, GroupVersionKind: gvk, Raw: ext.Raw})
 	}
 
 	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
@@ -596,12 +597,14 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 			if err := res.Error(); err != nil {
 				switch {
 				case apierrors.IsAlreadyExists(err):
-					log.Print(err)
 					method = http.MethodPatch
+					return false, nil
+				case apierrors.IsInternalError(err):
 					return false, nil
 				}
 
-				log.Print(err)
+				log.Printf("%s.%s: %v", unstructuredObj.GetKind(), unstructuredObj.GetName(), err)
+				log.Print(string(obj.Raw))
 				return true, nil
 			}
 			return true, nil
