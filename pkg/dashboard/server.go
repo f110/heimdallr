@@ -442,6 +442,7 @@ type user struct {
 	Maintainer     bool
 	Admin          bool
 	ServiceAccount bool
+	LastLogin      time.Time
 }
 
 type roleAndUser struct {
@@ -535,6 +536,7 @@ func (s *Server) handleUsers(w http.ResponseWriter, req *http.Request, _ httprou
 		case rpc.UserType_SERVICE_ACCOUNT:
 			serviceAccount = true
 		}
+
 		userList = append(userList, user{
 			Id:             v.Id,
 			Admin:          v.Admin,

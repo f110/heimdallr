@@ -87,6 +87,7 @@ message UserItem {
              string          comment        = 6;
     repeated AccessTokenItem tokens         = 7;
              string          login_name     = 8;
+             google.protobuf.Timestamp last_login = 9;
 }
 
 message AccessTokenItem {

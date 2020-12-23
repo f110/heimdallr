@@ -108,7 +108,7 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 	row := d.conn.QueryRowContext(ctx, "SELECT * FROM `user` WHERE `id` = ?", id)
 
 	v := &entity.User{}
-	if err := row.Scan(&v.Id, &v.Identity, &v.LoginName, &v.Admin, &v.Type, &v.Comment, &v.CreatedAt, &v.UpdatedAt); err != nil {
+	if err := row.Scan(&v.Id, &v.Identity, &v.LoginName, &v.Admin, &v.Type, &v.Comment, &v.LastLogin, &v.CreatedAt, &v.UpdatedAt); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
@@ -120,11 +120,11 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.User, error) {
 	row := d.conn.QueryRowContext(
 		ctx,
-		"SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `created_at`, `updated_at` FROM `user` WHERE `identity` = ?",
+		"SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `last_login`, `created_at`, `updated_at` FROM `user` WHERE `identity` = ?",
 		identity,
 	)
 	v := &entity.User{}
-	if err := row.Scan(&v.Id, &v.Identity, &v.LoginName, &v.Admin, &v.Type, &v.Comment, &v.CreatedAt, &v.UpdatedAt); err != nil {
+	if err := row.Scan(&v.Id, &v.Identity, &v.LoginName, &v.Admin, &v.Type, &v.Comment, &v.LastLogin, &v.CreatedAt, &v.UpdatedAt); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
@@ -168,7 +168,7 @@ func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, op
 
 func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error) {
 	listOpts := newListOpt(opt...)
-	query := "SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `created_at`, `updated_at` FROM `user`"
+	query := "SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `last_login`, `created_at`, `updated_at` FROM `user`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -187,7 +187,7 @@ func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, 
 	res := make([]*entity.User, 0)
 	for rows.Next() {
 		r := &entity.User{}
-		if err := rows.Scan(&r.Id, &r.Identity, &r.LoginName, &r.Admin, &r.Type, &r.Comment, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(&r.Id, &r.Identity, &r.LoginName, &r.Admin, &r.Type, &r.Comment, &r.LastLogin, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		r.ResetMark()
@@ -209,8 +209,8 @@ func (d *User) Create(ctx context.Context, user *entity.User, opt ...ExecOption)
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `user` (`identity`, `login_name`, `admin`, `type`, `comment`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)",
-		user.Identity, user.LoginName, user.Admin, user.Type, user.Comment, time.Now(),
+		"INSERT INTO `user` (`identity`, `login_name`, `admin`, `type`, `comment`, `last_login`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		user.Identity, user.LoginName, user.Admin, user.Type, user.Comment, user.LastLogin, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)

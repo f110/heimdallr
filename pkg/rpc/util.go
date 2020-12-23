@@ -17,6 +17,7 @@ func DatabaseUserToRPCUser(in *database.User) *UserItem {
 		maintainRoles = append(maintainRoles, v)
 	}
 
+	lastLogin, _ := ptypes.TimestampProto(in.LastLogin)
 	return &UserItem{
 		Id:            in.Id,
 		Roles:         in.Roles,
@@ -25,6 +26,7 @@ func DatabaseUserToRPCUser(in *database.User) *UserItem {
 		Type:          t,
 		Admin:         in.Admin,
 		Comment:       in.Comment,
+		LastLogin:     lastLogin,
 	}
 }
 

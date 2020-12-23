@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/coreos/go-oidc"
 	"github.com/julienschmidt/httprouter"
@@ -157,7 +158,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		}
 	}
 
-	_, err = s.database.Get(c.Email)
+	user, err := s.database.Get(c.Email)
 	if err != nil && !rootUser {
 		logger.Log.Info("Could not get email", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
@@ -173,6 +174,13 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	if user != nil {
+		user.LastLogin = time.Now()
+		if err := s.database.Set(req.Context(), user); err != nil {
+			logger.Log.Warn("Failed update user", zap.Error(err), zap.String("id", user.Id))
+		}
 	}
 
 	if redirectUrl != "" {

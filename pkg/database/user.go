@@ -81,6 +81,7 @@ type User struct {
 	Admin         bool            `json:"admin"`
 	Type          string          `json:"type"`
 	Comment       string          `json:"comment"`
+	LastLogin     time.Time       `json:"last_login"`
 
 	Version  int64 `json:"-"`
 	RootUser bool  `json:"-"`

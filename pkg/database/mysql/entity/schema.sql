@@ -11,6 +11,7 @@ CREATE TABLE `user` (
 	`admin` TINYINT(1) NOT NULL,
 	`type` VARCHAR(255) NOT NULL,
 	`comment` VARCHAR(255) NOT NULL,
+	`last_login` DATETIME NOT NULL,
 	`created_at` DATETIME NOT NULL,
 	`updated_at` DATETIME NULL,
 	UNIQUE `idx_identity` (`identity`),

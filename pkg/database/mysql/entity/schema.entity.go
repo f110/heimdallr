@@ -25,6 +25,7 @@ type User struct {
 	Admin     bool
 	Type      string
 	Comment   string
+	LastLogin time.Time
 	CreatedAt time.Time
 	UpdatedAt *time.Time
 
@@ -48,6 +49,7 @@ func (e *User) IsChanged() bool {
 		e.Admin != e.mark.Admin ||
 		e.Type != e.mark.Type ||
 		e.Comment != e.mark.Comment ||
+		!e.LastLogin.Equal(e.mark.LastLogin) ||
 		!e.CreatedAt.Equal(e.mark.CreatedAt) ||
 		((e.UpdatedAt != nil && (e.mark.UpdatedAt == nil || !e.UpdatedAt.Equal(*e.mark.UpdatedAt))) || (e.UpdatedAt == nil && e.mark.UpdatedAt != nil))
 }
@@ -72,6 +74,9 @@ func (e *User) ChangedColumn() []ddl.Column {
 	if e.Comment != e.mark.Comment {
 		res = append(res, ddl.Column{Name: "comment", Value: e.Comment})
 	}
+	if !e.LastLogin.Equal(e.mark.LastLogin) {
+		res = append(res, ddl.Column{Name: "last_login", Value: e.LastLogin})
+	}
 	if !e.CreatedAt.Equal(e.mark.CreatedAt) {
 		res = append(res, ddl.Column{Name: "created_at", Value: e.CreatedAt})
 	}
@@ -94,6 +99,7 @@ func (e *User) Copy() *User {
 		Admin:     e.Admin,
 		Type:      e.Type,
 		Comment:   e.Comment,
+		LastLogin: e.LastLogin,
 		CreatedAt: e.CreatedAt,
 	}
 	if e.UpdatedAt != nil {

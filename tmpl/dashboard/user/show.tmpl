@@ -40,7 +40,7 @@
       </tr>
       <tr>
         <td>Last Logged-in</td>
-        <td>### TODO ###</td>
+        <td>{{ .UserInfo.LastLogin.AsTime.Local.Format "2006-01-02 15:04:05 -07:00" }}</td>
       </tr>
       <tr>
         <td>Allowed URLs</td>
