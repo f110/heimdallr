@@ -1,11 +1,14 @@
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", "tools")
 
 def _github_release_impl(ctx):
     rc = ""
     if "rc" in ctx.attr.version:
         rc = "--release-candidate"
+
     files = []
-    assets = ["--attach=%s" % x.short_path for x in ctx.files.assets]
+    checksum_files = [sha256(ctx, x) for x in ctx.files.assets]
+    assets = ["--attach=%s" % x.short_path for x in ctx.files.assets + checksum_files]
     substitutions = {
         "@@BIN@@": shell.quote(ctx.executable._bin.short_path),
         "@@VERSION@@": shell.quote(ctx.attr.version),
@@ -28,6 +31,7 @@ def _github_release_impl(ctx):
 
     files.append(ctx.executable._bin)
     files.extend(ctx.files.assets)
+    files.extend(checksum_files)
     runfiles = ctx.runfiles(files = files)
     return [
         DefaultInfo(
@@ -51,6 +55,7 @@ github_release = rule(
             default = "//cmd/release",
         ),
         "_template": attr.label(default = "//build/rules:release.bash", allow_single_file = True),
+        "sha256": tools["sha256"],
     },
 )
 

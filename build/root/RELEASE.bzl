@@ -15,3 +15,14 @@ RELEASE_MESSAGE = """We have been published container images in quay.io.
 * CLI: `quay.io/{ctl_repository}:{version}`
 * operator: `quay.io/{operator_repository}:{version}`
 """
+
+ASSET_FILES = [
+    "//operator/deploy/prod:all-in-one",
+    "//cmd/heim-connector:heim-connector_darwin_amd64",
+    "//cmd/heim-connector:heim-connector_linux_amd64",
+    "//cmd/heim-connector:heim-connector_windows_amd64",
+    "//cmd/heim-proxy:heim-proxy_darwin_amd64",
+    "//cmd/heim-proxy:heim-proxy_linux_amd64",
+    "//cmd/heim-proxy:heim-proxy_windows_amd64",
+    "//operator/cmd/heimdallrcontroller",
+]
