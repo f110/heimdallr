@@ -66,12 +66,6 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 			LastDefragmentTime:      before.Status.LastDefragmentTime,
 			ClientEndpoint:          before.Status.ClientEndpoint,
 			ClientCertSecretName:    before.Status.ClientCertSecretName,
-			Restored: &etcdv1alpha2.RestoredStatus{
-				Completed:    before.Status.Restored.Completed,
-				Path:         before.Status.Restored.Path,
-				BackupTime:   before.Status.Restored.BackupTime,
-				RestoredTime: before.Status.Restored.RestoredTime,
-			},
 		},
 	}
 
@@ -131,6 +125,15 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 			})
 		}
 		after.Status.Backup.History = backupHistory
+	}
+
+	if before.Status.Restored != nil {
+		after.Status.Restored = &etcdv1alpha2.RestoredStatus{
+			Completed:    before.Status.Restored.Completed,
+			Path:         before.Status.Restored.Path,
+			BackupTime:   before.Status.Restored.BackupTime,
+			RestoredTime: before.Status.Restored.RestoredTime,
+		}
 	}
 
 	members := make([]etcdv1alpha2.MemberStatus, 0)
@@ -234,6 +237,15 @@ func V1Alpha2EtcdClusterToV1Alpha1EtcdCluster(in runtime.Object) (runtime.Object
 			})
 		}
 		after.Status.Backup.History = backupHistory
+	}
+
+	if before.Status.Restored != nil {
+		after.Status.Restored = &etcdv1alpha1.RestoredStatus{
+			Completed:    before.Status.Restored.Completed,
+			Path:         before.Status.Restored.Path,
+			BackupTime:   before.Status.Restored.BackupTime,
+			RestoredTime: before.Status.Restored.RestoredTime,
+		}
 	}
 
 	members := make([]etcdv1alpha1.MemberStatus, 0)
