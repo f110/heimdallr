@@ -44,6 +44,7 @@ github_release(
         "//cmd/heim-proxy:heim-proxy_darwin_amd64",
         "//cmd/heim-proxy:heim-proxy_linux_amd64",
         "//cmd/heim-proxy:heim-proxy_windows_amd64",
+        "//operator/cmd/heimdallrcontroller",
     ],
     body = ":release_message",
     branch = RELEASE_BRANCH,
