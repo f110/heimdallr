@@ -3,6 +3,10 @@ namespace: heimdallr
 resources:
   - ../base
 
+images:
+  - name: quay.io/f110/heimdallr-operator
+    newTag: latest
+
 patchesJson6902:
   - target:
       version: v1

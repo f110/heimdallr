@@ -66,10 +66,6 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 			LastDefragmentTime:      before.Status.LastDefragmentTime,
 			ClientEndpoint:          before.Status.ClientEndpoint,
 			ClientCertSecretName:    before.Status.ClientCertSecretName,
-			Backup: &etcdv1alpha2.BackupStatus{
-				Succeeded:         before.Status.Backup.Succeeded,
-				LastSucceededTime: before.Status.Backup.LastSucceededTime,
-			},
 			Restored: &etcdv1alpha2.RestoredStatus{
 				Completed:    before.Status.Restored.Completed,
 				Path:         before.Status.Restored.Path,
@@ -118,6 +114,11 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 	}
 
 	if before.Status.Backup != nil {
+		after.Status.Backup = &etcdv1alpha2.BackupStatus{
+			Succeeded:         before.Status.Backup.Succeeded,
+			LastSucceededTime: before.Status.Backup.LastSucceededTime,
+		}
+
 		backupHistory := make([]etcdv1alpha2.BackupStatusHistory, 0)
 		for _, v := range before.Status.Backup.History {
 			backupHistory = append(backupHistory, etcdv1alpha2.BackupStatusHistory{
