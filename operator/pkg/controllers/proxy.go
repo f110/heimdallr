@@ -435,11 +435,12 @@ func (r *HeimdallrProxy) EtcdCluster() (*etcdv1alpha2.EtcdCluster, *monitoringv1
 }
 
 func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
-	etcdVersion := r.Spec.DataStore.Etcd.Version
-	if etcdVersion == "" {
-		etcdVersion = EtcdVersion
+	etcdVersion := EtcdVersion
+	if r.Spec.DataStore != nil && r.Spec.DataStore.Etcd != nil && r.Spec.DataStore.Etcd.Version != "" {
+		etcdVersion = r.Spec.DataStore.Etcd.Version
 	}
-	return &etcdv1alpha2.EtcdCluster{
+
+	ec := &etcdv1alpha2.EtcdCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
 			Name:      r.EtcdClusterName(),
@@ -448,12 +449,16 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 			},
 		},
 		Spec: etcdv1alpha2.EtcdClusterSpec{
-			Members:            3,
-			Version:            etcdVersion,
-			DefragmentSchedule: r.Spec.DataStore.Etcd.Defragment.Schedule,
-			AntiAffinity:       r.Spec.DataStore.Etcd.AntiAffinity,
+			Members: 3,
+			Version: etcdVersion,
 		},
 	}
+	if r.Spec.DataStore != nil && r.Spec.DataStore.Etcd != nil {
+		ec.Spec.DefragmentSchedule = r.Spec.DataStore.Etcd.Defragment.Schedule
+		ec.Spec.AntiAffinity = r.Spec.DataStore.Etcd.AntiAffinity
+	}
+
+	return ec
 }
 
 func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdCluster) *monitoringv1.PodMonitor {

@@ -51,26 +51,17 @@ func V1Alpha1ProxyToV1Alpha2Proxy(in runtime.Object) (runtime.Object, error) {
 	}
 	logger.Log.Debug("Covert from v1alpha1.Proxy", zap.String("name", before.Name))
 
-	return &proxyv1alpha2.Proxy{
+	after := &proxyv1alpha2.Proxy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
 			Kind:       before.Kind,
 		},
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha2.ProxySpec{
-			Domain:   before.Spec.Domain,
-			Port:     before.Spec.Port,
-			HttpPort: before.Spec.HttpPort,
-			Version:  before.Spec.Version,
-			DataStore: &proxyv1alpha2.ProxyDataStoreSpec{
-				Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{
-					Version: before.Spec.DataStore.Etcd.Version,
-					Defragment: proxyv1alpha2.DefragmentSpec{
-						Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
-					},
-					AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
-				},
-			},
+			Domain:         before.Spec.Domain,
+			Port:           before.Spec.Port,
+			HttpPort:       before.Spec.HttpPort,
+			Version:        before.Spec.Version,
 			LoadBalancerIP: before.Spec.LoadBalancerIP,
 			CertificateAuthority: &proxyv1alpha2.CertificateAuthoritySpec{
 				Local: &proxyv1alpha2.LocalCertificateAuthoritySpec{
@@ -143,7 +134,21 @@ func V1Alpha1ProxyToV1Alpha2Proxy(in runtime.Object) (runtime.Object, error) {
 			CookieSecretName:            before.Status.CookieSecretName,
 			InternalTokenSecretName:     before.Status.InternalTokenSecretName,
 		},
-	}, nil
+	}
+
+	if before.Spec.DataStore != nil {
+		if before.Spec.DataStore.Etcd != nil {
+			after.Spec.DataStore.Etcd = &proxyv1alpha2.ProxyDataStoreEtcdSpec{
+				Version: before.Spec.DataStore.Etcd.Version,
+				Defragment: proxyv1alpha2.DefragmentSpec{
+					Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
+				},
+				AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
+			}
+		}
+	}
+
+	return after, nil
 }
 
 func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
@@ -162,26 +167,17 @@ func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
 	}
 	logger.Log.Debug("Covert from v1alpha1.Proxy", zap.String("name", before.Name))
 
-	return &proxyv1alpha1.Proxy{
+	after := &proxyv1alpha1.Proxy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
 			Kind:       before.Kind,
 		},
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha1.ProxySpec{
-			Domain:   before.Spec.Domain,
-			Port:     before.Spec.Port,
-			HttpPort: before.Spec.HttpPort,
-			Version:  before.Spec.Version,
-			DataStore: &proxyv1alpha1.ProxyDataStoreSpec{
-				Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
-					Version: before.Spec.DataStore.Etcd.Version,
-					Defragment: proxyv1alpha1.DefragmentSpec{
-						Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
-					},
-					AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
-				},
-			},
+			Domain:            before.Spec.Domain,
+			Port:              before.Spec.Port,
+			HttpPort:          before.Spec.HttpPort,
+			Version:           before.Spec.Version,
 			LoadBalancerIP:    before.Spec.LoadBalancerIP,
 			Country:           before.Spec.CertificateAuthority.Local.Country,
 			AdministratorUnit: before.Spec.CertificateAuthority.Local.AdministratorUnit,
@@ -250,7 +246,21 @@ func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
 			CookieSecretName:            before.Status.CookieSecretName,
 			InternalTokenSecretName:     before.Status.InternalTokenSecretName,
 		},
-	}, nil
+	}
+
+	if before.Spec.DataStore != nil {
+		if before.Spec.DataStore.Etcd != nil {
+			after.Spec.DataStore.Etcd = &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+				Version: before.Spec.DataStore.Etcd.Version,
+				Defragment: proxyv1alpha1.DefragmentSpec{
+					Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
+				},
+				AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
+			}
+		}
+	}
+
+	return after, nil
 }
 
 func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error) {
