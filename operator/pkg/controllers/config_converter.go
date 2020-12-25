@@ -89,7 +89,9 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 			socket = &configv2.SocketBackend{
 				Upstream: upstream,
 				Agent:    v.Spec.Socket.Agent,
-				Timeout:  &configv2.Duration{Duration: v.Spec.Socket.Timeout.Duration},
+			}
+			if v.Spec.Socket.Timeout != nil {
+				socket.Timeout = &configv2.Duration{Duration: v.Spec.Socket.Timeout.Duration}
 			}
 		}
 
