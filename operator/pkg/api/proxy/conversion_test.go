@@ -169,6 +169,9 @@ spec:
 			require.NotNil(t, out.Spec.Socket)
 			assert.Equal(t, tt.Expect.Spec.Socket.Upstream, out.Spec.Socket.Upstream)
 			assert.Equal(t, tt.Expect.Spec.Socket.Agent, out.Spec.Socket.Agent)
+			if tt.Expect.Spec.Socket.ServiceSelector == nil {
+				assert.Nil(t, out.Spec.Socket.ServiceSelector)
+			}
 		}
 		assert.Len(t, out.Spec.Permissions, len(tt.Expect.Spec.Permissions))
 	}
