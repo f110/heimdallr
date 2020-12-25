@@ -89,7 +89,12 @@ spec:
 }
 
 func TestV1Alpha1BackendToV1Alpha2Backend(t *testing.T) {
-	in := `apiVersion: proxy.f110.dev/v1alpha1
+	cases := []struct {
+		In     string
+		Expect *proxyv1alpha2.Backend
+	}{
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend
 metadata:
   name: unifi
@@ -110,20 +115,72 @@ spec:
     - name: all
       locations:
         - any: /
-`
-	obj := decodeYAML(t, in)
+`,
+			Expect: &proxyv1alpha2.Backend{
+				Spec: proxyv1alpha2.BackendSpec{
+					HTTP: []*proxyv1alpha2.BackendHTTPSpec{
+						{
+							Path: "/",
+						},
+					},
+					Permissions: []proxyv1alpha2.Permission{
+						{
+							Name: "all",
+						},
+					},
+				},
+			},
+		},
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha1
+kind: Backend
+metadata:
+  name: raptor
+  namespace: heimdallr
+  labels:
+    instance: global
+spec:
+  layer: ssh
+  agent: true
+  upstream: tcp://127.0.0.1:22`,
+			Expect: &proxyv1alpha2.Backend{
+				Spec: proxyv1alpha2.BackendSpec{
+					Socket: &proxyv1alpha2.BackendSocketSpec{
+						Agent: true,
+					},
+				},
+			},
+		},
+	}
 
-	v, err := V1Alpha1BackendToV1Alpha2Backend(obj)
-	require.NoError(t, err)
-	out, ok := v.(*proxyv1alpha2.Backend)
-	require.True(t, ok)
+	for _, tt := range cases {
+		obj := decodeYAML(t, tt.In)
 
-	assert.Len(t, out.Spec.HTTP, 1)
-	assert.Len(t, out.Spec.Permissions, 1)
+		v, err := V1Alpha1BackendToV1Alpha2Backend(obj)
+		require.NoError(t, err)
+		out, ok := v.(*proxyv1alpha2.Backend)
+		require.True(t, ok)
+
+		if tt.Expect.Spec.HTTP != nil {
+			require.NotNil(t, out.Spec.HTTP)
+			assert.Len(t, out.Spec.HTTP, len(tt.Expect.Spec.HTTP))
+		}
+		if tt.Expect.Spec.Socket != nil {
+			require.NotNil(t, out.Spec.Socket)
+			assert.Equal(t, tt.Expect.Spec.Socket.Upstream, out.Spec.Socket.Upstream)
+			assert.Equal(t, tt.Expect.Spec.Socket.Agent, out.Spec.Socket.Agent)
+		}
+		assert.Len(t, out.Spec.Permissions, len(tt.Expect.Spec.Permissions))
+	}
 }
 
 func TestV1Alpha2BackendToV1Alpha1Backend(t *testing.T) {
-	in := `apiVersion: proxy.f110.dev/v1alpha2
+	cases := []struct {
+		In     string
+		Expect *proxyv1alpha1.Backend
+	}{
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha2
 kind: Backend
 metadata:
   name: unifi
@@ -141,17 +198,52 @@ spec:
   permissions:
     - name: all
       locations:
-        - any: /`
+        - any: /`,
+			Expect: &proxyv1alpha1.Backend{
+				Spec: proxyv1alpha1.BackendSpec{
+					Layer: "tools",
+					ServiceSelector: proxyv1alpha1.ServiceSelector{
+						Port: "https-gui",
+					},
+					Permissions: []proxyv1alpha1.Permission{
+						{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
+					},
+				},
+			},
+		},
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha2
+kind: Backend
+metadata:
+  name: raptor
+spec:
+  layer: ssh
+  socket:
+    agent: true`,
+			Expect: &proxyv1alpha1.Backend{
+				Spec: proxyv1alpha1.BackendSpec{
+					Layer:  "ssh",
+					Agent:  true,
+					Socket: true,
+				},
+			},
+		},
+	}
 
-	obj := decodeYAML(t, in)
+	for _, tt := range cases {
+		obj := decodeYAML(t, tt.In)
 
-	v, err := V1Alpha2BackendToV1Alpha1Backend(obj)
-	require.NoError(t, err)
-	out, ok := v.(*proxyv1alpha1.Backend)
-	require.True(t, ok)
+		v, err := V1Alpha2BackendToV1Alpha1Backend(obj)
+		require.NoError(t, err)
+		out, ok := v.(*proxyv1alpha1.Backend)
+		require.True(t, ok)
 
-	assert.Equal(t, "https-gui", out.Spec.ServiceSelector.Port)
-	assert.Len(t, out.Spec.Permissions, 1)
+		assert.Equal(t, tt.Expect.Spec.Layer, out.Spec.Layer)
+		assert.Equal(t, tt.Expect.Spec.Agent, out.Spec.Agent)
+		assert.Equal(t, tt.Expect.Spec.Socket, out.Spec.Socket)
+		assert.Equal(t, tt.Expect.Spec.ServiceSelector.Port, out.Spec.ServiceSelector.Port)
+		assert.Len(t, out.Spec.Permissions, len(tt.Expect.Spec.Permissions))
+	}
 }
 
 func decodeYAML(t *testing.T, in string) runtime.Object {
