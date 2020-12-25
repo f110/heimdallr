@@ -251,12 +251,14 @@ func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
 
 	if before.Spec.DataStore != nil {
 		if before.Spec.DataStore.Etcd != nil {
-			after.Spec.DataStore.Etcd = &proxyv1alpha1.ProxyDataStoreEtcdSpec{
-				Version: before.Spec.DataStore.Etcd.Version,
-				Defragment: proxyv1alpha1.DefragmentSpec{
-					Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
+			after.Spec.DataStore = &proxyv1alpha1.ProxyDataStoreSpec{
+				Etcd: &proxyv1alpha1.ProxyDataStoreEtcdSpec{
+					Version: before.Spec.DataStore.Etcd.Version,
+					Defragment: proxyv1alpha1.DefragmentSpec{
+						Schedule: before.Spec.DataStore.Etcd.Defragment.Schedule,
+					},
+					AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
 				},
-				AntiAffinity: before.Spec.DataStore.Etcd.AntiAffinity,
 			}
 		}
 	}

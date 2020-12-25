@@ -209,10 +209,11 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha2.ClusterPhasePending {
 		c.Status.Phase = etcdv1alpha2.ClusterPhaseInitializing
-		_, err := ec.client.EtcdV1alpha2().EtcdClusters(c.Namespace).UpdateStatus(ctx, c, metav1.UpdateOptions{})
+		updatedEC, err := ec.client.EtcdV1alpha2().EtcdClusters(c.Namespace).UpdateStatus(ctx, c, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+		c = updatedEC
 	}
 
 	cluster := NewEtcdCluster(c, ec.clusterDomain, ec.Log(), ec.etcdClientMockOpt)
