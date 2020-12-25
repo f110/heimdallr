@@ -175,7 +175,7 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 			},
 			Spec: proxyv1alpha2.BackendSpec{
 				AllowRootUser: true,
-				HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+				HTTP: []*proxyv1alpha2.BackendHTTPSpec{
 					{
 						Path:     "/",
 						Upstream: fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),

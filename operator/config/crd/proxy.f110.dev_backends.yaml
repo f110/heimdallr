@@ -238,7 +238,7 @@ spec:
                 type: boolean
               fqdn:
                 type: string
-              httpRouting:
+              http:
                 items:
                   properties:
                     agent:

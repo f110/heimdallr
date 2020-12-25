@@ -116,7 +116,7 @@ func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deploymen
 		},
 		Spec: proxyv1alpha2.BackendSpec{
 			Layer: "test",
-			HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+			HTTP: []*proxyv1alpha2.BackendHTTPSpec{
 				{
 					Path: "/",
 					ServiceSelector: &proxyv1alpha2.ServiceSelector{

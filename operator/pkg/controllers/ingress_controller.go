@@ -163,9 +163,9 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 
 	backends := make([]*proxyv1alpha2.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
-		httpRouting := make([]*proxyv1alpha2.BackendHTTPRoutingSpec, 0)
+		httpRouting := make([]*proxyv1alpha2.BackendHTTPSpec, 0)
 		for _, v := range rule.HTTP.Paths {
-			httpRouting = append(httpRouting, &proxyv1alpha2.BackendHTTPRoutingSpec{
+			httpRouting = append(httpRouting, &proxyv1alpha2.BackendHTTPSpec{
 				Path: v.Path,
 				ServiceSelector: &proxyv1alpha2.ServiceSelector{
 					Name:      v.Backend.Service.Name,
@@ -191,7 +191,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 				Spec: proxyv1alpha2.BackendSpec{
 					FQDN:         rule.Host,
 					DisableAuthn: true,
-					HTTPRouting:  httpRouting,
+					HTTP:         httpRouting,
 				},
 			},
 		)

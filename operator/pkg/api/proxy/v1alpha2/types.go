@@ -167,18 +167,18 @@ type ServiceSelector struct {
 
 // BackendSpec defines the desired state of Backend
 type BackendSpec struct {
-	FQDN               string                    `json:"fqdn,omitempty"` // If FQDN is set, ignore a layer-style naming.
-	Layer              string                    `json:"layer,omitempty"`
-	AllowRootUser      bool                      `json:"allowRootUser,omitempty"`
-	DisableAuthn       bool                      `json:"disableAuthn,omitempty"`
-	AllowHttp          bool                      `json:"allowHttp,omitempty"`
-	Permissions        []Permission              `json:"permissions,omitempty"`
-	MaxSessionDuration *metav1.Duration          `json:"maxSessionDuration,omitempty"`
-	HTTPRouting        []*BackendHTTPRoutingSpec `json:"httpRouting,omitempty"`
-	Socket             *BackendSocketSpec        `json:"socket,omitempty"`
+	FQDN               string             `json:"fqdn,omitempty"` // If FQDN is set, ignore a layer-style naming.
+	Layer              string             `json:"layer,omitempty"`
+	AllowRootUser      bool               `json:"allowRootUser,omitempty"`
+	DisableAuthn       bool               `json:"disableAuthn,omitempty"`
+	AllowHttp          bool               `json:"allowHttp,omitempty"`
+	Permissions        []Permission       `json:"permissions,omitempty"`
+	MaxSessionDuration *metav1.Duration   `json:"maxSessionDuration,omitempty"`
+	HTTP               []*BackendHTTPSpec `json:"http,omitempty"`
+	Socket             *BackendSocketSpec `json:"socket,omitempty"`
 }
 
-type BackendHTTPRoutingSpec struct {
+type BackendHTTPSpec struct {
 	Path            string           `json:"path"`
 	ServiceSelector *ServiceSelector `json:"serviceSelector,omitempty"`
 	Upstream        string           `json:"upstream,omitempty"`

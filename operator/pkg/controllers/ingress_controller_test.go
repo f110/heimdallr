@@ -30,9 +30,9 @@ func TestIngressController(t *testing.T) {
 		assert.Equal(t, ingClass.Labels, updatedB.Labels)
 		assert.Equal(t, ing.Spec.Rules[0].Host, updatedB.Spec.FQDN)
 		assert.True(t, updatedB.Spec.DisableAuthn)
-		require.Len(t, updatedB.Spec.HTTPRouting, 2)
-		assert.Equal(t, svc.Name, updatedB.Spec.HTTPRouting[0].ServiceSelector.Name)
-		assert.Equal(t, svcWeb.Name, updatedB.Spec.HTTPRouting[1].ServiceSelector.Name)
+		require.Len(t, updatedB.Spec.HTTP, 2)
+		assert.Equal(t, svc.Name, updatedB.Spec.HTTP[0].ServiceSelector.Name)
+		assert.Equal(t, svcWeb.Name, updatedB.Spec.HTTP[1].ServiceSelector.Name)
 	})
 }
 

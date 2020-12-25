@@ -296,6 +296,41 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 		Status: proxyv1alpha2.BackendStatus{},
 	}
 
+	socket := false
+	if before.Spec.Socket {
+		socket = true
+	}
+	if !socket {
+		after.Spec.HTTP = []*proxyv1alpha2.BackendHTTPSpec{
+			{
+				Path: "/",
+				ServiceSelector: &proxyv1alpha2.ServiceSelector{
+					LabelSelector: before.Spec.ServiceSelector.LabelSelector,
+					Namespace:     before.Spec.ServiceSelector.Namespace,
+					Name:          before.Spec.ServiceSelector.Name,
+					Port:          before.Spec.ServiceSelector.Port,
+					Scheme:        before.Spec.ServiceSelector.Scheme,
+				},
+				Insecure: before.Spec.Insecure,
+				Agent:    before.Spec.Agent,
+				Upstream: before.Spec.Upstream,
+			},
+		}
+	} else {
+		after.Spec.Socket = &proxyv1alpha2.BackendSocketSpec{
+			ServiceSelector: &proxyv1alpha2.ServiceSelector{
+				LabelSelector: before.Spec.ServiceSelector.LabelSelector,
+				Namespace:     before.Spec.ServiceSelector.Namespace,
+				Name:          before.Spec.ServiceSelector.Name,
+				Port:          before.Spec.ServiceSelector.Port,
+				Scheme:        before.Spec.ServiceSelector.Scheme,
+			},
+			Upstream: before.Spec.Upstream,
+			Agent:    before.Spec.Agent,
+			Timeout:  before.Spec.SocketTimeout,
+		}
+	}
+
 	permissionNames := make(map[string]struct{})
 	permissions := make([]proxyv1alpha2.Permission, 0)
 	for _, v := range before.Spec.Permissions {
@@ -411,6 +446,39 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 			MaxSessionDuration: before.Spec.MaxSessionDuration,
 		},
 		Status: proxyv1alpha1.BackendStatus{},
+	}
+
+	socket := false
+	if before.Spec.Socket != nil {
+		socket = true
+	}
+	if !socket {
+		if len(before.Spec.HTTP) > 0 {
+			if r := before.Spec.HTTP[0]; r != nil {
+				after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
+					LabelSelector: r.ServiceSelector.LabelSelector,
+					Namespace:     r.ServiceSelector.Namespace,
+					Name:          r.ServiceSelector.Name,
+					Port:          r.ServiceSelector.Port,
+					Scheme:        r.ServiceSelector.Scheme,
+				}
+				after.Spec.Insecure = r.Insecure
+				after.Spec.Agent = r.Agent
+				after.Spec.Upstream = r.Upstream
+			}
+		}
+	} else {
+		after.Spec.Socket = true
+		after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
+			LabelSelector: before.Spec.Socket.ServiceSelector.LabelSelector,
+			Namespace:     before.Spec.Socket.ServiceSelector.Namespace,
+			Name:          before.Spec.Socket.ServiceSelector.Name,
+			Port:          before.Spec.Socket.ServiceSelector.Port,
+			Scheme:        before.Spec.Socket.ServiceSelector.Scheme,
+		}
+		after.Spec.Upstream = before.Spec.Socket.Upstream
+		after.Spec.Agent = before.Spec.Socket.Agent
+		after.Spec.SocketTimeout = before.Spec.Socket.Timeout
 	}
 
 	permissionNames := make(map[string]struct{})

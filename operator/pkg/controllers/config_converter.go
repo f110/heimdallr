@@ -27,7 +27,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 		}
 
 		routing := make([]*configv2.HTTPBackend, 0)
-		for _, r := range v.Spec.HTTPRouting {
+		for _, r := range v.Spec.HTTP {
 			var service *corev1.Service
 			if !virtualDashboard && r.Upstream == "" {
 				svc, err := findService(serviceLister, r.ServiceSelector, v.Namespace)
