@@ -77,7 +77,7 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 			},
 			Spec: proxyv1alpha2.BackendSpec{
 				Layer: "test",
-				HTTPRouting: []*proxyv1alpha2.BackendHTTPRoutingSpec{
+				HTTP: []*proxyv1alpha2.BackendHTTPSpec{
 					{
 						Path: "/",
 						ServiceSelector: &proxyv1alpha2.ServiceSelector{

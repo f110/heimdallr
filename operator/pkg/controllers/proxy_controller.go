@@ -651,7 +651,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 
 	for _, backend := range lp.Backends() {
 		skipProvision := false
-		for _, v := range backend.Spec.HTTPRouting {
+		for _, v := range backend.Spec.HTTP {
 			if v.ServiceSelector != nil {
 				_, err := findService(c.serviceLister, v.ServiceSelector, backend.Namespace)
 				if err != nil && !backend.CreationTimestamp.IsZero() {
