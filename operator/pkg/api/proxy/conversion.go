@@ -330,18 +330,20 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 		}
 	} else {
 		after.Spec.Socket = &proxyv1alpha2.BackendSocketSpec{
-			ServiceSelector: &proxyv1alpha2.ServiceSelector{
-				LabelSelector: before.Spec.ServiceSelector.LabelSelector,
-				Namespace:     before.Spec.ServiceSelector.Namespace,
-				Name:          before.Spec.ServiceSelector.Name,
-				Port:          before.Spec.ServiceSelector.Port,
-				Scheme:        before.Spec.ServiceSelector.Scheme,
-			},
 			Agent:   before.Spec.Agent,
 			Timeout: before.Spec.SocketTimeout,
 		}
 		if !before.Spec.Agent {
 			after.Spec.Socket.Upstream = before.Spec.Upstream
+		}
+		if before.Spec.ServiceSelector.Port != "" {
+			after.Spec.Socket.ServiceSelector = &proxyv1alpha2.ServiceSelector{
+				LabelSelector: before.Spec.ServiceSelector.LabelSelector,
+				Namespace:     before.Spec.ServiceSelector.Namespace,
+				Name:          before.Spec.ServiceSelector.Name,
+				Port:          before.Spec.ServiceSelector.Port,
+				Scheme:        before.Spec.ServiceSelector.Scheme,
+			}
 		}
 	}
 
