@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"net/url"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -300,6 +301,15 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 	if before.Spec.Socket {
 		socket = true
 	}
+	if before.Spec.Upstream != "" {
+		u, err := url.Parse(before.Spec.Upstream)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		if u.Scheme == "tcp" {
+			socket = true
+		}
+	}
 	if !socket {
 		after.Spec.HTTP = []*proxyv1alpha2.BackendHTTPSpec{
 			{
@@ -325,9 +335,11 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 				Port:          before.Spec.ServiceSelector.Port,
 				Scheme:        before.Spec.ServiceSelector.Scheme,
 			},
-			Upstream: before.Spec.Upstream,
-			Agent:    before.Spec.Agent,
-			Timeout:  before.Spec.SocketTimeout,
+			Agent:   before.Spec.Agent,
+			Timeout: before.Spec.SocketTimeout,
+		}
+		if !before.Spec.Agent {
+			after.Spec.Socket.Upstream = before.Spec.Upstream
 		}
 	}
 
@@ -469,12 +481,14 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 		}
 	} else {
 		after.Spec.Socket = true
-		after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
-			LabelSelector: before.Spec.Socket.ServiceSelector.LabelSelector,
-			Namespace:     before.Spec.Socket.ServiceSelector.Namespace,
-			Name:          before.Spec.Socket.ServiceSelector.Name,
-			Port:          before.Spec.Socket.ServiceSelector.Port,
-			Scheme:        before.Spec.Socket.ServiceSelector.Scheme,
+		if before.Spec.Socket.ServiceSelector != nil {
+			after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
+				LabelSelector: before.Spec.Socket.ServiceSelector.LabelSelector,
+				Namespace:     before.Spec.Socket.ServiceSelector.Namespace,
+				Name:          before.Spec.Socket.ServiceSelector.Name,
+				Port:          before.Spec.Socket.ServiceSelector.Port,
+				Scheme:        before.Spec.Socket.ServiceSelector.Scheme,
+			}
 		}
 		after.Spec.Upstream = before.Spec.Socket.Upstream
 		after.Spec.Agent = before.Spec.Socket.Agent
