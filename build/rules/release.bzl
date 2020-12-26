@@ -2,10 +2,6 @@ load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@bazel_tools//tools/build_defs/hash:hash.bzl", "sha256", "tools")
 
 def _github_release_impl(ctx):
-    rc = ""
-    if "rc" in ctx.attr.version:
-        rc = "--release-candidate"
-
     files = []
     checksum_files = [sha256(ctx, x) for x in ctx.files.assets]
     assets = ["--attach=%s" % x.short_path for x in ctx.files.assets + checksum_files]
@@ -15,7 +11,6 @@ def _github_release_impl(ctx):
         "@@REPO@@": shell.quote(ctx.attr.repository),
         "@@BRANCH@@": shell.quote(ctx.attr.branch),
         "@@ASSETS@@": shell.array_literal(assets),
-        "@@RC@@": rc,
     }
     if ctx.attr.body:
         substitutions["@@BODY@@"] = shell.quote(ctx.file.body.short_path)

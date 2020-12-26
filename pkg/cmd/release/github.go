@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v32/github"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
@@ -15,12 +16,11 @@ import (
 )
 
 type githubOpt struct {
-	Version          string
-	From             string
-	Attach           []string
-	GithubRepo       string
-	BodyFile         string
-	ReleaseCandidate bool
+	Version    string
+	From       string
+	Attach     []string
+	GithubRepo string
+	BodyFile   string
 }
 
 func githubRelease(opt *githubOpt) error {
@@ -31,6 +31,15 @@ func githubRelease(opt *githubOpt) error {
 	if !strings.Contains(opt.GithubRepo, "/") {
 		return xerrors.Errorf("invalid repo name: %s", opt.GithubRepo)
 	}
+	ver, err := semver.NewVersion(opt.Version)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	preRelease := false
+	if ver.Prerelease() != "" {
+		preRelease = true
+	}
+
 	body := ""
 	if _, err := os.Lstat(opt.BodyFile); !os.IsNotExist(err) {
 		b, err := ioutil.ReadFile(opt.BodyFile)
@@ -74,7 +83,7 @@ func githubRelease(opt *githubOpt) error {
 			TagName:         github.String(opt.Version),
 			TargetCommitish: branch.Commit.SHA,
 			Body:            github.String(body),
-			Prerelease:      github.Bool(opt.ReleaseCandidate),
+			Prerelease:      github.Bool(preRelease),
 		})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -127,7 +136,6 @@ func GitHub(rootCmd *cobra.Command) {
 	ghRelease.Flags().StringArrayVar(&opt.Attach, "attach", []string{}, "")
 	ghRelease.Flags().StringVar(&opt.GithubRepo, "repo", "", "")
 	ghRelease.Flags().StringVar(&opt.BodyFile, "body", "", "Release body")
-	ghRelease.Flags().BoolVar(&opt.ReleaseCandidate, "release-candidate", false, "This release is the candidate")
 
 	rootCmd.AddCommand(ghRelease)
 }

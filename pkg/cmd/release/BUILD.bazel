@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "release",
@@ -9,6 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cmd/release",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/github.com/Masterminds/semver/v3:semver",
         "//vendor/github.com/google/go-containerregistry/pkg/authn",
         "//vendor/github.com/google/go-containerregistry/pkg/name",
         "//vendor/github.com/google/go-containerregistry/pkg/v1/remote",
@@ -16,5 +17,16 @@ go_library(
         "//vendor/github.com/spf13/cobra",
         "//vendor/golang.org/x/oauth2",
         "//vendor/golang.org/x/xerrors",
+    ],
+)
+
+go_test(
+    name = "release_test",
+    srcs = ["github_test.go"],
+    embed = [":release"],
+    deps = [
+        "//vendor/github.com/Masterminds/semver/v3:semver",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
     ],
 )

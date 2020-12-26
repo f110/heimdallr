@@ -5,6 +5,7 @@ go 1.15
 require (
 	cloud.google.com/go v0.60.0 // indirect
 	cloud.google.com/go/storage v1.10.0
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/coreos/go-oidc v2.1.0+incompatible
