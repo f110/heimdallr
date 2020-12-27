@@ -1,4 +1,4 @@
-VERSION = "v0.11.0-rc.4"
+VERSION = "v0.11.0"
 RELEASE_BRANCH = "release-v0.11"
 
 PLATFORMS = [
