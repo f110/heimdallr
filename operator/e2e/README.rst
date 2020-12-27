@@ -15,6 +15,12 @@ You can run the e2e testing with below.
 
     $ bazel test --config e2e //operator/e2e/test:test_test
 
+If you want to preserve the cluster for debugging, you can use the following command.
+
+.. code:: console
+
+    $ bazel test --config e2e --test_arg="-retain" //operator/e2e/test:test_test
+
 Dependencies
 ================
 
