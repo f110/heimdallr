@@ -526,7 +526,7 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 			Locations: locations,
 		})
 
-		if v.WebhookConfiguration != nil {
+		if v.WebhookConfiguration != nil && len(path) > 0 {
 			after.Spec.Webhook = v.Webhook
 			after.Spec.WebhookPath = path
 			after.Spec.WebhookConfiguration = &proxyv1alpha1.WebhookConfiguration{
