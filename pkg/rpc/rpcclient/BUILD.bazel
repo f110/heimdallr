@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/auth/token",
+        "//pkg/config/userconfig",
         "//pkg/logger",
         "//pkg/rpc",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap",

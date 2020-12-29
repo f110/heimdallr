@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "userconfig",
+    srcs = ["userconfig.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/config/userconfig",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/xerrors"],
+)
+
+go_test(
+    name = "userconfig_test",
+    srcs = ["userconfig_test.go"],
+    embed = [":userconfig"],
+    deps = [
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
+)

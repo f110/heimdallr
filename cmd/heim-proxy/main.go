@@ -13,6 +13,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/authproxy"
+	"go.f110.dev/heimdallr/pkg/config/userconfig"
 	"go.f110.dev/heimdallr/pkg/version"
 )
 
@@ -34,8 +35,12 @@ func proxy(args []string) error {
 		return nil
 	}
 
-	tokenClient := token.NewClient("token")
-	to, err := tokenClient.GetToken()
+	uc, err := userconfig.New()
+	if err != nil {
+		return err
+	}
+
+	to, err := uc.GetToken()
 	if err != nil {
 		return err
 	}
@@ -58,11 +63,16 @@ Retry:
 	if err != nil {
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
+			tokenClient := token.NewClient()
 			t, err := tokenClient.RequestToken(e.Endpoint)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
 			to = t
+			if err := uc.SetToken(to); err != nil {
+				return err
+			}
+
 			goto Retry
 		}
 		return err

@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
+	"go.f110.dev/heimdallr/pkg/config/userconfig"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
@@ -66,8 +67,12 @@ type Client struct {
 func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 	adminClient := rpc.NewAdminClient(conn)
 
-	tokenClient := token.NewClient("token")
-	t, err := tokenClient.GetToken()
+	uc, err := userconfig.New()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	t, err := uc.GetToken()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", nil)
 	}
@@ -78,6 +83,7 @@ func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
+		tokenClient := token.NewClient()
 		newToken, err := tokenClient.RequestToken(endpoint)
 		ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 	}

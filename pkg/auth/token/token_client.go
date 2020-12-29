@@ -9,11 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 
 	"golang.org/x/xerrors"
 )
@@ -32,12 +29,8 @@ type Client struct {
 	tokenFilename string
 }
 
-func NewClient(tokenFilename string) *Client {
-	return &Client{tokenFilename: tokenFilename}
-}
-
-func (c *Client) GetToken() (string, error) {
-	return c.readToken()
+func NewClient() *Client {
+	return &Client{}
 }
 
 func (c *Client) RequestToken(endpoint string) (string, error) {
@@ -65,49 +58,7 @@ func (c *Client) RequestToken(endpoint string) (string, error) {
 		return "", xerrors.Errorf(": %v", err)
 	}
 
-	if err := c.saveToken(token); err != nil {
-		return "", xerrors.Errorf(": %v", err)
-	}
-
 	return token, nil
-}
-
-func (c *Client) readToken() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
-	}
-	f, err := os.Open(filepath.Join(home, Directory, c.tokenFilename))
-	if os.IsNotExist(err) {
-		return "", nil
-	}
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
-	}
-
-	return string(b), nil
-}
-
-func (c *Client) saveToken(token string) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	_, err = os.Stat(filepath.Join(home, Directory))
-	if os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Join(home, Directory), 0755); err != nil {
-			return xerrors.Errorf(": %v", err)
-		}
-	}
-	f, err := os.Create(filepath.Join(home, Directory, c.tokenFilename))
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	defer f.Close()
-	f.WriteString(token)
-
-	return nil
 }
 
 func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, error) {

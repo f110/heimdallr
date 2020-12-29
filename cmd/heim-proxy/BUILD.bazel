@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/auth/token",
         "//pkg/authproxy",
+        "//pkg/config/userconfig",
         "//pkg/version",
         "//vendor/github.com/spf13/pflag",
         "//vendor/golang.org/x/xerrors",
