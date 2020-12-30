@@ -21,7 +21,8 @@ import (
 )
 
 type CA struct {
-	client *clientv3.Client
+	client      *clientv3.Client
+	watchCancel context.CancelFunc
 
 	mu          sync.RWMutex
 	revokedList []*database.RevokedCertificate
@@ -55,8 +56,9 @@ func NewCA(ctx context.Context, client *clientv3.Client) (*CA, error) {
 		revoked = append(revoked, r)
 	}
 
-	ca := &CA{client: client, revokedList: revoked}
-	go ca.watchRevokeList(ctx, res.Header.Revision)
+	watchCtx, cancel := context.WithCancel(context.Background())
+	ca := &CA{client: client, watchCancel: cancel, revokedList: revoked}
+	go ca.watchRevokeList(watchCtx, res.Header.Revision)
 	return ca, nil
 }
 
@@ -196,6 +198,10 @@ func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
 	c.wMu.Unlock()
 
 	return ch
+}
+
+func (c *CA) Close() {
+	c.watchCancel()
 }
 
 func (c *CA) watchRevokeList(ctx context.Context, revision int64) {

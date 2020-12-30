@@ -197,6 +197,12 @@ func (m *mainProcess) shutdown() (cmd.State, error) {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
 		}
 	}
+	if m.relayLocator != nil {
+		v, ok := m.relayLocator.(*etcd.RelayLocator)
+		if ok {
+			v.Close()
+		}
+	}
 
 	return cmd.CloseState, nil
 }
