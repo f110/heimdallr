@@ -224,6 +224,17 @@ func (m *mainProcess) Shutdown() error {
 		}()
 	}
 
+	if m.relayLocator != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			v, ok := m.relayLocator.(*etcd.RelayLocator)
+			if ok {
+				v.Close()
+			}
+		}()
+	}
+
 	go func() {
 		wg.Wait()
 		done <- struct{}{}
@@ -443,7 +454,7 @@ func (m *mainProcess) Setup() error {
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
-			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
+			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}

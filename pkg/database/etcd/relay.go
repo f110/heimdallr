@@ -17,8 +17,9 @@ import (
 )
 
 type RelayLocator struct {
-	client *clientv3.Client
-	gone   chan *database.Relay
+	client      *clientv3.Client
+	gone        chan *database.Relay
+	watchCancel context.CancelFunc
 
 	mu    sync.RWMutex
 	cache map[string]*database.Relay
@@ -29,8 +30,10 @@ type RelayLocator struct {
 var _ database.RelayLocator = &RelayLocator{}
 
 func NewRelayLocator(ctx context.Context, client *clientv3.Client) (*RelayLocator, error) {
+	watchCtx, cancel := context.WithCancel(context.Background())
 	rl := &RelayLocator{
 		client:         client,
+		watchCancel:    cancel,
 		cache:          make(map[string]*database.Relay),
 		gone:           make(chan *database.Relay),
 		myListenedAddr: make([]string, 0),
@@ -52,7 +55,8 @@ func NewRelayLocator(ctx context.Context, client *clientv3.Client) (*RelayLocato
 		r.Version = v.Version
 		rl.cache[r.Name] = r
 	}
-	w := client.Watch(ctx, "relay/", clientv3.WithPrefix(), clientv3.WithRev(res.Header.Revision))
+
+	w := client.Watch(watchCtx, "relay/", clientv3.WithPrefix(), clientv3.WithRev(res.Header.Revision))
 	go rl.watch(w, res.Header.Revision)
 
 	return rl, nil
@@ -160,6 +164,7 @@ func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
 	for {
 		select {
 		case events := <-watch:
+			logger.Log.Debug("GOT EVENT")
 			if len(events.Events) == 0 {
 				return
 			}
@@ -208,4 +213,8 @@ func (l *RelayLocator) watchEvents(events []*clientv3.Event) {
 			}
 		}
 	}
+}
+
+func (l *RelayLocator) Close() {
+	l.watchCancel()
 }
