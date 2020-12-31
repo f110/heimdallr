@@ -164,7 +164,6 @@ func (l *RelayLocator) watch(watch clientv3.WatchChan, startRev int64) {
 	for {
 		select {
 		case events := <-watch:
-			logger.Log.Debug("GOT EVENT")
 			if len(events.Events) == 0 {
 				return
 			}
