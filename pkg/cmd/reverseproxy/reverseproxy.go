@@ -375,7 +375,13 @@ func (m *mainProcess) startInternalApiServer() {
 	internalApi := internalapi.New()
 	internalProbe := internalapi.NewProbe(m.IsReady)
 	internalProf := internalapi.NewProf()
-	s := server.NewInternal(m.config, internalApi, internalProbe, internalProf)
+	resourceServer, err := internalapi.NewResourceServer(m.config, m.userDatabase)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		return
+	}
+
+	s := server.NewInternal(m.config, internalApi, internalProbe, internalProf, resourceServer)
 	m.internalApi = s
 	if err := m.internalApi.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -383,7 +389,11 @@ func (m *mainProcess) startInternalApiServer() {
 }
 
 func (m *mainProcess) startDashboard() {
-	dashboardServer := dashboard.NewServer(m.config, m.rpcServerConn)
+	dashboardServer, err := dashboard.NewServer(m.config, m.rpcServerConn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		return
+	}
 	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

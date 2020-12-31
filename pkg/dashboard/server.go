@@ -3,8 +3,11 @@ package dashboard
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"sort"
@@ -12,11 +15,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
+	"go.f110.dev/heimdallr/pkg/auth/authn"
+	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -28,17 +35,44 @@ import (
 type Server struct {
 	Config *configv2.Config
 
-	conn   *grpc.ClientConn
-	client *rpcclient.ClientWithUserToken
-	loader *template.Loader
-	server *http.Server
-	router *httprouter.Router
+	publicKey crypto.PublicKey
+	conn      *grpc.ClientConn
+	client    *rpcclient.ClientWithUserToken
+	loader    *template.Loader
+	server    *http.Server
+	router    *httprouter.Router
 }
 
-func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
+func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) (*Server, error) {
+	req, err := http.NewRequest(http.MethodGet, config.Dashboard.PublicKeyUrl, nil)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	res.Body.Close()
+	block, _ := pem.Decode(b)
+	if block == nil {
+		return nil, xerrors.New("failed parse public key")
+	}
+	if block.Type != "PUBLIC KEY" {
+		return nil, xerrors.Errorf("unexpected type: %s", block.Type)
+	}
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
 	s := &Server{
-		Config: config,
-		conn:   grpcConn,
+		Config:    config,
+		publicKey: publicKey,
+		conn:      grpcConn,
 		loader: template.New(
 			dashboard.Data,
 			config.Dashboard.Template.Loader,
@@ -54,9 +88,9 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
 	}
 	mux := httprouter.New()
 	s.router = mux
-	s.Get("/liveness", s.handleLiveness)
-	s.Get("/readiness", s.handleReadiness)
-	s.Get("/", s.handleIndex)
+	// Probe endpoints should not verify a JWT header.
+	mux.GET("/liveness", s.handleLiveness)
+	mux.GET("/readiness", s.handleReadiness)
 	s.Get("/role", s.handleRoleIndex)
 	s.Get("/user", s.handleUsers)
 	s.Post("/user", s.handleAddUser)
@@ -82,17 +116,18 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) *Server {
 	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken)
 	s.Get("/me", s.handleMe)
 	s.Post("/me", s.handleUpdateProfile)
+	s.Get("/", s.handleIndex)
 	s.server.Handler = mux
 
-	return s
+	return s, nil
 }
 
 func (s *Server) Get(path string, handle httprouter.Handle) {
-	s.router.GET(path, handle)
+	s.router.GET(path, s.verifyRequest(handle))
 }
 
 func (s *Server) Post(path string, handle httprouter.Handle) {
-	s.router.POST(path, handle)
+	s.router.POST(path, s.verifyRequest(handle))
 }
 
 func (s *Server) Start() error {
@@ -940,6 +975,39 @@ func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interfa
 	if err != nil {
 		logger.Log.Info("Failed render template", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+type verifiedUserIdKey struct{}
+
+var VerifiedUserIdKey = verifiedUserIdKey{}
+
+func (s *Server) verifyRequest(handle httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		if req.Header.Get(authproxy.TokenHeaderName) == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		claim := &authn.TokenClaims{}
+		_, err := jwt.ParseWithClaims(req.Header.Get(authproxy.TokenHeaderName), claim, func(t *jwt.Token) (interface{}, error) {
+			if t.Method != jwt.SigningMethodES256 {
+				return nil, xerrors.New("dashboard: invalid signing method")
+			}
+			return s.publicKey, nil
+		})
+		if err != nil {
+			logger.Log.Info("Failed parse JWT", zap.Error(err))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err := claim.Valid(); err != nil {
+			logger.Log.Warn("Invalid JWT token", zap.Error(err))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		req = req.WithContext(context.WithValue(req.Context(), VerifiedUserIdKey, claim.Id))
+
+		handle(w, req, params)
 	}
 }
 

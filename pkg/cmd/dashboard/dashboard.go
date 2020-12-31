@@ -95,7 +95,11 @@ func (m *mainProcess) openConnection() (cmd.State, error) {
 }
 
 func (m *mainProcess) start() (cmd.State, error) {
-	dashboardServer := dashboard.NewServer(m.config, m.rpcServerConn)
+	dashboardServer, err := dashboard.NewServer(m.config, m.rpcServerConn)
+	if err != nil {
+		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+	}
+
 	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

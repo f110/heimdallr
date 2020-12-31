@@ -50,5 +50,6 @@ dashboard:
   bind: :4100
   rpc_server: 127.0.0.1:4002
   ca_cert_file: ./ca.crt
+  publickey_url: http://127.0.0.1:4004/internal/publickey
   template:
     loader: shotgun

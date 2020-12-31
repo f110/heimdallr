@@ -288,10 +288,11 @@ type Session struct {
 }
 
 type Dashboard struct {
-	Bind      string    `json:"bind,omitempty"`
-	RPCServer string    `json:"rpc_server,omitempty"`
-	TokenFile string    `json:"token_file,omitempty"`
-	Template  *Template `json:"template,omitempty"`
+	Bind         string    `json:"bind,omitempty"`
+	RPCServer    string    `json:"rpc_server,omitempty"`
+	TokenFile    string    `json:"token_file,omitempty"`
+	Template     *Template `json:"template,omitempty"`
+	PublicKeyUrl string    `json:"publickey_url,omitempty"`
 
 	InternalToken string `json:"-"`
 }
