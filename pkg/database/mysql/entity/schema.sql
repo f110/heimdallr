@@ -122,6 +122,7 @@ CREATE TABLE `signed_certificate` (
 	`p12` BLOB NOT NULL,
 	`agent` TINYINT(1) NOT NULL,
 	`comment` VARCHAR(255) NOT NULL,
+	`device` TINYINT(1) NOT NULL,
 	`issued_at` DATETIME NOT NULL,
 	PRIMARY KEY(`id`)
 ) Engine=InnoDB;
@@ -135,6 +136,7 @@ CREATE TABLE `revoked_certificate` (
 	`comment` VARCHAR(255) NOT NULL,
 	`revoked_at` DATETIME NOT NULL,
 	`issued_at` DATETIME NOT NULL,
+	`device` TINYINT(1) NOT NULL,
 	`created_at` DATETIME NOT NULL,
 	`updated_at` DATETIME NULL,
 	PRIMARY KEY(`id`)

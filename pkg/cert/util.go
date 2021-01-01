@@ -86,27 +86,38 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType stri
 	return data, clientCert, nil
 }
 
-func CreateCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, *ecdsa.PrivateKey, error) {
+func CreatePrivateKeyAndCertificateRequest(subject pkix.Name, dnsName []string) ([]byte, *ecdsa.PrivateKey, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
 
+	csr, err := CreateCertificateRequest(subject, dnsName, privateKey)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %w", err)
+	}
+
+	return csr, privateKey, nil
+}
+
+// CreateCertificateRequest creates CertificateSigningRequest with PrivateKey.
+// The return value is pem-encoded CertificateSigningRequest
+func CreateCertificateRequest(subject pkix.Name, dnsName []string, privateKey crypto.PrivateKey) ([]byte, error) {
 	template := &x509.CertificateRequest{
 		Subject:  subject,
 		DNSNames: dnsName,
 	}
 	csr, err := x509.CreateCertificateRequest(rand.Reader, template, privateKey)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.Errorf(": %v", err)
 	}
 
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csr}); err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	return buf.Bytes(), privateKey, nil
+	return buf.Bytes(), nil
 }
 
 func SigningCertificateRequest(r *x509.CertificateRequest, ca *configv2.CertificateAuthorityLocal) (*x509.Certificate, error) {

@@ -101,6 +101,7 @@ func (ca *CA) GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) 
 			IssuedAt:     v.IssuedAt,
 			RevokedAt:    v.RevokedAt,
 			Agent:        v.Agent,
+			Device:       v.Device,
 			Comment:      v.Comment,
 		}
 	}
@@ -248,6 +249,7 @@ func (ca *CA) checkRevokedCertificate() {
 			IssuedAt:     v.IssuedAt,
 			RevokedAt:    v.RevokedAt,
 			Agent:        v.Agent,
+			Device:       v.Device,
 			Comment:      v.Comment,
 		}
 

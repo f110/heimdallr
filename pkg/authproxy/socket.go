@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -150,6 +151,20 @@ func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	defer conn.Close()
+
+	if len(conn.ConnectionState().PeerCertificates) == 0 {
+		logger.Log.Info("Client did not submitted the client certificate")
+		return
+	}
+	cert := conn.ConnectionState().PeerCertificates[0]
+	_, err := cert.Verify(x509.VerifyOptions{
+		Roots:     s.Config.CertificateAuthority.Local.CertPool,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	})
+	if err != nil {
+		logger.Log.Info("Client submitted the certificate but it is invalid", zap.Error(err))
+		return
+	}
 
 	stat.Value.OpenSocketProxyConn()
 	defer stat.Value.CloseSocketProxyConn()
@@ -454,12 +469,13 @@ func NewSocketProxyClient(in io.Reader, out io.Writer) *Client {
 	return &Client{inCh: inCh, outCh: outCh}
 }
 
-func (c *Client) Dial(host, port, token string) error {
+func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token string) error {
 	conn, err := tls.DialWithDialer(
 		&net.Dialer{Timeout: 3 * time.Second},
 		"tcp",
 		fmt.Sprintf("%s:%s", host, port),
 		&tls.Config{
+			Certificates:       []tls.Certificate{*clientCert},
 			NextProtos:         []string{SocketProxyNextProto},
 			InsecureSkipVerify: true,
 		},

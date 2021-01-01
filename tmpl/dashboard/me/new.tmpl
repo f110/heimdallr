@@ -1,0 +1,19 @@
+{{ template "include/header.tmpl" }}
+
+<div class="ui container">
+    <h2 class="ui header">Add device</h2>
+    <div class="ui divider"></div>
+    <form class="ui form" action="/me/device/new" method="POST">
+        <div class="field">
+            <label>Name</label>
+            <input type="text" name="name" placeholder="Name">
+        </div>
+        <div class="field">
+            <label>CSR</label>
+            <textarea rows="6" name="csr"></textarea>
+        </div>
+        <button class="ui button primary" type="submit">Add</a>
+    </form>
+</div>
+
+{{ template "include/footer.tmpl" }}

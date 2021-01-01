@@ -394,6 +394,7 @@ func (m *mainProcess) startDashboard() {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
+
 	m.dashboard = dashboardServer
 	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

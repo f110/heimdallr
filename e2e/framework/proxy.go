@@ -123,7 +123,7 @@ func NewConnector(name string, m *MockServer, proxyCACert *x509.Certificate) (*C
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	csr, privateKey, err := cert.CreateCertificateRequest(pkix.Name{CommonName: name}, nil)
+	csr, privateKey, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: name}, nil)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

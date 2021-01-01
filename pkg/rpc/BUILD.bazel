@@ -21,6 +21,7 @@ go_library(
     name = "rpc",
     srcs = [
         "const.go",
+        "interface.go",
         "method_matcher.go",
         "rpc.pb.go",
         "util.go",

@@ -47,5 +47,7 @@ go_test(
         "//pkg/netutil",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
     ],
 )

@@ -189,7 +189,7 @@ func TestGenerateServerCertificate(t *testing.T) {
 }
 
 func TestCreateCertificateRequest(t *testing.T) {
-	csrByte, privateKey, err := CreateCertificateRequest(pkix.Name{CommonName: "test@f110.dev"}, []string{""})
+	csrByte, privateKey, err := CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: "test@f110.dev"}, []string{""})
 	if err != nil {
 		t.Fatal(err)
 	}

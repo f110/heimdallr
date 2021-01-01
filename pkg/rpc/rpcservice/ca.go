@@ -30,15 +30,22 @@ func NewCertificateAuthorityService(conf *configv2.Config, ca *cert.CertificateA
 	return &CertificateAuthorityService{Config: conf, ca: ca}
 }
 
-func (s *CertificateAuthorityService) GetSignedList(ctx context.Context, _ *rpc.RequestGetSignedList) (*rpc.ResponseGetSignedList, error) {
+func (s *CertificateAuthorityService) GetSignedList(ctx context.Context, req *rpc.RequestGetSignedList) (*rpc.ResponseGetSignedList, error) {
 	certs, err := s.ca.GetSignedCertificates(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]*rpc.CertItem, len(certs))
-	for i, c := range certs {
-		res[i] = rpc.DatabaseCertToRPCCert(c)
+	res := make([]*rpc.CertItem, 0, len(certs))
+	for _, c := range certs {
+		if req.CommonName != "" && req.CommonName != c.Certificate.Subject.CommonName {
+			continue
+		}
+		if req.Device && !c.Device {
+			continue
+		}
+
+		res = append(res, rpc.DatabaseCertToRPCCert(c))
 	}
 
 	return &rpc.ResponseGetSignedList{Items: res}, nil
@@ -61,6 +68,12 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		commonName = r.Subject.CommonName
 		csr = r
 	}
+	if req.OverrideCommonName != "" {
+		commonName = req.GetOverrideCommonName()
+		if csr != nil {
+			csr.Subject.CommonName = req.GetOverrideCommonName()
+		}
+	}
 
 	if req.GetAgent() {
 		if _, ok := s.Config.AccessProxy.GetBackend(commonName); !ok {
@@ -72,7 +85,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 	if commonName == "" {
 		return nil, errors.New("rpcservice: the common name is mandatory")
 	}
-	if req.GetCsr() != "" && req.GetCommonName() != commonName {
+	if req.GetCsr() != "" && req.GetOverrideCommonName() == "" && req.GetCommonName() != commonName {
 		return nil, errors.New("rpcservice: Subject.CommonName and req.CommonName are not same value")
 	}
 
@@ -84,7 +97,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 			signed, err = s.ca.NewClientCertificate(ctx, req.GetCommonName(), req.GetKeyType(), int(req.GetKeyBits()), req.GetPassword(), req.GetComment())
 		}
 	} else {
-		signed, err = s.ca.SignCertificateRequest(ctx, csr, req.GetComment(), req.GetAgent())
+		signed, err = s.ca.SignCertificateRequest(ctx, csr, req.GetComment(), req.GetAgent(), req.GetDevice())
 	}
 	if err != nil {
 		return nil, err

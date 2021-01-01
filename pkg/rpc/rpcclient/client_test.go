@@ -91,7 +91,7 @@ func TestNewWithClient(t *testing.T) {
 	if ca.NewClientCertCall != 1 {
 		t.Error("Expect call NewClientCert")
 	}
-	_, _ = c.NewCertByCSR("", "")
+	_, _ = c.NewCertByCSR("")
 	if ca.NewClientCertCall != 2 {
 		t.Error("Expect call NewClientCert")
 	}

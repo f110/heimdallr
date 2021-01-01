@@ -31,7 +31,7 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 	_, err := os.Stat(privateKeyPath)
 	if os.IsNotExist(err) {
 		subject := pkix.Name{CommonName: name}
-		csr, key, err := cert.CreateCertificateRequest(subject, []string{})
+		csr, key, err := cert.CreatePrivateKeyAndCertificateRequest(subject, []string{})
 		if err != nil {
 			return nil, nil, nil, xerrors.Errorf(": %v", err)
 		}

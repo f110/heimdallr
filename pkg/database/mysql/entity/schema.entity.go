@@ -748,6 +748,7 @@ type SignedCertificate struct {
 	P12            []byte
 	Agent          bool
 	Comment        string
+	Device         bool
 	IssuedAt       time.Time
 
 	SerialNumber *SerialNumber
@@ -772,6 +773,7 @@ func (e *SignedCertificate) IsChanged() bool {
 		!bytes.Equal(e.P12, e.mark.P12) ||
 		e.Agent != e.mark.Agent ||
 		e.Comment != e.mark.Comment ||
+		e.Device != e.mark.Device ||
 		!e.IssuedAt.Equal(e.mark.IssuedAt)
 }
 
@@ -795,6 +797,9 @@ func (e *SignedCertificate) ChangedColumn() []ddl.Column {
 	if e.Comment != e.mark.Comment {
 		res = append(res, ddl.Column{Name: "comment", Value: e.Comment})
 	}
+	if e.Device != e.mark.Device {
+		res = append(res, ddl.Column{Name: "device", Value: e.Device})
+	}
 	if !e.IssuedAt.Equal(e.mark.IssuedAt) {
 		res = append(res, ddl.Column{Name: "issued_at", Value: e.IssuedAt})
 	}
@@ -810,6 +815,7 @@ func (e *SignedCertificate) Copy() *SignedCertificate {
 		P12:            e.P12,
 		Agent:          e.Agent,
 		Comment:        e.Comment,
+		Device:         e.Device,
 		IssuedAt:       e.IssuedAt,
 	}
 
@@ -828,6 +834,7 @@ type RevokedCertificate struct {
 	Comment      string
 	RevokedAt    time.Time
 	IssuedAt     time.Time
+	Device       bool
 	CreatedAt    time.Time
 	UpdatedAt    *time.Time
 
@@ -852,6 +859,7 @@ func (e *RevokedCertificate) IsChanged() bool {
 		e.Comment != e.mark.Comment ||
 		!e.RevokedAt.Equal(e.mark.RevokedAt) ||
 		!e.IssuedAt.Equal(e.mark.IssuedAt) ||
+		e.Device != e.mark.Device ||
 		!e.CreatedAt.Equal(e.mark.CreatedAt) ||
 		((e.UpdatedAt != nil && (e.mark.UpdatedAt == nil || !e.UpdatedAt.Equal(*e.mark.UpdatedAt))) || (e.UpdatedAt == nil && e.mark.UpdatedAt != nil))
 }
@@ -879,6 +887,9 @@ func (e *RevokedCertificate) ChangedColumn() []ddl.Column {
 	if !e.IssuedAt.Equal(e.mark.IssuedAt) {
 		res = append(res, ddl.Column{Name: "issued_at", Value: e.IssuedAt})
 	}
+	if e.Device != e.mark.Device {
+		res = append(res, ddl.Column{Name: "device", Value: e.Device})
+	}
 	if !e.CreatedAt.Equal(e.mark.CreatedAt) {
 		res = append(res, ddl.Column{Name: "created_at", Value: e.CreatedAt})
 	}
@@ -902,6 +913,7 @@ func (e *RevokedCertificate) Copy() *RevokedCertificate {
 		Comment:      e.Comment,
 		RevokedAt:    e.RevokedAt,
 		IssuedAt:     e.IssuedAt,
+		Device:       e.Device,
 		CreatedAt:    e.CreatedAt,
 	}
 	if e.UpdatedAt != nil {

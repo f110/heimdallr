@@ -31,6 +31,7 @@ type SignedCertificate struct {
 	P12         []byte
 	IssuedAt    time.Time
 	Agent       bool
+	Device      bool
 	Comment     string
 }
 
@@ -40,5 +41,6 @@ type RevokedCertificate struct {
 	IssuedAt     time.Time
 	RevokedAt    time.Time
 	Agent        bool
+	Device       bool
 	Comment      string
 }

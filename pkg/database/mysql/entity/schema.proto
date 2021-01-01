@@ -231,7 +231,8 @@ message SignedCertificate {
     bytes         p12           = 4;
     bool          agent         = 5;
     string        comment       = 6;
-    google.protobuf.Timestamp issued_at = 7;
+    bool          device        = 7;
+    google.protobuf.Timestamp issued_at = 8;
 
     option (dev.f110.ddl.table) = {
         primary_key: "id"
@@ -256,7 +257,8 @@ message RevokedCertificate {
     bool   agent         = 4;
     string comment       = 5;
     google.protobuf.Timestamp revoked_at = 6;
-    google.protobuf.Timestamp issued_at = 7;
+    google.protobuf.Timestamp issued_at  = 7;
+    bool device = 8;
 
     option (dev.f110.ddl.table) = {
         primary_key: "id"

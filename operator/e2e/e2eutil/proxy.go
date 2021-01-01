@@ -164,11 +164,11 @@ func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 }
 
 func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) {
-	csr, privKey, err := cert.CreateCertificateRequest(pkix.Name{CommonName: id}, nil)
+	csr, privKey, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: id}, nil)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	signedCert, err := rpcClient.NewCertByCSR(string(csr), id)
+	signedCert, err := rpcClient.NewCertByCSR(string(csr))
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

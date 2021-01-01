@@ -243,7 +243,7 @@ func TestAuthenticate(t *testing.T) {
 
 		newClientCert := func(t *testing.T, id string) *x509.Certificate {
 			subject := pkix.Name{CommonName: id}
-			pemEncodedCSRBytes, _, err := cert.CreateCertificateRequest(subject, []string{})
+			pemEncodedCSRBytes, _, err := cert.CreatePrivateKeyAndCertificateRequest(subject, []string{})
 			if err != nil {
 				t.Fatal(err)
 			}

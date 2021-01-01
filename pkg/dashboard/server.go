@@ -116,6 +116,8 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) (*Server, err
 	s.Post("/service_account/:id/token", s.handleNewServiceAccountToken)
 	s.Get("/me", s.handleMe)
 	s.Post("/me", s.handleUpdateProfile)
+	s.Get("/me/device/new", s.handleNewDevice)
+	s.Post("/me/device/new", s.handleAddDevice)
 	s.Get("/", s.handleIndex)
 	s.server.Handler = mux
 
@@ -349,7 +351,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		_, err := client.NewCertByCSR(req.FormValue("csr"), req.FormValue("id"))
+		_, err := client.NewCertByCSR(req.FormValue("csr"), rpcclient.VerifyCommonName(req.FormValue("id")))
 		if err != nil {
 			logger.Log.Info("Failed sign CSR", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -929,6 +931,12 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
+	userId, ok := req.Context().Value(VerifiedUserIdKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	keys, err := client.GetSSHKey("")
 	if err != nil {
 		logger.Log.Info("Failed get ssh key", zap.Error(err))
@@ -938,12 +946,36 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 		logger.Log.Info("Failed get gpg key", zap.Error(err))
 	}
 
+	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
+	if err != nil {
+		logger.Log.Info("Failed get my certs")
+	}
+
+	signedCertificates := make([]*certificate, 0, len(signed))
+	for _, v := range signed {
+		serialNumber := big.NewInt(0)
+		serialNumber.SetBytes(v.SerialNumber)
+		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
+		if err != nil {
+			continue
+		}
+
+		signedCertificates = append(signedCertificates, &certificate{
+			SerialNumber: serialNumber.Text(16),
+			IssuedAt:     issuedAt,
+			CommonName:   v.CommonName,
+			Comment:      v.Comment,
+		})
+	}
+
 	s.RenderTemplate(w, "me/index.tmpl", struct {
 		SSHKeys string
 		GPGKey  string
+		Devices []*certificate
 	}{
 		SSHKeys: keys,
 		GPGKey:  gpgKey,
+		Devices: signedCertificates,
 	})
 }
 
@@ -963,6 +995,43 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, req *http.Request, _
 
 	if err := client.SetGPGKey(req.FormValue("gpgkey")); err != nil {
 		logger.Log.Info("Failed update gpg key", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, "/me", http.StatusFound)
+}
+
+func (s *Server) handleNewDevice(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	s.RenderTemplate(w, "me/new.tmpl", nil)
+}
+
+func (s *Server) handleAddDevice(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	client := s.client.WithRequest(req)
+
+	if err := req.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if req.FormValue("csr") == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	v := req.Context().Value(VerifiedUserIdKey)
+	userId, ok := v.(string)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err := client.NewCertByCSR(
+		req.FormValue("csr"),
+		rpcclient.OverrideCommonName(userId),
+		rpcclient.IsDevice(),
+		rpcclient.Comment(req.FormValue("name")),
+	)
+	if err != nil {
+		logger.Log.Warn("Failed create certificate", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

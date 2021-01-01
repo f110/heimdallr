@@ -3,6 +3,7 @@ package authproxy
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -11,6 +12,9 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
@@ -67,26 +71,16 @@ func (d *dummyTLSConn) ConnectionState() tls.ConnectionState {
 }
 
 func parseResponseMessage(t *testing.T, buf []byte) MessageError {
-	if len(buf) < 5 {
-		t.Fatal("response message is short")
-	}
-	if buf[0] != TypeMessage {
-		t.Fatalf("expect TypeMessage: %v", buf[0])
-	}
+	require.Greater(t, len(buf), 5, "response message is short")
+	require.Equal(t, buf[0], TypeMessage, "response message type is not TypeMessage")
 	length := binary.BigEndian.Uint32(buf[1:5])
-	if len(buf) < int(5+length) {
-		t.Fatalf("length field is invalid: %v %v", len(buf), 5+length)
-	}
+	require.Greaterf(t, len(buf), int(5+length), "length field is invalid: %v %v", len(buf), 5+length)
 
 	query := buf[5 : 5+length]
 	value, err := url.ParseQuery(string(query))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msgErr, err := ParseMessageError(value)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return msgErr
 }
@@ -115,9 +109,19 @@ func TestSocketProxy_Accept(t *testing.T) {
 		close(gotConn)
 	}()
 
+	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	caPool := x509.NewCertPool()
+	caPool.AddCert(ca)
+	// Private key for the client is not needed.
+	clientCert, _, err := cert.GenerateMutualTLSCertificate(ca, caPrivateKey, []string{"test"}, nil)
+	require.NoError(t, err)
+
 	user := memory.NewUserDatabase()
 	token := memory.NewTokenDatabase()
-	v := NewSocketProxy(&configv2.Config{
+	socketProxy := NewSocketProxy(&configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "example.com",
 			TokenEndpoint:  "http://token.example.com",
@@ -134,25 +138,31 @@ func TestSocketProxy_Accept(t *testing.T) {
 				}},
 			},
 		},
+		CertificateAuthority: &configv2.CertificateAuthority{
+			Local: &configv2.CertificateAuthorityLocal{
+				CertPool: caPool,
+			},
+		},
 	}, nil)
-	err = v.Config.AccessProxy.Setup(v.Config.AccessProxy.Backends)
+	err = socketProxy.Config.AccessProxy.Setup(socketProxy.Config.AccessProxy.Backends)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = v.Config.AuthorizationEngine.Setup(v.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
+	err = socketProxy.Config.AuthorizationEngine.Setup(socketProxy.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = user.Set(nil, &database.User{Id: "test@example.com", Roles: []string{"test"}})
 	userToken, _ := token.SetUser("test@example.com")
-	auth.Init(v.Config, nil, user, token, nil)
+	auth.Init(socketProxy.Config, nil, user, token, nil)
 
 	t.Run("Handshake failure", func(t *testing.T) {
 		conn := newTLSConn(tls.ConnectionState{
-			ServerName: "socket.example.com",
+			ServerName:       "socket.example.com",
+			PeerCertificates: []*x509.Certificate{clientCert},
 		}, bytes.NewBuffer([]byte{0x00}))
 
-		v.Accept(nil, conn, nil)
+		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
 		if msgErr.Code() != SocketErrorCodeInvalidProtocol {
@@ -171,10 +181,11 @@ func TestSocketProxy_Accept(t *testing.T) {
 		data.Write(buf)
 		data.WriteString(q)
 		conn := newTLSConn(tls.ConnectionState{
-			ServerName: "socket.example.com",
+			ServerName:       "socket.example.com",
+			PeerCertificates: []*x509.Certificate{clientCert},
 		}, data)
 
-		v.Accept(nil, conn, nil)
+		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
 		if msgErr.Code() != SocketErrorCodeRequestAuth {
@@ -193,10 +204,11 @@ func TestSocketProxy_Accept(t *testing.T) {
 		data.Write(buf)
 		data.WriteString(q)
 		conn := newTLSConn(tls.ConnectionState{
-			ServerName: "socket.example.com",
+			ServerName:       "socket.example.com",
+			PeerCertificates: []*x509.Certificate{clientCert},
 		}, data)
 
-		v.Accept(nil, conn, nil)
+		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
 		if msgErr.Code() != SocketErrorCodeServerUnavailable {
@@ -215,10 +227,11 @@ func TestSocketProxy_Accept(t *testing.T) {
 		data.Write(buf)
 		data.WriteString(q)
 		conn := newTLSConn(tls.ConnectionState{
-			ServerName: "success.example.com",
+			ServerName:       "success.example.com",
+			PeerCertificates: []*x509.Certificate{clientCert},
 		}, data)
 
-		v.Accept(nil, conn, nil)
+		socketProxy.Accept(nil, conn, nil)
 
 		select {
 		case <-gotConn:
@@ -253,6 +266,12 @@ func TestClient_Dial(t *testing.T) {
 	serverCert, serverPrivKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{hostname})
 	if err != nil {
 		t.Fatal(err)
+	}
+	cCert, clientPrivKey, err := cert.GenerateMutualTLSCertificate(ca, caPrivateKey, []string{"test"}, nil)
+	require.NoError(t, err)
+	clientCert := &tls.Certificate{
+		Certificate: [][]byte{cCert.Raw},
+		PrivateKey:  clientPrivKey,
 	}
 
 	t.Run("Success", func(t *testing.T) {
@@ -302,7 +321,7 @@ func TestClient_Dial(t *testing.T) {
 
 		r, w := io.Pipe()
 		v := NewSocketProxyClient(r, w)
-		err = v.Dial("", fmt.Sprintf("%d", port), "test-token")
+		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -366,16 +385,10 @@ func TestClient_Dial(t *testing.T) {
 
 		r, w := io.Pipe()
 		v := NewSocketProxyClient(r, w)
-		err = v.Dial("", fmt.Sprintf("%d", port), "test-token")
-		if err == nil {
-			t.Fatal("Expect occurred na error")
-		}
+		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token")
+		require.Error(t, err)
 		msgErr, ok := err.(MessageError)
-		if !ok {
-			t.Fatal("Expect return MessageError")
-		}
-		if msgErr.Code() != 3 {
-			t.Errorf("Expect error code 3: %v", msgErr.Code())
-		}
+		require.True(t, ok, "Expect return MessageError")
+		assert.Equal(t, 3, msgErr.Code())
 	})
 }

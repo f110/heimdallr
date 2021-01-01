@@ -400,7 +400,7 @@ func TestServicesViaServer(t *testing.T) {
 			t.Fatal("Expect return ok")
 		}
 
-		csr, _, err := cert.CreateCertificateRequest(pkix.Name{CommonName: "csr@example.com"}, []string{})
+		csr, _, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: "csr@example.com"}, []string{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -457,7 +457,7 @@ func TestServicesViaServer(t *testing.T) {
 			t.Errorf("Expect 1 revoked certificate: %d revoked certificates", len(revokedListRes.GetItems()))
 		}
 
-		csr, _, err = cert.CreateCertificateRequest(pkix.Name{CommonName: "test.example.com"}, []string{"test.example.com"})
+		csr, _, err = cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: "test.example.com"}, []string{"test.example.com"})
 		if err != nil {
 			t.Fatal(err)
 		}

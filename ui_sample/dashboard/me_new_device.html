@@ -23,47 +23,18 @@
 </div>
 
 <div class="ui container">
-    <h2 class="ui header">Me</h2>
+    <h2 class="ui header">Add device</h2>
     <div class="ui divider"></div>
-    <form class="ui form" action="/me" method="POST">
+    <form class="ui form">
         <div class="field">
-            <label>SSH Keys</label>
+            <label>Name</label>
+            <input type="text" name="id" placeholder="Name">
+        </div>
+        <div class="field">
+            <label>CSR</label>
             <textarea rows="6"></textarea>
         </div>
-
-        <div class="ui divider"></div>
-        <div class="field">
-            <label>GPG Key</label>
-            <textarea rows="5"></textarea>
-        </div>
-
-        <div class="ui divider"></div>
-        <h3 class="ui header">Devices
-            <a class="ui basic button mini primary" href="./me_new_device.html"><i class="desktop icon"></i>Add</a>
-        </h3>
-        <table class="ui table celled striped">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Registered at</th>
-                <th></th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td>MacBook Pro 16</td>
-                <td>2019/09/12 00:00:00</td>
-                <td><a href="/"><i class="icon download"></i>Cert</a></td>
-                <td>
-                    <button class="ui button red mini basic">Delete</button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-
-        <div class="ui divider"></div>
-        <button class="ui button primary" type="submit">Update</button>
+        <a class="ui button primary" type="submit" href="./me_added_new_device.html">Add</a>
     </form>
 </div>
 

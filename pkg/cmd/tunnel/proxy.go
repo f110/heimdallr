@@ -1,46 +1,30 @@
-package main
+package tunnel
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
-	"go.f110.dev/heimdallr/pkg/version"
 )
 
-func printVersion() {
-	fmt.Printf("Version: %s\n", version.Version)
-	fmt.Printf("Go version: %s\n", runtime.Version())
-}
-
 func proxy(args []string) error {
-	version := false
-	fs := pflag.NewFlagSet("heim-proxy", pflag.ContinueOnError)
-	fs.BoolVarP(&version, "version", "v", version, "Show version")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if version {
-		printVersion()
-		return nil
-	}
-
 	uc, err := userconfig.New()
 	if err != nil {
 		return err
 	}
 
 	to, err := uc.GetToken()
+	if err != nil {
+		return err
+	}
+	clientCert, err := uc.GetCertificate()
 	if err != nil {
 		return err
 	}
@@ -59,7 +43,7 @@ func proxy(args []string) error {
 	}
 	client := authproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(host, port, to)
+	err = client.Dial(host, port, clientCert, to)
 	if err != nil {
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
@@ -80,12 +64,19 @@ Retry:
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	err = client.Pipe(ctx)
+
 	return err
 }
 
-func main() {
-	if err := proxy(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n\x1b[0G", err)
-		os.Exit(1)
+func Proxy(rootCmd *cobra.Command) {
+	proxyCmd := &cobra.Command{
+		Use:   "proxy [host]",
+		Short: "Proxy to backend",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return proxy(args)
+		},
 	}
+
+	rootCmd.AddCommand(proxyCmd)
 }

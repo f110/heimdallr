@@ -26,6 +26,8 @@ const (
 
 var loggerOnce sync.Once
 
+type RequestOpt func(interface{})
+
 type ClientWithUserToken struct {
 	*Client
 }
@@ -256,8 +258,13 @@ func (c *Client) ListAgentBackend() ([]*rpc.BackendItem, error) {
 	return res.Items, nil
 }
 
-func (c *Client) ListCert() ([]*rpc.CertItem, error) {
-	res, err := c.caClient.GetSignedList(c.md, &rpc.RequestGetSignedList{})
+func (c *Client) ListCert(opts ...RequestOpt) ([]*rpc.CertItem, error) {
+	req := &rpc.RequestGetSignedList{}
+	for _, v := range opts {
+		v(req)
+	}
+
+	res, err := c.caClient.GetSignedList(c.md, req)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +290,13 @@ func (c *Client) NewCert(commonName, keyType string, keyBits int, password, comm
 	return nil
 }
 
-func (c *Client) NewCertByCSR(csr string, commonName string) (*rpc.CertItem, error) {
-	res, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Csr: csr, CommonName: commonName})
+func (c *Client) NewCertByCSR(csr string, opts ...RequestOpt) (*rpc.CertItem, error) {
+	req := &rpc.RequestNewClientCert{Csr: csr}
+	for _, v := range opts {
+		v(req)
+	}
+
+	res, err := c.caClient.NewClientCert(c.md, req)
 	if err != nil {
 		return nil, err
 	}
@@ -398,6 +410,62 @@ func extractEndpointFromError(err error) (string, error) {
 	}
 
 	return "", err
+}
+
+func OverrideCommonName(cn string) RequestOpt {
+	return func(req interface{}) {
+		v, ok := req.(interface {
+			SetOverrideCommonName(string)
+		})
+		if !ok {
+			return
+		}
+
+		v.SetOverrideCommonName(cn)
+	}
+}
+
+func VerifyCommonName(cn string) RequestOpt {
+	return func(req interface{}) {
+		v, ok := req.(interface {
+			SetCommonName(string)
+		})
+		if !ok {
+			return
+		}
+
+		v.SetCommonName(cn)
+	}
+}
+
+func IsDevice() RequestOpt {
+	return func(req interface{}) {
+		v, ok := req.(interface {
+			SetDevice(bool)
+		})
+		if !ok {
+			return
+		}
+
+		v.SetDevice(true)
+	}
+}
+
+func CommonName(cn string) RequestOpt {
+	return VerifyCommonName(cn)
+}
+
+func Comment(c string) RequestOpt {
+	return func(req interface{}) {
+		v, ok := req.(interface {
+			SetComment(string)
+		})
+		if !ok {
+			return
+		}
+
+		v.SetComment(c)
+	}
 }
 
 func OverrideGrpcLogger() {

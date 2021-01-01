@@ -41,6 +41,7 @@ func DatabaseCertToRPCCert(in *database.SignedCertificate) *CertItem {
 		CommonName:   in.Certificate.Subject.CommonName,
 		IssuedAt:     issuedAt,
 		Agent:        in.Agent,
+		Device:       in.Device,
 		Comment:      in.Comment,
 		HasP12:       in.P12 != nil && len(in.P12) > 0,
 	}
@@ -69,6 +70,7 @@ func DatabaseRevokedCertToRPCCert(in *database.RevokedCertificate) *CertItem {
 		CommonName:   in.CommonName,
 		Comment:      in.Comment,
 		Agent:        in.Agent,
+		Device:       in.Device,
 		IssuedAt:     issuedAt,
 		RevokedAt:    revokedAt,
 	}

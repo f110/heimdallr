@@ -27,7 +27,7 @@ func NewCertificateAuthority(db database.CertificateAuthority, ca *configv2.Cert
 	return &CertificateAuthority{db: db, ca: ca}
 }
 
-func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, forAgent bool) (*database.SignedCertificate, error) {
+func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, forAgent, forDevice bool) (*database.SignedCertificate, error) {
 	signedCert, err := SigningCertificateRequest(csr, ca.ca.Local)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -38,6 +38,7 @@ func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr 
 		IssuedAt:    time.Now(),
 		Comment:     comment,
 		Agent:       forAgent,
+		Device:      forDevice,
 	}
 	err = ca.db.SetSignedCertificate(ctx, obj)
 	if err != nil {
@@ -55,6 +56,7 @@ func (ca *CertificateAuthority) Revoke(ctx context.Context, certificate *databas
 		RevokedAt:    time.Now(),
 		Comment:      certificate.Comment,
 		Agent:        certificate.Agent,
+		Device:       certificate.Device,
 	})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -64,11 +66,11 @@ func (ca *CertificateAuthority) Revoke(ctx context.Context, certificate *databas
 }
 
 func (ca *CertificateAuthority) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*database.SignedCertificate, error) {
-	return ca.newClientCertificate(ctx, name, keyType, keyBits, password, comment, false)
+	return ca.newClientCertificate(ctx, name, keyType, keyBits, password, comment, false, false)
 }
 
 func (ca *CertificateAuthority) NewAgentCertificate(ctx context.Context, name, password, comment string) (*database.SignedCertificate, error) {
-	return ca.newClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, password, comment, true)
+	return ca.newClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, password, comment, true, false)
 
 }
 
@@ -115,7 +117,7 @@ func (ca *CertificateAuthority) WatchRevokeCertificate() chan *database.RevokedC
 	return ca.db.WatchRevokeCertificate()
 }
 
-func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent bool) (*database.SignedCertificate, error) {
+func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent, device bool) (*database.SignedCertificate, error) {
 	serial, err := ca.db.NewSerialNumber(ctx)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -143,6 +145,7 @@ func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, 
 		IssuedAt:    time.Now(),
 		Comment:     comment,
 		Agent:       agent,
+		Device:      device,
 	}
 	if err := ca.db.SetSignedCertificate(ctx, signed); err != nil {
 		return nil, xerrors.Errorf(": %w", err)

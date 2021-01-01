@@ -1,19 +1,50 @@
 {{ template "include/header.tmpl" }}
 
 <div class="ui container">
-  <h2 class="ui header">Me</h2>
-  <div class="ui divider"></div>
-  <form class="ui form" action="/me" method="POST">
-    <div class="field">
-      <label>SSH Keys</label>
-      <textarea rows="6" name="sshkeys">{{ .SSHKeys }}</textarea>
-    </div>
-    <div class="field">
-      <label>GPG Key</label>
-      <textarea rows="5" name="gpgkey">{{ .GPGKey }}</textarea>
-    </div>
-    <button class="ui button primary" type="submit">Update</button>
-  </form>
+    <h2 class="ui header">Me</h2>
+    <div class="ui divider"></div>
+    <form class="ui form" action="/me" method="POST">
+        <div class="field">
+            <label>SSH Keys</label>
+            <textarea rows="6" name="sshkeys">{{ .SSHKeys }}</textarea>
+        </div>
+
+        <div class="ui divider"></div>
+        <div class="field">
+            <label>GPG Key</label>
+            <textarea rows="5" name="gpgkey">{{ .GPGKey }}</textarea>
+        </div>
+
+        <div class="ui divider"></div>
+        <h3 class="ui header">Devices
+            <a class="ui basic button mini primary" href="/me/device/new"><i class="desktop icon"></i>Add</a>
+        </h3>
+        <table class="ui table celled striped">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Registered at</th>
+                <th></th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {{- range .Devices }}
+            <tr>
+                <td>{{ .Comment }}</td>
+                <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+                <td><a href="/cert/download?serial={{ .SerialNumber }}&format=cert"><i class="icon download"></i>Cert</a></td>
+                <td>
+                    <button class="ui button red mini basic">Delete</button>
+                </td>
+            </tr>
+            {{- end }}
+            </tbody>
+        </table>
+
+        <div class="ui divider"></div>
+        <button class="ui button primary" type="submit">Update</button>
+    </form>
 </div>
 
 {{ template "include/footer.tmpl" }}

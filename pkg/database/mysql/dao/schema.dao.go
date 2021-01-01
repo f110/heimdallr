@@ -2273,7 +2273,7 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 	row := d.conn.QueryRowContext(ctx, "SELECT * FROM `signed_certificate` WHERE `id` = ?", id)
 
 	v := &entity.SignedCertificate{}
-	if err := row.Scan(&v.Id, &v.Certificate, &v.SerialNumberId, &v.P12, &v.Agent, &v.Comment, &v.IssuedAt); err != nil {
+	if err := row.Scan(&v.Id, &v.Certificate, &v.SerialNumberId, &v.P12, &v.Agent, &v.Comment, &v.Device, &v.IssuedAt); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
@@ -2292,7 +2292,7 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 
 func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at` FROM `signed_certificate` WHERE `serial_number_id` = ?"
+	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `device`, `issued_at` FROM `signed_certificate` WHERE `serial_number_id` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2312,7 +2312,7 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 	res := make([]*entity.SignedCertificate, 0)
 	for rows.Next() {
 		r := &entity.SignedCertificate{}
-		if err := rows.Scan(&r.Id, &r.Certificate, &r.SerialNumberId, &r.P12, &r.Agent, &r.Comment, &r.IssuedAt); err != nil {
+		if err := rows.Scan(&r.Id, &r.Certificate, &r.SerialNumberId, &r.P12, &r.Agent, &r.Comment, &r.Device, &r.IssuedAt); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		r.ResetMark()
@@ -2337,7 +2337,7 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 
 func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at` FROM `signed_certificate`"
+	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `device`, `issued_at` FROM `signed_certificate`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2356,7 +2356,7 @@ func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*
 	res := make([]*entity.SignedCertificate, 0)
 	for rows.Next() {
 		r := &entity.SignedCertificate{}
-		if err := rows.Scan(&r.Id, &r.Certificate, &r.SerialNumberId, &r.P12, &r.Agent, &r.Comment, &r.IssuedAt); err != nil {
+		if err := rows.Scan(&r.Id, &r.Certificate, &r.SerialNumberId, &r.P12, &r.Agent, &r.Comment, &r.Device, &r.IssuedAt); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		r.ResetMark()
@@ -2390,8 +2390,8 @@ func (d *SignedCertificate) Create(ctx context.Context, signedCertificate *entit
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `signed_certificate` (`certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `issued_at`) VALUES (?, ?, ?, ?, ?, ?)",
-		signedCertificate.Certificate, signedCertificate.SerialNumberId, signedCertificate.P12, signedCertificate.Agent, signedCertificate.Comment, signedCertificate.IssuedAt,
+		"INSERT INTO `signed_certificate` (`certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `device`, `issued_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		signedCertificate.Certificate, signedCertificate.SerialNumberId, signedCertificate.P12, signedCertificate.Agent, signedCertificate.Comment, signedCertificate.Device, signedCertificate.IssuedAt,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -2524,7 +2524,7 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 	row := d.conn.QueryRowContext(ctx, "SELECT * FROM `revoked_certificate` WHERE `id` = ?", id)
 
 	v := &entity.RevokedCertificate{}
-	if err := row.Scan(&v.Id, &v.CommonName, &v.SerialNumber, &v.Agent, &v.Comment, &v.RevokedAt, &v.IssuedAt, &v.CreatedAt, &v.UpdatedAt); err != nil {
+	if err := row.Scan(&v.Id, &v.CommonName, &v.SerialNumber, &v.Agent, &v.Comment, &v.RevokedAt, &v.IssuedAt, &v.Device, &v.CreatedAt, &v.UpdatedAt); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
@@ -2535,7 +2535,7 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 
 func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`, `updated_at` FROM `revoked_certificate` WHERE `serial_number` = ?"
+	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `device`, `created_at`, `updated_at` FROM `revoked_certificate` WHERE `serial_number` = ?"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2555,7 +2555,7 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 	res := make([]*entity.RevokedCertificate, 0)
 	for rows.Next() {
 		r := &entity.RevokedCertificate{}
-		if err := rows.Scan(&r.Id, &r.CommonName, &r.SerialNumber, &r.Agent, &r.Comment, &r.RevokedAt, &r.IssuedAt, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(&r.Id, &r.CommonName, &r.SerialNumber, &r.Agent, &r.Comment, &r.RevokedAt, &r.IssuedAt, &r.Device, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		r.ResetMark()
@@ -2568,7 +2568,7 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 
 func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
-	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`, `updated_at` FROM `revoked_certificate`"
+	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `device`, `created_at`, `updated_at` FROM `revoked_certificate`"
 	if listOpts.limit > 0 {
 		order := "ASC"
 		if listOpts.desc {
@@ -2587,7 +2587,7 @@ func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]
 	res := make([]*entity.RevokedCertificate, 0)
 	for rows.Next() {
 		r := &entity.RevokedCertificate{}
-		if err := rows.Scan(&r.Id, &r.CommonName, &r.SerialNumber, &r.Agent, &r.Comment, &r.RevokedAt, &r.IssuedAt, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(&r.Id, &r.CommonName, &r.SerialNumber, &r.Agent, &r.Comment, &r.RevokedAt, &r.IssuedAt, &r.Device, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		r.ResetMark()
@@ -2609,8 +2609,8 @@ func (d *RevokedCertificate) Create(ctx context.Context, revokedCertificate *ent
 
 	res, err := conn.ExecContext(
 		ctx,
-		"INSERT INTO `revoked_certificate` (`common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		revokedCertificate.CommonName, revokedCertificate.SerialNumber, revokedCertificate.Agent, revokedCertificate.Comment, revokedCertificate.RevokedAt, revokedCertificate.IssuedAt, time.Now(),
+		"INSERT INTO `revoked_certificate` (`common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `device`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		revokedCertificate.CommonName, revokedCertificate.SerialNumber, revokedCertificate.Agent, revokedCertificate.Comment, revokedCertificate.RevokedAt, revokedCertificate.IssuedAt, revokedCertificate.Device, time.Now(),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)

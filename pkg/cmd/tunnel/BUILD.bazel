@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "tunnel",
+    srcs = [
+        "info.go",
+        "initialize.go",
+        "proxy.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/tunnel",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/auth/token",
+        "//pkg/authproxy",
+        "//pkg/cert",
+        "//pkg/config/userconfig",
+        "//vendor/github.com/spf13/cobra",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)

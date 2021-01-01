@@ -172,7 +172,7 @@ func TestCertificateAuthority_SignCertificateRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, err := ca.SignCertificateRequest(context.Background(), csr, "for testing", false)
+	c, err := ca.SignCertificateRequest(context.Background(), csr, "for testing", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
