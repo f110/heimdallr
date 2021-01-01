@@ -231,6 +231,87 @@ spec:
 				},
 			},
 		},
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha2
+kind: Backend
+metadata:
+  name: build-dev
+  namespace: build-dev
+spec:
+  http:
+  - path: /api
+    serviceSelector:
+      matchLabels:
+        app.kubernetes.io/name: build
+      namespace: build-dev
+      port: api
+      scheme: http
+  - path: /
+    serviceSelector:
+      matchLabels:
+        app.kubernetes.io/name: build
+      namespace: build-dev
+      port: http
+      scheme: http
+  layer: internal
+  permissions:
+  - locations:
+    - any: /
+    name: all
+  - name: webhook
+    webhook: github
+    webhookConfiguration:
+      github:
+        appIdKey: appid
+        contentType: json
+        credentialSecretName: github-app
+        events:
+        - push
+        installationIdKey: installationid
+        path: /api/webhook
+        privateKeyKey: privatekey.pem
+        repositories:
+        - f110/sandbox`,
+			Expect: &proxyv1alpha1.Backend{
+				Spec: proxyv1alpha1.BackendSpec{
+					Layer: "internal",
+					ServiceSelector: proxyv1alpha1.ServiceSelector{
+						Port: "api",
+					},
+					Permissions: []proxyv1alpha1.Permission{
+						{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
+						{Name: "webhook", Locations: []proxyv1alpha1.Location{{Any: "/api/webhook"}}},
+					},
+				},
+			},
+		},
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha2
+kind: Backend
+metadata:
+  name: build
+  labels:
+    instance: global
+spec:
+  layer: webhook
+  http:
+    - path: /
+      agent: true
+  permissions:
+    - name: all
+      locations:
+        - any: /`,
+			Expect: &proxyv1alpha1.Backend{
+				Spec: proxyv1alpha1.BackendSpec{
+					Layer:    "webhook",
+					Agent:    true,
+					Upstream: "tcp://127.0.0.1:80",
+					Permissions: []proxyv1alpha1.Permission{
+						{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {
@@ -245,6 +326,7 @@ spec:
 		assert.Equal(t, tt.Expect.Spec.Agent, out.Spec.Agent)
 		assert.Equal(t, tt.Expect.Spec.Socket, out.Spec.Socket)
 		assert.Equal(t, tt.Expect.Spec.ServiceSelector.Port, out.Spec.ServiceSelector.Port)
+		assert.Equal(t, tt.Expect.Spec.Upstream, out.Spec.Upstream)
 		assert.Len(t, out.Spec.Permissions, len(tt.Expect.Spec.Permissions))
 	}
 }
