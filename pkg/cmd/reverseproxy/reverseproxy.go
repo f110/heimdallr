@@ -610,10 +610,14 @@ func (m *mainProcess) Start() error {
 		go func() {
 			defer m.wg.Done()
 
+			if err := netutil.WaitListen(m.config.AccessProxy.HTTP.BindInternalApi, 3*time.Second); err != nil {
+				return
+			}
+
 			m.startDashboard()
 		}()
 
-		if err := netutil.WaitListen(m.config.Dashboard.Bind, time.Second); err != nil {
+		if err := netutil.WaitListen(m.config.Dashboard.Bind, 5*time.Second); err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 	}

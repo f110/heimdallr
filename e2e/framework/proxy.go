@@ -852,7 +852,8 @@ func (p *Proxy) buildConfig() error {
 			},
 		},
 		Dashboard: &configv2.Dashboard{
-			Bind: fmt.Sprintf(":%d", p.dashboardPort),
+			Bind:         fmt.Sprintf(":%d", p.dashboardPort),
+			PublicKeyUrl: fmt.Sprintf("http://:%d/internal/publickey", p.internalPort),
 		},
 	}
 
