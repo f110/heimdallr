@@ -29,7 +29,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 		routing := make([]*configv2.HTTPBackend, 0)
 		for _, r := range v.Spec.HTTP {
 			var service *corev1.Service
-			if !virtualDashboard && r.Upstream == "" {
+			if !virtualDashboard && r.Upstream == "" && r.ServiceSelector != nil {
 				svc, err := findService(serviceLister, r.ServiceSelector, v.Namespace)
 				if err != nil {
 					// At this time, ignore error
@@ -40,12 +40,12 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 				}
 				service = svc
 			}
-			if r.Upstream == "" && service == nil {
+			if r.Upstream == "" && service == nil && !r.Agent {
 				continue
 			}
 
 			upstream := r.Upstream
-			if upstream == "" {
+			if upstream == "" && service != nil && !r.Agent {
 				for _, p := range service.Spec.Ports {
 					if p.Name == r.ServiceSelector.Port {
 						scheme := r.ServiceSelector.Scheme
