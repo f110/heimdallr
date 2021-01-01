@@ -471,16 +471,22 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 	if !socket {
 		if len(before.Spec.HTTP) > 0 {
 			if r := before.Spec.HTTP[0]; r != nil {
-				after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
-					LabelSelector: r.ServiceSelector.LabelSelector,
-					Namespace:     r.ServiceSelector.Namespace,
-					Name:          r.ServiceSelector.Name,
-					Port:          r.ServiceSelector.Port,
-					Scheme:        r.ServiceSelector.Scheme,
+				upstream := r.Upstream
+				if r.ServiceSelector != nil {
+					after.Spec.ServiceSelector = proxyv1alpha1.ServiceSelector{
+						LabelSelector: r.ServiceSelector.LabelSelector,
+						Namespace:     r.ServiceSelector.Namespace,
+						Name:          r.ServiceSelector.Name,
+						Port:          r.ServiceSelector.Port,
+						Scheme:        r.ServiceSelector.Scheme,
+					}
+				} else {
+					// This is workaround
+					upstream = "tcp://127.0.0.1:80"
 				}
 				after.Spec.Insecure = r.Insecure
 				after.Spec.Agent = r.Agent
-				after.Spec.Upstream = r.Upstream
+				after.Spec.Upstream = upstream
 			}
 		}
 	} else {

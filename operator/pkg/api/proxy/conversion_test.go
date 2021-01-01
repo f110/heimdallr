@@ -285,6 +285,33 @@ spec:
 				},
 			},
 		},
+		{
+			In: `apiVersion: proxy.f110.dev/v1alpha2
+kind: Backend
+metadata:
+  name: build
+  labels:
+    instance: global
+spec:
+  layer: webhook
+  http:
+    - path: /
+      agent: true
+  permissions:
+    - name: all
+      locations:
+        - any: /`,
+			Expect: &proxyv1alpha1.Backend{
+				Spec: proxyv1alpha1.BackendSpec{
+					Layer:    "webhook",
+					Agent:    true,
+					Upstream: "tcp://127.0.0.1:80",
+					Permissions: []proxyv1alpha1.Permission{
+						{Name: "all", Locations: []proxyv1alpha1.Location{{Any: "/"}}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {
@@ -299,6 +326,7 @@ spec:
 		assert.Equal(t, tt.Expect.Spec.Agent, out.Spec.Agent)
 		assert.Equal(t, tt.Expect.Spec.Socket, out.Spec.Socket)
 		assert.Equal(t, tt.Expect.Spec.ServiceSelector.Port, out.Spec.ServiceSelector.Port)
+		assert.Equal(t, tt.Expect.Spec.Upstream, out.Spec.Upstream)
 		assert.Len(t, out.Spec.Permissions, len(tt.Expect.Spec.Permissions))
 	}
 }
