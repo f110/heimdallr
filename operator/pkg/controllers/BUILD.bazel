@@ -94,6 +94,7 @@ rbac_gen(
 go_test(
     name = "controllers_test",
     srcs = [
+        "config_converter_test.go",
         "etcd_controller_test.go",
         "github_controller_test.go",
         "ingress_controller_test.go",
@@ -131,5 +132,6 @@ go_test(
         "//vendor/k8s.io/client-go/scale/scheme",
         "//vendor/k8s.io/client-go/testing",
         "//vendor/k8s.io/client-go/tools/cache",
+        "//vendor/sigs.k8s.io/yaml",
     ],
 )
