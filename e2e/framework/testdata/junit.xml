@@ -1,0 +1,11 @@
+<testsuites tests="1">
+  <testsuite tests="1">
+    <properties>
+      <property name="foo" value="bar"></property>
+    </properties>
+    <testcase name="" classname="">
+      <system-out>This is stdout</system-out>
+      <system-err>This is stderr</system-err>
+    </testcase>
+  </testsuite>
+</testsuites>

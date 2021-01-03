@@ -6,6 +6,7 @@ go_library(
         "agent.go",
         "framework.go",
         "idp.go",
+        "junit.go",
         "proxy.go",
     ],
     importpath = "go.f110.dev/heimdallr/e2e/framework",
@@ -37,7 +38,14 @@ go_library(
 
 go_test(
     name = "framework_test",
-    srcs = ["framework_test.go"],
+    srcs = [
+        "framework_test.go",
+        "junit_test.go",
+    ],
+    data = glob(["testdata/**"]),
     embed = [":framework"],
-    deps = ["//vendor/github.com/stretchr/testify/require"],
+    deps = [
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
 )

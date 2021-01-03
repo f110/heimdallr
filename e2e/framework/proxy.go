@@ -442,12 +442,14 @@ func (p *Proxy) Cleanup() error {
 	return os.RemoveAll(p.dir)
 }
 
-func (p *Proxy) ClearConf() {
+func (p *Proxy) ClearConf() bool {
 	p.backends = nil
 	p.roles = nil
 	p.rpcPermissions = nil
 	p.users = nil
 	p.mockServers = nil
+
+	return true
 }
 
 func (p *Proxy) Reload() error {

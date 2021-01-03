@@ -200,11 +200,11 @@ func (a *Agents) DecodeCookieValue(name, value string) (*session.Session, error)
 	return a.sessionStore.DecodeValue(name, value)
 }
 
-func (a *Agent) Get(m *Matcher, u string) {
+func (a *Agent) Get(m *Matcher, u string) bool {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		m.lastHttpErr = err
-		return
+		return false
 	}
 	if len(a.cookies) > 0 {
 		for _, v := range a.cookies {
@@ -219,13 +219,15 @@ func (a *Agent) Get(m *Matcher, u string) {
 
 	a.lastResponse = res
 	a.lastErr = err
+
+	return true
 }
 
-func (a *Agent) Post(m *Matcher, u, body string) {
+func (a *Agent) Post(m *Matcher, u, body string) bool {
 	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(body))
 	if err != nil {
 		m.lastHttpErr = err
-		return
+		return false
 	}
 	if len(a.cookies) > 0 {
 		for _, v := range a.cookies {
@@ -240,6 +242,12 @@ func (a *Agent) Post(m *Matcher, u, body string) {
 
 	a.lastResponse = res
 	a.lastErr = err
+
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 func (a *Agent) FollowRedirect(m *Matcher) error {

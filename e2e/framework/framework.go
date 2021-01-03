@@ -2,8 +2,10 @@ package framework
 
 import (
 	"bytes"
+	"encoding/xml"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -12,12 +14,14 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	format   *string
+	junit    *string
 	verbose  *bool
 	e2eDebug *bool
 )
@@ -25,15 +29,19 @@ var (
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	format = flag.String("e2e.format", "", "Output format. (json, doc)")
+	junit = flag.String("e2e.junit", "", "JUnit output file path")
 	verbose = flag.Bool("e2e.verbose", false, "Verbose output. include stdout and stderr of all child processes.")
 	e2eDebug = flag.Bool("e2e.debug", false, "Debug e2e framework")
 }
+
+var DefaultTracker = &Tracker{}
 
 type Framework struct {
 	Proxy  *Proxy
 	Agents *Agents
 
-	t *testing.T
+	t       *testing.T
+	tracker *Tracker
 
 	child []*Scenario
 
@@ -53,21 +61,29 @@ func New(t *testing.T) *Framework {
 	}
 
 	return &Framework{
-		Proxy:  p,
-		Agents: NewAgents(p.Domain, p.CA, p.sessionStore),
-		t:      t,
-		dryRun: dryRun,
-		child:  make([]*Scenario, 0),
+		Proxy:   p,
+		Agents:  NewAgents(p.Domain, p.CA, p.sessionStore),
+		t:       t,
+		tracker: DefaultTracker,
+		dryRun:  dryRun,
+		child:   make([]*Scenario, 0),
 	}
 }
 
 func (f *Framework) Execute() {
+	if *junit != "" {
+		defer DefaultTracker.Save(*junit)
+	}
+
 	// 1st phase:
 	// 1st phase is an analysis phase.
 	// This phase will not execute each cases.
 	child := make([]*node, 0)
 	for _, c := range f.child {
-		child = append(child, c.analyze())
+		suite := &testSuite{Name: c.Name}
+		f.tracker.Suites = append(f.tracker.Suites, suite)
+
+		child = append(child, c.analyze(suite))
 	}
 
 	switch *format {
@@ -103,7 +119,7 @@ func (f *Framework) Describe(name string, fn func(s *Scenario)) {
 }
 
 type children interface {
-	analyze() *node
+	analyze(*testSuite) *node
 }
 
 type stack struct {
@@ -148,44 +164,60 @@ type node struct {
 	route      string
 	depth      int
 	child      []*node
-	fn         func(*Matcher)
+	fn         func(*Matcher) bool
 	m          *Matcher
 	beforeAll  *hook
 	afterAll   *hook
 	subject    *hook
-	beforeEach func(*Matcher)
-	afterEach  func(*Matcher)
+	beforeEach func(*Matcher) bool
+	afterEach  func(*Matcher) bool
 	deferFunc  func()
+
+	suite *testSuite
 }
 
 func (n *node) execute(t *testing.T) {
 	if *e2eDebug {
 		log.Print(n.name)
 	}
+	n.suite.Trigger()
+
 	if n.deferFunc != nil {
 		defer n.deferFunc()
 	}
 
 	if n.beforeAll != nil && !n.beforeAll.done {
-		n.executeFunc(t, n.beforeAll.fn)
+		n.executeFunc(t, n.beforeAll.fn, nil)
 		n.beforeAll.done = true
 	}
 
 	if n.beforeEach != nil {
-		n.executeFunc(t, n.beforeEach)
+		n.executeFunc(t, n.beforeEach, nil)
 	}
 
 	if n.subject != nil && !n.subject.done {
-		n.executeFunc(t, n.subject.fn)
+		n.executeFunc(t, n.subject.fn, nil)
 		n.subject.done = true
 	}
 
 	if n.fn != nil {
-		n.executeFunc(t, n.fn)
+		c := n.suite.NewCase(n.route)
+		tSpy := &testingSpy{T: t}
+		c.Start()
+		success := n.executeFunc(t, n.fn, tSpy)
+		c.Finish()
+
+		if success {
+			c.Succeeded()
+		} else {
+			log.Print(n.route)
+			c.FailureMessage = tSpy.message
+			c.Failed()
+		}
 	}
 
 	if n.afterEach != nil {
-		n.executeFunc(t, n.afterEach)
+		n.executeFunc(t, n.afterEach, nil)
 	}
 
 	if n.m != nil && n.m.failed {
@@ -205,42 +237,66 @@ func (n *node) execute(t *testing.T) {
 	}
 
 	if n.afterAll != nil && !n.afterAll.done {
-		n.executeFunc(t, n.afterAll.fn)
+		n.executeFunc(t, n.afterAll.fn, nil)
 		n.afterAll.done = true
 	}
+
+	n.suite.Finish()
 }
 
 type execDone struct {
-	Stack string
-	Err   interface{}
+	Stack   string
+	Err     interface{}
+	Failure bool
 }
 
-func (n *node) executeFunc(t *testing.T, fn func(*Matcher)) {
+type testingT interface {
+	Log(...interface{})
+	Logf(string, ...interface{})
+	Error(...interface{})
+	Errorf(string, ...interface{})
+	Fatalf(string, ...interface{})
+}
+
+func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy) bool {
 	done := make(chan *execDone)
 	go func() {
+		success := false
 		defer func() {
-			err := recover()
-			if err != nil {
+			rErr := recover()
+			if rErr != nil {
 				s := debug.Stack()
-				done <- &execDone{Stack: string(s), Err: err}
+				done <- &execDone{Stack: string(s), Err: rErr}
+			} else if !success {
+				done <- &execDone{Failure: true}
 			}
-			done <- nil
+			close(done)
 		}()
 
 		n.m.route = n.route
-		fn(n.m)
+		m := n.m
+		if spy != nil {
+			m = n.m.wrapTesting(spy)
+		}
+		success = fn(m)
 	}()
+
 	select {
-	case err := <-done:
-		if err != nil {
+	case err, ok := <-done:
+		if !ok {
+			return true
+		}
+
+		if err != nil && err.Err != nil {
 			t.Log(err.Stack)
 			t.Fatalf("%s: %+v", n.route, err.Err)
 		}
+		return false
 	}
 }
 
 type hook struct {
-	fn   func(*Matcher)
+	fn   func(*Matcher) bool
 	done bool
 }
 
@@ -252,8 +308,8 @@ type Scenario struct {
 	fn          func(s *Scenario)
 	beforeAll   *hook
 	afterAll    *hook
-	beforeEach  func(*Matcher)
-	afterEach   func(*Matcher)
+	beforeEach  func(*Matcher) bool
+	afterEach   func(*Matcher) bool
 	subject     *hook
 	subjectDone bool
 	deferFunc   func()
@@ -277,12 +333,14 @@ func NewScenario(t *testing.T, parent *Scenario, name string, depth int, fn func
 	}
 }
 
-func (f *Scenario) analyze() *node {
+func (f *Scenario) analyze(suite *testSuite) *node {
 	f.fn(f)
 
 	child := make([]*node, 0)
 	for _, v := range f.child {
-		child = append(child, v.analyze())
+		n := v.analyze(suite)
+
+		child = append(child, n)
 	}
 
 	return &node{
@@ -294,6 +352,7 @@ func (f *Scenario) analyze() *node {
 		beforeAll: f.beforeAll,
 		afterAll:  f.afterAll,
 		deferFunc: f.deferFunc,
+		suite:     suite,
 	}
 }
 
@@ -310,7 +369,7 @@ func (f *Scenario) Context(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) It(name string, fn func(m *Matcher)) {
+func (f *Scenario) It(name string, fn func(m *Matcher) bool) {
 	s := NewCase(f.t, f, name, f.depth+1, fn, f.beforeEach, f.afterEach, f.route+" "+name)
 	f.child = append(f.child, s)
 }
@@ -320,32 +379,32 @@ func (f *Scenario) Step(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) BeforeAll(fn func(m *Matcher)) {
+func (f *Scenario) BeforeAll(fn func(m *Matcher) bool) {
 	f.beforeAll = &hook{fn: fn}
 }
 
-func (f *Scenario) AfterAll(fn func(m *Matcher)) {
+func (f *Scenario) AfterAll(fn func(m *Matcher) bool) {
 	f.afterAll = &hook{fn: fn}
 }
 
-func (f *Scenario) BeforeEach(fn func(m *Matcher)) {
+func (f *Scenario) BeforeEach(fn func(m *Matcher) bool) {
 	if f.beforeEach != nil {
 		b := f.beforeEach
-		f.beforeEach = func(m *Matcher) {
+		f.beforeEach = func(m *Matcher) bool {
 			b(m)
-			fn(m)
+			return fn(m)
 		}
 	} else {
 		f.beforeEach = fn
 	}
 }
 
-func (f *Scenario) AfterEach(fn func(m *Matcher)) {
+func (f *Scenario) AfterEach(fn func(m *Matcher) bool) {
 	if f.afterEach != nil {
 		a := f.afterEach
-		f.afterEach = func(m *Matcher) {
+		f.afterEach = func(m *Matcher) bool {
 			a(m)
-			fn(m)
+			return fn(m)
 		}
 	} else {
 		f.afterEach = fn
@@ -356,7 +415,7 @@ func (f *Scenario) Defer(fn func()) {
 	f.deferFunc = fn
 }
 
-func (f *Scenario) Subject(fn func(m *Matcher)) {
+func (f *Scenario) Subject(fn func(m *Matcher) bool) {
 	f.subject = &hook{fn: fn}
 }
 
@@ -367,15 +426,15 @@ type Case struct {
 	depth      int
 	route      string
 	beforeAll  []*hook
-	beforeEach func(*Matcher)
-	afterEach  func(*Matcher)
+	beforeEach func(*Matcher) bool
+	afterEach  func(*Matcher) bool
 
-	fn func(m *Matcher)
+	fn func(m *Matcher) bool
 
 	t *testing.T
 }
 
-func NewCase(t *testing.T, s *Scenario, name string, depth int, fn func(m *Matcher), before, after func(*Matcher), route string) *Case {
+func NewCase(t *testing.T, s *Scenario, name string, depth int, fn func(m *Matcher) bool, before, after func(*Matcher) bool, route string) *Case {
 	return &Case{
 		Name:       name,
 		s:          s,
@@ -388,7 +447,7 @@ func NewCase(t *testing.T, s *Scenario, name string, depth int, fn func(m *Match
 	}
 }
 
-func (c *Case) analyze() *node {
+func (c *Case) analyze(ancestor *testSuite) *node {
 	var s *hook
 	if c.s.subject != nil {
 		s = c.s.subject
@@ -402,11 +461,12 @@ func (c *Case) analyze() *node {
 		beforeEach: c.beforeEach,
 		afterEach:  c.afterEach,
 		fn:         c.fn,
+		suite:      ancestor,
 	}
 }
 
 type Matcher struct {
-	t     *testing.T
+	t     testingT
 	route string
 
 	done         bool
@@ -423,10 +483,22 @@ func NewMatcher(t *testing.T, route string) *Matcher {
 	return &Matcher{t: t, route: route, mockServers: make(map[string]*MockServer)}
 }
 
-func (m *Matcher) Must(err error) {
+func (m *Matcher) wrapTesting(t *testingSpy) *Matcher {
+	newM := &Matcher{}
+	*newM = *m
+	if v, ok := m.t.(*testing.T); ok {
+		t.T = v
+	}
+	newM.t = t
+
+	return newM
+}
+
+func (m *Matcher) Must(err error) bool {
 	if err != nil {
 		panic(err)
 	}
+	return true
 }
 
 type HttpResponse struct {
@@ -455,13 +527,14 @@ func (m *Matcher) MockServer(name string) *MockServer {
 	return m.mockServers[name]
 }
 
-func (m *Matcher) ResetConnection() {
+func (m *Matcher) ResetConnection() bool {
 	if !m.done {
 		m.Fail("not send request")
 	}
 	if m.lastResponse != nil || m.lastHttpErr == nil {
 		m.Failf("expect connection reset: %v", m.lastHttpErr)
 	}
+	return true
 }
 
 func (m *Matcher) NoError(err error, msg ...string) {
@@ -493,28 +566,28 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 	m.t.Logf(format, args...)
 }
 
-func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
-	assert.Equal(m.t, expected, actual, msgAndArgs...)
+func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool {
+	return assert.Equal(m.t, expected, actual, msgAndArgs...)
 }
 
-func (m *Matcher) Len(object interface{}, len int, msgAndArgs ...interface{}) {
-	assert.Len(m.t, object, len, msgAndArgs...)
+func (m *Matcher) Len(object interface{}, len int, msgAndArgs ...interface{}) bool {
+	return assert.Len(m.t, object, len, msgAndArgs...)
 }
 
-func (m *Matcher) True(value bool, msgAndArgs ...interface{}) {
-	assert.True(m.t, value, msgAndArgs...)
+func (m *Matcher) True(value bool, msgAndArgs ...interface{}) bool {
+	return assert.True(m.t, value, msgAndArgs...)
 }
 
-func (m *Matcher) False(value bool, msgAndArgs ...interface{}) {
-	assert.False(m.t, value, msgAndArgs...)
+func (m *Matcher) False(value bool, msgAndArgs ...interface{}) bool {
+	return assert.False(m.t, value, msgAndArgs...)
 }
 
-func (m *Matcher) Contains(s, contains interface{}, msgAndArgs ...interface{}) {
-	assert.Contains(m.t, s, contains, msgAndArgs)
+func (m *Matcher) Contains(s, contains interface{}, msgAndArgs ...interface{}) bool {
+	return assert.Contains(m.t, s, contains, msgAndArgs)
 }
 
-func (m *Matcher) StatusCode(code int, msgAndArgs ...interface{}) {
-	assert.Equal(m.t, code, m.LastResponse().StatusCode, msgAndArgs...)
+func (m *Matcher) StatusCode(code int, msgAndArgs ...interface{}) bool {
+	return assert.Equal(m.t, code, m.LastResponse().StatusCode, msgAndArgs...)
 }
 
 func (m *Matcher) NotNil(object interface{}, msg ...string) {
@@ -523,10 +596,90 @@ func (m *Matcher) NotNil(object interface{}, msg ...string) {
 	}
 }
 
-func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) {
-	assert.Empty(m.t, object, msgAndArgs...)
+func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) bool {
+	return assert.Empty(m.t, object, msgAndArgs...)
 }
 
-func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
-	assert.NotEmpty(m.t, object, msgAndArgs...)
+func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) bool {
+	return assert.NotEmpty(m.t, object, msgAndArgs...)
+}
+
+type Tracker struct {
+	Suites []*testSuite
+}
+
+func (t *Tracker) Save(path string) {
+	junitTestSuites := NewJUnitTestSuites(DefaultTracker)
+	buf, err := xml.MarshalIndent(junitTestSuites, "", " ")
+	if err != nil {
+		return
+	}
+
+	err = ioutil.WriteFile(path, buf, 0644)
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+type testSuite struct {
+	Name  string
+	Cases []*testCase
+
+	start  time.Time
+	finish time.Time
+}
+
+func (s *testSuite) Trigger() {
+	if s.start.IsZero() {
+		s.start = time.Now()
+	}
+}
+
+func (s *testSuite) Finish() {
+	s.finish = time.Now()
+}
+
+func (s *testSuite) NewCase(name string) *testCase {
+	c := &testCase{Name: name}
+	s.Cases = append(s.Cases, c)
+
+	return c
+}
+
+type testCase struct {
+	Name           string
+	Failure        bool
+	FailureMessage string
+
+	start  time.Time
+	finish time.Time
+}
+
+func (c *testCase) Start() {
+	if c.start.IsZero() {
+		c.start = time.Now()
+	}
+}
+
+func (c *testCase) Finish() {
+	c.finish = time.Now()
+}
+
+func (c *testCase) Succeeded() {}
+
+func (c *testCase) Failed() {
+	c.Failure = true
+}
+
+type testingSpy struct {
+	*testing.T
+
+	message string
+}
+
+var _ testingT = &testingSpy{}
+
+func (t *testingSpy) Errorf(format string, args ...interface{}) {
+	t.message += fmt.Sprintf(format, args...)
+	t.T.Errorf(format, args...)
 }
