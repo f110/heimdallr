@@ -259,6 +259,8 @@ spec:
     - any: /
     name: all
   - name: webhook
+    locations:
+    - any: /api/webhook
     webhook: github
     webhookConfiguration:
       github:
