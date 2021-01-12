@@ -700,7 +700,7 @@ func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httpr
 		return
 	}
 
-	http.Redirect(w, req, "/user", http.StatusFound)
+	http.Redirect(w, req, "/role", http.StatusFound)
 }
 
 func (s *Server) handleEditUser(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -739,7 +739,7 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, para
 		return
 	}
 
-	http.Redirect(w, req, "/user", http.StatusFound)
+	http.Redirect(w, req, "/role", http.StatusFound)
 }
 
 func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -761,7 +761,7 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 		return
 	}
 
-	http.Redirect(w, req, "/user", http.StatusFound)
+	http.Redirect(w, req, "/role", http.StatusFound)
 }
 
 func (s *Server) handleMakeAdmin(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -772,7 +772,7 @@ func (s *Server) handleMakeAdmin(w http.ResponseWriter, req *http.Request, param
 		return
 	}
 
-	http.Redirect(w, req, "/users", http.StatusFound)
+	http.Redirect(w, req, "/role", http.StatusFound)
 }
 
 func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
