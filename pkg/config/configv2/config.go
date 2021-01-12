@@ -849,7 +849,7 @@ func (d *Datastore) Load(dir string) error {
 				}
 
 				u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", addr.Port)}
-				if err := os.MkdirAll(filepath.Join(d.DataDir), 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(d.DataDir), 0700); err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
 				err = ioutil.WriteFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename), []byte(u.String()), 0600)
