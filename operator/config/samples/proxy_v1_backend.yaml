@@ -1,4 +1,4 @@
-apiVersion: proxy.f110.dev/v1alpha1
+apiVersion: proxy.f110.dev/v1alpha2
 kind: Backend
 metadata:
   name: backend-sample
@@ -6,21 +6,25 @@ metadata:
     instance: proxy-sample
 spec:
   layer: example
-  upstream: http://localhost:4502
+  http:
+    - path: /
+      upstream: http://localhost:4502
   permissions:
     - name: all
       locations:
         - get: /
-  webhook: "github"
-#  webhookConfiguration:
-#    repositories: ["f110/ops"]
-#    credentialSecretName: githubapp
-#    appIdKey: appid
-#    installationIdKey: installationid
-#    privateKeyKey: privatekey.pem
-#    contentType: json
-#    path: /webhook
-#    events: ["push"]
+#    - name: github
+#      webhook: "github"
+#      webhookConfiguration:
+#        github:
+#          repositories: ["f110/sandbox"]
+#          credentialSecretName: githubapp
+#          appIdKey: appid
+#          installationIdKey: installationid
+#          privateKeyKey: privatekey.pem
+#          contentType: json
+#          path: /webhook
+#          events: ["push"]
 ---
 apiVersion: proxy.f110.dev/v1alpha1
 kind: Backend

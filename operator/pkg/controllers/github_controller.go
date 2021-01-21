@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -247,6 +248,11 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		return nil
 	}
 
+	webhookConfigurationStatus := make(map[string]*proxyv1alpha2.WebhookConfigurationStatus)
+	for _, v := range backend.Status.WebhookConfigurations {
+		webhookConfigurationStatus[v.Repository] = v
+	}
+
 	for _, p := range backend.Spec.Permissions {
 		if p.Webhook != "github" {
 			continue
@@ -260,42 +266,62 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			return xerrors.Errorf(": %w", err)
 		}
 
-		webhookConfigurations := make([]*proxyv1alpha2.WebhookConfigurationStatus, 0)
-		for _, v := range backend.Status.WebhookConfigurations {
-			if v.Id == 0 {
+		for _, v := range p.WebhookConfiguration.GitHub.Repositories {
+			status, ok := webhookConfigurationStatus[v]
+			if !ok {
 				continue
 			}
-			s := strings.SplitN(v.Repository, "/", 2)
+			s := strings.SplitN(v, "/", 2)
 			owner, repo := s[0], s[1]
 
-			c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", v.Id))
-			_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, v.Id)
+			c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", status.Id))
+			_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, status.Id)
 			if err != nil {
 				c.Log().Debug("Failed delete hook", zap.Error(err))
-				webhookConfigurations = append(webhookConfigurations, v)
+			} else {
+				c.Log().Info("Delete webhook", zap.Int64("id", status.Id), zap.String("repo", v))
+				delete(webhookConfigurationStatus, v)
 			}
 		}
+	}
 
-		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			backend, err = c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+	webhookConfigurations := make([]*proxyv1alpha2.WebhookConfigurationStatus, 0)
+	for _, v := range webhookConfigurationStatus {
+		webhookConfigurations = append(webhookConfigurations, v)
+	}
+	sort.Slice(webhookConfigurations, func(i, j int) bool {
+		return webhookConfigurations[i].Id < webhookConfigurations[j].Id
+	})
+
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+		if err != nil {
+			return err
+		}
+
+		updatedB := backend.DeepCopy()
+		updatedB.Status.WebhookConfigurations = webhookConfigurations
+		if len(updatedB.Status.WebhookConfigurations) == 0 {
+			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
+		}
+		if !reflect.DeepEqual(updatedB.Status, backend.Status) {
+			c.Log().Debug("Update Backend Status", zap.String("name", updatedB.Name))
+			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
-
-			updatedB := backend.DeepCopy()
-			updatedB.Status.WebhookConfigurations = webhookConfigurations
-			if len(updatedB.Status.WebhookConfigurations) == 0 {
-				controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
-			}
-			if !reflect.DeepEqual(updatedB.Status, backend.Status) || !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+		}
+		if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
+			c.Log().Debug("Update Backend", zap.String("name", updatedB.Name))
+			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+			if err != nil {
 				return err
 			}
-			return nil
-		})
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
 		}
+		return nil
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil

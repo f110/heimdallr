@@ -217,7 +217,7 @@ func (c *Controller) enqueue(obj interface{}) {
 }
 
 func RemoveFinalizer(metaObj *metav1.ObjectMeta, finalizer string) {
-	removeString(metaObj.Finalizers, finalizer)
+	metaObj.Finalizers = removeString(metaObj.Finalizers, finalizer)
 }
 
 func containsString(v []string, s string) bool {
