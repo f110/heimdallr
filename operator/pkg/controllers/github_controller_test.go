@@ -88,6 +88,7 @@ func TestGitHubController(t *testing.T) {
 			httpmock.NewStringResponder(http.StatusNoContent, ""),
 		)
 
+		f.ExpectUpdateBackendStatus()
 		f.ExpectUpdateBackend()
 		f.Run(t, backend)
 	})
