@@ -44,6 +44,7 @@ import (
 )
 
 var KindNodeImageHash = map[string]string{
+	"v1.20.2":  "8f7ea6e7642c0da54f04a7ee10431549c0257315b3a634f6ef2fecaaedb19bab",
 	"v1.19.3":  "e1ac015e061da4b931cc4f693e22d7bc1110f031faf7b2af4c4fefac9e65565d",
 	"v1.19.1":  "98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600",
 	"v1.19.0":  "3b0289b2d1bab2cb9108645a006939d2f447a10ad2bb21919c332d06b548bbc6",
@@ -600,6 +601,7 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 					method = http.MethodPatch
 					return false, nil
 				case apierrors.IsInternalError(err):
+					log.Print(err)
 					return false, nil
 				}
 
