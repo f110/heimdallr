@@ -51,7 +51,6 @@ var KindNodeImageHash = map[string]string{
 	"v1.19.0":  "3b0289b2d1bab2cb9108645a006939d2f447a10ad2bb21919c332d06b548bbc6",
 	"v1.18.15": "5c1b980c4d0e0e8e7eb9f36f7df525d079a96169c8a8f20d8bd108c0d0889cc4",
 	"v1.18.8":  "f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb",
-	"v1.17.11": "5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555",
 }
 
 const (
