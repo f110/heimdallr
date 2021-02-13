@@ -457,6 +457,40 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 		ec.Spec.DefragmentSchedule = r.Spec.DataStore.Etcd.Defragment.Schedule
 		ec.Spec.AntiAffinity = r.Spec.DataStore.Etcd.AntiAffinity
 	}
+	if r.Spec.DataStore.Etcd != nil && r.Spec.DataStore.Etcd.Backup != nil {
+		ec.Spec.Backup = &etcdv1alpha2.BackupSpec{
+			IntervalInSecond: r.Spec.DataStore.Etcd.Backup.IntervalInSecond,
+			MaxBackups:       r.Spec.DataStore.Etcd.Backup.MaxBackups,
+		}
+		switch {
+		case r.Spec.DataStore.Etcd.Backup.Storage.MinIO != nil:
+			ec.Spec.Backup.Storage.MinIO = &etcdv1alpha2.BackupStorageMinIOSpec{
+				ServiceSelector: etcdv1alpha2.ObjectSelector{
+					Name:      r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name,
+					Namespace: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace,
+				},
+				CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
+					Name:               r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name,
+					Namespace:          r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace,
+					AccessKeyIDKey:     r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey,
+					SecretAccessKeyKey: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey,
+				},
+				Bucket: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket,
+				Path:   r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path,
+				Secure: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure,
+			}
+		case r.Spec.DataStore.Etcd.Backup.Storage.GCS != nil:
+			ec.Spec.Backup.Storage.GCS = &etcdv1alpha2.BackupStorageGCSSpec{
+				Bucket: r.Spec.DataStore.Etcd.Backup.Storage.GCS.Bucket,
+				Path:   r.Spec.DataStore.Etcd.Backup.Storage.GCS.Path,
+				CredentialSelector: etcdv1alpha2.GCPCredentialSelector{
+					Name:                  r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Name,
+					Namespace:             r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Namespace,
+					ServiceAccountJSONKey: r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey,
+				},
+			}
+		}
+	}
 
 	return ec
 }

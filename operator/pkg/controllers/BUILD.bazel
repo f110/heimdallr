@@ -100,6 +100,7 @@ go_test(
         "ingress_controller_test.go",
         "main_test.go",
         "proxy_controller_test.go",
+        "proxy_test.go",
         "runner_test.go",
     ],
     data = glob(["testdata/**"]),

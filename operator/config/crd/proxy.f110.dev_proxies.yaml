@@ -532,6 +532,7 @@ spec:
                     type: string
                 type: object
               backup:
+                description: Deprecated. Use DataStore.Etcd.Backup instead.
                 properties:
                   bucket:
                     type: string
@@ -586,6 +587,61 @@ spec:
                     properties:
                       antiAffinity:
                         type: boolean
+                      backup:
+                        properties:
+                          intervalInSeconds:
+                            type: integer
+                          maxBackups:
+                            type: integer
+                          storage:
+                            properties:
+                              gcs:
+                                properties:
+                                  bucket:
+                                    type: string
+                                  credentialSelector:
+                                    properties:
+                                      name:
+                                        type: string
+                                      namespace:
+                                        type: string
+                                      serviceAccountJSONKey:
+                                        type: string
+                                    type: object
+                                  path:
+                                    type: string
+                                type: object
+                              minio:
+                                properties:
+                                  bucket:
+                                    type: string
+                                  credentialSelector:
+                                    properties:
+                                      accessKeyIDKey:
+                                        type: string
+                                      name:
+                                        type: string
+                                      namespace:
+                                        type: string
+                                      secretAccessKeyKey:
+                                        type: string
+                                    type: object
+                                  path:
+                                    type: string
+                                  secure:
+                                    type: boolean
+                                  serviceSelector:
+                                    properties:
+                                      name:
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    type: object
+                                required:
+                                - credentialSelector
+                                type: object
+                            type: object
+                        type: object
                       defragment:
                         properties:
                           schedule:

@@ -3,8 +3,11 @@
   <component name="GoImports">
     <option name="excludedPackages">
       <array>
+        <option value="github.com/golangplus/testing/assert" />
+        <option value="github.com/influxdata/influxdb/pkg/testing/assert" />
         <option value="github.com/mitchellh/go-testing-interface" />
         <option value="gotest.tools/assert" />
+        <option value="gotest.tools/v3/assert" />
       </array>
     </option>
   </component>

@@ -29,6 +29,27 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 			DataStore: &proxyv1alpha2.ProxyDataStoreSpec{
 				Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{
 					Version: "v3.4.9",
+					Backup: &proxyv1alpha2.EtcdBackupSpec{
+						IntervalInSecond: 24 * 60,
+						MaxBackups:       5,
+						Storage: proxyv1alpha2.EtcdBackupStorageSpec{
+							MinIO: &proxyv1alpha2.EtcdBackupMinIOSpec{
+								ServiceSelector: proxyv1alpha2.ObjectSelector{
+									Name:      "minio",
+									Namespace: metav1.NamespaceDefault,
+								},
+								CredentialSelector: proxyv1alpha2.AWSCredentialSelector{
+									Name:               "minio-token",
+									Namespace:          metav1.NamespaceDefault,
+									AccessKeyIDKey:     "accesskey",
+									SecretAccessKeyKey: "secretkey",
+								},
+								Bucket: "test",
+								Path:   "backup-test",
+								Secure: false,
+							},
+						},
+					},
 				},
 			},
 			BackendSelector: proxyv1alpha2.LabelSelector{
@@ -267,6 +288,19 @@ func TestProxyController(t *testing.T) {
 		etcdC, err := f.client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
+		require.NotNil(t, etcdC.Spec.Backup)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)
+		require.NotNil(t, etcdC.Spec.Backup.Storage.MinIO)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket, etcdC.Spec.Backup.Storage.MinIO.Bucket)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path, etcdC.Spec.Backup.Storage.MinIO.Path)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure, etcdC.Spec.Backup.Storage.MinIO.Secure)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Name)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Namespace)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Name)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Namespace)
 	})
 
 	t.Run("Finish preparing phase", func(t *testing.T) {

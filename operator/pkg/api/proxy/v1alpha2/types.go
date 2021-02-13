@@ -37,7 +37,8 @@ type ProxySpec struct {
 	RoleSelector          LabelSelector `json:"roleSelector,omitempty"`
 	RpcPermissionSelector LabelSelector `json:"rpcPermissionSelector,omitempty"`
 	Monitor               MonitorSpec   `json:"monitor,omitempty"`
-	Backup                BackupSpec    `json:"backup,omitempty"`
+	// Deprecated. Use DataStore.Etcd.Backup instead.
+	Backup BackupSpec `json:"backup,omitempty"`
 	// ProxyResources field is able to control the resource requirements and limits of front proxy.
 	// If it isn't set, Use the default value.
 	// (Default Value: requirements is cpu: 100m and memory: 128Mi. limits is cpu: 1 and memory: 256Mi)
@@ -70,9 +71,48 @@ type ProxyDataStoreSpec struct {
 }
 
 type ProxyDataStoreEtcdSpec struct {
-	Version      string         `json:"version,omitempty"`
-	Defragment   DefragmentSpec `json:"defragment,omitempty"`
-	AntiAffinity bool           `json:"antiAffinity,omitempty"`
+	Version      string          `json:"version,omitempty"`
+	Defragment   DefragmentSpec  `json:"defragment,omitempty"`
+	AntiAffinity bool            `json:"antiAffinity,omitempty"`
+	Backup       *EtcdBackupSpec `json:"backup,omitempty"`
+}
+
+type EtcdBackupSpec struct {
+	IntervalInSecond int                   `json:"intervalInSeconds,omitempty"`
+	MaxBackups       int                   `json:"maxBackups,omitempty"`
+	Storage          EtcdBackupStorageSpec `json:"storage,omitempty"`
+}
+
+type EtcdBackupStorageSpec struct {
+	MinIO *EtcdBackupMinIOSpec `json:"minio,omitempty"`
+	GCS   *EtcdBackupGCSSpec   `json:"gcs,omitempty"`
+}
+
+type EtcdBackupMinIOSpec struct {
+	ServiceSelector    ObjectSelector        `json:"serviceSelector,omitempty"`
+	CredentialSelector AWSCredentialSelector `json:"credentialSelector"`
+	Bucket             string                `json:"bucket,omitempty"`
+	Path               string                `json:"path,omitempty"`
+	Secure             bool                  `json:"secure,omitempty"`
+}
+
+type EtcdBackupGCSSpec struct {
+	Bucket             string                `json:"bucket,omitempty"`
+	Path               string                `json:"path,omitempty"`
+	CredentialSelector GCPCredentialSelector `json:"credentialSelector,omitempty"`
+}
+
+type AWSCredentialSelector struct {
+	Name               string `json:"name,omitempty"`
+	Namespace          string `json:"namespace,omitempty"`
+	AccessKeyIDKey     string `json:"accessKeyIDKey,omitempty"`
+	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
+}
+
+type GCPCredentialSelector struct {
+	Name                  string `json:"name,omitempty"`
+	Namespace             string `json:"namespace,omitempty"`
+	ServiceAccountJSONKey string `json:"serviceAccountJSONKey,omitempty"`
 }
 
 type IdentityProviderSpec struct {
@@ -163,6 +203,11 @@ type ServiceSelector struct {
 	Name                 string `json:"name,omitempty"`
 	Port                 string `json:"port,omitempty"`
 	Scheme               string `json:"scheme,omitempty"`
+}
+
+type ObjectSelector struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // BackendSpec defines the desired state of Backend
