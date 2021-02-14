@@ -21,12 +21,12 @@ import (
 	"golang.org/x/xerrors"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -41,6 +41,7 @@ import (
 
 	"go.f110.dev/heimdallr/manifest/certmanager"
 	"go.f110.dev/heimdallr/manifest/minio"
+	"go.f110.dev/heimdallr/pkg/k8s"
 )
 
 var KindNodeImageHash = map[string]string{
@@ -372,7 +373,19 @@ func readImageManifest(image *ContainerImageFile) error {
 }
 
 func InstallCertManager(cfg *rest.Config, fieldManager string) error {
-	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cert-manager.yaml"], fieldManager); err != nil {
+	objs, err := loadUnstructuredFromString(certmanager.Data["manifest/certmanager/cert-manager.yaml"])
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	err = k8sObjects(objs).apply(cfg, fieldManager)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	crds, err := k8sObjects(objs).selectCustomResourceDefinitions()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"], fieldManager); err != nil {
@@ -505,14 +518,8 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 	return pf, nil
 }
 
-type object struct {
-	Object           runtime.Object
-	GroupVersionKind *schema.GroupVersionKind
-	Raw              []byte
-}
-
-func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
-	objs := make([]object, 0)
+func loadUnstructuredFromString(manifest string) ([]*unstructured.Unstructured, error) {
+	objs := make([]*unstructured.Unstructured, 0)
 	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
 	for {
 		ext := runtime.RawExtension{}
@@ -520,19 +527,55 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 			if err == io.EOF {
 				break
 			}
-			return xerrors.Errorf(": %w", err)
+			return nil, xerrors.Errorf(": %w", err)
 		}
 		if len(ext.Raw) == 0 {
 			continue
 		}
 
-		obj, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
+		obj, _, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return nil, xerrors.Errorf(": %w", err)
 		}
-		objs = append(objs, object{Object: obj, GroupVersionKind: gvk, Raw: ext.Raw})
+		objs = append(objs, obj.(*unstructured.Unstructured))
 	}
 
+	return objs, nil
+}
+
+func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
+	objs, err := loadUnstructuredFromString(manifest)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	err = k8sObjects(objs).apply(cfg, fieldManager)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	return nil
+}
+
+type k8sObjects []*unstructured.Unstructured
+
+func (k k8sObjects) selectCustomResourceDefinitions() ([]*apiextensionsv1.CustomResourceDefinition, error) {
+	crds := make([]*apiextensionsv1.CustomResourceDefinition, 0)
+	for _, v := range k {
+		kind := v.GetObjectKind()
+		if kind.GroupVersionKind().Kind == "CustomResourceDefinition" {
+			crd := &apiextensionsv1.CustomResourceDefinition{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, crd); err != nil {
+				log.Printf("Failed %s decode CustomResourceDefinition from Unstructured: %v", v.GetName(), err)
+				continue
+			}
+			crds = append(crds, crd)
+		}
+	}
+
+	return crds, nil
+}
+
+func (k k8sObjects) apply(cfg *rest.Config, fieldManager string) error {
 	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -542,8 +585,8 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 		return xerrors.Errorf(": %w", err)
 	}
 
-	for _, obj := range objs {
-		gv := obj.GroupVersionKind.GroupVersion()
+	for _, obj := range k {
+		gv := obj.GroupVersionKind().GroupVersion()
 
 		conf := *cfg
 		conf.GroupVersion = &gv
@@ -562,7 +605,7 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 		for _, v := range apiResourcesList {
 			if v.GroupVersion == gv.String() {
 				for _, v := range v.APIResources {
-					if v.Kind == obj.GroupVersionKind.Kind && !strings.HasSuffix(v.Name, "/status") {
+					if v.Kind == obj.GroupVersionKind().Kind && !strings.HasSuffix(v.Name, "/status") {
 						apiResource = &v
 						break
 					}
@@ -573,7 +616,6 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 			continue
 		}
 
-		unstructuredObj := obj.Object.(*unstructured.Unstructured)
 		method := http.MethodPatch
 		err = wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
 			var req *rest.Request
@@ -583,16 +625,16 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 			default:
 				req = client.Post()
 			}
-			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj.Object)
+			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
 			if err != nil {
 				log.Print(err)
 				return true, nil
 			}
 			force := true
 			res := req.
-				NamespaceIfScoped(unstructuredObj.GetNamespace(), apiResource.Namespaced).
+				NamespaceIfScoped(obj.GetNamespace(), apiResource.Namespaced).
 				Resource(apiResource.Name).
-				Name(unstructuredObj.GetName()).
+				Name(obj.GetName()).
 				VersionedParams(&metav1.PatchOptions{FieldManager: fieldManager, Force: &force}, metav1.ParameterCodec).
 				Body(data).
 				Do(context.TODO())
@@ -606,8 +648,7 @@ func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) er
 					return false, nil
 				}
 
-				log.Printf("%s.%s: %v", unstructuredObj.GetKind(), unstructuredObj.GetName(), err)
-				log.Print(string(obj.Raw))
+				log.Printf("%s.%s: %v", obj.GetKind(), obj.GetName(), err)
 				return true, nil
 			}
 			return true, nil

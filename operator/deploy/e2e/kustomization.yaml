@@ -1,0 +1,8 @@
+namespace: heimdallr
+
+resources:
+  - ../base
+
+images:
+  - name: quay.io/f110/heimdallr-operator
+    newTag: e2e

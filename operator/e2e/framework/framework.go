@@ -22,9 +22,11 @@ type ConfigStruct struct {
 	ClusterVersion     string
 	Verbose            bool
 	KindFile           string
+	OperatorImageFile  string
 	ProxyImageFile     string
 	RPCImageFile       string
 	DashboardImageFile string
+	AllInOneManifest   string
 	Retain             bool
 }
 
@@ -35,9 +37,11 @@ func Flags(fs *flag.FlagSet) {
 	fs.BoolVar(&Config.Verbose, "verbose", false, "View controller's log")
 	fs.StringVar(&Config.ClusterVersion, "cluster-version", "v0.18.8", "Kubernetes cluster version")
 	fs.StringVar(&Config.KindFile, "kind-file", "", "Kind executable file path")
+	fs.StringVar(&Config.OperatorImageFile, "operator-image-file", "", "Operator image file")
 	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
 	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
 	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
+	fs.StringVar(&Config.AllInOneManifest, "all-in-one-manifest", "", "Manifest file for operator")
 	fs.BoolVar(&Config.Retain, "retain", false, "Do not delete cluster after test")
 }
 

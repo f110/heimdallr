@@ -113,7 +113,6 @@ func main() {
 
 	probe := controllers.NewProbe(probeAddr)
 	go probe.Start()
-	probe.Ready()
 
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
@@ -211,6 +210,7 @@ func main() {
 					}()
 				}
 
+				probe.Ready()
 				wg.Wait()
 			},
 			OnStoppedLeading: func() {
