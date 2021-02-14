@@ -6,6 +6,9 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -13,11 +16,15 @@ import (
 	apiextensionsClientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
@@ -91,6 +98,19 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 	return nil
 }
 
+func ApplyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
+	objs, err := LoadUnstructuredFromString(manifest)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	err = Objects(objs).Apply(cfg, fieldManager)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	return nil
+}
+
 func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourceDefinition) error {
 	target := make(map[string]*apiextensionsv1.CustomResourceDefinition)
 	for _, v := range crds {
@@ -139,4 +159,134 @@ func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourc
 			return errors.New("kind: timed out")
 		}
 	}
+}
+
+func LoadUnstructuredFromString(manifest string) ([]*unstructured.Unstructured, error) {
+	objs := make([]*unstructured.Unstructured, 0)
+	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
+	for {
+		ext := runtime.RawExtension{}
+		if err := d.Decode(&ext); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		if len(ext.Raw) == 0 {
+			continue
+		}
+
+		obj, _, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		objs = append(objs, obj.(*unstructured.Unstructured))
+	}
+
+	return objs, nil
+}
+
+type Objects []*unstructured.Unstructured
+
+func (k Objects) SelectCustomResourceDefinitions() ([]*apiextensionsv1.CustomResourceDefinition, error) {
+	crds := make([]*apiextensionsv1.CustomResourceDefinition, 0)
+	for _, v := range k {
+		kind := v.GetObjectKind()
+		if kind.GroupVersionKind().Kind == "CustomResourceDefinition" {
+			crd := &apiextensionsv1.CustomResourceDefinition{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, crd); err != nil {
+				log.Printf("Failed %s decode CustomResourceDefinition from Unstructured: %v", v.GetName(), err)
+				continue
+			}
+			crds = append(crds, crd)
+		}
+	}
+
+	return crds, nil
+}
+
+func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
+	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	_, apiResourcesList, err := disClient.ServerGroupsAndResources()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	for _, obj := range k {
+		gv := obj.GroupVersionKind().GroupVersion()
+
+		conf := *cfg
+		conf.GroupVersion = &gv
+		if gv.Group == "" {
+			conf.APIPath = "/api"
+		} else {
+			conf.APIPath = "/apis"
+		}
+		conf.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+		client, err := rest.RESTClientFor(&conf)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		var apiResource *metav1.APIResource
+		for _, v := range apiResourcesList {
+			if v.GroupVersion == gv.String() {
+				for _, v := range v.APIResources {
+					if v.Kind == obj.GroupVersionKind().Kind && !strings.HasSuffix(v.Name, "/status") {
+						apiResource = &v
+						break
+					}
+				}
+			}
+		}
+		if apiResource == nil {
+			continue
+		}
+
+		method := http.MethodPatch
+		err = wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+			var req *rest.Request
+			switch method {
+			case http.MethodPatch:
+				req = client.Patch(types.ApplyPatchType)
+			default:
+				req = client.Post()
+			}
+			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
+			if err != nil {
+				log.Print(err)
+				return true, nil
+			}
+			force := true
+			res := req.
+				NamespaceIfScoped(obj.GetNamespace(), apiResource.Namespaced).
+				Resource(apiResource.Name).
+				Name(obj.GetName()).
+				VersionedParams(&metav1.PatchOptions{FieldManager: fieldManager, Force: &force}, metav1.ParameterCodec).
+				Body(data).
+				Do(context.TODO())
+			if err := res.Error(); err != nil {
+				switch {
+				case apierrors.IsAlreadyExists(err):
+					method = http.MethodPatch
+					return false, nil
+				case apierrors.IsInternalError(err):
+					log.Print(err)
+					return false, nil
+				}
+
+				log.Printf("%s.%s: %v", obj.GetKind(), obj.GetName(), err)
+				return true, nil
+			}
+			return true, nil
+		})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	return nil
 }

@@ -1,4 +1,4 @@
-package kind
+package k8s
 
 import (
 	"io"
@@ -32,7 +32,7 @@ func TestSelectCustomResourceDefinitions(t *testing.T) {
 		objs = append(objs, obj.(*unstructured.Unstructured))
 	}
 
-	crds, err := k8sObjects(objs).selectCustomResourceDefinitions()
+	crds, err := Objects(objs).SelectCustomResourceDefinitions()
 	require.NoError(t, err)
 	require.Len(t, crds, 2)
 	assert.Equal(t, "roles.proxy.f110.dev", crds[0].Name)

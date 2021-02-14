@@ -14,25 +14,16 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	minioclient "github.com/minio/minio-go/v6"
 	"golang.org/x/xerrors"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
@@ -330,7 +321,7 @@ func (c *Cluster) Apply(f, fieldManager string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := applyManifestFromString(cfg, string(buf), fieldManager); err != nil {
+	if err := k8s.ApplyManifestFromString(cfg, string(buf), fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -373,22 +364,22 @@ func readImageManifest(image *ContainerImageFile) error {
 }
 
 func InstallCertManager(cfg *rest.Config, fieldManager string) error {
-	objs, err := loadUnstructuredFromString(certmanager.Data["manifest/certmanager/cert-manager.yaml"])
+	objs, err := k8s.LoadUnstructuredFromString(certmanager.Data["manifest/certmanager/cert-manager.yaml"])
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	err = k8sObjects(objs).apply(cfg, fieldManager)
+	err = k8s.Objects(objs).Apply(cfg, fieldManager)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	crds, err := k8sObjects(objs).selectCustomResourceDefinitions()
+	crds, err := k8s.Objects(objs).SelectCustomResourceDefinitions()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if err := applyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"], fieldManager); err != nil {
+	if err := k8s.ApplyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"], fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -414,7 +405,7 @@ func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := applyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"], fieldManager); err != nil {
+	if err := k8s.ApplyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"], fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -516,147 +507,4 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 	}
 
 	return pf, nil
-}
-
-func loadUnstructuredFromString(manifest string) ([]*unstructured.Unstructured, error) {
-	objs := make([]*unstructured.Unstructured, 0)
-	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
-	for {
-		ext := runtime.RawExtension{}
-		if err := d.Decode(&ext); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, xerrors.Errorf(": %w", err)
-		}
-		if len(ext.Raw) == 0 {
-			continue
-		}
-
-		obj, _, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
-		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
-		}
-		objs = append(objs, obj.(*unstructured.Unstructured))
-	}
-
-	return objs, nil
-}
-
-func applyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
-	objs, err := loadUnstructuredFromString(manifest)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	err = k8sObjects(objs).apply(cfg, fieldManager)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	return nil
-}
-
-type k8sObjects []*unstructured.Unstructured
-
-func (k k8sObjects) selectCustomResourceDefinitions() ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	crds := make([]*apiextensionsv1.CustomResourceDefinition, 0)
-	for _, v := range k {
-		kind := v.GetObjectKind()
-		if kind.GroupVersionKind().Kind == "CustomResourceDefinition" {
-			crd := &apiextensionsv1.CustomResourceDefinition{}
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, crd); err != nil {
-				log.Printf("Failed %s decode CustomResourceDefinition from Unstructured: %v", v.GetName(), err)
-				continue
-			}
-			crds = append(crds, crd)
-		}
-	}
-
-	return crds, nil
-}
-
-func (k k8sObjects) apply(cfg *rest.Config, fieldManager string) error {
-	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	_, apiResourcesList, err := disClient.ServerGroupsAndResources()
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	for _, obj := range k {
-		gv := obj.GroupVersionKind().GroupVersion()
-
-		conf := *cfg
-		conf.GroupVersion = &gv
-		if gv.Group == "" {
-			conf.APIPath = "/api"
-		} else {
-			conf.APIPath = "/apis"
-		}
-		conf.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-		client, err := rest.RESTClientFor(&conf)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		var apiResource *metav1.APIResource
-		for _, v := range apiResourcesList {
-			if v.GroupVersion == gv.String() {
-				for _, v := range v.APIResources {
-					if v.Kind == obj.GroupVersionKind().Kind && !strings.HasSuffix(v.Name, "/status") {
-						apiResource = &v
-						break
-					}
-				}
-			}
-		}
-		if apiResource == nil {
-			continue
-		}
-
-		method := http.MethodPatch
-		err = wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
-			var req *rest.Request
-			switch method {
-			case http.MethodPatch:
-				req = client.Patch(types.ApplyPatchType)
-			default:
-				req = client.Post()
-			}
-			data, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
-			if err != nil {
-				log.Print(err)
-				return true, nil
-			}
-			force := true
-			res := req.
-				NamespaceIfScoped(obj.GetNamespace(), apiResource.Namespaced).
-				Resource(apiResource.Name).
-				Name(obj.GetName()).
-				VersionedParams(&metav1.PatchOptions{FieldManager: fieldManager, Force: &force}, metav1.ParameterCodec).
-				Body(data).
-				Do(context.TODO())
-			if err := res.Error(); err != nil {
-				switch {
-				case apierrors.IsAlreadyExists(err):
-					method = http.MethodPatch
-					return false, nil
-				case apierrors.IsInternalError(err):
-					log.Print(err)
-					return false, nil
-				}
-
-				log.Printf("%s.%s: %v", obj.GetKind(), obj.GetName(), err)
-				return true, nil
-			}
-			return true, nil
-		})
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-
-	return nil
 }
