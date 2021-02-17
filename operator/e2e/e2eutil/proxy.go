@@ -168,7 +168,7 @@ func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) 
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	signedCert, err := rpcClient.NewCertByCSR(string(csr))
+	signedCert, err := rpcClient.NewCertByCSR(string(csr), rpcclient.CommonName(id))
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
