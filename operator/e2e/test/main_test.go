@@ -49,7 +49,8 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	if framework.Config.ProxyImageFile != "" ||
 		framework.Config.RPCImageFile != "" ||
 		framework.Config.DashboardImageFile != "" ||
-		framework.Config.OperatorImageFile != "" {
+		framework.Config.OperatorImageFile != "" ||
+		framework.Config.SidecarImageFile != "" {
 		images := []*kind.ContainerImageFile{
 			{
 				File:       framework.Config.ProxyImageFile,
@@ -70,6 +71,11 @@ func setupSuite(id string) (*kind.Cluster, error) {
 				File:       framework.Config.OperatorImageFile,
 				Repository: "quay.io/f110/heimdallr-operator",
 				Tag:        "e2e",
+			},
+			{
+				File:       framework.Config.SidecarImageFile,
+				Repository: "quay.io/f110/heimdallr-discovery-sidecar",
+				Tag:        framework.Config.BuildVersion,
 			},
 		}
 		if err := k8sCluster.LoadImageFiles(images...); err != nil {

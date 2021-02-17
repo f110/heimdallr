@@ -26,6 +26,8 @@ type ConfigStruct struct {
 	ProxyImageFile     string
 	RPCImageFile       string
 	DashboardImageFile string
+	SidecarImageFile   string
+	BuildVersion       string
 	AllInOneManifest   string
 	Retain             bool
 }
@@ -41,7 +43,9 @@ func Flags(fs *flag.FlagSet) {
 	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
 	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
 	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
+	fs.StringVar(&Config.SidecarImageFile, "sidecar-image-file", "", "Sidecar image file")
 	fs.StringVar(&Config.AllInOneManifest, "all-in-one-manifest", "", "Manifest file for operator")
+	fs.StringVar(&Config.BuildVersion, "build-version", "", "Version string")
 	fs.BoolVar(&Config.Retain, "retain", false, "Do not delete cluster after test")
 }
 

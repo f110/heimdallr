@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("//:RELEASE.bzl", "VERSION")
 
 K8S_CLUSTER_VERSION = "v1.19.3"
 
@@ -19,14 +20,16 @@ go_test(
         "-rpc-image-file=$(location //container:image_rpcserver.tar)",
         "-dashboard-image-file=$(location //container:image_dashboard.tar)",
         "-operator-image-file=$(location //container:image_operator.tar)",
+        "-sidecar-image-file=$(location //container:image_sidecar.tar)",
         "-all-in-one-manifest=$(location //operator/deploy/e2e:all-in-one)",
-        "-retain",
+        "-build-version=" + VERSION,
     ],
     data = [
         "//container:image.tar",
         "//container:image_dashboard.tar",
         "//container:image_operator.tar",
         "//container:image_rpcserver.tar",
+        "//container:image_sidecar.tar",
         "//operator/config/crd",
         "//operator/deploy/e2e:all-in-one",
         "@kind//:file",
