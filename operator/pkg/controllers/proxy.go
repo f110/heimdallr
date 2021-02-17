@@ -822,9 +822,10 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			},
 		},
 		Dashboard: &configv2.Dashboard{
-			Bind:      fmt.Sprintf(":%d", dashboardPort),
-			RPCServer: fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
-			TokenFile: fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+			Bind:         fmt.Sprintf(":%d", dashboardPort),
+			RPCServer:    fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
+			TokenFile:    fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
+			PublicKeyUrl: fmt.Sprintf("http://%s.%s.svc:%d/internal/publickey", r.ServiceNameForInternalApi(), r.Namespace, internalApiPort),
 		},
 	}
 	b, err := yaml.Marshal(conf)
