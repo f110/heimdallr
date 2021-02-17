@@ -140,7 +140,7 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 			Encoding: "console",
 		},
 		Dashboard: &configv2.Dashboard{
-			Bind: ":4100",
+			Bind: "",
 			Template: &configv2.Template{
 				Loader: "embed",
 				Dir:    "tmpl/dashboard",
