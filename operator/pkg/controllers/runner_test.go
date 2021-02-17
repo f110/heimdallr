@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -112,14 +113,14 @@ func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1alpha2.Backend) {
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleFixture(r ...*proxyv1alpha2.Role) {
+func (f *commonTestRunner) RegisterProxyRoleFixture(r ...*proxyv1alpha2.Role) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
 		f.sharedInformerFactory.Proxy().V1alpha2().Roles().Informer().GetIndexer().Add(v)
 	}
 }
 
-func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*proxyv1alpha2.RoleBinding) {
+func (f *commonTestRunner) RegisterProxyRoleBindingFixture(r ...*proxyv1alpha2.RoleBinding) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
 		f.sharedInformerFactory.Proxy().V1alpha2().RoleBindings().Informer().GetIndexer().Add(v)
@@ -162,6 +163,27 @@ func (f *commonTestRunner) RegisterServiceFixture(s ...*corev1.Service) {
 	}
 }
 
+func (f *commonTestRunner) RegisterServiceAccountFixture(sa ...*corev1.ServiceAccount) {
+	for _, v := range sa {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Core().V1().ServiceAccounts().Informer().GetIndexer().Add(v)
+	}
+}
+
+func (f *commonTestRunner) RegisterRoleFixture(r ...*rbacv1.Role) {
+	for _, v := range r {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Rbac().V1().Roles().Informer().GetIndexer().Add(v)
+	}
+}
+
+func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*rbacv1.RoleBinding) {
+	for _, v := range r {
+		f.coreClient.Tracker().Add(v)
+		f.coreSharedInformerFactory.Rbac().V1().RoleBindings().Informer().GetIndexer().Add(v)
+	}
+}
+
 func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
 	for _, v := range c {
 		f.coreClient.Tracker().Add(v)
@@ -181,6 +203,24 @@ func (f *commonTestRunner) RegisterIngressClassFixture(ic *networkingv1.IngressC
 
 func (f *commonTestRunner) ExpectCreateSecret() {
 	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateServiceAccount() {
+	action := core.NewCreateAction(scheme.SchemeGroupVersion.WithResource("serviceaccounts"), "", &corev1.ServiceAccount{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateRole() {
+	action := core.NewCreateAction(rbacv1.SchemeGroupVersion.WithResource("roles"), "", &rbacv1.Role{})
+
+	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
+}
+
+func (f *commonTestRunner) ExpectCreateRoleBinding() {
+	action := core.NewCreateAction(rbacv1.SchemeGroupVersion.WithResource("rolebindings"), "", &rbacv1.RoleBinding{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }

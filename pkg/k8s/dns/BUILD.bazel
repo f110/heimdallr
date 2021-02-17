@@ -19,9 +19,13 @@ go_library(
 
 go_test(
     name = "dns_test",
-    srcs = ["sidecar_test.go"],
+    srcs = [
+        "sidecar_test.go",
+        "util_test.go",
+    ],
     embed = [":dns"],
     deps = [
+        "//pkg/logger",
         "//vendor/github.com/miekg/dns",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/stretchr/testify/require",

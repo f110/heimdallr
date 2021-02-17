@@ -311,8 +311,8 @@ func TestProxyController(t *testing.T) {
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterBackendFixture(backends...)
-		f.RegisterRoleFixture(roles...)
-		f.RegisterRoleBindingFixture(roleBindings...)
+		f.RegisterProxyRoleFixture(roles...)
+		f.RegisterProxyRoleBindingFixture(roleBindings...)
 		f.RegisterSecretFixture(clientSecret)
 
 		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
@@ -384,8 +384,8 @@ func TestProxyController(t *testing.T) {
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
 		f.RegisterProxyFixture(p)
 		f.RegisterBackendFixture(backends...)
-		f.RegisterRoleFixture(roles...)
-		f.RegisterRoleBindingFixture(roleBindings...)
+		f.RegisterProxyRoleFixture(roles...)
+		f.RegisterProxyRoleBindingFixture(roleBindings...)
 		for _, s := range services {
 			f.RegisterServiceFixture(&s)
 		}

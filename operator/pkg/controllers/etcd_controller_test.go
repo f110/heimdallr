@@ -35,6 +35,9 @@ func TestEtcdController(t *testing.T) {
 		f.ExpectCreateSecret()
 		f.ExpectCreateSecret()
 		f.ExpectCreateSecret()
+		f.ExpectCreateServiceAccount()
+		f.ExpectCreateRole()
+		f.ExpectCreateRoleBinding()
 		// Create first node
 		f.ExpectCreatePod()
 		f.ExpectCreateService()
@@ -478,6 +481,9 @@ func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunn
 	f.RegisterSecretFixture(clientS)
 	f.RegisterServiceFixture(c.DiscoveryService())
 	f.RegisterServiceFixture(c.ClientService())
+	f.RegisterServiceAccountFixture(c.ServiceAccount())
+	f.RegisterRoleFixture(c.EtcdRole())
+	f.RegisterRoleBindingFixture(c.EtcdRoleBinding())
 }
 
 func etcdClusterReady(e *etcdv1alpha2.EtcdCluster) {

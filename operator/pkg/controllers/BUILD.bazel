@@ -128,6 +128,7 @@ go_test(
         "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/api/networking/v1:networking",
         "//vendor/k8s.io/api/policy/v1beta1",
+        "//vendor/k8s.io/api/rbac/v1:rbac",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/util/uuid",
         "//vendor/k8s.io/client-go/informers",
