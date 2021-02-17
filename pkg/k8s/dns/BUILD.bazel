@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "dns",
+    srcs = ["sidecar.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/dns",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/logger",
+        "//vendor/github.com/miekg/dns",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/watch",
+        "//vendor/k8s.io/client-go/kubernetes",
+    ],
+)
+
+go_test(
+    name = "dns_test",
+    srcs = ["sidecar_test.go"],
+    embed = [":dns"],
+    deps = [
+        "//vendor/github.com/miekg/dns",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+        "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/client-go/kubernetes/fake",
+    ],
+)

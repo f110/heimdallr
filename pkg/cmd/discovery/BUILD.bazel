@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "discovery",
+    srcs = ["discovery.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/discovery",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/cmd",
+        "//pkg/k8s/dns",
+        "//pkg/logger",
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/go.uber.org/zap",
+        "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/client-go/kubernetes",
+        "//vendor/k8s.io/client-go/tools/clientcmd",
+    ],
+)

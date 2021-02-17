@@ -59,18 +59,20 @@ type EtcdController struct {
 	clusterDomain     string
 	runOutsideCluster bool
 
-	etcdClusterInformer cache.SharedIndexInformer
-	clusterLister       etcdlisters.EtcdClusterLister
-	clusterListerSynced cache.InformerSynced
-	podInformer         cache.SharedIndexInformer
-	podLister           listers.PodLister
-	podListerSynced     cache.InformerSynced
-	serviceLister       listers.ServiceLister
-	serviceListerSynced cache.InformerSynced
-	secretLister        listers.SecretLister
-	secretListerSynced  cache.InformerSynced
-	pvcLister           listers.PersistentVolumeClaimLister
-	pvcListerSynced     cache.InformerSynced
+	etcdClusterInformer  cache.SharedIndexInformer
+	clusterLister        etcdlisters.EtcdClusterLister
+	clusterListerSynced  cache.InformerSynced
+	podInformer          cache.SharedIndexInformer
+	podLister            listers.PodLister
+	podListerSynced      cache.InformerSynced
+	serviceLister        listers.ServiceLister
+	serviceListerSynced  cache.InformerSynced
+	secretLister         listers.SecretLister
+	secretListerSynced   cache.InformerSynced
+	pvcLister            listers.PersistentVolumeClaimLister
+	pvcListerSynced      cache.InformerSynced
+	serviceAccountLister listers.ServiceAccountLister
+	serviceAccountSynced cache.InformerSynced
 
 	// for testing hack
 	etcdClientMockOpt *MockOption
@@ -92,29 +94,32 @@ func NewEtcdController(
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 	pvcInformer := coreSharedInformerFactory.Core().V1().PersistentVolumeClaims()
+	saInformer := coreSharedInformerFactory.Core().V1().ServiceAccounts()
 
 	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha2().EtcdClusters()
 
 	c := &EtcdController{
-		config:              cfg,
-		client:              client,
-		coreClient:          coreClient,
-		clusterDomain:       clusterDomain,
-		runOutsideCluster:   runOutsideCluster,
-		etcdClusterInformer: etcdClusterInformer.Informer(),
-		clusterLister:       etcdClusterInformer.Lister(),
-		clusterListerSynced: etcdClusterInformer.Informer().HasSynced,
-		podInformer:         podInformer.Informer(),
-		podLister:           podInformer.Lister(),
-		podListerSynced:     podInformer.Informer().HasSynced,
-		serviceLister:       serviceInformer.Lister(),
-		serviceListerSynced: serviceInformer.Informer().HasSynced,
-		secretLister:        secretInformer.Lister(),
-		secretListerSynced:  secretInformer.Informer().HasSynced,
-		pvcLister:           pvcInformer.Lister(),
-		pvcListerSynced:     pvcInformer.Informer().HasSynced,
-		transport:           transport,
-		etcdClientMockOpt:   mockOpt,
+		config:               cfg,
+		client:               client,
+		coreClient:           coreClient,
+		clusterDomain:        clusterDomain,
+		runOutsideCluster:    runOutsideCluster,
+		etcdClusterInformer:  etcdClusterInformer.Informer(),
+		clusterLister:        etcdClusterInformer.Lister(),
+		clusterListerSynced:  etcdClusterInformer.Informer().HasSynced,
+		podInformer:          podInformer.Informer(),
+		podLister:            podInformer.Lister(),
+		podListerSynced:      podInformer.Informer().HasSynced,
+		serviceLister:        serviceInformer.Lister(),
+		serviceListerSynced:  serviceInformer.Informer().HasSynced,
+		secretLister:         secretInformer.Lister(),
+		secretListerSynced:   secretInformer.Informer().HasSynced,
+		pvcLister:            pvcInformer.Lister(),
+		pvcListerSynced:      pvcInformer.Informer().HasSynced,
+		serviceAccountLister: saInformer.Lister(),
+		serviceAccountSynced: saInformer.Informer().HasSynced,
+		transport:            transport,
+		etcdClientMockOpt:    mockOpt,
 	}
 
 	c.Controller = controllerbase.NewController(c, coreClient)
@@ -136,6 +141,7 @@ func (ec *EtcdController) ListerSynced() []cache.InformerSynced {
 		ec.serviceListerSynced,
 		ec.secretListerSynced,
 		ec.pvcListerSynced,
+		ec.serviceAccountSynced,
 	}
 }
 
@@ -232,6 +238,9 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	cluster.SetCASecret(caSecret)
 	cluster.SetServerCertSecret(serverCertSecret)
 	if err := cluster.GetOwnedPods(ec.podLister, ec.pvcLister); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err = ec.ensureServiceAccount(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -832,6 +841,30 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *EtcdCluster) error {
+	sa, err := ec.serviceAccountLister.ServiceAccounts(cluster.Namespace).Get(cluster.ServiceAccountName())
+	if err != nil && apierrors.IsNotFound(err) {
+		sa = cluster.ServiceAccount()
+
+		sa, err = ec.coreClient.CoreV1().ServiceAccounts(cluster.Namespace).Create(ctx, sa, metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		_, err = ec.coreClient.RbacV1().Roles(cluster.Namespace).Create(ctx, cluster.EtcdRole(), metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		_, err = ec.coreClient.RbacV1().RoleBindings(cluster.Namespace).Create(ctx, cluster.EtcdRoleBinding(), metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	} else if err != nil {
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil

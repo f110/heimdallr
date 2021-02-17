@@ -27,6 +27,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -37,6 +38,7 @@ import (
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 type InternalState string
@@ -57,20 +59,6 @@ const (
 	EtcdPeerPort    = 2380
 	EtcdMetricsPort = 2381
 )
-
-const waitDNSPropagationScript = `IP=$MY_POD_IP
-while ( ! nslookup ${IP//./-}{{ .DomainSuffix }} )
-do
-	echo "Waiting for DNS propagation..."
-	sleep 1
-done
-
-while ( ! nslookup {{ .DiscoveryServiceDomain }} | grep -q ${IP} )
-do
-	echo "[Discovery] Waiting for DNS propagation..."
-	sleep 1
-done
-`
 
 const addMemberScript = `
 ETCDCTL_OPT="--cacert={{ .CACert }} --cert={{ .Cert }} --key={{ .Key }} --endpoints={{ .Endpoint }}"
@@ -350,6 +338,58 @@ func (c *EtcdCluster) ClientCertSecret(ca *corev1.Secret) (*corev1.Secret, error
 
 func (c *EtcdCluster) ClientCertSecretName() string {
 	return fmt.Sprintf("etcd-%s-client-cert", c.Name)
+}
+
+func (c *EtcdCluster) ServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            c.ServiceAccountName(),
+			Namespace:       c.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
+		},
+	}
+}
+
+func (c *EtcdCluster) ServiceAccountName() string {
+	return fmt.Sprintf("%s-etcd", c.Name)
+}
+
+func (c *EtcdCluster) EtcdRole() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            fmt.Sprintf("%s-etcd", c.Name),
+			Namespace:       c.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"*"},
+				Resources: []string{"pods"},
+				Verbs:     []string{"list", "watch"},
+			},
+		},
+	}
+}
+
+func (c *EtcdCluster) EtcdRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            fmt.Sprintf("%s-etcd", c.Name),
+			Namespace:       c.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     fmt.Sprintf("%s-etcd", c.Name),
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Name: c.ServiceAccountName(),
+			},
+		},
+	}
 }
 
 func (c *EtcdCluster) DefragmentCronJob() *batchv1beta1.CronJob {
@@ -959,20 +999,7 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 
 func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
 	initContainers := make([]corev1.Container, 0)
-	dnsPropagationScript := template.Must(template.New("").Parse(waitDNSPropagationScript))
 	memberManipulateScript := template.Must(template.New("").Parse(addMemberScript))
-
-	dnsPropagationScriptBuf := new(bytes.Buffer)
-	err := dnsPropagationScript.Execute(dnsPropagationScriptBuf, struct {
-		DomainSuffix           string
-		DiscoveryServiceDomain string
-	}{
-		DomainSuffix:           fmt.Sprintf(".%s.pod.%s", c.Namespace, c.ClusterDomain),
-		DiscoveryServiceDomain: c.ServerDiscoveryServiceName(),
-	})
-	if err != nil {
-		panic(err)
-	}
 
 	caVolume := &podVolume{
 		Name: "ca",
@@ -1019,28 +1046,7 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 		}
 	}
 
-	// We have to wait for cache invalidation of kube-dns.
-	// Etcd will check the client's IP address by accepted node.
-	// I'm not sure why they are doing that.
-	// If we don't wait for cache invalidation, then they can't authenticate client certificates.
-	// As a result, newer member of etcd cluster could not join the cluster
-	// because current members closes connection.
 	initContainers = append(initContainers,
-		corev1.Container{
-			Name:    "wait-dns",
-			Image:   "busybox:latest",
-			Command: []string{"/bin/sh", "-c", dnsPropagationScriptBuf.String()},
-			Env: []corev1.EnvVar{
-				{
-					Name: "MY_POD_IP",
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							FieldPath: "status.podIP",
-						},
-					},
-				},
-			},
-		},
 		corev1.Container{
 			Name:         "wipe-data",
 			Image:        "busybox:latest",
@@ -1110,10 +1116,15 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 	if initialCluster != nil && len(initialCluster) > 0 {
 		etcdArgs = append(etcdArgs, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
 	}
-	args := []string{
-		"-c",
-		"/usr/local/bin/etcd " + strings.Join(etcdArgs, " "),
-	}
+	etcdScript := fmt.Sprintf(`
+while ( ! ls /var/run/sidecar/ready )
+do
+	echo "Waiting for booting sidecar"
+	sleep 1
+done
+echo '' > /etc/resolv.conf
+/usr/local/bin/etcd %s`, strings.Join(etcdArgs, " "))
+	args := []string{"-c", etcdScript}
 	var affinity *corev1.Affinity
 	if antiAffinity {
 		affinity = &corev1.Affinity{
@@ -1136,11 +1147,19 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 		}
 	}
 
+	runVolume := &podVolume{
+		Name: "share",
+		Path: "/var/run/sidecar",
+		Source: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
 	return corev1.PodSpec{
-		Affinity:       affinity,
-		Subdomain:      c.ServerDiscoveryServiceName(),
-		RestartPolicy:  corev1.RestartPolicyNever,
-		InitContainers: initContainers,
+		Affinity:           affinity,
+		Subdomain:          c.ServerDiscoveryServiceName(),
+		RestartPolicy:      corev1.RestartPolicyNever,
+		ServiceAccountName: c.ServiceAccountName(),
+		InitContainers:     initContainers,
 		Containers: []corev1.Container{
 			{
 				Name:    "etcd",
@@ -1189,6 +1208,27 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 					serverCertVolume.ToMount(),
 					caVolume.ToMount(),
 					dataVolume.ToMount(),
+					runVolume.ToMount(),
+				},
+			},
+			{
+				Name:            "sidecar",
+				Image:           fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version),
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Args: []string{
+					"--port",
+					"53",
+					"--namespace",
+					c.Namespace,
+					"--cluster-domain",
+					c.ClusterDomain,
+					"--ttl",
+					"5",
+					"--ready-file",
+					"/var/run/sidecar/ready",
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					runVolume.ToMount(),
 				},
 			},
 		},
@@ -1197,6 +1237,7 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 			serverCertVolume.ToVolume(),
 			caVolume.ToVolume(),
 			dataVolume.ToVolume(),
+			runVolume.ToVolume(),
 		},
 	}
 }

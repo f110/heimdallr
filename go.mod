@@ -27,6 +27,7 @@ require (
 	github.com/jarcoal/httpmock v1.0.5
 	github.com/jetstack/cert-manager v1.0.1
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/miekg/dns v1.1.29
 	github.com/minio/minio-go/v6 v6.0.44
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/prometheus/client_golang v1.7.1

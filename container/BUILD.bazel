@@ -129,6 +129,30 @@ container_push(
     tag = "dev-{BUILD_USER}",
 )
 
+pkg_tar(
+    name = "bin_sidecar",
+    srcs = ["//cmd/discovery-sidecar"],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+)
+
+container_image(
+    name = "image_sidecar",
+    base = "@com_google_distroless_base//image",
+    entrypoint = ["/usr/local/bin/discovery-sidecar"],
+    tars = [":bin_sidecar"],
+    visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push_sidecar",
+    format = "Docker",
+    image = ":image_sidecar",
+    registry = REGISTRY,
+    repository = CONTAINER_IMAGE_REPOSITORIES["sidecar"],
+    tag = "dev-{BUILD_USER}",
+)
+
 sh_binary(
     name = "tag_proxy",
     srcs = ["//cmd/release"],

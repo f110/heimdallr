@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/config/configv2",
+        "//vendor/github.com/spf13/pflag",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
         "//vendor/golang.org/x/xerrors",

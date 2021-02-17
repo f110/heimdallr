@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -105,7 +106,7 @@ func deleteCluster(kindPath, name, kubeConfig string) error {
 	return nil
 }
 
-func runController(kindPath, name, manifestFile, controllerImage, namespace string) error {
+func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, namespace string) error {
 	kindCluster, err := kind.NewCluster(kindPath, name, "")
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -121,11 +122,19 @@ func runController(kindPath, name, manifestFile, controllerImage, namespace stri
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := kindCluster.LoadImageFiles(&kind.ContainerImageFile{
-		File:       controllerImage,
-		Repository: "quay.io/f110/heimdallr-operator",
-		Tag:        "latest",
-	}); err != nil {
+	containerImages := []*kind.ContainerImageFile{
+		{
+			File:       controllerImage,
+			Repository: "quay.io/f110/heimdallr-operator",
+			Tag:        "latest",
+		},
+		{
+			File:       sidecarImage,
+			Repository: "quay.io/f110/heimdallr-discovery-sidecar",
+			Tag:        "latest",
+		},
+	}
+	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -184,6 +193,34 @@ func logOperator(kindPath, name, namespace string) error {
 		return xerrors.New("could not found controller pod")
 	}
 	if err := tailLog(context.Background(), client, "heimdallr", pods.Items[0].Name); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func loadImages(kindPath, name string, images []string) error {
+	kindCluster, err := kind.NewCluster(kindPath, name, "")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if exist, err := kindCluster.IsExist(name); err != nil {
+		return xerrors.Errorf(": %w", err)
+	} else if !exist {
+		return xerrors.New("Cluster does not exist. You create the cluster first.")
+	}
+
+	containerImages := make([]*kind.ContainerImageFile, 0)
+	for _, v := range images {
+		s := strings.SplitN(v, "=", 2)
+		t := strings.SplitN(s[0], ":", 2)
+		containerImages = append(containerImages, &kind.ContainerImageFile{
+			File:       s[1],
+			Repository: t[0],
+			Tag:        t[1],
+		})
+	}
+	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -274,17 +311,19 @@ func Cluster(rootCmd *cobra.Command) {
 
 	manifestFile := ""
 	controllerImage := ""
+	sidecarImage := ""
 	namespace := ""
 	runOperator := &cobra.Command{
 		Use:   "run-operator",
 		Short: "Run the operator",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, namespace)
+			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
 		},
 	}
 	commonFlags(runOperator.Flags(), opts)
 	runOperator.Flags().StringVar(&manifestFile, "manifest", "", "A manifest file for the controller")
 	runOperator.Flags().StringVar(&controllerImage, "controller-image", "", "A path of file of controller")
+	runOperator.Flags().StringVar(&sidecarImage, "sidecar-image", "", "A path of file of sidecar")
 	runOperator.Flags().StringVarP(&namespace, "namespace", "n", "heimdallr", "The namespace of operator")
 	clusterCmd.AddCommand(runOperator)
 
@@ -297,6 +336,25 @@ func Cluster(rootCmd *cobra.Command) {
 	}
 	commonFlags(logs.Flags(), opts)
 	clusterCmd.AddCommand(logs)
+
+	images := make([]string, 0)
+	load := &cobra.Command{
+		Use:   "load",
+		Short: "Load container images",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return loadImages(opts.KindPath, opts.ClusterName, images)
+		},
+	}
+	commonFlags(load.Flags(), opts)
+	load.Flags().StringSliceVar(
+		&images,
+		"images",
+		[]string{},
+		`Loading images. each arguments will required name and path.
+A separator between name and path is equal mark.
+(e,g, --images quay.io/f110/heimdallr:latest=./image.tar)`,
+	)
+	clusterCmd.AddCommand(load)
 
 	rootCmd.AddCommand(clusterCmd)
 }
