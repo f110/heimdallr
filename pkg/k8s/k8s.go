@@ -31,7 +31,7 @@ import (
 func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
 	f, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
@@ -46,7 +46,7 @@ func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, 
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, xerrors.Errorf(": %w", err)
 		}
 		obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
 		if err != nil {
@@ -65,16 +65,19 @@ func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, 
 func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinition, timeout time.Duration) error {
 	apiextensionsClient, err := apiextensionsClientset.NewForConfig(config)
 	if err != nil {
-		return err
+		return xerrors.Errorf(": %w", err)
 	}
 
 	createdCRD := make(map[string]struct{})
 	for _, v := range crd {
-		_, err = apiextensionsClient.CustomResourceDefinitions().Create(context.TODO(), v, metav1.CreateOptions{})
-		if err != nil {
-			return err
+		_, err = apiextensionsClient.CustomResourceDefinitions().Get(context.TODO(), v.Name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			_, err = apiextensionsClient.CustomResourceDefinitions().Create(context.TODO(), v, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			createdCRD[v.Name] = struct{}{}
 		}
-		createdCRD[v.Name] = struct{}{}
 	}
 
 	err = wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {

@@ -47,21 +47,22 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig, 
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if exists, err := kindCluster.IsExist(name); err != nil {
+	exists, err := kindCluster.IsExist(name)
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
-	} else if exists {
-		return xerrors.New("Cluster already exists. abort.")
 	}
 
-	if err := kindCluster.Create(k8sVersion, workerNum); err != nil {
-		return xerrors.Errorf(": %w", err)
+	if !exists {
+		if err := kindCluster.Create(k8sVersion, workerNum); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Minute)
+		if err := kindCluster.WaitReady(ctx); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		cancelFunc()
+		log.Printf("Complete creating cluster")
 	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Minute)
-	if err := kindCluster.WaitReady(ctx); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	cancelFunc()
-	log.Printf("Complete creating cluster")
 
 	restCfg, err := kindCluster.RESTConfig()
 	if err != nil {

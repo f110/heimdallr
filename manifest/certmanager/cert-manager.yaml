@@ -978,8 +978,8 @@ spec:
                   if not specified. If `keyAlgorithm` is set to `ECDSA`, valid values
                   are `256`, `384` or `521`, and will default to `256` if not specified.
                   No other values are allowed.
-                maximum: 8192
-                minimum: 0
+                maximum: 8192.0
+                minimum: 0.0
                 type: integer
               keystores:
                 description: Keystores configures additional keystore output formats
@@ -1386,8 +1386,8 @@ spec:
                   if not specified. If `keyAlgorithm` is set to `ECDSA`, valid values
                   are `256`, `384` or `521`, and will default to `256` if not specified.
                   No other values are allowed.
-                maximum: 8192
-                minimum: 0
+                maximum: 8192.0
+                minimum: 0.0
                 type: integer
               keystores:
                 description: Keystores configures additional keystore output formats
@@ -1876,8 +1876,8 @@ spec:
                       if not specified. If `algorithm` is set to `ECDSA`, valid values
                       are `256`, `384` or `521`, and will default to `256` if not
                       specified. No other values are allowed.
-                    maximum: 8192
-                    minimum: 0
+                    maximum: 8192.0
+                    minimum: 0.0
                     type: integer
                 type: object
               renewBefore:
@@ -2285,8 +2285,8 @@ spec:
                       if not specified. If `algorithm` is set to `ECDSA`, valid values
                       are `256`, `384` or `521`, and will default to `256` if not
                       specified. No other values are allowed.
-                    maximum: 8192
-                    minimum: 0
+                    maximum: 8192.0
+                    minimum: 0.0
                     type: integer
                 type: object
               renewBefore:

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/xerrors"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -389,7 +390,8 @@ func InstallCertManager(cfg *rest.Config, fieldManager string) error {
 func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "minio-token",
+			Name:      "minio-token",
+			Namespace: metav1.NamespaceDefault,
 		},
 		StringData: map[string]string{
 			"accesskey": minioAccessKey,
@@ -400,9 +402,11 @@ func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	_, err = client.CoreV1().Secrets(metav1.NamespaceDefault).Create(context.Background(), secret, metav1.CreateOptions{})
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
+	if _, err := client.CoreV1().Secrets(secret.Namespace).Get(context.Background(), secret.Name, metav1.GetOptions{}); apierrors.IsNotFound(err) {
+		_, err = client.CoreV1().Secrets(secret.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
 	}
 
 	if err := k8s.ApplyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"], fieldManager); err != nil {
