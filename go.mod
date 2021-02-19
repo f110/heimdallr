@@ -11,6 +11,7 @@ require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/coreos/prometheus-operator v0.36.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fatih/color v1.10.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.2

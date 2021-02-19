@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,6 +25,8 @@ var (
 	junit    *string
 	verbose  *bool
 	e2eDebug *bool
+
+	stdout = os.Stdout
 )
 
 func init() {
@@ -208,9 +211,10 @@ func (n *node) execute(t *testing.T) {
 		c.Finish()
 
 		if success {
+			fmt.Fprint(stdout, color.GreenString("S: %s\n", n.route))
 			c.Succeeded()
 		} else {
-			log.Print(n.route)
+			fmt.Fprint(stdout, color.RedString("F: %s\n", n.route))
 			c.FailureMessage = tSpy.message
 			c.Failed()
 		}

@@ -58,6 +58,9 @@ github.com/docker/spdystream/spdy
 github.com/dustin/go-humanize
 # github.com/evanphx/json-patch v4.9.0+incompatible
 github.com/evanphx/json-patch
+# github.com/fatih/color v1.10.0
+## explicit
+github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit
 github.com/fsnotify/fsnotify
@@ -198,6 +201,10 @@ github.com/jtolds/gls
 github.com/julienschmidt/httprouter
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
+# github.com/mattn/go-colorable v0.1.8
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.12
+github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/miekg/dns v1.1.29

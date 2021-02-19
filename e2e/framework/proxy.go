@@ -661,7 +661,7 @@ func (p *Proxy) startProcess() error {
 		return xerrors.Errorf(": %w", err)
 	}
 	p.running = true
-	p.t.Logf("Start process :%d rpc :%d", p.proxyPort, p.rpcPort)
+	//p.t.Logf("Start process :%d rpc :%d", p.proxyPort, p.rpcPort)
 
 	return nil
 }
