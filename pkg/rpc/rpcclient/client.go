@@ -87,7 +87,7 @@ func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 			return nil, xerrors.Errorf(": %v", err)
 		}
 		tokenClient := token.NewClient(net.DefaultResolver)
-		newToken, err := tokenClient.RequestToken(endpoint, "")
+		newToken, err := tokenClient.RequestToken(endpoint, "", false)
 		ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 	}
 

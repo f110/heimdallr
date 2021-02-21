@@ -35,7 +35,7 @@ func NewClient(resolver *net.Resolver) *Client {
 	return &Client{resolver: resolver}
 }
 
-func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string) (string, error) {
+func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure bool) (string, error) {
 	verifier := c.newVerifier()
 
 	u, err := url.Parse(endpoint)
@@ -55,7 +55,7 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string) (string, 
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
-	token, err := c.exchangeToken(endpoint, code, verifier)
+	token, err := c.exchangeToken(endpoint, code, verifier, insecure)
 	if err != nil {
 		return "", xerrors.Errorf(": %w", err)
 	}
@@ -63,7 +63,7 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string) (string, 
 	return token, nil
 }
 
-func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, error) {
+func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure bool) (string, error) {
 	v := &url.Values{}
 	v.Set("code", code)
 	v.Set("code_verifier", codeVerifier)
@@ -76,7 +76,7 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, err
 		Transport: &http.Transport{
 			DialContext: dialer.DialContext,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: insecure,
 			},
 		},
 	}

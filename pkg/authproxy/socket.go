@@ -469,7 +469,7 @@ func NewSocketProxyClient(in io.Reader, out io.Writer) *Client {
 	return &Client{inCh: inCh, outCh: outCh}
 }
 
-func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token string, resolver *net.Resolver) error {
+func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token string, resolver *net.Resolver, insecure bool) error {
 	conn, err := tls.DialWithDialer(
 		&net.Dialer{
 			Timeout:  3 * time.Second,
@@ -480,7 +480,7 @@ func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token stri
 		&tls.Config{
 			Certificates:       []tls.Certificate{*clientCert},
 			NextProtos:         []string{SocketProxyNextProto},
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: insecure,
 		},
 	)
 	if err != nil {

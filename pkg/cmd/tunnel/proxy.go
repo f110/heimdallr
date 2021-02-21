@@ -14,7 +14,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
-func proxy(args []string, resolverAddr, overrideOpenURLCommand string) error {
+func proxy(args []string, resolverAddr, overrideOpenURLCommand string, insecure bool) error {
 	uc, err := userconfig.New()
 	if err != nil {
 		return err
@@ -54,12 +54,12 @@ func proxy(args []string, resolverAddr, overrideOpenURLCommand string) error {
 
 	client := authproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(hostname, port, clientCert, accessToken, resolver)
+	err = client.Dial(hostname, port, clientCert, accessToken, resolver, insecure)
 	if err != nil {
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
 			tokenClient := token.NewClient(resolver)
-			t, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand)
+			t, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -82,16 +82,18 @@ Retry:
 func Proxy(rootCmd *cobra.Command) {
 	resolverAddr := ""
 	overrideOpenURLCommand := ""
+	insecure := false
 	proxyCmd := &cobra.Command{
 		Use:   "proxy [host]",
 		Short: "Proxy to backend",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return proxy(args, resolverAddr, overrideOpenURLCommand)
+			return proxy(args, resolverAddr, overrideOpenURLCommand, insecure)
 		},
 	}
 	proxyCmd.Flags().StringVar(&overrideOpenURLCommand, "override-open-url-command", "", "Override command for opening URL")
 	proxyCmd.Flags().StringVar(&resolverAddr, "resolver", "", "Resolver address")
+	proxyCmd.Flags().BoolVar(&insecure, "insecure", false, "Skip verification")
 
 	rootCmd.AddCommand(proxyCmd)
 }
