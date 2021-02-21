@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 
@@ -26,11 +27,12 @@ type ExchangeResponse struct {
 }
 
 type Client struct {
+	resolver      *net.Resolver
 	tokenFilename string
 }
 
-func NewClient() *Client {
-	return &Client{}
+func NewClient(resolver *net.Resolver) *Client {
+	return &Client{resolver: resolver}
 }
 
 func (c *Client) RequestToken(endpoint string) (string, error) {
@@ -69,8 +71,11 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, err
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
+	dialer := net.Dialer{Resolver: c.resolver}
 	client := &http.Client{
 		Transport: &http.Transport{
+			DialContext:    dialer.DialContext,
+			DialTLSContext: dialer.DialContext,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},

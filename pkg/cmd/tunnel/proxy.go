@@ -14,13 +14,13 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
-func proxy(args []string) error {
+func proxy(args []string, resolverAddr string) error {
 	uc, err := userconfig.New()
 	if err != nil {
 		return err
 	}
 
-	to, err := uc.GetToken()
+	accessToken, err := uc.GetToken()
 	if err != nil {
 		return err
 	}
@@ -41,19 +41,30 @@ func proxy(args []string) error {
 		host = args[0]
 		port = "443"
 	}
+	resolver := net.DefaultResolver
+	if resolverAddr != "" {
+		d := net.Dialer{}
+		resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return d.DialContext(ctx, network, resolverAddr)
+			},
+		}
+	}
+
 	client := authproxy.NewSocketProxyClient(os.Stdin, os.Stdout)
 Retry:
-	err = client.Dial(host, port, clientCert, to)
+	err = client.Dial(host, port, clientCert, accessToken, resolver)
 	if err != nil {
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
-			tokenClient := token.NewClient()
+			tokenClient := token.NewClient(resolver)
 			t, err := tokenClient.RequestToken(e.Endpoint)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
-			to = t
-			if err := uc.SetToken(to); err != nil {
+			accessToken = t
+			if err := uc.SetToken(accessToken); err != nil {
 				return err
 			}
 
@@ -69,14 +80,16 @@ Retry:
 }
 
 func Proxy(rootCmd *cobra.Command) {
+	resolverAddr := ""
 	proxyCmd := &cobra.Command{
 		Use:   "proxy [host]",
 		Short: "Proxy to backend",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return proxy(args)
+			return proxy(args, resolverAddr)
 		},
 	}
+	proxyCmd.Flags().StringVar(&resolverAddr, "resolver", "", "Resolver address")
 
 	rootCmd.AddCommand(proxyCmd)
 }

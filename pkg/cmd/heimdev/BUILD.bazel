@@ -4,6 +4,7 @@ go_library(
     name = "heimdev",
     srcs = [
         "cluster.go",
+        "dns.go",
         "testserver.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heimdev",
@@ -15,6 +16,7 @@ go_library(
         "//pkg/k8s/kind",
         "//vendor/github.com/dgrijalva/jwt-go",
         "//vendor/github.com/gorilla/websocket",
+        "//vendor/github.com/miekg/dns",
         "//vendor/github.com/spf13/cobra",
         "//vendor/github.com/spf13/pflag",
         "//vendor/golang.org/x/xerrors",

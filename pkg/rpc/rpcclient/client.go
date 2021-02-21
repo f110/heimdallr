@@ -3,6 +3,7 @@ package rpcclient
 import (
 	"context"
 	"math/big"
+	"net"
 	"net/http"
 	"sync"
 
@@ -85,7 +86,7 @@ func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 		if err != nil {
 			return nil, xerrors.Errorf(": %v", err)
 		}
-		tokenClient := token.NewClient()
+		tokenClient := token.NewClient(net.DefaultResolver)
 		newToken, err := tokenClient.RequestToken(endpoint)
 		ctx = metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, newToken)
 	}
