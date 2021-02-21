@@ -7,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 
@@ -44,11 +43,11 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 		if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
 			return nil, nil, nil, xerrors.Errorf(": %v", err)
 		}
-		if err := ioutil.WriteFile(privateKeyPath, buf.Bytes(), 0400); err != nil {
+		if err := os.WriteFile(privateKeyPath, buf.Bytes(), 0400); err != nil {
 			return nil, nil, nil, xerrors.Errorf(": %v", err)
 		}
 
-		f, err := ioutil.TempFile("", "csr")
+		f, err := os.CreateTemp("", "csr")
 		if err != nil {
 			return nil, nil, nil, xerrors.Errorf(": %v", err)
 		}
@@ -69,7 +68,7 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 		return nil, nil, nil, err
 	}
 
-	b, err := ioutil.ReadFile(privateKeyPath)
+	b, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, nil, nil, xerrors.Errorf(": %v", err)
 	}
@@ -82,7 +81,7 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 		return nil, nil, nil, xerrors.Errorf(": %v", err)
 	}
 
-	b, err = ioutil.ReadFile(certFilePath)
+	b, err = os.ReadFile(certFilePath)
 	if err != nil {
 		return nil, nil, nil, xerrors.Errorf(": %v", err)
 	}
@@ -97,7 +96,7 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 
 	var caCertificates []*x509.Certificate
 	if caCertPath != "" {
-		b, err = ioutil.ReadFile(caCertPath)
+		b, err = os.ReadFile(caCertPath)
 		if err != nil {
 			return nil, nil, nil, xerrors.Errorf(": %v", err)
 		}
@@ -168,7 +167,7 @@ func agent(args []string) error {
 			return err
 		}
 	} else if credential != "" {
-		b, err := ioutil.ReadFile(credential)
+		b, err := os.ReadFile(credential)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}

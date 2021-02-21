@@ -1,8 +1,8 @@
 package configutil
 
 import (
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
@@ -13,7 +13,7 @@ import (
 )
 
 func ReadConfig(filename string) (*configv2.Config, error) {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func ReadConfigV1(filename string) (*config.Config, error) {
 	}
 	dir := filepath.Dir(a)
 
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 	}
 	dir := filepath.Dir(a)
 
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

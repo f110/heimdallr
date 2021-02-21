@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -186,7 +186,7 @@ func (u *UserDir) readFile(filename string) ([]byte, error) {
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

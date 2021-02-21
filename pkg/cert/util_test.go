@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -143,7 +142,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 	ca := createCAForTest(t)
 
 	for _, c := range cases {
-		b, err := ioutil.ReadFile(c.File)
+		b, err := os.ReadFile(c.File)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -216,7 +215,7 @@ func TestCreateCertificateRequest(t *testing.T) {
 
 func TestPemEncode(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -234,7 +233,7 @@ func TestPemEncode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		readed, err := ioutil.ReadFile(f.Name())
+		readed, err := os.ReadFile(f.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -251,7 +250,7 @@ func TestPemEncode(t *testing.T) {
 	})
 
 	t.Run("Illegal header", func(t *testing.T) {
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}

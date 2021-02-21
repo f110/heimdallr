@@ -2,7 +2,7 @@ package framework
 
 import (
 	"encoding/xml"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -32,7 +32,7 @@ func TestJUnit(t *testing.T) {
 			},
 		},
 	}
-	out, err := ioutil.ReadFile("./testdata/junit.xml")
+	out, err := os.ReadFile("./testdata/junit.xml")
 	require.NoError(t, err)
 
 	buf, err := xml.MarshalIndent(in, "", "  ")

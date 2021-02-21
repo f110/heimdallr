@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -29,7 +29,7 @@ import (
 )
 
 func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	f, err := ioutil.ReadFile(fileName)
+	f, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

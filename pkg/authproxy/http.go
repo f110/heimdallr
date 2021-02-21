@@ -3,7 +3,7 @@ package authproxy
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -284,12 +284,12 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 		return
 	}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return
 	}
 	req.Body.Close()
-	req.Body = ioutil.NopCloser(bytes.NewReader(buf))
+	req.Body = io.NopCloser(bytes.NewReader(buf))
 	err = github.ValidateSignature(req.Header.Get("X-Hub-Signature"), buf, p.Config.AccessProxy.Credential.GithubWebhookSecret)
 	if err != nil {
 		logger.Log.Debug("Couldn't validate signature", zap.Error(err), logger.WithRequestId(ctx))

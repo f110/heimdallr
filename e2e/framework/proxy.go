@@ -15,7 +15,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	mrand "math/rand"
 	"net"
@@ -213,7 +212,7 @@ type Connector struct {
 }
 
 func NewConnector(name string, m *MockServer, proxyCACert *x509.Certificate) (*Connector, error) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -341,10 +340,7 @@ type Proxy struct {
 }
 
 func NewProxy(t *testing.T) (*Proxy, error) {
-	dir, err := ioutil.TempDir("", "heimdallr")
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
+	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "data"), 0700); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -404,7 +400,7 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 
 	sessionStore := session.NewSecureCookieStore([]byte(hex.EncodeToString(hashKey)), []byte(hex.EncodeToString(blockKey)), "e2e.f110.dev")
 
-	if err := ioutil.WriteFile(filepath.Join(dir, "identityprovider"), []byte("identityprovider"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "identityprovider"), []byte("identityprovider"), 0644); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
@@ -887,7 +883,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 	p.proxyConfBuf = b
-	if err := ioutil.WriteFile(filepath.Join(p.dir, "proxies.yaml"), b, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(p.dir, "proxies.yaml"), b, 0644); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -897,7 +893,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 	p.roleConfBuf = b
-	if err := ioutil.WriteFile(filepath.Join(p.dir, "roles.yaml"), b, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(p.dir, "roles.yaml"), b, 0644); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -907,7 +903,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 	p.rpcPermissionConfBuf = b
-	if err := ioutil.WriteFile(filepath.Join(p.dir, "rpc_permissions.yaml"), b, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(p.dir, "rpc_permissions.yaml"), b, 0644); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -978,7 +974,7 @@ func (p *Proxy) buildConfig() error {
 		return xerrors.Errorf(": %w", err)
 	}
 	p.configBuf = b
-	if err := ioutil.WriteFile(filepath.Join(p.dir, "config.yaml"), b, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(p.dir, "config.yaml"), b, 0644); err != nil {
 		return err
 	}
 

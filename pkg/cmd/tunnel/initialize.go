@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -44,7 +44,7 @@ func loadCertificate(p string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	buf, err := ioutil.ReadFile(p)
+	buf, err := os.ReadFile(p)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

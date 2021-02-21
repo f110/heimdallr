@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"testing"
@@ -125,7 +125,7 @@ func TestMain(m *testing.M) {
 	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
 		log.Fatal(err)
 	}
-	klog.SetOutput(ioutil.Discard)
+	klog.SetOutput(io.Discard)
 
 	log.Printf("%+v", framework.Config)
 

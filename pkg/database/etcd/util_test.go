@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"testing"
@@ -22,7 +21,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	dataDir, err := ioutil.TempDir("", "")
+	dataDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not create a temporary directory: %v\n", err)
 		os.Exit(1)

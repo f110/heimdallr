@@ -3,7 +3,6 @@ package template
 import (
 	"html/template"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,7 +71,7 @@ func (l *Loader) Render(w io.Writer, name string, data interface{}) error {
 			if _, ok := parsed[name]; ok {
 				return nil
 			}
-			b, err := ioutil.ReadFile(path)
+			b, err := os.ReadFile(path)
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}

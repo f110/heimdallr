@@ -1,7 +1,7 @@
 package k8s
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -13,7 +13,7 @@ var (
 
 func GetClusterDomain() (string, error) {
 	// Running on k8s
-	b, err := ioutil.ReadFile(ResolvFile)
+	b, err := os.ReadFile(ResolvFile)
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}

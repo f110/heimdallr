@@ -3,7 +3,7 @@ package configutil
 import (
 	"crypto/ecdsa"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -68,16 +68,16 @@ logger:
 
 	tmpDir := t.TempDir()
 
-	f, err := ioutil.TempFile(tmpDir, "")
+	f, err := os.CreateTemp(tmpDir, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	f.WriteString(b)
 	f.Sync()
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "roles.yaml"), []byte(roleBuf), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "roles.yaml"), []byte(roleBuf), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
 		t.Fatal(err)
 	}
 	caCert, privateKey, err := cert.CreateCertificateAuthorityForConfig(
@@ -147,7 +147,7 @@ logger:
 		t.Errorf("datastore.data expect %s: %s", filepath.Join(tmpDir, "data"), conf.Datastore.DataDir)
 	}
 
-	err = ioutil.WriteFile(filepath.Join(tmpDir, "data", config.EmbedEtcdUrlFilename), []byte("etcd://localhost:60000"), 0600)
+	err = os.WriteFile(filepath.Join(tmpDir, "data", config.EmbedEtcdUrlFilename), []byte("etcd://localhost:60000"), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}

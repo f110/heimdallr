@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -88,7 +87,7 @@ func (c *Cluster) IsExist(name string) (bool, error) {
 }
 
 func (c *Cluster) Create(clusterVersion string, workerNum int) error {
-	kindConfFile, err := ioutil.TempFile("", "kind.config.yaml")
+	kindConfFile, err := os.CreateTemp("", "kind.config.yaml")
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -122,7 +121,7 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 	}
 
 	if c.kubeConfig == "" {
-		f, err := ioutil.TempFile("", "config")
+		f, err := os.CreateTemp("", "config")
 		if err != nil {
 			return err
 		}
@@ -231,7 +230,7 @@ func (c *Cluster) RESTConfig() (*rest.Config, error) {
 		return nil, xerrors.New("The cluster is not created yet")
 	}
 	if c.kubeConfig == "" {
-		kubeConf, err := ioutil.TempFile("", "kubeconfig")
+		kubeConf, err := os.CreateTemp("", "kubeconfig")
 		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
@@ -313,7 +312,7 @@ func (c *Cluster) WaitReady(ctx context.Context) error {
 }
 
 func (c *Cluster) Apply(f, fieldManager string) error {
-	buf, err := ioutil.ReadFile(f)
+	buf, err := os.ReadFile(f)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -345,7 +344,7 @@ func readImageManifest(image *ContainerImageFile) error {
 		}
 		if hdr.Name != "manifest.json" {
 			// Skip reading if the file name is not manifest.json.
-			if _, err := io.Copy(ioutil.Discard, r); err != nil {
+			if _, err := io.Copy(io.Discard, r); err != nil {
 				return err
 			}
 			continue

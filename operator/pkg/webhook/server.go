@@ -2,7 +2,7 @@ package webhook
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -56,7 +56,7 @@ func (s *Server) Conversion(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	req.Body.Close()
 	if err != nil {
 		logger.Log.Warn("Failed read body", zap.Error(err))
@@ -94,7 +94,7 @@ func (s *Server) Validate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	req.Body.Close()
 	if err != nil {
 		logger.Log.Warn("Failed read request body", zap.Error(err))

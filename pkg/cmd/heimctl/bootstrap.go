@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	mrand "math/rand"
 	"os"
 	"path/filepath"
@@ -34,7 +33,7 @@ func bootstrap(confFile string) error {
 		return xerrors.Errorf(": %v", err)
 	}
 	dir := filepath.Dir(p)
-	confBuf, err := ioutil.ReadFile(p)
+	confBuf, err := os.ReadFile(p)
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -56,7 +55,7 @@ func bootstrap(confFile string) error {
 		}
 	}
 
-	b, err := ioutil.ReadFile(absPath(conf.CertificateAuthority.Local.CertFile, dir))
+	b, err := os.ReadFile(absPath(conf.CertificateAuthority.Local.CertFile, dir))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
@@ -65,7 +64,7 @@ func bootstrap(confFile string) error {
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}
-	b, err = ioutil.ReadFile(absPath(conf.CertificateAuthority.Local.KeyFile, dir))
+	b, err = os.ReadFile(absPath(conf.CertificateAuthority.Local.KeyFile, dir))
 	if err != nil {
 		return xerrors.Errorf(": %v", err)
 	}

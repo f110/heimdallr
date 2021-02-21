@@ -2,7 +2,7 @@ package release
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -15,7 +15,7 @@ func containerReleaseCmd(repository, sha256File, tag string) error {
 	if tag == "" || sha256File == "" {
 		return xerrors.New("tag and sha256 is mandatory")
 	}
-	b, err := ioutil.ReadFile(sha256File)
+	b, err := os.ReadFile(sha256File)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

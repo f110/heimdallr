@@ -2,7 +2,6 @@ package heimctl
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -42,7 +41,7 @@ func generateBackendCommand() *cobra.Command {
 			codecs := serializer.NewCodecFactory(sch)
 
 			var buf []byte
-			b, err := ioutil.ReadFile(input)
+			b, err := os.ReadFile(input)
 			if err != nil {
 				return err
 			}

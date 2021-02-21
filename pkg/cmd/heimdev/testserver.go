@@ -6,10 +6,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -22,7 +22,7 @@ import (
 )
 
 func testServer(port int, publicKeyFile string) error {
-	fBuf, err := ioutil.ReadFile(publicKeyFile)
+	fBuf, err := os.ReadFile(publicKeyFile)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

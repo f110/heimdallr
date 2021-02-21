@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"sort"
@@ -52,7 +52,7 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) (*Server, err
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -56,7 +55,7 @@ func findPid() string {
 }
 
 func memoryUsage(pid string) int {
-	b, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/status", pid))
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%s/status", pid))
 	if err != nil {
 		return 0
 	}
@@ -102,7 +101,7 @@ func main() {
 
 	var pool *x509.CertPool
 	if ca != "" {
-		b, err := ioutil.ReadFile(ca)
+		b, err := os.ReadFile(ca)
 		if err != nil {
 			panic(err)
 		}

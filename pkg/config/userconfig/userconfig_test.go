@@ -1,7 +1,6 @@
 package userconfig
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +14,7 @@ func TestUserDir_GetToken(t *testing.T) {
 
 	err := os.Mkdir(filepath.Join(tmpDir, Directory), 0755)
 	require.NoError(t, err)
-	err = ioutil.WriteFile(filepath.Join(tmpDir, Directory, "token"), []byte("test-token"), 0644)
+	err = os.WriteFile(filepath.Join(tmpDir, Directory, "token"), []byte("test-token"), 0644)
 	require.NoError(t, err)
 
 	prevHome := os.Getenv("HOME")

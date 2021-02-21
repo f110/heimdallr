@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -1118,7 +1117,7 @@ func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) er
 		}
 	}()
 
-	tmpFile, err := ioutil.TempFile("", "")
+	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

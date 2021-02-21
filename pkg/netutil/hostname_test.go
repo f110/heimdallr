@@ -1,7 +1,6 @@
 package netutil
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -26,7 +25,7 @@ func TestGetHostname(t *testing.T) {
 	})
 
 	t.Run("on-k8s", func(t *testing.T) {
-		tempFile, err := ioutil.TempFile("", "k8s")
+		tempFile, err := os.CreateTemp("", "k8s")
 		if err != nil {
 			t.Fatal(err)
 		}

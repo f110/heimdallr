@@ -13,7 +13,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"os"
@@ -111,7 +110,7 @@ func webhookCert() *cobra.Command {
 			if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: certByte}); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-			if err := ioutil.WriteFile(certificateFile, buf.Bytes(), 0644); err != nil {
+			if err := os.WriteFile(certificateFile, buf.Bytes(), 0644); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 			buf.Reset()
@@ -122,7 +121,7 @@ func webhookCert() *cobra.Command {
 			if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-			if err := ioutil.WriteFile(privateKeyFile, buf.Bytes(), 0644); err != nil {
+			if err := os.WriteFile(privateKeyFile, buf.Bytes(), 0644); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 
@@ -159,7 +158,7 @@ func convertV2Config() *cobra.Command {
 			}
 
 			conf := &config.Config{}
-			readBuf, err := ioutil.ReadFile(v1Config)
+			readBuf, err := os.ReadFile(v1Config)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}

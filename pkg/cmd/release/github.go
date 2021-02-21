@@ -3,7 +3,6 @@ package release
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +41,7 @@ func githubRelease(opt *githubOpt) error {
 
 	body := ""
 	if _, err := os.Lstat(opt.BodyFile); !os.IsNotExist(err) {
-		b, err := ioutil.ReadFile(opt.BodyFile)
+		b, err := os.ReadFile(opt.BodyFile)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

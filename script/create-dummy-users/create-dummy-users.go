@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -35,7 +34,7 @@ func main() {
 
 	var pool *x509.CertPool
 	if ca != "" {
-		b, err := ioutil.ReadFile(ca)
+		b, err := os.ReadFile(ca)
 		if err != nil {
 			panic(err)
 		}

@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -338,7 +337,7 @@ func (t *Template) inflate(dir string) error {
 
 func (idp *IdentityProvider) Load(dir string) error {
 	if idp.ClientSecretFile != "" {
-		b, err := ioutil.ReadFile(absPath(idp.ClientSecretFile, dir))
+		b, err := os.ReadFile(absPath(idp.ClientSecretFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -352,7 +351,7 @@ func (idp *IdentityProvider) Load(dir string) error {
 func (ca *CertificateAuthority) Load(dir string) error {
 	if ca.Local != nil {
 		if ca.Local.CertFile != "" {
-			b, err := ioutil.ReadFile(absPath(ca.Local.CertFile, dir))
+			b, err := os.ReadFile(absPath(ca.Local.CertFile, dir))
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
@@ -370,7 +369,7 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		}
 
 		if ca.Local.KeyFile != "" {
-			b, err := ioutil.ReadFile(absPath(ca.Local.KeyFile, dir))
+			b, err := os.ReadFile(absPath(ca.Local.KeyFile, dir))
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
@@ -411,7 +410,7 @@ func (ca *CertificateAuthority) Load(dir string) error {
 func (s *Session) Load(dir string) error {
 	switch s.Type {
 	case config.SessionTypeSecureCookie:
-		b, err := ioutil.ReadFile(absPath(s.KeyFile, dir))
+		b, err := os.ReadFile(absPath(s.KeyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -522,7 +521,7 @@ func (g *AccessProxy) Load(dir string) error {
 	if g.ProxyFile != "" {
 		g.ProxyFile = absPath(g.ProxyFile, dir)
 
-		b, err := ioutil.ReadFile(g.ProxyFile)
+		b, err := os.ReadFile(g.ProxyFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -610,7 +609,7 @@ func (c *Certificate) ReloadCertificate() error {
 
 func (g *AccessProxy) ReloadConfig() error {
 	backends := make([]*Backend, 0)
-	b, err := ioutil.ReadFile(g.ProxyFile)
+	b, err := os.ReadFile(g.ProxyFile)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -627,14 +626,14 @@ func (g *AccessProxy) ReloadConfig() error {
 
 func (c *Credential) Load(dir string) error {
 	if c.GithubWebHookSecretFile != "" {
-		b, err := ioutil.ReadFile(absPath(c.GithubWebHookSecretFile, dir))
+		b, err := os.ReadFile(absPath(c.GithubWebHookSecretFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
 		c.GithubWebhookSecret = b
 	}
 	if c.InternalTokenFile != "" {
-		b, err := ioutil.ReadFile(absPath(c.InternalTokenFile, dir))
+		b, err := os.ReadFile(absPath(c.InternalTokenFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -658,7 +657,7 @@ func (a *AuthorizationEngine) Load(dir string) error {
 	if a.RoleFile != "" {
 		a.RoleFile = absPath(a.RoleFile, dir)
 
-		b, err := ioutil.ReadFile(a.RoleFile)
+		b, err := os.ReadFile(a.RoleFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -669,7 +668,7 @@ func (a *AuthorizationEngine) Load(dir string) error {
 	if a.RPCPermissionFile != "" {
 		a.RPCPermissionFile = absPath(a.RPCPermissionFile, dir)
 
-		b, err := ioutil.ReadFile(a.RPCPermissionFile)
+		b, err := os.ReadFile(a.RPCPermissionFile)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -712,7 +711,7 @@ func (a *AuthorizationEngine) GetRPCPermission(name string) (*RPCPermission, boo
 
 func (a *AuthorizationEngine) ReloadConfig() error {
 	roles := make([]*Role, 0)
-	b, err := ioutil.ReadFile(a.RoleFile)
+	b, err := os.ReadFile(a.RoleFile)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -721,7 +720,7 @@ func (a *AuthorizationEngine) ReloadConfig() error {
 	}
 
 	rpcPermissions := make([]*RPCPermission, 0)
-	b, err = ioutil.ReadFile(a.RPCPermissionFile)
+	b, err = os.ReadFile(a.RPCPermissionFile)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -806,7 +805,7 @@ func (d *Datastore) Load(dir string) error {
 	}
 
 	if d.CACertFile != "" {
-		b, err := ioutil.ReadFile(absPath(d.CACertFile, dir))
+		b, err := os.ReadFile(absPath(d.CACertFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
@@ -819,11 +818,11 @@ func (d *Datastore) Load(dir string) error {
 		d.CertPool.AddCert(cert)
 	}
 	if d.CertFile != "" && d.KeyFile != "" {
-		b, err := ioutil.ReadFile(absPath(d.CertFile, dir))
+		b, err := os.ReadFile(absPath(d.CertFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
 		}
-		k, err := ioutil.ReadFile(absPath(d.KeyFile, dir))
+		k, err := os.ReadFile(absPath(d.KeyFile, dir))
 		c, err := tls.X509KeyPair(b, k)
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -852,13 +851,13 @@ func (d *Datastore) Load(dir string) error {
 				if err := os.MkdirAll(filepath.Join(d.DataDir), 0700); err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
-				err = ioutil.WriteFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename), []byte(u.String()), 0600)
+				err = os.WriteFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename), []byte(u.String()), 0600)
 				if err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
 				d.EtcdUrl = u
 			} else {
-				b, err := ioutil.ReadFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename))
+				b, err := os.ReadFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename))
 				if err != nil {
 					return xerrors.Errorf(": %v", err)
 				}
@@ -1090,7 +1089,7 @@ func absPath(path, dir string) string {
 }
 
 func readPrivateKey(path string) (*ecdsa.PrivateKey, error) {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}

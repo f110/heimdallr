@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -689,7 +688,7 @@ func (t *Tracker) Save(path string) {
 		return
 	}
 
-	err = ioutil.WriteFile(path, buf, 0644)
+	err = os.WriteFile(path, buf, 0644)
 	if err != nil {
 		log.Print(err)
 	}
