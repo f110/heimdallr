@@ -51,7 +51,7 @@ func (u *UserDir) GetToken() (string, error) {
 }
 
 func (u *UserDir) SetToken(token string) error {
-	if err := u.writeFile(TokenFilename, []byte(token), 0400); err != nil {
+	if err := u.writeFile(TokenFilename, []byte(token), 0600); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
