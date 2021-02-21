@@ -474,6 +474,7 @@ func (t *Tunnel) Proxy(m *Matcher, host, resolver string, body io.Reader) bool {
 		"--resolver",
 		resolver,
 		"proxy",
+		"--insecure",
 		host,
 	)
 	cmd.Env = []string{"HOME=" + t.Homedir}

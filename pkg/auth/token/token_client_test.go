@@ -55,7 +55,7 @@ func TestClient_RequestToken(t *testing.T) {
 	}))
 
 	c := NewClient(net.DefaultResolver)
-	gotToken, err := c.RequestToken(s.URL, "")
+	gotToken, err := c.RequestToken(s.URL, "", false)
 	require.NoError(t, err)
 
 	assert.Equal(t, t.Name(), gotToken)
