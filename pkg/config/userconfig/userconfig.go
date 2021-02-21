@@ -8,20 +8,24 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
+
+	"go.f110.dev/heimdallr/pkg/cert"
 )
 
 const (
 	Directory = ".heimdallr"
 
-	tokenFilename       = "token"
-	certificateFilename = "client.crt"
-	privateKeyFilename  = "client.key"
+	TokenFilename       = "token"
+	CertificateFilename = "client.crt"
+	PrivateKeyFilename  = "client.key"
+	CSRFilename         = "client.csr"
 )
 
 type UserDir struct {
@@ -38,7 +42,7 @@ func New() (*UserDir, error) {
 }
 
 func (u *UserDir) GetToken() (string, error) {
-	b, err := u.readFile(tokenFilename)
+	b, err := u.readFile(TokenFilename)
 	if err != nil {
 		return "", xerrors.Errorf(": %w", err)
 	}
@@ -47,7 +51,7 @@ func (u *UserDir) GetToken() (string, error) {
 }
 
 func (u *UserDir) SetToken(token string) error {
-	if err := u.writeFile(tokenFilename, []byte(token), 0400); err != nil {
+	if err := u.writeFile(TokenFilename, []byte(token), 0400); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -55,13 +59,13 @@ func (u *UserDir) SetToken(token string) error {
 }
 
 func (u *UserDir) GetPrivateKey() (crypto.PrivateKey, error) {
-	if _, err := os.Stat(filepath.Join(u.home, Directory, privateKeyFilename)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(u.home, Directory, PrivateKeyFilename)); os.IsNotExist(err) {
 		if err := u.newPrivateKey(); err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 	}
 
-	buf, err := u.readFile(privateKeyFilename)
+	buf, err := u.readFile(PrivateKeyFilename)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -99,12 +103,28 @@ func (u *UserDir) GetCertificate() (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
+func (u *UserDir) GetCSR() ([]byte, error) {
+	privateKey, err := u.GetPrivateKey()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	csr, err := cert.CreateCertificateRequest(pkix.Name{}, nil, privateKey)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	if err := u.writeFile(CSRFilename, csr, 0644); err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return csr, nil
+}
+
 func (u *UserDir) SetCertificate(c *x509.Certificate) error {
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if err := u.writeFile(certificateFilename, buf.Bytes(), 0600); err != nil {
+	if err := u.writeFile(CertificateFilename, buf.Bytes(), 0600); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -112,7 +132,7 @@ func (u *UserDir) SetCertificate(c *x509.Certificate) error {
 }
 
 func (u *UserDir) getCertificate() (*x509.Certificate, error) {
-	buf, err := u.readFile(certificateFilename)
+	buf, err := u.readFile(CertificateFilename)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -154,7 +174,7 @@ func (u *UserDir) newPrivateKey() error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := u.writeFile(privateKeyFilename, buf.Bytes(), 0400); err != nil {
+	if err := u.writeFile(PrivateKeyFilename, buf.Bytes(), 0400); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 

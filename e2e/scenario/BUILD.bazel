@@ -9,15 +9,18 @@ go_test(
     args = [
         "-e2e.binary=../../$(location //cmd/heimdallr-proxy:heimdallr-proxy)",
         "-e2e.connector-binary=../../$(location //cmd/heim-connector:heim-connector)",
+        "-e2e.tunnel-binary=../../$(location //cmd/heim-tunnel:heim-tunnel)",
     ],
     data = [
         "//cmd/heim-connector",
+        "//cmd/heim-tunnel",
         "//cmd/heimdallr-proxy",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//e2e/framework",
         "//pkg/config/configv2",
+        "//pkg/config/userconfig",
         "//pkg/database",
         "//pkg/session",
     ],

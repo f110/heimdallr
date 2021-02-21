@@ -69,7 +69,13 @@ func TestTacker(t *testing.T) {
 			})
 		})
 	})
-	f.Execute()
+	doneCh := make(chan struct{})
+	go func() {
+		defer close(doneCh)
+		f.Execute()
+	}()
+
+	<-doneCh
 
 	junitTestSuites := NewJUnitTestSuites(f.tracker)
 	buf, err := xml.MarshalIndent(junitTestSuites, "", "  ")

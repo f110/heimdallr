@@ -16,7 +16,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	NewClient()
+	NewClient(net.DefaultResolver)
 }
 
 func TestClient_RequestToken(t *testing.T) {
@@ -54,8 +54,8 @@ func TestClient_RequestToken(t *testing.T) {
 		require.NoError(t, json.NewEncoder(w).Encode(token))
 	}))
 
-	c := NewClient()
-	gotToken, err := c.RequestToken(s.URL)
+	c := NewClient(net.DefaultResolver)
+	gotToken, err := c.RequestToken(s.URL, "")
 	require.NoError(t, err)
 
 	assert.Equal(t, t.Name(), gotToken)

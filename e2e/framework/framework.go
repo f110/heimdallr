@@ -3,10 +3,12 @@ package framework
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -17,7 +19,10 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
+
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 var (
@@ -42,6 +47,7 @@ var DefaultTracker = &Tracker{}
 type Framework struct {
 	Proxy  *Proxy
 	Agents *Agents
+	DNS    *dns.Server
 
 	t       *testing.T
 	tracker *Tracker
@@ -63,9 +69,45 @@ func New(t *testing.T) *Framework {
 		t.Fatalf("Failed setup proxy: %v", err)
 	}
 
+	dnsPort, err := netutil.FindUnusedPort()
+	if err != nil {
+		t.Fatal("Failed find unused port")
+	}
+	mux := dns.NewServeMux()
+	mux.HandleFunc(".", func(w dns.ResponseWriter, msg *dns.Msg) {
+		res := new(dns.Msg)
+		res.SetReply(msg)
+
+		ans := make([]dns.RR, 0)
+		for _, q := range msg.Question {
+			switch q.Qtype {
+			case dns.TypeA:
+				ans = append(ans, &dns.A{
+					Hdr: dns.RR_Header{
+						Name:   q.Name,
+						Rrtype: q.Qtype,
+						Class:  q.Qclass,
+						Ttl:    10,
+					},
+					A: net.IPv4(127, 0, 0, 1),
+				})
+			}
+		}
+		res.Answer = ans
+
+		w.WriteMsg(res)
+	})
+	dnsServer := &dns.Server{
+		Addr:    fmt.Sprintf(":%d", dnsPort),
+		Net:     "udp",
+		Handler: mux,
+	}
+	go dnsServer.ListenAndServe()
+
 	return &Framework{
 		Proxy:   p,
-		Agents:  NewAgents(p.Domain, p.CA, p.sessionStore),
+		Agents:  NewAgents(p.Domain, p.CA, p.sessionStore, p.rpcPort, p.signPrivateKey),
+		DNS:     dnsServer,
 		t:       t,
 		tracker: DefaultTracker,
 		dryRun:  dryRun,
@@ -260,6 +302,7 @@ type testingT interface {
 	Error(...interface{})
 	Errorf(string, ...interface{})
 	Fatalf(string, ...interface{})
+	TempDir() string
 }
 
 func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy) bool {
@@ -272,7 +315,7 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy
 				s := debug.Stack()
 				done <- &execDone{Stack: string(s), Err: rErr}
 			} else if !success {
-				done <- &execDone{Failure: true}
+				done <- &execDone{Failure: true, Err: errors.New("failed execute")}
 			}
 			close(done)
 		}()
@@ -292,7 +335,9 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy
 		}
 
 		if err != nil && err.Err != nil {
-			t.Log(err.Stack)
+			if err.Stack != "" {
+				t.Log(err.Stack)
+			}
 			t.Fatalf("%s: %+v", n.route, err.Err)
 		}
 		return false
@@ -477,14 +522,22 @@ type Matcher struct {
 	lastResponse *http.Response
 	lastHttpErr  error
 
-	mockServers map[string]*MockServer
+	urlFile string
+
+	mockServers    map[string]*MockServer
+	mockTCPServers map[string]*MockTCPServer
 
 	failed   bool
 	messages []string
 }
 
 func NewMatcher(t *testing.T, route string) *Matcher {
-	return &Matcher{t: t, route: route, mockServers: make(map[string]*MockServer)}
+	return &Matcher{
+		t:              t,
+		route:          route,
+		mockServers:    make(map[string]*MockServer),
+		mockTCPServers: make(map[string]*MockTCPServer),
+	}
 }
 
 func (m *Matcher) wrapTesting(t *testingSpy) *Matcher {
@@ -529,6 +582,10 @@ func (m *Matcher) LastResponse() *HttpResponse {
 
 func (m *Matcher) MockServer(name string) *MockServer {
 	return m.mockServers[name]
+}
+
+func (m *Matcher) MockTCPServer(name string) *MockTCPServer {
+	return m.mockTCPServers[name]
 }
 
 func (m *Matcher) ResetConnection() bool {
@@ -606,6 +663,19 @@ func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) bool {
 
 func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) bool {
 	return assert.NotEmpty(m.t, object, msgAndArgs...)
+}
+
+func (m *Matcher) FileExists(path string, msgANdArgs ...interface{}) bool {
+	return assert.FileExists(m.t, path, msgANdArgs...)
+}
+
+func (m *Matcher) OpenURL() bool {
+	if m.urlFile == "" {
+		return assert.Fail(m.t, "Not open URL")
+	}
+	buf, err := os.ReadFile(m.urlFile)
+	assert.NoError(m.t, err)
+	return assert.Greater(m.t, len(buf), 1)
 }
 
 type Tracker struct {

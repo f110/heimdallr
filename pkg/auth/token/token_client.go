@@ -35,7 +35,7 @@ func NewClient(resolver *net.Resolver) *Client {
 	return &Client{resolver: resolver}
 }
 
-func (c *Client) RequestToken(endpoint string) (string, error) {
+func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string) (string, error) {
 	verifier := c.newVerifier()
 
 	u, err := url.Parse(endpoint)
@@ -47,7 +47,7 @@ func (c *Client) RequestToken(endpoint string) (string, error) {
 	v.Set("challenge_method", "S256")
 	u.RawQuery = v.Encode()
 	u.Path = u.Path + "/authorize"
-	if err := OpenBrowser(u.String()); err != nil {
+	if err := OpenBrowser(u.String(), overrideOpenURLCommand); err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
 
@@ -57,7 +57,7 @@ func (c *Client) RequestToken(endpoint string) (string, error) {
 	}
 	token, err := c.exchangeToken(endpoint, code, verifier)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.Errorf(": %w", err)
 	}
 
 	return token, nil
@@ -71,11 +71,10 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, err
 	if err != nil {
 		return "", xerrors.Errorf(": %v", err)
 	}
-	dialer := net.Dialer{Resolver: c.resolver}
+	dialer := &net.Dialer{Resolver: c.resolver}
 	client := &http.Client{
 		Transport: &http.Transport{
-			DialContext:    dialer.DialContext,
-			DialTLSContext: dialer.DialContext,
+			DialContext: dialer.DialContext,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -86,7 +85,7 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string) (string, err
 		return "", xerrors.Errorf(": %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return "", xerrors.New("localproxy: failure exchange token")
+		return "", xerrors.Errorf("localproxy: failure exchange token: Code=%d", res.StatusCode)
 	}
 
 	exchange := &ExchangeResponse{}

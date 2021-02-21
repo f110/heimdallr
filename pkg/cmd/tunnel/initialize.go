@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
@@ -26,11 +24,7 @@ func initializeTunnel(force bool) error {
 		}
 	}
 
-	privateKey, err := uc.GetPrivateKey()
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	csr, err := cert.CreateCertificateRequest(pkix.Name{}, nil, privateKey)
+	csr, err := uc.GetCSR()
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

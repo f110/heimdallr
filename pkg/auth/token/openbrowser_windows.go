@@ -7,7 +7,10 @@ import (
 	"syscall"
 )
 
-func OpenBrowser(u string) error {
+func OpenBrowser(u, commandOverride string) error {
+	if commandOverride != "" {
+		return execCommand(commandOverride, u)
+	}
 	cmd := exec.Command("cmd", "/c", "start", strings.Replace(u, "&", "^&", -1))
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

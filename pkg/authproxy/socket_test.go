@@ -321,7 +321,7 @@ func TestClient_Dial(t *testing.T) {
 
 		r, w := io.Pipe()
 		v := NewSocketProxyClient(r, w)
-		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token")
+		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token", net.DefaultResolver)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -385,7 +385,7 @@ func TestClient_Dial(t *testing.T) {
 
 		r, w := io.Pipe()
 		v := NewSocketProxyClient(r, w)
-		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token")
+		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token", net.DefaultResolver)
 		require.Error(t, err)
 		msgErr, ok := err.(MessageError)
 		require.True(t, ok, "Expect return MessageError")

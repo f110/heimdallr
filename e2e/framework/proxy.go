@@ -11,8 +11,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	mrand "math/rand"
@@ -57,11 +59,18 @@ const (
 var (
 	binaryPath          *string
 	connectorBinaryPath *string
+	tunnelBinaryPath    *string
 )
 
 func init() {
 	binaryPath = flag.String("e2e.binary", "", "")
 	connectorBinaryPath = flag.String("e2e.connector-binary", "", "")
+	tunnelBinaryPath = flag.String("e2e.tunnel-binary", "", "")
+}
+
+type mockServer interface {
+	Start() error
+	Stop() error
 }
 
 type MockServer struct {
@@ -104,6 +113,92 @@ func (s *MockServer) Stop() error {
 
 func (s *MockServer) Requests() []*http.Request {
 	return s.gotRequests
+}
+
+type MockTCPServer struct {
+	Port int
+
+	listener net.Listener
+
+	mu         sync.Mutex
+	activeConn map[string]net.Conn
+}
+
+func NewMockTCPServer() (*MockTCPServer, error) {
+	port, err := netutil.FindUnusedPort()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return &MockTCPServer{Port: port, activeConn: make(map[string]net.Conn)}, nil
+}
+
+func (s *MockTCPServer) Start() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if *e2eDebug {
+		log.Print("Start test tcp server")
+	}
+	s.listener = lis
+	go func() {
+		for {
+			conn, err := s.listener.Accept()
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
+			if err != nil {
+				log.Printf("Error accept new conn: %v", err)
+				continue
+			}
+			go s.accept(conn)
+		}
+	}()
+
+	return nil
+}
+
+func (s *MockTCPServer) Stop() error {
+	if s.listener == nil {
+		return nil
+	}
+
+	s.mu.Lock()
+	conns := make([]net.Conn, 0)
+	for _, conn := range s.activeConn {
+		conns = append(conns, conn)
+	}
+	s.mu.Unlock()
+	for _, conn := range conns {
+		if err := conn.Close(); err != nil {
+			log.Printf("Failed close connection of %s: %v", conn.RemoteAddr().String(), err)
+		}
+	}
+
+	return s.listener.Close()
+}
+
+func (s *MockTCPServer) accept(conn net.Conn) {
+	s.mu.Lock()
+	s.activeConn[conn.RemoteAddr().String()] = conn
+	s.mu.Unlock()
+
+	conn.Write([]byte("HELLO"))
+
+	buf := make([]byte, 1024)
+	for {
+		_, err := conn.Read(buf)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			break
+		}
+	}
+
+	s.mu.Lock()
+	delete(s.activeConn, conn.RemoteAddr().String())
+	s.mu.Unlock()
 }
 
 type Connector struct {
@@ -226,8 +321,8 @@ type Proxy struct {
 	roles              []*configv2.Role
 	rpcPermissions     []*configv2.RPCPermission
 	users              []*database.User
-	mockServers        []*MockServer
-	runningMockServers []*MockServer
+	mockServers        []mockServer
+	runningMockServers []mockServer
 	connectors         []*Connector
 
 	configBuf                []byte
@@ -374,6 +469,14 @@ func (p *Proxy) URL(subdomain string, pathAnd ...string) string {
 	}
 }
 
+func (p *Proxy) Host(name string) string {
+	return fmt.Sprintf("%s.%s", name, p.Domain)
+}
+
+func (p *Proxy) ProxyAddr() string {
+	return fmt.Sprintf(":%d", p.proxyPort)
+}
+
 func (p *Proxy) Backend(b *configv2.Backend) {
 	p.backends = append(p.backends, b)
 }
@@ -396,6 +499,17 @@ func (p *Proxy) MockServer(m *Matcher, name string) *MockServer {
 		return nil
 	}
 	m.mockServers[name] = s
+	p.mockServers = append(p.mockServers, s)
+
+	return s
+}
+
+func (p *Proxy) MockTCPServer(m *Matcher, name string) *MockTCPServer {
+	s, err := NewMockTCPServer()
+	if err != nil {
+		return nil
+	}
+	m.mockTCPServers[name] = s
 	p.mockServers = append(p.mockServers, s)
 
 	return s
@@ -723,7 +837,7 @@ func (p *Proxy) waitForStart() error {
 
 func (p *Proxy) setup(dir string) error {
 	s := strings.SplitN(p.Domain, ":", 2)
-	hosts := []string{s[0]}
+	hosts := []string{s[0], "dashboard." + s[0]}
 	for _, b := range p.backends {
 		if b.FQDN != "" {
 			hosts = append(hosts, b.FQDN)

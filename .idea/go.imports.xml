@@ -3,10 +3,12 @@
   <component name="GoImports">
     <option name="excludedPackages">
       <array>
+        <option value="github.com/docker/docker/api/types/time" />
         <option value="github.com/golangplus/testing/assert" />
         <option value="github.com/influxdata/influxdb/pkg/testing/assert" />
         <option value="github.com/mitchellh/go-testing-interface" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/fmt" />
+        <option value="golang.org/x/tools/go/ssa/interp/testdata/src/time" />
         <option value="gotest.tools/assert" />
         <option value="gotest.tools/v3/assert" />
       </array>

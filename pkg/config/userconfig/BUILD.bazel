@@ -5,7 +5,10 @@ go_library(
     srcs = ["userconfig.go"],
     importpath = "go.f110.dev/heimdallr/pkg/config/userconfig",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/golang.org/x/xerrors"],
+    deps = [
+        "//pkg/cert",
+        "//vendor/golang.org/x/xerrors",
+    ],
 )
 
 go_test(
