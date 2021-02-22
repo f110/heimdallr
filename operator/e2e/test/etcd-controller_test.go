@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -20,6 +19,7 @@ import (
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
+	"go.f110.dev/heimdallr/pkg/poll"
 )
 
 var (
@@ -293,8 +293,8 @@ func TestEtcdController(t *testing.T) {
 				}
 				dataPutTime := time.Now()
 
-				err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
-					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				err = poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
+					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						return false, nil
 					}
@@ -322,8 +322,8 @@ func TestEtcdController(t *testing.T) {
 					}
 				}
 
-				err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
-					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
+				err = poll.PollImmediate(context.TODO(), 10*time.Second, 3*time.Minute, func(ctx context.Context) (bool, error) {
+					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
 					if err != nil {
 						return false, nil
 					}

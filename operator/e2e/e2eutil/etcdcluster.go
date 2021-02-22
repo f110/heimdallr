@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -20,11 +19,12 @@ import (
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/poll"
 )
 
 func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alpha2.EtcdCluster, phase etcdv1alpha2.EtcdClusterPhase, timeout time.Duration) error {
-	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		ec, err := client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
+	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
+		ec, err := client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(ctx, ec.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -38,8 +38,8 @@ func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alph
 }
 
 func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha2.Proxy, phase proxyv1alpha2.ProxyPhase, timeout time.Duration) error {
-	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
+		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -53,8 +53,8 @@ func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha2.Pro
 }
 
 func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha2.Proxy, timeout time.Duration) error {
-	return wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
-		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
+		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

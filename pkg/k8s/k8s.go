@@ -20,12 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+
+	"go.f110.dev/heimdallr/pkg/poll"
 )
 
 func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
@@ -80,9 +81,9 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 		}
 	}
 
-	err = wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {
+	err = poll.PollImmediate(context.TODO(), 10*time.Second, timeout, func(ctx context.Context) (bool, error) {
 		for name := range createdCRD {
-			_, err := apiextensionsClient.CustomResourceDefinitions().Get(context.TODO(), name, metav1.GetOptions{})
+			_, err := apiextensionsClient.CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
 			if err == nil {
 				delete(createdCRD, name)
 			}
@@ -250,7 +251,7 @@ func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
 		}
 
 		method := http.MethodPatch
-		err = wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+		err = poll.PollImmediate(context.TODO(), 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
 			var req *rest.Request
 			switch method {
 			case http.MethodPatch:
@@ -270,7 +271,7 @@ func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
 				Name(obj.GetName()).
 				VersionedParams(&metav1.PatchOptions{FieldManager: fieldManager, Force: &force}, metav1.ParameterCodec).
 				Body(data).
-				Do(context.TODO())
+				Do(ctx)
 			if err := res.Error(); err != nil {
 				switch {
 				case apierrors.IsAlreadyExists(err):

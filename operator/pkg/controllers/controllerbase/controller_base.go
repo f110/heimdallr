@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -85,7 +84,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	for i := 0; i < workers; i++ {
-		go wait.Until(c.worker, time.Second, ctx.Done())
+		go c.worker()
 	}
 
 	<-ctx.Done()

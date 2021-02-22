@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "poll",
+    srcs = ["poll.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/poll",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/xerrors"],
+)

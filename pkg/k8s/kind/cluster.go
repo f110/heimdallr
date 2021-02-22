@@ -22,7 +22,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -33,6 +32,7 @@ import (
 	"go.f110.dev/heimdallr/manifest/certmanager"
 	"go.f110.dev/heimdallr/manifest/minio"
 	"go.f110.dev/heimdallr/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/poll"
 )
 
 var KindNodeImageHash = map[string]string{
@@ -287,7 +287,7 @@ func (c *Cluster) WaitReady(ctx context.Context) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	return wait.PollImmediate(1*time.Second, 3*time.Minute, func() (done bool, err error) {
+	return poll.PollImmediate(ctx, 1*time.Second, 3*time.Minute, func(ctx2 context.Context) (done bool, err error) {
 		nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false, err
@@ -425,14 +425,14 @@ func createMinIOBucket(cfg *rest.Config) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	err = wait.PollImmediate(10*time.Second, 3*time.Minute, func() (bool, error) {
-		svc, err := client.CoreV1().Services(metav1.NamespaceDefault).Get(context.Background(), "minio", metav1.GetOptions{})
+	err = poll.PollImmediate(context.TODO(), 10*time.Second, 3*time.Minute, func(ctx context.Context) (bool, error) {
+		svc, err := client.CoreV1().Services(metav1.NamespaceDefault).Get(ctx, "minio", metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}
 
 		var forwarder *portforward.PortForwarder
-		forwarder, err = portForward(context.TODO(), cfg, client, svc, int(svc.Spec.Ports[0].Port))
+		forwarder, err = portForward(ctx, cfg, client, svc, int(svc.Spec.Ports[0].Port))
 		if err != nil {
 			return false, nil
 		}
