@@ -1,4 +1,4 @@
-package framework
+package btesting
 
 import (
 	"encoding/xml"
@@ -42,7 +42,7 @@ func TestJUnit(t *testing.T) {
 
 func TestTacker(t *testing.T) {
 	stubT := &testing.T{}
-	f := New(stubT)
+	f := New(stubT, "")
 	f.Describe("About Foo", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
 			s.It("Baz", func(m *Matcher) bool {
@@ -72,7 +72,7 @@ func TestTacker(t *testing.T) {
 	doneCh := make(chan struct{})
 	go func() {
 		defer close(doneCh)
-		f.Execute()
+		f.Execute("")
 	}()
 
 	<-doneCh

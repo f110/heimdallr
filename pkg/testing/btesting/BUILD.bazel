@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "btesting",
+    srcs = [
+        "doc.go",
+        "junit.go",
+        "match.go",
+        "mock.go",
+        "testing.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/testing/btesting",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/netutil",
+        "//vendor/github.com/fatih/color",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)
+
+go_test(
+    name = "btesting_test",
+    srcs = [
+        "junit_test.go",
+        "testing_test.go",
+    ],
+    data = glob(["testdata/**"]),
+    embed = [":btesting"],
+    deps = [
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
+)

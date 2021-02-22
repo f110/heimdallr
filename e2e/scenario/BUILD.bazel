@@ -23,5 +23,6 @@ go_test(
         "//pkg/config/userconfig",
         "//pkg/database",
         "//pkg/session",
+        "//pkg/testing/btesting",
     ],
 )

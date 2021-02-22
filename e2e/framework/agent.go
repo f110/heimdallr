@@ -22,6 +22,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -33,6 +34,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 	"go.f110.dev/heimdallr/pkg/session"
+	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
 type resolver struct {
@@ -272,10 +274,10 @@ type Agent struct {
 	tempDir     string
 }
 
-func (a *Agent) Get(m *Matcher, u string) bool {
+func (a *Agent) Get(m *btesting.Matcher, u string) bool {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		m.lastHttpErr = err
+		m.SetLastResponse(nil, err)
 		return false
 	}
 	if len(a.cookies) > 0 {
@@ -285,9 +287,8 @@ func (a *Agent) Get(m *Matcher, u string) bool {
 	}
 
 	res, err := a.client.Do(req)
-	m.lastResponse = res
-	m.lastHttpErr = err
-	m.done = true
+	m.SetLastResponse(res, err)
+	m.Done()
 
 	a.lastResponse = res
 	a.lastErr = err
@@ -295,10 +296,10 @@ func (a *Agent) Get(m *Matcher, u string) bool {
 	return true
 }
 
-func (a *Agent) Post(m *Matcher, u, body string) bool {
+func (a *Agent) Post(m *btesting.Matcher, u, body string) bool {
 	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(body))
 	if err != nil {
-		m.lastHttpErr = err
+		m.SetLastResponse(nil, err)
 		return false
 	}
 	if len(body) > 0 {
@@ -311,9 +312,8 @@ func (a *Agent) Post(m *Matcher, u, body string) bool {
 	}
 
 	res, err := a.client.Do(req)
-	m.lastResponse = res
-	m.lastHttpErr = err
-	m.done = true
+	m.SetLastResponse(res, err)
+	m.Done()
 
 	a.lastResponse = res
 	a.lastErr = err
@@ -325,22 +325,20 @@ func (a *Agent) Post(m *Matcher, u, body string) bool {
 	return true
 }
 
-func (a *Agent) FollowRedirect(m *Matcher) error {
+func (a *Agent) FollowRedirect(m *btesting.Matcher) error {
 	if a.lastResponse == nil {
 		return xerrors.New("Agent does not have any response. Probably, test suite's bug.")
 	}
 	u, err := a.lastResponse.Location()
 	if err != nil {
-		m.lastResponse = nil
-		m.lastHttpErr = err
+		m.SetLastResponse(nil, err)
 		a.lastResponse = nil
 		a.lastErr = err
 		return err
 	}
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
-		m.lastResponse = nil
-		m.lastHttpErr = err
+		m.SetLastResponse(nil, err)
 		a.lastResponse = nil
 		a.lastErr = err
 		return err
@@ -351,11 +349,12 @@ func (a *Agent) FollowRedirect(m *Matcher) error {
 		}
 	}
 
-	m.lastResponse, m.lastHttpErr = a.client.Do(req)
-	a.lastResponse = m.lastResponse
-	a.lastErr = m.lastHttpErr
-	if m.lastHttpErr != nil {
-		return m.lastHttpErr
+	res, err := a.client.Do(req)
+	m.SetLastResponse(res, err)
+	a.lastResponse = res
+	a.lastErr = err
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -371,13 +370,13 @@ func (a *Agent) SaveCookie() {
 	}
 }
 
-func (a *Agent) Tunnel(m *Matcher) *Tunnel {
+func (a *Agent) Tunnel(m *btesting.Matcher) *Tunnel {
 	if a.tunnel != nil {
 		return a.tunnel
 	}
 
 	a.tempDirOnce.Do(func() {
-		tmpDir := m.t.TempDir()
+		tmpDir := m.T.TempDir()
 		a.tempDir = tmpDir
 
 		err := os.WriteFile(filepath.Join(a.tempDir, "open-url"), []byte(openURLCommandScript), 0755)
@@ -398,8 +397,9 @@ type Tunnel struct {
 	Homedir string
 	Buf     *bytes.Buffer
 
-	bin string
-	cmd *exec.Cmd
+	bin     string
+	cmd     *exec.Cmd
+	urlFile string
 }
 
 func NewTunnel(homedir string) *Tunnel {
@@ -441,7 +441,7 @@ func (t *Tunnel) LoadCert(c []byte) bool {
 	return true
 }
 
-func (t *Tunnel) Proxy(m *Matcher, host, resolver string, body io.Reader) bool {
+func (t *Tunnel) Proxy(m *btesting.Matcher, host, resolver string, body io.Reader) bool {
 	if t.cmd != nil {
 		return false
 	}
@@ -488,7 +488,7 @@ func (t *Tunnel) Proxy(m *Matcher, host, resolver string, body io.Reader) bool {
 	}
 	t.cmd = cmd
 	t.Buf = buf
-	m.urlFile = filepath.Join(t.Homedir, "url.txt")
+	t.urlFile = filepath.Join(t.Homedir, "url.txt")
 	openBrowserNotifyCh := make(chan struct{})
 	doneCh := make(chan struct{})
 	defer close(doneCh)
@@ -499,7 +499,7 @@ func (t *Tunnel) Proxy(m *Matcher, host, resolver string, body io.Reader) bool {
 		for {
 			select {
 			case <-tick.C:
-				info, err := os.Stat(m.urlFile)
+				info, err := os.Stat(t.urlFile)
 				if err != nil {
 					continue
 				}
@@ -523,7 +523,16 @@ func (t *Tunnel) Proxy(m *Matcher, host, resolver string, body io.Reader) bool {
 	}
 }
 
-func (t *Tunnel) GetFirstCertificate(m *Matcher, rpcClient *rpcclient.ClientWithUserToken) []byte {
+func (t *Tunnel) OpenURL(m *btesting.Matcher) bool {
+	if t.urlFile == "" {
+		return assert.Fail(m.T, "Not open URL")
+	}
+	buf, err := os.ReadFile(t.urlFile)
+	assert.NoError(m.T, err)
+	return assert.Greater(m.T, len(buf), 1)
+}
+
+func (t *Tunnel) GetFirstCertificate(m *btesting.Matcher, rpcClient *rpcclient.ClientWithUserToken) []byte {
 	certs, err := rpcClient.ListCert()
 	m.Must(err)
 	if len(certs) != 1 {
@@ -537,7 +546,7 @@ func (t *Tunnel) GetFirstCertificate(m *Matcher, rpcClient *rpcclient.ClientWith
 	return cert.Certificate
 }
 
-func (t *Tunnel) CSR(m *Matcher) string {
+func (t *Tunnel) CSR(m *btesting.Matcher) string {
 	buf, err := os.ReadFile(filepath.Join(t.Homedir, userconfig.Directory, userconfig.CSRFilename))
 	if err != nil {
 		m.Failf("Failed CSR file: %v", err)

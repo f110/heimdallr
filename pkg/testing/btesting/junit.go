@@ -1,6 +1,8 @@
-package framework
+package btesting
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+)
 
 type JUnitTestSuites struct {
 	XMLName    xml.Name         `xml:"testsuites"`

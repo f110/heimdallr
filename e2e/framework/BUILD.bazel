@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "framework",
@@ -6,7 +6,6 @@ go_library(
         "agent.go",
         "framework.go",
         "idp.go",
-        "junit.go",
         "proxy.go",
     ],
     importpath = "go.f110.dev/heimdallr/e2e/framework",
@@ -22,8 +21,8 @@ go_library(
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
+        "//pkg/testing/btesting",
         "//vendor/github.com/dgrijalva/jwt-go",
-        "//vendor/github.com/fatih/color",
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/gorilla/securecookie",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
@@ -36,19 +35,5 @@ go_library(
         "//vendor/google.golang.org/grpc/keepalive",
         "//vendor/gopkg.in/square/go-jose.v2:go-jose_v2",
         "//vendor/sigs.k8s.io/yaml",
-    ],
-)
-
-go_test(
-    name = "framework_test",
-    srcs = [
-        "framework_test.go",
-        "junit_test.go",
-    ],
-    data = glob(["testdata/**"]),
-    embed = [":framework"],
-    deps = [
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
     ],
 )
