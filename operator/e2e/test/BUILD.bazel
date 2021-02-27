@@ -23,7 +23,6 @@ go_test(
         "-sidecar-image-file=$(location //container:image_sidecar.tar)",
         "-all-in-one-manifest=$(location //operator/deploy/e2e:all-in-one)",
         "-build-version=" + VERSION,
-        "-retain"
     ],
     data = [
         "//container:image.tar",
