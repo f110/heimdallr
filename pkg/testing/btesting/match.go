@@ -56,6 +56,10 @@ func (m *Matcher) Done() {
 	m.done = true
 }
 
+func (m *Matcher) Failed() bool {
+	return m.failed
+}
+
 func (m *Matcher) NoError(err error, msg ...string) {
 	if err != nil {
 		m.Fail(msg...)
@@ -85,24 +89,39 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 	m.T.Logf(format, args...)
 }
 
-func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool {
-	return assert.Equal(m.T, expected, actual, msgAndArgs...)
+func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
+	success := assert.Equal(m.T, expected, actual, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) Len(object interface{}, len int, msgAndArgs ...interface{}) bool {
-	return assert.Len(m.T, object, len, msgAndArgs...)
+func (m *Matcher) Len(object interface{}, len int, msgAndArgs ...interface{}) {
+	success := assert.Len(m.T, object, len, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) True(value bool, msgAndArgs ...interface{}) bool {
-	return assert.True(m.T, value, msgAndArgs...)
+func (m *Matcher) True(value bool, msgAndArgs ...interface{}) {
+	success := assert.True(m.T, value, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) False(value bool, msgAndArgs ...interface{}) bool {
-	return assert.False(m.T, value, msgAndArgs...)
+func (m *Matcher) False(value bool, msgAndArgs ...interface{}) {
+	success := assert.False(m.T, value, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) Contains(s, contains interface{}, msgAndArgs ...interface{}) bool {
-	return assert.Contains(m.T, s, contains, msgAndArgs)
+func (m *Matcher) Contains(s, contains interface{}, msgAndArgs ...interface{}) {
+	success := assert.Contains(m.T, s, contains, msgAndArgs)
+	if !success {
+		m.failed = true
+	}
 }
 
 func (m *Matcher) NotNil(object interface{}, msg ...string) {
@@ -111,16 +130,25 @@ func (m *Matcher) NotNil(object interface{}, msg ...string) {
 	}
 }
 
-func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) bool {
-	return assert.Empty(m.T, object, msgAndArgs...)
+func (m *Matcher) Empty(object interface{}, msgAndArgs ...interface{}) {
+	success := assert.Empty(m.T, object, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) bool {
-	return assert.NotEmpty(m.T, object, msgAndArgs...)
+func (m *Matcher) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
+	success := assert.NotEmpty(m.T, object, msgAndArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
-func (m *Matcher) FileExists(path string, msgANdArgs ...interface{}) bool {
-	return assert.FileExists(m.T, path, msgANdArgs...)
+func (m *Matcher) FileExists(path string, msgANdArgs ...interface{}) {
+	success := assert.FileExists(m.T, path, msgANdArgs...)
+	if !success {
+		m.failed = true
+	}
 }
 
 type HttpResponse struct {
@@ -158,16 +186,15 @@ func (m *HTTPMatcher) LastResponse() *HttpResponse {
 	return &HttpResponse{Response: m.lastResponse}
 }
 
-func (m *HTTPMatcher) StatusCode(code int, msgAndArgs ...interface{}) bool {
-	return assert.Equal(m.t, code, m.LastResponse().StatusCode, msgAndArgs...)
+func (m *HTTPMatcher) StatusCode(code int, msgAndArgs ...interface{}) {
+	m.m.Equal(code, m.LastResponse().StatusCode, msgAndArgs...)
 }
 
-func (m *HTTPMatcher) ResetConnection() bool {
+func (m *HTTPMatcher) ResetConnection() {
 	if !m.m.done {
 		m.m.Fail("not send request")
 	}
 	if m.lastResponse != nil || m.lastHttpErr == nil {
 		m.m.Failf("expect connection reset: %v", m.lastHttpErr)
 	}
-	return true
 }

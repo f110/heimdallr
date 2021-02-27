@@ -344,51 +344,47 @@ func (c *EtcdCluster) Destroy(client *clientset.Clientset) {
 	_ = client.EtcdV1alpha2().EtcdClusters(c.Namespace).Delete(context.TODO(), c.Name, metav1.DeleteOptions{})
 }
 
-func (c *EtcdCluster) NumOfPods(m *btesting.Matcher, length int) bool {
+func (c *EtcdCluster) NumOfPods(m *btesting.Matcher, length int) {
 	if c.EtcdCluster == nil {
 		m.Fail("EtcdCluster is not found")
-		return false
 	}
 	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.NoError(err)
-	return m.Len(pods.Items, length)
+	m.Len(pods.Items, length)
 }
 
-func (c *EtcdCluster) EqualVersion(m *btesting.Matcher, version string) bool {
+func (c *EtcdCluster) EqualVersion(m *btesting.Matcher, version string) {
 	if c.EtcdCluster == nil {
 		m.Fail("EtcdCluster is not found")
-		return false
 	}
 	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.NoError(err)
 	if len(pods.Items) == 0 {
 		m.Fail("Pod is not found")
-		return false
 	}
 	for _, pod := range pods.Items {
 		m.Equal(version, pod.Labels[etcd.LabelNameEtcdVersion])
 	}
-	return true
 }
 
-func (c *EtcdCluster) HavePVC(m *btesting.Matcher) bool {
-	return c.haveDataVolume(m, "pvc")
+func (c *EtcdCluster) HavePVC(m *btesting.Matcher) {
+	c.haveDataVolume(m, "pvc")
 }
 
-func (c *EtcdCluster) HaveEmptyDir(m *btesting.Matcher) bool {
-	return c.haveDataVolume(m, "emptydir")
+func (c *EtcdCluster) HaveEmptyDir(m *btesting.Matcher) {
+	c.haveDataVolume(m, "emptydir")
 }
 
-func (c *EtcdCluster) Ready(m *btesting.Matcher) bool {
+func (c *EtcdCluster) Ready(m *btesting.Matcher) {
 	if c.EtcdCluster == nil {
-		return false
+		m.Fail("etcd cluster is not found")
 	}
-	return m.True(c.EtcdCluster.Status.Ready)
+	m.True(c.EtcdCluster.Status.Ready)
 }
 
-func (c *EtcdCluster) haveDataVolume(m *btesting.Matcher, source string) bool {
+func (c *EtcdCluster) haveDataVolume(m *btesting.Matcher, source string) {
 	if c.EtcdCluster == nil {
-		return false
+		m.Fail("etcd cluster is not found")
 	}
 	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.Must(err)
@@ -406,5 +402,7 @@ func (c *EtcdCluster) haveDataVolume(m *btesting.Matcher, source string) bool {
 			}
 		}
 	}
-	return found
+	if !found {
+		m.Fail("could not found data volume")
+	}
 }

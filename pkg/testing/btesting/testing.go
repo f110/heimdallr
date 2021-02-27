@@ -93,8 +93,8 @@ type Scenario struct {
 	fn          func(s *Scenario)
 	beforeAll   *hook
 	afterAll    *hook
-	beforeEach  func(*Matcher) bool
-	afterEach   func(*Matcher) bool
+	beforeEach  func(*Matcher)
+	afterEach   func(*Matcher)
 	subject     *hook
 	subjectDone bool
 	deferFunc   func()
@@ -158,7 +158,7 @@ func (f *Scenario) Context(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) It(name string, fn func(m *Matcher) bool) {
+func (f *Scenario) It(name string, fn func(m *Matcher)) {
 	s := NewCase(f.t, f, name, f.depth+1, fn, f.beforeEach, f.afterEach, f.route+" "+name)
 	f.child = append(f.child, s)
 }
@@ -168,32 +168,32 @@ func (f *Scenario) Step(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) BeforeAll(fn func(m *Matcher) bool) {
+func (f *Scenario) BeforeAll(fn func(m *Matcher)) {
 	f.beforeAll = &hook{fn: fn}
 }
 
-func (f *Scenario) AfterAll(fn func(m *Matcher) bool) {
+func (f *Scenario) AfterAll(fn func(m *Matcher)) {
 	f.afterAll = &hook{fn: fn}
 }
 
-func (f *Scenario) BeforeEach(fn func(m *Matcher) bool) {
+func (f *Scenario) BeforeEach(fn func(m *Matcher)) {
 	if f.beforeEach != nil {
 		b := f.beforeEach
-		f.beforeEach = func(m *Matcher) bool {
+		f.beforeEach = func(m *Matcher) {
 			b(m)
-			return fn(m)
+			fn(m)
 		}
 	} else {
 		f.beforeEach = fn
 	}
 }
 
-func (f *Scenario) AfterEach(fn func(m *Matcher) bool) {
+func (f *Scenario) AfterEach(fn func(m *Matcher)) {
 	if f.afterEach != nil {
 		a := f.afterEach
-		f.afterEach = func(m *Matcher) bool {
+		f.afterEach = func(m *Matcher) {
 			a(m)
-			return fn(m)
+			fn(m)
 		}
 	} else {
 		f.afterEach = fn
@@ -204,7 +204,7 @@ func (f *Scenario) Defer(fn func()) {
 	f.deferFunc = fn
 }
 
-func (f *Scenario) Subject(fn func(m *Matcher) bool) {
+func (f *Scenario) Subject(fn func(m *Matcher)) {
 	f.subject = &hook{fn: fn}
 }
 
@@ -215,15 +215,15 @@ type Case struct {
 	depth      int
 	route      string
 	beforeAll  []*hook
-	beforeEach func(*Matcher) bool
-	afterEach  func(*Matcher) bool
+	beforeEach func(*Matcher)
+	afterEach  func(*Matcher)
 
-	fn func(m *Matcher) bool
+	fn func(m *Matcher)
 
 	t *testing.T
 }
 
-func NewCase(t *testing.T, s *Scenario, name string, depth int, fn func(m *Matcher) bool, before, after func(*Matcher) bool, route string) *Case {
+func NewCase(t *testing.T, s *Scenario, name string, depth int, fn, before, after func(*Matcher), route string) *Case {
 	return &Case{
 		Name:       name,
 		s:          s,
@@ -259,13 +259,13 @@ type node struct {
 	route      string
 	depth      int
 	child      []*node
-	fn         func(*Matcher) bool
+	fn         func(*Matcher)
 	m          *Matcher
 	beforeAll  *hook
 	afterAll   *hook
 	subject    *hook
-	beforeEach func(*Matcher) bool
-	afterEach  func(*Matcher) bool
+	beforeEach func(*Matcher)
+	afterEach  func(*Matcher)
 	deferFunc  func()
 
 	suite *testSuite
@@ -337,7 +337,7 @@ func (n *node) execute(t *testing.T) {
 	n.suite.Finish()
 }
 
-func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy) bool {
+func (n *node) executeFunc(t *testing.T, fn func(*Matcher), spy *testingSpy) bool {
 	done := make(chan *execDone)
 	go func() {
 		success := false
@@ -357,7 +357,8 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy
 		if spy != nil {
 			m = n.m.wrapTesting(spy)
 		}
-		success = fn(m)
+		fn(m)
+		success = !m.Failed()
 	}()
 
 	select {
@@ -377,7 +378,7 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy
 }
 
 type hook struct {
-	fn   func(*Matcher) bool
+	fn   func(*Matcher)
 	done bool
 }
 

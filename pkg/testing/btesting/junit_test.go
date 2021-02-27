@@ -45,27 +45,27 @@ func TestTacker(t *testing.T) {
 	f := New(stubT, "")
 	f.Describe("About Foo", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
-			s.It("Baz", func(m *Matcher) bool {
+			s.It("Baz", func(m *Matcher) {
 				time.Sleep(1 * time.Second)
-				return m.True(true)
+				m.True(true)
 			})
 		})
 
 		s.Context("Spam", func(s *Scenario) {
-			s.It("Ham", func(m *Matcher) bool {
+			s.It("Ham", func(m *Matcher) {
 				time.Sleep(1 * time.Second)
-				return m.True(true)
+				m.True(true)
 			})
 
-			s.It("Eggs", func(m *Matcher) bool {
-				return m.True(false)
+			s.It("Eggs", func(m *Matcher) {
+				m.True(false)
 			})
 		})
 	})
 	f.Describe("About FooBar", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
-			s.It("Baz", func(m *Matcher) bool {
-				return m.True(true)
+			s.It("Baz", func(m *Matcher) {
+				m.True(true)
 			})
 		})
 	})
