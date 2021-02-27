@@ -4,6 +4,7 @@ go_library(
     name = "btesting",
     srcs = [
         "doc.go",
+        "graphviz.go",
         "junit.go",
         "match.go",
         "mock.go",

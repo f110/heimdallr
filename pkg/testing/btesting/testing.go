@@ -71,6 +71,10 @@ func (b *BehaviorDriven) Execute(format string) {
 		}
 		w.WriteTo(os.Stdout)
 		return
+	case "dot":
+		f := newGraphvizFormatter(child)
+		f.Out(b.t.Name())
+		return
 	}
 
 	// 2nd phase:
@@ -125,24 +129,27 @@ func NewScenario(t *testing.T, parent *Scenario, name string, depth int, fn func
 func (f *Scenario) analyze(suite *testSuite) *node {
 	f.fn(f)
 
-	child := make([]*node, 0)
-	for _, v := range f.child {
-		n := v.analyze(suite)
-
-		child = append(child, n)
-	}
-
-	return &node{
+	n := &node{
 		name:      f.Name,
 		route:     f.route,
 		depth:     f.depth,
-		child:     child,
 		m:         f.m,
 		beforeAll: f.beforeAll,
 		afterAll:  f.afterAll,
 		deferFunc: f.deferFunc,
 		suite:     suite,
 	}
+
+	child := make([]*node, 0)
+	for _, v := range f.child {
+		c := v.analyze(suite)
+		c.parent = n
+
+		child = append(child, c)
+	}
+	n.child = child
+
+	return n
 }
 
 func (f *Scenario) newChild(t *testing.T, name string, fn func(s *Scenario)) *Scenario {
@@ -258,6 +265,7 @@ type node struct {
 	name       string
 	route      string
 	depth      int
+	parent     *node
 	child      []*node
 	fn         func(*Matcher)
 	m          *Matcher
