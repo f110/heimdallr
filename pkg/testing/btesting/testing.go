@@ -370,7 +370,7 @@ func (n *node) executeFunc(t *testing.T, fn func(*Matcher) bool, spy *testingSpy
 			if err.Stack != "" {
 				t.Log(err.Stack)
 			}
-			t.Fatalf("%s: %+v", n.route, err.Err)
+			t.Fatalf("%s: %+v ", n.route, err.Err)
 		}
 		return false
 	}

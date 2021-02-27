@@ -133,8 +133,6 @@ github.com/googleapis/gax-go/v2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/openapiv2
-# github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de
-github.com/gopherjs/gopherjs/js
 # github.com/gorilla/mux v1.7.3
 ## explicit
 github.com/gorilla/mux
@@ -194,8 +192,6 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
-# github.com/jtolds/gls v4.20.0+incompatible
-github.com/jtolds/gls
 # github.com/julienschmidt/httprouter v1.3.0
 ## explicit
 github.com/julienschmidt/httprouter
@@ -276,16 +272,6 @@ github.com/schemalex/schemalex/internal/util
 github.com/schemalex/schemalex/model
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
-# github.com/smartystreets/assertions v1.0.1
-github.com/smartystreets/assertions
-github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch
-github.com/smartystreets/assertions/internal/go-render/render
-github.com/smartystreets/assertions/internal/oglematchers
-# github.com/smartystreets/goconvey v1.6.4
-## explicit
-github.com/smartystreets/goconvey/convey
-github.com/smartystreets/goconvey/convey/gotest
-github.com/smartystreets/goconvey/convey/reporting
 # github.com/soheilhy/cmux v0.1.4
 github.com/soheilhy/cmux
 # github.com/spf13/cobra v1.0.0

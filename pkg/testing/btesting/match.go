@@ -30,7 +30,7 @@ func NewMatcher(t *testing.T, route string) *Matcher {
 		T:     t,
 		route: route,
 	}
-	m.HTTPMatcher = &HTTPMatcher{m: m}
+	m.HTTPMatcher = &HTTPMatcher{m: m, t: t}
 	return m
 }
 

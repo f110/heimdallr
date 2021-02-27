@@ -9,8 +9,8 @@ import (
 	"math/rand"
 	"testing"
 
-	_ "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/xerrors"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
@@ -20,6 +20,10 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
+)
+
+var (
+	RESTConfig *rest.Config
 )
 
 func init() {
@@ -130,21 +134,19 @@ func TestMain(m *testing.M) {
 	log.Printf("%+v", framework.Config)
 
 	var k8sCluster *kind.Cluster
-	framework.BeforeSuite(func() {
-		if v, err := setupSuite(id); err != nil {
-			log.Fatalf("%+v", err)
-		} else {
-			k8sCluster = v
-		}
-	})
+	if v, err := setupSuite(id); err != nil {
+		log.Fatalf("%+v", err)
+	} else {
+		k8sCluster = v
+	}
 
-	framework.AfterSuite(func() {
+	defer func() {
 		if k8sCluster != nil && !framework.Config.Retain {
 			if err := k8sCluster.Delete(); err != nil {
 				log.Fatalf("Could not delete a cluster: %v", err)
 			}
 		}
-	})
+	}()
 
-	framework.RunSpec(m)
+	m.Run()
 }

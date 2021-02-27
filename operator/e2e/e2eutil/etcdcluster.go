@@ -63,6 +63,37 @@ func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha2.Proxy, tim
 	})
 }
 
+func WaitForBackup(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
+	return poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
+		e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+		if e.Status.Backup == nil {
+			return false, nil
+		}
+		if e.Status.Backup.Succeeded && after.Before(e.Status.Backup.LastSucceededTime.Time) {
+			return true, nil
+		}
+
+		return false, nil
+	})
+}
+
+func WaitForRestore(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
+	return poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
+		e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+		if e.Status.Restored != nil && !e.Status.Restored.Completed {
+			return true, nil
+		}
+
+		return false, nil
+	})
+}
+
 type EtcdClient struct {
 	*clientv3.Client
 	*portforward.PortForwarder

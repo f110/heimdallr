@@ -2,351 +2,190 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/smartystreets/goconvey/convey"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"go.etcd.io/etcd/v3/clientv3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
-	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
-	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
-	"go.f110.dev/heimdallr/pkg/poll"
-)
-
-var (
-	RESTConfig *rest.Config
+	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
 func TestEtcdController(t *testing.T) {
 	t.Parallel()
+	f := framework.New(t, RESTConfig)
+	defer f.Execute()
 
-	framework.Describe(t, "EtcdController", func() {
-		framework.Context("creates a new cluster", func() {
-			framework.Context("with PersistentVolumeClaim", func() {
-				framework.It("should create some pods with PersistentVolume", func() {
-					client, err := clientset.NewForConfig(RESTConfig)
-					if err != nil {
-						t.Fatal(err)
-					}
+	f.Describe("EtcdController", func(s *btesting.Scenario) {
+		s.Context("creates a new cluster", func(s *btesting.Scenario) {
+			s.Context("with PersistentVolumeClaim", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.Setup(m, framework.Name("pvc"), framework.PersistentData)
+				})
+				s.Defer(func() { f.EtcdClusters.EtcdCluster("pvc").Destroy(f.Client()) })
 
-					etcdCluster := &etcdv1alpha2.EtcdCluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "pvc",
-							Namespace: "default",
-						},
-						Spec: etcdv1alpha2.EtcdClusterSpec{
-							Members:      3,
-							Version:      "v3.4.4",
-							AntiAffinity: true,
-							VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{
-								Spec: corev1.PersistentVolumeClaimSpec{
-									AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-									Resources: corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											"storage": resource.MustParse("1Gi"),
-										},
-									},
-								},
-							},
-						},
-					}
-					_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
+				s.It("should have 3 pods", func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.EtcdCluster("pvc").NumOfPods(m, 3)
+				})
 
-					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-						t.Fatal(err)
-					}
-
-					kubeClient, err := kubernetes.NewForConfig(RESTConfig)
-					if err != nil {
-						t.Fatal(err)
-					}
-					pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
-					if err != nil {
-						t.Fatal(err)
-					}
-					convey.So(pods.Items, convey.ShouldHaveLength, 3)
-				Item:
-					for _, pod := range pods.Items {
-						for _, vol := range pod.Spec.Volumes {
-							if vol.Name == "data" {
-								convey.So(vol.PersistentVolumeClaim, convey.ShouldNotBeNil)
-								continue Item
-							}
-						}
-
-						t.Fatal("Data volume does not attached")
-					}
-
-					newEC, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
-					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha2.ClusterPhaseRunning)
-
-					if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
-						t.Fatal(err)
-					}
+				s.It("should have persistent volume", func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.EtcdCluster("pvc").HavePVC(m)
 				})
 			})
 
-			framework.Context("with EmptyDir", func() {
-				framework.It("should create some pods", func() {
-					client, err := clientset.NewForConfig(RESTConfig)
-					if err != nil {
-						t.Fatal(err)
-					}
+			s.Context("with EmptyDir", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.Setup(m, framework.Name("memory"))
+				})
+				s.Defer(func() { f.EtcdClusters.EtcdCluster("memory").Destroy(f.Client()) })
 
-					etcdCluster := &etcdv1alpha2.EtcdCluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "create",
-							Namespace: "default",
-						},
-						Spec: etcdv1alpha2.EtcdClusterSpec{
-							Members:      3,
-							Version:      "v3.4.4",
-							AntiAffinity: true,
-						},
-					}
-					_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
+				s.It("should have 3 pods", func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.EtcdCluster("memory").NumOfPods(m, 3)
+				})
 
-					if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-						t.Fatal(err)
-					}
-
-					kubeClient, err := kubernetes.NewForConfig(RESTConfig)
-					if err != nil {
-						t.Fatal(err)
-					}
-					pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
-					if err != nil {
-						t.Fatal(err)
-					}
-					convey.So(pods.Items, convey.ShouldHaveLength, 3)
-				Item:
-					for _, pod := range pods.Items {
-						for _, vol := range pod.Spec.Volumes {
-							if vol.Name == "data" {
-								convey.So(vol.EmptyDir, convey.ShouldNotBeNil)
-								continue Item
-							}
-						}
-
-						t.Fatal("Data volume does not attached")
-					}
-
-					newEC, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
-					convey.So(newEC.Status.Phase, convey.ShouldEqual, etcdv1alpha2.ClusterPhaseRunning)
-
-					if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
-						t.Fatal(err)
-					}
+				s.It("should have EmptyDir volume", func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.EtcdCluster("memory").HaveEmptyDir(m)
 				})
 			})
 		})
 
-		framework.Context("updates the cluster", func() {
-			framework.It("recreates all pods", func() {
-				client, err := clientset.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
+		s.Context("updates the cluster", func(s *btesting.Scenario) {
+			s.Context("recreates all pods", func(s *btesting.Scenario) {
+				s.Defer(func() { f.EtcdClusters.EtcdCluster("update").Destroy(f.Client()) })
 
-				etcdCluster := &etcdv1alpha2.EtcdCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "update",
-						Namespace: "default",
-					},
-					Spec: etcdv1alpha2.EtcdClusterSpec{
-						Members: 3,
-						Version: "v3.4.3",
-					},
-				}
-				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
+				s.Step("create new cluster", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) bool {
+						return f.EtcdClusters.Setup(m, framework.Name("update"), framework.DisableAntiAffinity)
+					})
 
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-					t.Fatal(err)
-				}
+					s.It("should have 3 pods", func(m *btesting.Matcher) bool {
+						return f.EtcdClusters.EtcdCluster("update").NumOfPods(m, 3)
+					})
+				})
 
-				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				etcdCluster.Spec.Version = "v3.4.4"
-				_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Update(context.TODO(), etcdCluster, metav1.UpdateOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
+				s.Step("edit version", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) bool {
+						f.EtcdClusters.EtcdCluster("update").Reload()
+						ec := f.EtcdClusters.EtcdCluster("update").EtcdCluster
+						m.NotNil(ec)
+						ec.Spec.Version = "v3.4.4"
+						_, err := f.Client().EtcdV1alpha2().EtcdClusters(ec.Namespace).Update(context.TODO(), ec, metav1.UpdateOptions{})
+						m.Must(err)
+						return m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseUpdating, 1*time.Minute))
+					})
 
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseUpdating, 1*time.Minute); err != nil {
-					t.Fatal(err)
-				}
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-					t.Fatal(err)
-				}
+					s.It("should be ready", func(m *btesting.Matcher) bool {
+						return f.EtcdClusters.EtcdCluster("update").Ready(m)
+					})
+				})
 
-				kubeClient, err := kubernetes.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
-				pods, err := kubeClient.CoreV1().Pods(etcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, etcdCluster.Name)})
-				if err != nil {
-					t.Fatal(err)
-				}
+				s.Step("wait for running", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) bool {
+						ec := f.EtcdClusters.EtcdCluster("update").EtcdCluster
+						m.NotNil(ec)
+						return m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+					})
 
-				convey.So(pods.Items, convey.ShouldHaveLength, 3)
-				for _, v := range pods.Items {
-					convey.So(v.Labels[etcd.LabelNameEtcdVersion], convey.ShouldEqual, etcdCluster.Spec.Version)
-				}
-
-				if err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Delete(context.TODO(), etcdCluster.Name, metav1.DeleteOptions{}); err != nil {
-					t.Fatal(err)
-				}
+					s.It("all pods should have updated", func(m *btesting.Matcher) bool {
+						return f.EtcdClusters.EtcdCluster("update").EqualVersion(m, "v3.4.4")
+					})
+				})
 			})
 		})
 
-		framework.Context("restore from backup", func() {
-			framework.It("should have same data", func() {
-				client, err := clientset.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
-				kubeClient, err := kubernetes.NewForConfig(RESTConfig)
-				if err != nil {
-					t.Fatal(err)
-				}
+		s.Context("restore from backup", func(s *btesting.Scenario) {
+			var dataPutTime time.Time
+			const testDataKey = "e2e-test-data"
+			s.Defer(func() { f.EtcdClusters.EtcdCluster("restore").Destroy(f.Client()) })
 
-				etcdCluster := &etcdv1alpha2.EtcdCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "restore",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Spec: etcdv1alpha2.EtcdClusterSpec{
-						Members:      3,
-						Version:      "v3.4.4",
-						AntiAffinity: true,
-						Backup: &etcdv1alpha2.BackupSpec{
-							IntervalInSecond: 60,
-							MaxBackups:       5,
-							Storage: etcdv1alpha2.BackupStorageSpec{
-								MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
-									Bucket: kind.MinIOBucketName,
-									Path:   "restore-test",
-									ServiceSelector: etcdv1alpha2.ObjectSelector{
-										Name:      "minio",
-										Namespace: metav1.NamespaceDefault,
-									},
-									CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
-										Name:               "minio-token",
-										Namespace:          metav1.NamespaceDefault,
-										AccessKeyIDKey:     "accesskey",
-										SecretAccessKeyKey: "secretkey",
-									},
-								},
-							},
-						},
-					},
-				}
-				_, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-					t.Fatal(err)
-				}
-
-				const testDataKey = "e2e-test-data"
-				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				ecClient, err := e2eutil.NewEtcdClient(kubeClient, RESTConfig, etcdCluster)
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, err = ecClient.Put(context.TODO(), testDataKey, "ok-test")
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := ecClient.Close(); err != nil {
-					t.Fatal(err)
-				}
-				dataPutTime := time.Now()
-
-				err = poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
-					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
-					if err != nil {
-						return false, nil
-					}
-					if e.Status.Backup == nil {
-						return false, nil
-					}
-					if e.Status.Backup.Succeeded && dataPutTime.Before(e.Status.Backup.LastSucceededTime.Time) {
-						return true, nil
-					}
-
-					return false, nil
+			s.Step("create new cluster", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.Setup(m, framework.Name("restore"), framework.Backup(kind.MinIOBucketName))
 				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				etcdCluster, err = client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(context.TODO(), etcdCluster.Name, metav1.GetOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
 
-				for _, v := range etcdCluster.Status.Members {
-					err = kubeClient.CoreV1().Pods(etcdCluster.Namespace).Delete(context.TODO(), v.PodName, metav1.DeleteOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
-				}
-
-				err = poll.PollImmediate(context.TODO(), 10*time.Second, 3*time.Minute, func(ctx context.Context) (bool, error) {
-					e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
-					if err != nil {
-						return false, nil
-					}
-					if e.Status.Restored != nil && !e.Status.Restored.Completed {
-						return true, nil
-					}
-
-					return false, nil
+				s.It("should have 3 pods", func(m *btesting.Matcher) bool {
+					return f.EtcdClusters.EtcdCluster("restore").NumOfPods(m, 3)
 				})
-				if err := e2eutil.WaitForStatusOfEtcdClusterBecome(client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute); err != nil {
-					t.Fatal(err)
-				}
+			})
 
-				ecClient, err = e2eutil.NewEtcdClient(kubeClient, RESTConfig, etcdCluster)
-				if err != nil {
-					t.Fatal(err)
-				}
-				res, err := ecClient.Get(context.TODO(), testDataKey)
-				if err != nil {
-					t.Fatal(err)
-				}
-				convey.So(res.Count, convey.ShouldEqual, 1)
-				convey.So(string(res.Kvs[0].Value), convey.ShouldEqual, "ok-test")
+			s.Step("write data", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					f.EtcdClusters.EtcdCluster("restore").Reload()
+					ecClient := f.EtcdClusters.EtcdCluster("restore").Client(m)
+					_, err := ecClient.Put(context.TODO(), testDataKey, "ok-test")
+					m.Must(err)
+					dataPutTime = time.Now()
+					return m.Must(ecClient.Close())
+				})
+
+				s.It("should return data", func(m *btesting.Matcher) bool {
+					ecClient := f.EtcdClusters.EtcdCluster("restore").Client(m)
+					_, err := ecClient.Get(context.TODO(), testDataKey)
+					m.Must(err)
+					return true
+				})
+			})
+
+			s.Step("waiting for backed up", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					return m.Must(e2eutil.WaitForBackup(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, dataPutTime))
+				})
+
+				s.It("should update status", func(m *btesting.Matcher) bool {
+					f.EtcdClusters.EtcdCluster("restore").Reload()
+					m.NotNil(f.EtcdClusters.EtcdCluster("restore").Status.Backup)
+					m.True(f.EtcdClusters.EtcdCluster("restore").Status.Backup.Succeeded)
+					return m.True(len(f.EtcdClusters.EtcdCluster("restore").Status.Backup.History) > 0)
+				})
+			})
+
+			s.Step("destroy the cluster", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					etcdCluster := f.EtcdClusters.EtcdCluster("restore")
+					for _, v := range etcdCluster.Status.Members {
+						m.Must(f.CoreClient().CoreV1().Pods(etcdCluster.Namespace).Delete(context.TODO(), v.PodName, metav1.DeleteOptions{}))
+					}
+					return true
+				})
+
+				s.It("should deleted pod", func(m *btesting.Matcher) bool {
+					return m.True(true)
+				})
+			})
+
+			s.Step("waiting for completed restoring", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) bool {
+					m.Must(e2eutil.WaitForRestore(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, dataPutTime))
+					return m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+				})
+
+				s.It("should restore completed", func(m *btesting.Matcher) bool {
+					f.EtcdClusters.EtcdCluster("restore").Reload()
+					m.NotNil(f.EtcdClusters.EtcdCluster("restore").Status.Restored)
+					return m.True(f.EtcdClusters.EtcdCluster("restore").Status.Restored.Completed)
+				})
+			})
+
+			s.Step("read data", func(s *btesting.Scenario) {
+				var response *clientv3.GetResponse
+				s.Subject(func(m *btesting.Matcher) bool {
+					ecClient := f.EtcdClusters.EtcdCluster("restore").Client(m)
+					res, err := ecClient.Get(context.TODO(), testDataKey)
+					response = res
+					return m.Must(err)
+				})
+
+				s.It("should return 1 value", func(m *btesting.Matcher) bool {
+					return m.Equal(int64(1), response.Count)
+				})
+
+				s.It("should return correctly data", func(m *btesting.Matcher) bool {
+					return m.Equal("ok-test", string(response.Kvs[0].Value))
+				})
 			})
 		})
 	})
