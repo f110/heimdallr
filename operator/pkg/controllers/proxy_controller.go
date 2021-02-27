@@ -670,6 +670,9 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		}
 
 		hostname := fmt.Sprintf("%s.%s.%s", backend.Name, backend.Spec.Layer, lp.Spec.Domain)
+		if backend.Spec.Layer == "" {
+			hostname = fmt.Sprintf("%s.%s", backend.Name, lp.Spec.Domain)
+		}
 		if backend.Spec.FQDN != "" {
 			hostname = backend.Spec.FQDN
 		}
