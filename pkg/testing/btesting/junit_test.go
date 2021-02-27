@@ -40,7 +40,7 @@ func TestJUnit(t *testing.T) {
 	assert.Equal(t, string(out), string(buf))
 }
 
-func TestTacker(t *testing.T) {
+func TestTracker(t *testing.T) {
 	stubT := &testing.T{}
 	f := New(stubT, "")
 	f.Describe("About Foo", func(s *Scenario) {
