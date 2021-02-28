@@ -16,4 +16,8 @@ go_test(
     name = "template_test",
     srcs = ["loader_test.go"],
     embed = [":template"],
+    deps = [
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
 )

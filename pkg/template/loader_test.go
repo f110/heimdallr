@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -16,20 +19,16 @@ func TestNew(t *testing.T) {
 			"test": func() bool { return true },
 		},
 	)
-	if v == nil {
-		t.Fatal("New should return a value")
-	}
+	assert.NotNil(t, v)
 }
 
 func TestLoader_Render(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.MkdirAll(filepath.Join(dir, "data"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "data", "test"), []byte("{{ .Test }}"), 0644); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Join(dir, "data"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(dir, "data", "test"), []byte("{{ .Test }}"), 0644)
+	require.NoError(t, err)
 
 	v := New(
 		nil,
@@ -41,14 +40,11 @@ func TestLoader_Render(t *testing.T) {
 	)
 
 	buf := new(bytes.Buffer)
-	if err := v.Render(buf, "data/test", struct {
+	err = v.Render(buf, "data/test", struct {
 		Test string
 	}{
 		Test: "This is test",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if buf.String() != "This is test" {
-		t.Errorf("Expect rendered result is \"This is test\": %s", buf.String())
-	}
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "This is test", buf.String())
 }
