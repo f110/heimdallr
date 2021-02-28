@@ -69,17 +69,13 @@ logger:
 	tmpDir := t.TempDir()
 
 	f, err := os.CreateTemp(tmpDir, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	f.WriteString(b)
 	f.Sync()
-	if err := os.WriteFile(filepath.Join(tmpDir, "roles.yaml"), []byte(roleBuf), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644); err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(filepath.Join(tmpDir, "roles.yaml"), []byte(roleBuf), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tmpDir, "proxies.yaml"), []byte(proxyBuf), 0644)
+	require.NoError(t, err)
 	caCert, privateKey, err := cert.CreateCertificateAuthorityForConfig(
 		&configv2.Config{
 			CertificateAuthority: &configv2.CertificateAuthority{
@@ -91,73 +87,38 @@ logger:
 			},
 		},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privKey, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", caCert.Raw, nil); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	err = cert.PemEncode(filepath.Join(tmpDir, "ca.key"), "EC PRIVATE KEY", privKey, nil)
+	require.NoError(t, err)
+	err = cert.PemEncode(filepath.Join(tmpDir, "ca.crt"), "CERTIFICATE", caCert.Raw, nil)
+	require.NoError(t, err)
 
 	c, privateKey, err := cert.GenerateServerCertificate(caCert, privateKey, []string{"test.example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privKey, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c.Raw, nil); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	err = cert.PemEncode(filepath.Join(tmpDir, "tls.key"), "EC PRIVATE KEY", privKey, nil)
+	require.NoError(t, err)
+	err = cert.PemEncode(filepath.Join(tmpDir, "tls.crt"), "CERTIFICATE", c.Raw, nil)
+	require.NoError(t, err)
 
 	conf, err := ReadConfigV1(f.Name())
-	assert.NoError(t, err)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conf.Datastore == nil {
-		t.Fatal("yaml parse error or something")
-	}
-	if conf.Datastore.Url.Scheme != "etcd" {
-		t.Errorf("datastore url is expected etcd: %s", conf.Datastore.Url.Scheme)
-	}
-	if conf.Datastore.Url.Hostname() != "embed" {
-		t.Errorf("datastore host is expect embed: %s", conf.Datastore.Url.Hostname())
-	}
-	if conf.Logger == nil {
-		t.Fatal("yaml parse error or something")
-	}
-	if conf.Logger.Level != "debug" {
-		t.Errorf("expect logger level is debug: %s", conf.Logger.Level)
-	}
-	if conf.Logger.Encoding != "console" {
-		t.Errorf("expect logger encoding is console: %s", conf.Logger.Encoding)
-	}
-	if conf.Datastore.DataDir != filepath.Join(tmpDir, "data") {
-		t.Errorf("datastore.data expect %s: %s", filepath.Join(tmpDir, "data"), conf.Datastore.DataDir)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, conf.Datastore)
+	assert.Equal(t, "etcd", conf.Datastore.Url.Scheme)
+	assert.Equal(t, "embed", conf.Datastore.Url.Hostname())
+	assert.NotNil(t, conf.Logger)
+	assert.Equal(t, "debug", conf.Logger.Level)
+	assert.Equal(t, "console", conf.Logger.Encoding)
+	assert.Equal(t, filepath.Join(tmpDir, "data"), conf.Datastore.DataDir)
 
 	err = os.WriteFile(filepath.Join(tmpDir, "data", config.EmbedEtcdUrlFilename), []byte("etcd://localhost:60000"), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	conf, err = ReadConfigV1(f.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conf.Datastore.EtcdUrl.Host != "localhost:60000" {
-		t.Errorf("failed read previous etcd url: %s", conf.Datastore.EtcdUrl.String())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "localhost:60000", conf.Datastore.EtcdUrl.Host)
 }
 
 func TestReadConfigFromFile(t *testing.T) {
