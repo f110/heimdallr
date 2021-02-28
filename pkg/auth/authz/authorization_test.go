@@ -234,13 +234,9 @@ func newAuthorization(t *testing.T, backend *configv2.Backend, role *configv2.Ro
 		},
 	}
 	err := a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = a.Config.AuthorizationEngine.Setup(a.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return a
 }
