@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -38,9 +40,8 @@ func TestNewServer(t *testing.T) {
 			Level: "error",
 		},
 	}
-	if err := logger.Init(conf.Logger); err != nil {
-		t.Fatal(err)
-	}
+	err := logger.Init(conf.Logger)
+	require.NoError(t, err)
 
 	v := NewServer(
 		conf,
@@ -51,24 +52,16 @@ func TestNewServer(t *testing.T) {
 		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
 		nil,
 	)
-	if v == nil {
-		t.Fatal("NewServer should return a value")
-	}
+	require.NotNil(t, v)
 }
 
 func TestServer_Start(t *testing.T) {
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	port, err := netutil.FindUnusedPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	metricPort, err := netutil.FindUnusedPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	conf := &configv2.Config{
 		CertificateAuthority: &configv2.CertificateAuthority{
@@ -85,9 +78,8 @@ func TestServer_Start(t *testing.T) {
 			Level: "error",
 		},
 	}
-	if err := logger.Init(conf.Logger); err != nil {
-		t.Fatal(err)
-	}
+	err = logger.Init(conf.Logger)
+	require.NoError(t, err)
 
 	v := NewServer(
 		conf,
@@ -99,40 +91,28 @@ func TestServer_Start(t *testing.T) {
 		nil,
 	)
 	go func() {
-		if err := v.Start(); err != nil {
-			t.Fatal(err)
-		}
+		err := v.Start()
+		require.NoError(t, err)
 	}()
 
-	if err := netutil.WaitListen(fmt.Sprintf(":%d", port), 5*time.Second); err != nil {
-		t.Fatal(err)
-	}
-	if err := netutil.WaitListen(fmt.Sprintf(":%d", metricPort), 5*time.Second); err != nil {
-		t.Fatal(err)
-	}
+	err = netutil.WaitListen(fmt.Sprintf(":%d", port), 5*time.Second)
+	require.NoError(t, err)
+	err = netutil.WaitListen(fmt.Sprintf(":%d", metricPort), 5*time.Second)
+	require.NoError(t, err)
 
-	if err := v.Shutdown(context.Background()); err != nil {
-		t.Fatal(err)
-	}
+	err = v.Shutdown(context.Background())
+	require.NoError(t, err)
 }
 
 func TestServicesViaServer(t *testing.T) {
 	hostname, err := os.Hostname()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	port, err := netutil.FindUnusedPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signReqPubKey := signReqKey.PublicKey
 
 	conf := &configv2.Config{
@@ -175,15 +155,12 @@ func TestServicesViaServer(t *testing.T) {
 			Level: "error",
 		},
 	}
-	if err := conf.AccessProxy.Setup(conf.AccessProxy.Backends); err != nil {
-		t.Fatal(err)
-	}
-	if err := conf.AuthorizationEngine.Setup(conf.AuthorizationEngine.Roles, conf.AuthorizationEngine.RPCPermissions); err != nil {
-		t.Fatal(err)
-	}
-	if err := logger.Init(conf.Logger); err != nil {
-		t.Fatal(err)
-	}
+	err = conf.AccessProxy.Setup(conf.AccessProxy.Backends)
+	require.NoError(t, err)
+	err = conf.AuthorizationEngine.Setup(conf.AuthorizationEngine.Roles, conf.AuthorizationEngine.RPCPermissions)
+	require.NoError(t, err)
+	err = logger.Init(conf.Logger)
+	require.NoError(t, err)
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
 	cluster := memory.NewClusterDatabase()
@@ -196,17 +173,12 @@ func TestServicesViaServer(t *testing.T) {
 		Roles: []string{"test-admin"},
 	}
 	testUser.Setup()
-	if err := u.Set(nil, testUser); err != nil {
-		t.Fatal(err)
-	}
+	err = u.Set(nil, testUser)
+	require.NoError(t, err)
 	code, err := token.NewCode(nil, testUser.Id, "", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	userToken, err := token.IssueToken(nil, code.Code, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_ = cluster.Join(nil)
 	_ = relay.Set(context.Background(), &database.Relay{Name: "test", Addr: "127.0.0.1:10000"})
@@ -221,13 +193,11 @@ func TestServicesViaServer(t *testing.T) {
 		func() bool { return true },
 	)
 	go func() {
-		if err := s.Start(); err != nil {
-			t.Fatal(err)
-		}
+		err := s.Start()
+		require.NoError(t, err)
 	}()
-	if err := netutil.WaitListen(fmt.Sprintf(":%d", port), 5*time.Second); err != nil {
-		t.Fatal(err)
-	}
+	err = netutil.WaitListen(fmt.Sprintf(":%d", port), 5*time.Second)
+	require.NoError(t, err)
 
 	caPool := x509.NewCertPool()
 	caPool.AddCert(caCert)
@@ -236,9 +206,7 @@ func TestServicesViaServer(t *testing.T) {
 		RootCAs:    caPool,
 	})
 	conn, err := grpc.Dial(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(transCreds))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: "internal-token"})
 	systemUserCtx := metadata.NewOutgoingContext(context.Background(), md)
@@ -251,29 +219,17 @@ func TestServicesViaServer(t *testing.T) {
 
 		adminClient := rpc.NewAdminClient(conn)
 		res, err := adminClient.Ping(context.Background(), &rpc.RequestPing{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res == nil {
-			t.Error("Expect return a value")
-		}
+		require.NoError(t, err)
+		assert.NotNil(t, res)
 
 		t.Run("Get Config", func(t *testing.T) {
 			backendListRes, err := adminClient.BackendList(systemUserCtx, &rpc.RequestBackendList{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(backendListRes.GetItems()) != 1 {
-				t.Errorf("BackendList should return an array that have 1 element: %d", len(backendListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, backendListRes.GetItems(), 1)
 
 			roleListRes, err := adminClient.RoleList(systemUserCtx, &rpc.RequestRoleList{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(roleListRes.GetItems()) != 3 {
-				t.Errorf("RoleList should return an array that have 3 elements: %d", len(roleListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, roleListRes.GetItems(), 3)
 		})
 
 		t.Run("Management User", func(t *testing.T) {
@@ -284,100 +240,49 @@ func TestServicesViaServer(t *testing.T) {
 				Type: rpc.UserType_NORMAL,
 				Role: "test-admin2",
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !addRes.GetOk() {
-				t.Error("Expect return ok")
-			}
+			require.NoError(t, err)
+			assert.True(t, addRes.GetOk())
 
 			getRes, err := adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id, WithTokens: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if getRes.GetUser().GetId() != "test@example.com" {
-				t.Errorf("Unexpected Id: %s", getRes.GetUser().GetId())
-			}
-			if getRes.GetUser().GetRoles()[0] != "test-admin" || getRes.GetUser().GetRoles()[1] != "test-admin2" {
-				t.Errorf("Unexpected role: %v", getRes.GetUser().GetRoles())
-			}
-			if getRes.GetUser().GetType() != rpc.UserType_NORMAL {
-				t.Errorf("Unexpected user type: %v", getRes.GetUser().GetType())
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "test@example.com", getRes.GetUser().GetId())
+			assert.Equal(t, "test-admin", getRes.GetUser().GetRoles()[0])
+			assert.Equal(t, "test-admin2", getRes.GetUser().GetRoles()[1])
+			assert.Equal(t, rpc.UserType_NORMAL, getRes.GetUser().GetType())
 
 			becomeRes, err := adminClient.BecomeMaintainer(systemUserCtx, &rpc.RequestBecomeMaintainer{Id: testUser.Id, Role: "test-admin"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !becomeRes.GetOk() {
-				t.Error("Expect return ok")
-			}
+			require.NoError(t, err)
+			assert.True(t, becomeRes.GetOk())
 
 			getRes, err = adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: "test@example.com"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(getRes.GetUser().GetMaintainRoles()) != 1 {
-				t.Error("test user should have a privilege to maintain 1 role")
-			}
+			require.NoError(t, err)
+			assert.Len(t, getRes.GetUser().GetMaintainRoles(), 1)
 
 			userListRes, err := adminClient.UserList(systemUserCtx, &rpc.RequestUserList{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(userListRes.GetItems()) != 2 {
-				t.Errorf("Expect 2 users: %d users", len(userListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, userListRes.GetItems(), 2)
 			userListRes, err = adminClient.UserList(systemUserCtx, &rpc.RequestUserList{Role: "test-admin"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(userListRes.GetItems()) != 1 {
-				t.Errorf("Expect 1 user: %d users", len(userListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, userListRes.GetItems(), 1)
 			userListRes, err = adminClient.UserList(systemUserCtx, &rpc.RequestUserList{ServiceAccount: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(userListRes.GetItems()) != 1 {
-				t.Errorf("Expect 1 user: %d users", len(userListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, userListRes.GetItems(), 1)
 
 			toggleRes, err := adminClient.ToggleAdmin(systemUserCtx, &rpc.RequestToggleAdmin{Id: testUser.Id})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !toggleRes.GetOk() {
-				t.Error("Expect return ok")
-			}
+			require.NoError(t, err)
+			assert.True(t, toggleRes.GetOk())
 			userListRes, err = adminClient.UserList(testUserCtx, &rpc.RequestUserList{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(userListRes.GetItems()) != 2 {
-				t.Errorf("Expect 2 users: %d users", len(userListRes.GetItems()))
-			}
+			require.NoError(t, err)
+			assert.Len(t, userListRes.GetItems(), 2)
 
 			tokenRes, err := adminClient.TokenNew(systemUserCtx, &rpc.RequestTokenNew{Name: "test", UserId: testUser.Id})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tokenRes.GetItem().GetValue() == "" {
-				t.Error("Expect return a value")
-			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, tokenRes.GetItem().GetValue())
 			getRes, err = adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id, WithTokens: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(getRes.GetUser().GetTokens()) != 1 {
-				t.Errorf("Expect 1 token: %d tokens", len(getRes.GetUser().GetTokens()))
-			}
-			if getRes.GetUser().GetTokens()[0].GetName() != "test" {
-				t.Errorf("Unexpected name: %s", getRes.GetUser().GetTokens()[0].GetName())
-			}
-			if getRes.GetUser().GetTokens()[0].GetIssuer() != database.SystemUser.Id {
-				t.Errorf("Unexpected issuer: %s", getRes.GetUser().GetTokens()[0].GetIssuer())
-			}
+			require.NoError(t, err)
+			assert.Len(t, getRes.GetUser().GetTokens(), 1)
+			assert.Equal(t, "test", getRes.GetUser().GetTokens()[0].GetName())
+			assert.Equal(t, database.SystemUser.Id, getRes.GetUser().GetTokens()[0].GetIssuer())
 		})
 	})
 
@@ -393,81 +298,45 @@ func TestServicesViaServer(t *testing.T) {
 			KeyBits:    2048,
 			Password:   "test",
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !newRes.GetOk() {
-			t.Fatal("Expect return ok")
-		}
+		require.NoError(t, err)
+		require.True(t, newRes.GetOk())
 
 		csr, _, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: "csr@example.com"}, []string{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		newRes, err = caClient.NewClientCert(systemUserCtx, &rpc.RequestNewClientCert{
 			Csr:        string(csr),
 			CommonName: "csr@example.com",
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !newRes.GetOk() {
-			t.Fatal("Expect return ok")
-		}
+		require.NoError(t, err)
+		require.True(t, newRes.GetOk())
 
 		newRes, err = caClient.NewClientCert(systemUserCtx, &rpc.RequestNewClientCert{
 			Agent:      true,
 			CommonName: "test",
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !newRes.GetOk() {
-			t.Fatal("Expect return ok")
-		}
+		require.NoError(t, err)
+		require.True(t, newRes.GetOk())
 
 		signedListRes, err := caClient.GetSignedList(systemUserCtx, &rpc.RequestGetSignedList{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(signedListRes.Items) != 3 {
-			t.Errorf("Expect return 3 signed certificates: %d signed certificates", len(signedListRes.Items))
-		}
+		require.NoError(t, err)
+		assert.Len(t, signedListRes.Items, 3)
 
 		revokedCert, err := caClient.Get(systemUserCtx, &rpc.CARequestGet{SerialNumber: signedListRes.Items[0].SerialNumber})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if revokedCert.Item == nil {
-			t.Error("Get should return certificate item")
-		}
+		require.NoError(t, err)
+		assert.NotNil(t, revokedCert.Item)
 
 		revokeRes, err := caClient.Revoke(systemUserCtx, &rpc.CARequestRevoke{SerialNumber: revokedCert.Item.SerialNumber})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !revokeRes.GetOk() {
-			t.Error("Expect return ok")
-		}
+		require.NoError(t, err)
+		assert.True(t, revokeRes.GetOk())
 		revokedListRes, err := caClient.GetRevokedList(systemUserCtx, &rpc.RequestGetRevokedList{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(revokedListRes.GetItems()) != 1 {
-			t.Errorf("Expect 1 revoked certificate: %d revoked certificates", len(revokedListRes.GetItems()))
-		}
+		require.NoError(t, err)
+		assert.Len(t, revokedListRes.GetItems(), 1)
 
 		csr, _, err = cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: "test.example.com"}, []string{"test.example.com"})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		newServerCertRes, err := caClient.NewServerCert(systemUserCtx, &rpc.RequestNewServerCert{SigningRequest: csr})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(newServerCertRes.Certificate) == 0 {
-			t.Error("NewServerCert should return a certificate")
-		}
+		require.NoError(t, err)
+		assert.NotEqual(t, 0, len(newServerCertRes.Certificate))
 	})
 
 	t.Run("Cluster", func(t *testing.T) {
@@ -476,43 +345,21 @@ func TestServicesViaServer(t *testing.T) {
 		clusterClient := rpc.NewClusterClient(conn)
 
 		memberListRes, err := clusterClient.MemberList(systemUserCtx, &rpc.RequestMemberList{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(memberListRes.GetItems()) != 1 {
-			t.Errorf("Expect return 1 member: %d members", len(memberListRes.GetItems()))
-		}
-		if memberListRes.GetItems()[0].GetId() != hostname {
-			t.Errorf("Expect %v", memberListRes.GetItems()[0].GetId())
-		}
+		require.NoError(t, err)
+		assert.Len(t, memberListRes.GetItems(), 1)
+		assert.Equal(t, hostname, memberListRes.GetItems()[0].GetId())
 
 		memberStatRes, err := clusterClient.MemberStat(systemUserCtx, &rpc.RequestMemberStat{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if memberStatRes.GetId() != cluster.Id() {
-			t.Fatal("Unexpected id")
-		}
-		if memberStatRes.GetUserCount() != 2 {
-			t.Errorf("Expect 2 users: %d users", memberStatRes.GetUserCount())
-		}
-		if memberStatRes.GetTokenCount() != 1 {
-			t.Errorf("Expect 1 token: %d tokens", memberStatRes.GetTokenCount())
-		}
-		if len(memberStatRes.GetListenedRelayAddrs()) != 1 {
-			t.Errorf("Expect 1 relay addr: %d addrs", len(memberStatRes.GetListenedRelayAddrs()))
-		}
+		require.NoError(t, err)
+		require.Equal(t, cluster.Id(), memberStatRes.GetId())
+		assert.Equal(t, int32(2), memberStatRes.GetUserCount())
+		assert.Equal(t, int32(1), memberStatRes.GetTokenCount())
+		assert.Len(t, memberStatRes.GetListenedRelayAddrs(), 1)
 
 		agentListRes, err := clusterClient.AgentList(systemUserCtx, &rpc.RequestAgentList{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(agentListRes.GetItems()) != 1 {
-			t.Fatalf("Expect 1 agent: %d agents", len(agentListRes.GetItems()))
-		}
-		if agentListRes.GetItems()[0].GetName() != "test" {
-			t.Errorf("Expect agent name is test: %s", agentListRes.GetItems()[0].GetName())
-		}
+		require.NoError(t, err)
+		require.Len(t, agentListRes.GetItems(), 1)
+		assert.Equal(t, "test", agentListRes.GetItems()[0].GetName())
 	})
 
 	t.Run("Health", func(t *testing.T) {
@@ -521,11 +368,7 @@ func TestServicesViaServer(t *testing.T) {
 		healthClient := healthpb.NewHealthClient(conn)
 
 		checkRes, err := healthClient.Check(systemUserCtx, &healthpb.HealthCheckRequest{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if checkRes.Status != healthpb.HealthCheckResponse_SERVING {
-			t.Errorf("Expect Serving: %v", checkRes.Status)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, healthpb.HealthCheckResponse_SERVING, checkRes.Status)
 	})
 }
