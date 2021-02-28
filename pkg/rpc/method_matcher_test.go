@@ -2,30 +2,26 @@ package rpc
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMethodMatcher_normalize(t *testing.T) {
 	m := NewMethodMatcher()
 	got := m.normalize("/proxy.rpc.Admin/RevokedCertList")
-	if got != "proxy.rpc.admin.revokedcertlist" {
-		t.Fail()
-	}
+	require.Equal(t, "proxy.rpc.admin.revokedcertlist", got)
 
 	got = m.normalize("proxy.rpc.Admin/RevokedCertList")
-	if got != "proxy.rpc.admin.revokedcertlist" {
-		t.Fail()
-	}
+	require.Equal(t, "proxy.rpc.admin.revokedcertlist", got)
 }
 
 func TestMethodMatcher_Add(t *testing.T) {
 	m := NewMethodMatcher()
 	err := m.Add("/proxy.rpc.admin")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := m.Add("/proxy.rpc.cluster"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	err = m.Add("/proxy.rpc.cluster")
+	require.NoError(t, err)
 }
 
 func TestMethodMatcher_Match(t *testing.T) {
@@ -44,15 +40,12 @@ func TestMethodMatcher_Match(t *testing.T) {
 	}
 	m := NewMethodMatcher()
 	for _, v := range allowRules {
-		if err := m.Add(v); err != nil {
-			t.Fatal(err)
-		}
+		err := m.Add(v)
+		require.NoError(t, err)
 	}
 
 	for _, c := range cases {
 		got := m.Match(c.Method)
-		if got != c.Result {
-			t.Errorf("%s is expected %v", c.Method, c.Result)
-		}
+		assert.Equal(t, c.Result, got)
 	}
 }

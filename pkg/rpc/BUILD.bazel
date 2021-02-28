@@ -54,4 +54,8 @@ go_test(
     name = "rpc_test",
     srcs = ["method_matcher_test.go"],
     embed = [":rpc"],
+    deps = [
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
 )
