@@ -9,6 +9,7 @@
         <option value="github.com/hashicorp/go.net/context" />
         <option value="github.com/influxdata/influxdb/pkg/testing/assert" />
         <option value="github.com/mitchellh/go-testing-interface" />
+        <option value="github.com/smartystreets/assertions/assert" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/fmt" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/time" />
         <option value="gotest.tools/assert" />
