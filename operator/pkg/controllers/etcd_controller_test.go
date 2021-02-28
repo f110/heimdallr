@@ -85,9 +85,7 @@ func TestEtcdController(t *testing.T) {
 				found = true
 			}
 		}
-		if !found {
-			assert.Fail(t, "Both nodes has initial-cluster-state=new")
-		}
+		assert.True(t, found, "Both nodes has initial-cluster-state=new")
 
 		portNames := make([]string, 0)
 		for _, v := range member.Pod.Spec.Containers[0].Ports {
