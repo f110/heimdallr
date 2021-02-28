@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"sigs.k8s.io/yaml"
@@ -14,85 +16,53 @@ import (
 
 func TestNewRelayLocator(t *testing.T) {
 	rl, err := NewRelayLocator(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rl == nil {
-		t.Fatal("NewRelayLocator should return a value")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, rl)
 }
 
 func TestRelayLocator_GetAndSet(t *testing.T) {
 	rl, err := NewRelayLocator(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = rl.Set(context.Background(), &database.Relay{Name: t.Name(), Addr: "127.0.0.1:10000"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	relay, ok := rl.Get(t.Name())
-	if !ok {
-		t.Fatal("should return ok")
-	}
-	if relay.Addr != "127.0.0.1:10000" {
-		t.Errorf("Unexpected addr: %s", relay.Addr)
-	}
+	require.True(t, ok)
+	assert.Equal(t, "127.0.0.1:10000", relay.Addr)
 
 	addrs := rl.GetListenedAddrs()
-	if len(addrs) != 1 {
-		t.Errorf("Expect 1 addr: %d addrs", len(addrs))
-	}
+	assert.Len(t, addrs, 1)
 
 	relays := rl.ListAllConnectedAgents()
-	if len(relays) != 1 {
-		t.Errorf("Expect 1 connected agent: %d connected agents", len(relays))
-	}
+	assert.Len(t, relays, 1)
 
 	err = rl.Delete(context.Background(), t.Name(), "127.0.0.1:10000")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, ok = rl.Get(t.Name())
-	if ok {
-		t.Fatal("should return not ok")
-	}
+	require.False(t, ok)
 }
 
 func TestRelayLocator_Update(t *testing.T) {
 	rl, err := NewRelayLocator(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	updatedAt := time.Now().Add(-10 * time.Second)
 	r := &database.Relay{Name: t.Name(), Addr: "127.0.0.1:10000", UpdatedAt: updatedAt}
 	err = rl.Set(context.Background(), r)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	relay, ok := rl.Get(t.Name())
-	if !ok {
-		t.Fatal("should return ok")
-	}
+	require.True(t, ok)
 
 	err = rl.Update(context.Background(), relay)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if relay.UpdatedAt.Unix() == updatedAt.Unix() {
-		t.Error("Should update UpdatedAt")
-	}
+	require.NoError(t, err)
+	require.NotEqual(t, updatedAt.Unix(), relay.UpdatedAt.Unix())
 }
 
 func TestRelayLocator_Watch(t *testing.T) {
 	rl, err := NewRelayLocator(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	started := make(chan struct{})
 	gotCh := make(chan *database.Relay)
@@ -110,9 +80,7 @@ func TestRelayLocator_Watch(t *testing.T) {
 	}
 
 	buf, err := yaml.Marshal(&database.Relay{Name: t.Name()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	rl.watchEvents([]*clientv3.Event{
 		{
 			Type: clientv3.EventTypePut,
@@ -120,12 +88,8 @@ func TestRelayLocator_Watch(t *testing.T) {
 		},
 	})
 	relay, ok := rl.Get(t.Name())
-	if !ok {
-		t.Error("Expect return ok")
-	}
-	if relay.Name != t.Name() {
-		t.Error("Expect Name is test")
-	}
+	assert.True(t, ok)
+	assert.Equal(t, t.Name(), relay.Name)
 
 	rl.watchEvents([]*clientv3.Event{
 		{
@@ -134,16 +98,12 @@ func TestRelayLocator_Watch(t *testing.T) {
 		},
 	})
 	_, ok = rl.Get(t.Name())
-	if ok {
-		t.Error("Expect return not ok")
-	}
+	assert.False(t, ok)
 
 	select {
 	case got := <-gotCh:
-		if got.Name != t.Name() {
-			t.Error("Expect Name is test")
-		}
+		assert.Equal(t, t.Name(), got.Name)
 	case <-time.After(10 * time.Second):
-		t.Fatal("Timeout")
+		require.Fail(t, "Timeout")
 	}
 }

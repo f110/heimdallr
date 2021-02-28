@@ -6,80 +6,57 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func TestNewTemporaryToken(t *testing.T) {
 	token := NewTemporaryToken(client)
-	if token == nil {
-		t.Fatal("NewTemporaryToken should return a value")
-	}
+	require.NotNil(t, token)
 }
 
 func TestTemporaryToken_IssueToken(t *testing.T) {
 	token := NewTemporaryToken(client)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	codes, err := token.AllCodes(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(codes) != 1 {
-		t.Errorf("Expect got 1 code: %d codes", len(codes))
-	}
+	require.NoError(t, err)
+	assert.Len(t, codes, 1)
 
 	t.Run("Failed verify", func(t *testing.T) {
 		t.Parallel()
 
 		_, err = token.IssueToken(context.Background(), code.Code, "failure")
-		if err == nil {
-			t.Error("Expect occurred an error")
-		}
+		assert.Error(t, err)
 	})
 
 	t.Run("Unknown code", func(t *testing.T) {
 		t.Parallel()
 
 		_, err = token.IssueToken(context.Background(), "unknown", "ch")
-		if err == nil {
-			t.Error("Expect occurred an error")
-		}
+		assert.Error(t, err)
 	})
 
 	t.Run("Success", func(t *testing.T) {
 		t.Parallel()
 
 		tk, err := token.IssueToken(context.Background(), code.Code, "ch")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if tk.Token == "" {
-			t.Error("Token is an empty string")
-		}
+		assert.NotEmpty(t, tk.Token)
 
 		got, err := token.FindToken(context.Background(), tk.Token)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got.UserId != "test@example.com" {
-			t.Error("Unexpected UserId")
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "test@example.com", got.UserId)
 		_, err = token.FindToken(context.Background(), "unknown")
-		if err != database.ErrTokenNotFound {
-			t.Error("Expect ErrTokenNotFound")
-		}
+		assert.Equal(t, database.ErrTokenNotFound, err)
 
 		tokens, err := token.AllTokens(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(tokens) != 1 {
-			t.Errorf("Expect got 1 token: %d tokens", len(tokens))
-		}
+		require.NoError(t, err)
+		assert.Len(t, tokens, 1)
 	})
 }
 
@@ -87,13 +64,9 @@ func TestTemporaryToken_DeleteCode(t *testing.T) {
 	token := NewTemporaryToken(client)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = token.DeleteCode(context.Background(), code.Code)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestTemporaryToken_DeleteToken(t *testing.T) {
@@ -103,16 +76,10 @@ func TestTemporaryToken_DeleteToken(t *testing.T) {
 	s.Write([]byte("ch"))
 	result := s.Sum(nil)
 	code, err := token.NewCode(context.Background(), "test@example.com", base64.StdEncoding.EncodeToString(result), "S256")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tk, err := token.IssueToken(context.Background(), code.Code, "ch")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = token.DeleteToken(context.Background(), tk.Token)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }

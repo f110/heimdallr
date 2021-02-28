@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"sigs.k8s.io/yaml"
@@ -14,218 +16,139 @@ import (
 
 func TestNewUserDatabase(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client, database.SystemUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if u == nil {
-		t.Fatal("NewUserDatabase should return a value")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, u)
 }
 
 func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	Id := "test@example.com"
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = u.Set(context.Background(), &database.User{
 		Id:    Id,
 		Roles: []string{"test"},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = u.Set(context.Background(), &database.User{
 		Id:    "sa@example.com",
 		Roles: []string{"test"},
 		Type:  database.UserTypeServiceAccount,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = u.Set(context.Background(), &database.User{})
-	if err == nil {
-		t.Error("Expect occurred an error")
-	}
+	assert.Error(t, err)
 
 	user, err := u.Get(Id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if user.Id != Id {
-		t.Fatalf("Unexpected ID: %s", user.Id)
-	}
+	require.NoError(t, err)
+	require.Equal(t, Id, user.Id)
 
 	users, err := u.GetAll()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(users) != 2 {
-		t.Fatalf("expect returning 2 users: %d users", len(users))
-	}
+	require.NoError(t, err)
+	require.Len(t, users, 2)
 
 	sa, err := u.GetAllServiceAccount()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(sa) != 1 {
-		t.Fatalf("expect returing 1 service account: %d service accounts", len(sa))
-	}
+	require.NoError(t, err)
+	require.Len(t, sa, 1)
 
-	if err := u.Delete(context.Background(), Id); err != nil {
-		t.Fatal(err)
-	}
+	err = u.Delete(context.Background(), Id)
+	require.NoError(t, err)
 
-	if _, err := u.Get(Id); err != database.ErrUserNotFound {
-		t.Fatal("expect user not found")
-	}
+	_, err = u.Get(Id)
+	require.Equal(t, database.ErrUserNotFound, err)
 
 	u, err = NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if u == nil {
-		t.Error("NewUserDatabase should return a value")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, u)
 }
 
 func TestUserDatabase_GetAndSetAccessToken(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = u.SetAccessToken(context.Background(), &database.AccessToken{
 		UserId: "test@example.com",
 		Value:  "test-token",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	token, err := u.GetAccessToken("test-token")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if token.UserId != "test@example.com" {
-		t.Errorf("token was returned but unexpected value: %s", token.UserId)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "test@example.com", token.UserId)
 
 	tokens, err := u.GetAccessTokens("test@example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(tokens) != 1 {
-		t.Errorf("Expect returning 1 token: %d tokens", len(tokens))
-	}
+	require.NoError(t, err)
+	assert.Len(t, tokens, 1)
 
 	u, err = NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if u == nil {
-		t.Fatal("NewUserDatabase should return a value")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, u)
 }
 
 func TestUserDatabase_GetAndSetState(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if _, err := u.GetState(context.Background(), ""); err == nil {
-		t.Error("Expect occurred an error")
-	}
+	_, err = u.GetState(context.Background(), "")
+	assert.Error(t, err)
 
 	state, err := u.SetState(context.Background(), "unique-value")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if state == "" {
-		t.Fatal("SetState should return a value")
-	}
+	require.NoError(t, err)
+	require.NotEmpty(t, state)
 
 	unique, err := u.GetState(context.Background(), state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if unique != "unique-value" {
-		t.Fatal("Unexpected unique value")
-	}
+	require.NoError(t, err)
+	require.Equal(t, "unique-value", unique)
 
 	now = func() time.Time { return time.Now().Add(24 * time.Hour) }
 	defer func() { now = time.Now }()
 
 	_, err = u.GetState(context.Background(), state)
-	if err == nil {
-		t.Error("Expect occurred an error")
-	}
+	assert.Error(t, err)
 
-	if err := u.DeleteState(context.Background(), state); err != nil {
-		t.Fatal(err)
-	}
+	err = u.DeleteState(context.Background(), state)
+	require.NoError(t, err)
 }
 
 func TestUserDatabase_Delete(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = u.Set(context.Background(), &database.User{
 		Id:    "test@example.com",
 		Roles: []string{"test"},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = u.Set(context.Background(), &database.User{Id: "test@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = u.Get("test@example")
-	if err != database.ErrUserNotFound {
-		t.Fatal("Expect occurred ErrUserNotFound")
-	}
+	require.Equal(t, database.ErrUserNotFound, err)
 }
 
 func TestUserDatabase_Close(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	u.Close()
-	if _, err := u.Get(""); err != database.ErrClosed {
-		t.Error("Expect occurred ErrClosed")
-	}
-	if _, err := u.GetAll(); err != database.ErrClosed {
-		t.Error("Expect occurred ErrClosed")
-	}
-	if _, err := u.GetAllServiceAccount(); err != database.ErrClosed {
-		t.Error("Expect occurred ErrClosed")
-	}
-	if _, err := u.GetAccessTokens(""); err != database.ErrClosed {
-		t.Error("Expect occurred ErrClosed")
-	}
-	if _, err := u.GetAccessToken(""); err != database.ErrClosed {
-		t.Error("Expect occurred ErrClosed")
-	}
+	_, err = u.Get("")
+	assert.Equal(t, database.ErrClosed, err)
+	_, err = u.GetAll()
+	assert.Equal(t, database.ErrClosed, err)
+	_, err = u.GetAllServiceAccount()
+	assert.Equal(t, database.ErrClosed, err)
+	_, err = u.GetAccessTokens("")
+	assert.Equal(t, database.ErrClosed, err)
+	_, err = u.GetAccessToken("")
+	assert.Equal(t, database.ErrClosed, err)
 }
 
 func TestUserDatabase_WatchUser(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	buf, err := database.MarshalUser(&database.User{Id: "test@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	put := &clientv3.Event{
 		Type: clientv3.EventTypePut,
 		Kv:   &mvccpb.KeyValue{Value: buf},
@@ -233,12 +156,8 @@ func TestUserDatabase_WatchUser(t *testing.T) {
 	u.watchUserEvent([]*clientv3.Event{put})
 
 	user, err := u.Get("test@example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if user.Id != "test@example.com" {
-		t.Error("Unexpected user")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "test@example.com", user.Id)
 
 	u.watchUserEvent([]*clientv3.Event{
 		{
@@ -254,21 +173,16 @@ func TestUserDatabase_WatchUser(t *testing.T) {
 			},
 		},
 	})
-	if _, err := u.Get("test@example.com"); err != database.ErrUserNotFound {
-		t.Error("Expect ErrUserNotFound")
-	}
+	_, err = u.Get("test@example.com")
+	assert.Equal(t, database.ErrUserNotFound, err)
 }
 
 func TestUserDatabase_WatchToken(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	buf, err := yaml.Marshal(&database.AccessToken{Value: "test-token", UserId: "test@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	u.watchTokenEvent([]*clientv3.Event{
 		{
 			Type: clientv3.EventTypePut,
@@ -277,15 +191,9 @@ func TestUserDatabase_WatchToken(t *testing.T) {
 	})
 
 	tokens, err := u.GetAccessTokens("test@example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(tokens) != 1 {
-		t.Errorf("Expect returning 1 token: %d tokens", len(tokens))
-	}
-	if tokens[0].Value != "test-token" {
-		t.Errorf("Unexpected token value")
-	}
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	assert.Equal(t, "test-token", tokens[0].Value)
 
 	u.watchTokenEvent([]*clientv3.Event{
 		{
@@ -297,7 +205,6 @@ func TestUserDatabase_WatchToken(t *testing.T) {
 			Kv:   &mvccpb.KeyValue{Key: []byte("/unknown")},
 		},
 	})
-	if _, err := u.GetAccessToken("test-token"); err != database.ErrAccessTokenNotFound {
-		t.Error("Expected ErrAccessTokenNotFound")
-	}
+	_, err = u.GetAccessToken("test-token")
+	assert.Equal(t, database.ErrAccessTokenNotFound, err)
 }

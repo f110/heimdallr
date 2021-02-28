@@ -4,16 +4,14 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewCompactor(t *testing.T) {
 	c, err := NewCompactor(client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c == nil {
-		t.Fatal("NewCompactor should return a value")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, c)
 
 	finished := make(chan struct{})
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -26,17 +24,14 @@ func TestNewCompactor(t *testing.T) {
 	select {
 	case <-finished:
 	case <-time.After(time.Second):
-		t.Fatal("Timeout")
+		require.Fail(t, "Timeout")
 	}
 }
 
 func TestCompactor_Compaction(t *testing.T) {
 	c, err := NewCompactor(client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if err := c.compact(); err != nil {
-		t.Fatal(err)
-	}
+	err = c.compact()
+	require.NoError(t, err)
 }
