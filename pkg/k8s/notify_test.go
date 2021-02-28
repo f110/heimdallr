@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewVolumeWatcher(t *testing.T) {
@@ -34,81 +36,52 @@ func TestCanWatchVolume(t *testing.T) {
 	t.Run("Dir", func(t *testing.T) {
 		d := t.TempDir()
 
-		if err := os.Mkdir(filepath.Join(d, "data"), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if CanWatchVolume(d) {
-			t.Fatal("CanWatchVolume should return false")
-		}
+		err := os.Mkdir(filepath.Join(d, "data"), 0755)
+		require.NoError(t, err)
+		require.False(t, CanWatchVolume(d))
 
-		if err := os.Mkdir(filepath.Join(d, "..data"), 0755); err != nil {
-			t.Fatal()
-		}
-		if CanWatchVolume(d) {
-			t.Fatal("CanWatchVolume should return false")
-		}
+		err = os.Mkdir(filepath.Join(d, "..data"), 0755)
+		require.NoError(t, err)
+		require.False(t, CanWatchVolume(d))
 
-		if err := os.Remove(filepath.Join(d, "..data")); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data")); err != nil {
-			t.Fatal(err)
-		}
-		if !CanWatchVolume(d) {
-			t.Fatal("CanWatchVolume should return true")
-		}
+		err = os.Remove(filepath.Join(d, "..data"))
+		require.NoError(t, err)
+		err = os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data"))
+		require.NoError(t, err)
+		require.True(t, CanWatchVolume(d))
 	})
 
 	t.Run("File", func(t *testing.T) {
 		d := t.TempDir()
 
-		if err := os.Mkdir(filepath.Join(d, "data"), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if CanWatchVolume(filepath.Join(d, "memo.txt")) {
-			t.Fatal("CanWatchVolume should return false")
-		}
+		err := os.Mkdir(filepath.Join(d, "data"), 0755)
+		require.NoError(t, err)
+		require.False(t, CanWatchVolume(filepath.Join(d, "memo.txt")))
 
-		if err := os.Mkdir(filepath.Join(d, "..data"), 0755); err != nil {
-			t.Fatal()
-		}
-		if CanWatchVolume(filepath.Join(d, "memo.txt")) {
-			t.Fatal("CanWatchVolume should return false")
-		}
+		err = os.Mkdir(filepath.Join(d, "..data"), 0755)
+		require.NoError(t, err)
+		require.False(t, CanWatchVolume(filepath.Join(d, "memo.txt")))
 
-		if err := os.Remove(filepath.Join(d, "..data")); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data")); err != nil {
-			t.Fatal(err)
-		}
-		if !CanWatchVolume(filepath.Join(d, "memo.txt")) {
-			t.Fatal("CanWatchVolume should return true")
-		}
+		err = os.Remove(filepath.Join(d, "..data"))
+		require.NoError(t, err)
+		err = os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data"))
+		require.NoError(t, err)
+		require.True(t, CanWatchVolume(filepath.Join(d, "memo.txt")))
 	})
 }
 
 func TestFindMountPath(t *testing.T) {
 	_, err := FindMountPath("hoge")
-	if err == nil {
-		t.Fatal("expected return error")
-	}
+	require.Error(t, err)
 
 	d := t.TempDir()
 
 	_, err = FindMountPath(filepath.Join(d, "data/memo.txt"))
-	if err == nil {
-		t.Fatal("expected return error")
-	}
+	require.Error(t, err)
 
-	if err := os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data")); err != nil {
-		t.Fatal(err)
-	}
+	err = os.Symlink(filepath.Join(d, "data"), filepath.Join(d, "..data"))
+	require.NoError(t, err)
 	m, err := FindMountPath(filepath.Join(d, "data/memo.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if m != d {
-		t.Fatalf("FindMountPath should return %s: %s", d, m)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, d, m)
 }

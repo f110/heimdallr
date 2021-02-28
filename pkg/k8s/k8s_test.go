@@ -21,7 +21,7 @@ func TestSelectCustomResourceDefinitions(t *testing.T) {
 			if err == io.EOF {
 				break
 			}
-			t.Fatal(err)
+			require.Fail(t, err.Error())
 		}
 		if len(ext.Raw) == 0 {
 			continue

@@ -3,13 +3,14 @@ package k8s
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetClusterDomain(t *testing.T) {
 	f, err := os.CreateTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
 	oldValue := ResolvFile
@@ -23,10 +24,6 @@ func TestGetClusterDomain(t *testing.T) {
 	f.Close()
 
 	domain, err := GetClusterDomain()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if domain != "cluster.local" {
-		t.Errorf("cluster domain is cluster.local: %s", domain)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "cluster.local", domain)
 }
