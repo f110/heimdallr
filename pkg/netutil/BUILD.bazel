@@ -19,5 +19,9 @@ go_test(
     name = "netutil_test",
     srcs = ["hostname_test.go"],
     embed = [":netutil"],
-    deps = ["//pkg/k8s"],
+    deps = [
+        "//pkg/k8s",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
 )

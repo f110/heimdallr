@@ -4,31 +4,26 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.f110.dev/heimdallr/pkg/k8s"
 )
 
 func TestGetHostname(t *testing.T) {
 	t.Run("on-perm", func(t *testing.T) {
 		got, err := GetHostname()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		hostname, err := os.Hostname()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if got != hostname {
-			t.Errorf("expect hostname is %s: %s", hostname, got)
-		}
+		assert.Equal(t, hostname, got)
 	})
 
 	t.Run("on-k8s", func(t *testing.T) {
 		tempFile, err := os.CreateTemp("", "k8s")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		defer os.Remove(tempFile.Name())
 		tempFile.WriteString(`nameserver 10.96.0.10
 search default.svc.cluster.example.com svc.cluster.example.com cluster.example.com
@@ -49,11 +44,7 @@ options ndots:5`)
 		}()
 
 		got, err := GetHostname()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got != "192-168-230-1.proxy.pod.cluster.example.com" {
-			t.Errorf("expected hostname is 192-168-230-1.proxy.pod.cluster.example.com: %s", got)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "192-168-230-1.proxy.pod.cluster.example.com", got)
 	})
 }
