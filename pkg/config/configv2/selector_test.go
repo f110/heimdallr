@@ -1,9 +1,10 @@
 package configv2
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func assertUpstream(t *testing.T, sel *HTTPBackendSelector, path, expect string) {
