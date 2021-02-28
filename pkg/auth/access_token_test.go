@@ -2,6 +2,8 @@ package auth
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAccessToken(t *testing.T) {
@@ -10,16 +12,8 @@ func TestNewAccessToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if at.Name != "test-name" {
-		t.Errorf("expect Name is test-name: %v", at.Name)
-	}
-	if at.UserId != "test-userid" {
-		t.Errorf("expect UserId is test-userid: %v", at.UserId)
-	}
-	if at.Issuer != "test-issuer" {
-		t.Errorf("expect Issuer is test-issuer: %v", at.Issuer)
-	}
-	if at.Value == "" {
-		t.Error("token is nil")
-	}
+	assert.Equal(t, "test-name", at.Name)
+	assert.Equal(t, "test-userid", at.UserId)
+	assert.Equal(t, "test-issuer", at.Issuer)
+	assert.NotEmpty(t, at.Value)
 }

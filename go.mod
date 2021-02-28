@@ -36,7 +36,7 @@ require (
 	github.com/prometheus/common v0.10.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200518175753-732df43cf85b
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.opencensus.io v0.22.4 // indirect

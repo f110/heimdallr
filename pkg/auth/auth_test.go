@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -123,9 +122,7 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://public.proxy.example.com/ok", nil)
 			_, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 
 		t.Run("with restricted path", func(t *testing.T) {
@@ -133,9 +130,7 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/ok", nil)
 			_, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 
 		t.Run("with not allowed path", func(t *testing.T) {
@@ -143,9 +138,7 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/disallow", nil)
 			_, _, err := Authenticate(context.TODO(), req)
-			if err != ErrNotAllowed {
-				t.Fatalf("expected ErrNotAllowed: %v", err)
-			}
+			require.Equal(t, ErrNotAllowed, err)
 		})
 	})
 
@@ -157,26 +150,16 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			c, err := s.Cookie(session.New("foobar@example.com"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req.AddCookie(c)
 
 			user, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if user.Id != "foobar@example.com" {
-				t.Errorf("expect foobar@example.com: %s", user.Id)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
 
 			user, _, err = Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if user.Id != "foobar@example.com" {
-				t.Errorf("expect foobar@example.com: %s", user.Id)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
 		})
 
 		t.Run("normal with root user", func(t *testing.T) {
@@ -184,20 +167,12 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://root.proxy.example.com/ok", nil)
 			c, err := s.Cookie(session.New("root@example.com"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req.AddCookie(c)
 			user, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if user.Id != "root@example.com" {
-				t.Errorf("expect foobar@example.com: %s", user.Id)
-			}
-			if !user.RootUser {
-				t.Error("expect root@example.com is root")
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "root@example.com", user.Id)
+			assert.True(t, user.RootUser)
 		})
 
 		t.Run("not have cookie", func(t *testing.T) {
@@ -206,9 +181,7 @@ func TestAuthenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 
 			_, _, err := Authenticate(context.TODO(), req)
-			if err != ErrSessionNotFound {
-				t.Errorf("expect session not found: %v", err)
-			}
+			assert.Equal(t, ErrSessionNotFound, err)
 		})
 
 		t.Run("user not found", func(t *testing.T) {
@@ -216,14 +189,10 @@ func TestAuthenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			c, err := s.Cookie(session.New("foo@example.com"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req.AddCookie(c)
 			_, _, err = Authenticate(context.TODO(), req)
-			if err != ErrUserNotFound {
-				t.Errorf("expect user not found: %v", err)
-			}
+			assert.Equal(t, ErrUserNotFound, err)
 		})
 
 		t.Run("unknown host", func(t *testing.T) {
@@ -232,9 +201,7 @@ func TestAuthenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://unknownhost.example.com/ok", nil)
 
 			_, _, err := Authenticate(context.TODO(), req)
-			if err != ErrHostnameNotFound {
-				t.Errorf("expect hostname not found: %v", err)
-			}
+			assert.Equal(t, ErrHostnameNotFound, err)
 		})
 	})
 
@@ -244,18 +211,12 @@ func TestAuthenticate(t *testing.T) {
 		newClientCert := func(t *testing.T, id string) *x509.Certificate {
 			subject := pkix.Name{CommonName: id}
 			pemEncodedCSRBytes, _, err := cert.CreatePrivateKeyAndCertificateRequest(subject, []string{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			block, _ := pem.Decode(pemEncodedCSRBytes)
 			csr, err := x509.ParseCertificateRequest(block.Bytes)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			clientCert, err := cert.SigningCertificateRequest(csr, conf.CertificateAuthority.Local)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			return clientCert
 		}
@@ -268,12 +229,8 @@ func TestAuthenticate(t *testing.T) {
 				PeerCertificates: []*x509.Certificate{newClientCert(t, "foobar@example.com")},
 			}
 			user, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if user.Id != "foobar@example.com" {
-				t.Errorf("expect foobar@example.com: %s", user.Id)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
 		})
 
 		t.Run("normal with revoked certificate", func(t *testing.T) {
@@ -287,12 +244,8 @@ func TestAuthenticate(t *testing.T) {
 				PeerCertificates: []*x509.Certificate{clientCert},
 			}
 			_, _, err = Authenticate(context.TODO(), req)
-			if err == nil {
-				t.Fatal("expected to occurred error but not")
-			}
-			if err != ErrInvalidCertificate {
-				t.Fatalf("expected ErrInvalidCertificate: %v", err)
-			}
+			require.Error(t, err)
+			assert.Equal(t, ErrInvalidCertificate, err)
 		})
 
 		t.Run("access to Secure backend with Cookie", func(t *testing.T) {
@@ -304,15 +257,11 @@ func TestAuthenticate(t *testing.T) {
 				PeerCertificates: []*x509.Certificate{clientCert},
 			}
 			c, err := s.Cookie(session.New("foobar@example.com"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req.AddCookie(c)
 
 			_, _, err = Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 	})
 
@@ -323,19 +272,13 @@ func TestAuthenticate(t *testing.T) {
 			t.Parallel()
 
 			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: t.Name(), UserId: "foobar@example.com"})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-TOKEN", t.Name())
 			user, _, err := Authenticate(context.TODO(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if user.Id != "foobar@example.com" {
-				t.Errorf("expect foobar@example.com: %s", user.Id)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
 		})
 
 		t.Run("header not found", func(t *testing.T) {
@@ -344,12 +287,8 @@ func TestAuthenticate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			_, _, err = Authenticate(context.TODO(), req)
-			if err == nil {
-				t.Fatal("expected to occurred error but not")
-			}
-			if err != ErrUserNotFound {
-				t.Fatalf("expected ErrUserNotFound: %v", err)
-			}
+			require.Error(t, err)
+			assert.Equal(t, ErrUserNotFound, err)
 		})
 
 		t.Run("invalid token", func(t *testing.T) {
@@ -359,31 +298,21 @@ func TestAuthenticate(t *testing.T) {
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-Token", "unknown-token")
 			_, _, err = Authenticate(context.TODO(), req)
-			if err == nil {
-				t.Fatal("expected to occurred error but not")
-			}
-			if err != ErrUserNotFound {
-				t.Fatalf("expected ErrUserNotFound: %v", err)
-			}
+			require.Error(t, err)
+			assert.Equal(t, ErrUserNotFound, err)
 		})
 
 		t.Run("user not found", func(t *testing.T) {
 			t.Parallel()
 
 			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: "dummy-token", UserId: "piyo@example.com"})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "LP-TOKEN")
 			req.Header.Set("X-LP-TOKEN", "dummy-token")
 			_, _, err = Authenticate(context.TODO(), req)
-			if err == nil {
-				t.Fatal("expected to occurred error but not")
-			}
-			if err != ErrUserNotFound {
-				t.Fatalf("expected ErrUserNotFound: %v", err)
-			}
+			require.Error(t, err)
+			assert.Equal(t, ErrUserNotFound, err)
 		})
 	})
 }
@@ -476,13 +405,9 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 		t.Parallel()
 
 		newCode, err := token.NewCode(context.Background(), "foobar@example.com", "", "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		newToken, err := token.IssueToken(context.Background(), newCode.Code, "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		backend, user, err := AuthenticateSocket(context.Background(), newToken.Token, "test.proxy.example.com")
 		require.NoError(t, err)
 		assert.Equal(t, "test", backend.Name)
@@ -492,9 +417,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 
 func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
@@ -548,40 +471,24 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		t.Parallel()
 
 		newCode, err := token.NewCode(context.Background(), "foobar@example.com", "", "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		newToken, err := token.IssueToken(context.Background(), newCode.Code, "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		md := metadata.New(map[string]string{rpc.TokenMetadataKey: newToken.Token})
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		res, ok := v.(bool)
-		if !ok {
-			t.Fatal("response should be bool")
-		}
-		if !res {
-			t.Fatal("unexpected response")
-		}
+		require.True(t, ok)
+		require.True(t, res)
 
 		v, err = UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		res, ok = v.(bool)
-		if !ok {
-			t.Fatal("response should be bool")
-		}
-		if !res {
-			t.Fatal("unexpected response")
-		}
+		require.True(t, ok)
+		require.True(t, res)
 	})
 
 	t.Run("with jwt", func(t *testing.T) {
@@ -593,24 +500,16 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 			ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
 		})
 		jwtToken, err := claim.SignedString(conf.AccessProxy.Credential.SigningPrivateKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		md := metadata.New(map[string]string{rpc.JwtTokenMetadataKey: jwtToken})
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		res, ok := v.(bool)
-		if !ok {
-			t.Fatal("response should be bool")
-		}
-		if !res {
-			t.Fatal("unexpected response")
-		}
+		require.True(t, ok)
+		require.True(t, res)
 	})
 
 	t.Run("with internal token", func(t *testing.T) {
@@ -620,28 +519,18 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/proxy.rpc.certificateauthority.watchrevokedcert"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		res, ok := v.(bool)
-		if !ok {
-			t.Fatal("response should be bool")
-		}
-		if !res {
-			t.Fatal("unexpected response")
-		}
+		require.True(t, ok)
+		require.True(t, res)
 	})
 
 	t.Run("not provide metadata", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := UnaryInterceptor(context.Background(), nil, nil, nil)
-		if err == nil {
-			t.Fatal("expect to occurred error but not")
-		}
-		if !errors.Is(err, unauthorizedError.Err()) {
-			t.Fatalf("expect unauthorizedError: %v", err)
-		}
+		require.Error(t, err)
+		require.ErrorIs(t, err, unauthorizedError.Err())
 	})
 
 	t.Run("not provide token", func(t *testing.T) {
@@ -651,12 +540,8 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		_, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/test"}, nil)
-		if err == nil {
-			t.Fatal("expect to occurred error but not")
-		}
-		if !errors.Is(err, unauthorizedError.Err()) {
-			t.Fatalf("expect unauthorizedError: %v", err)
-		}
+		require.Error(t, err)
+		require.ErrorIs(t, err, unauthorizedError.Err())
 	})
 
 	t.Run("health check methods should not check a clearance", func(t *testing.T) {
@@ -670,25 +555,17 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 			v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: m}, func(_ context.Context, _ interface{}) (interface{}, error) {
 				return true, nil
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			res, ok := v.(bool)
-			if !ok {
-				t.Fatal("response should be bool")
-			}
-			if !res {
-				t.Fatal("unexpected response")
-			}
+			require.True(t, ok)
+			require.True(t, res)
 		}
 	})
 }
 
 func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
 	token := memory.NewTokenDatabase()
@@ -743,26 +620,18 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		err := StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		err = StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, okHandler)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	})
 
 	t.Run("not provide metadata", func(t *testing.T) {
 		t.Parallel()
 
 		err := StreamInterceptor(nil, &testServerStream{ctx: context.Background()}, nil, nil)
-		if err == nil {
-			t.Fatal("expect to occurred error but not")
-		}
-		if !errors.Is(err, unauthorizedError.Err()) {
-			t.Fatalf("expect unauthorizedError: %v", err)
-		}
+		require.Error(t, err)
+		require.ErrorIs(t, err, unauthorizedError.Err())
 	})
 
 	t.Run("not provide token", func(t *testing.T) {
@@ -772,11 +641,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 
 		err := StreamInterceptor(nil, &testServerStream{ctx: ctx}, &grpc.StreamServerInfo{FullMethod: "/test"}, nil)
-		if err == nil {
-			t.Fatal("expect to occurred error but not")
-		}
-		if !errors.Is(err, unauthorizedError.Err()) {
-			t.Fatalf("expect unauthorizedError: %v", err)
-		}
+		require.Error(t, err)
+		require.ErrorIs(t, err, unauthorizedError.Err())
 	})
 }
