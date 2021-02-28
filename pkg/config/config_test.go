@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.etcd.io/etcd/v3/embed"
 	"go.uber.org/zap/zapcore"
 
@@ -38,9 +39,7 @@ func TestGeneral(t *testing.T) {
 		t.Parallel()
 
 		backend, ok := conf.GetBackendByHostname("test.example.com")
-		if !ok {
-			t.Fatal("expect is ok")
-		}
+		require.True(t, ok)
 		assert.Equal(t, "test", backend.Name)
 	})
 
@@ -48,81 +47,55 @@ func TestGeneral(t *testing.T) {
 		t.Parallel()
 
 		backend, ok := conf.GetBackendByHost("test.example.com:80")
-		if !ok {
-			t.Fatalf("expect is ok")
-		}
-		if backend.Name != "test" {
-			t.Fatalf("unexpected backend: %s", backend.Name)
-		}
+		require.True(t, ok)
+		assert.Equal(t, "test", backend.Name)
 	})
 
 	t.Run("GetBackend", func(t *testing.T) {
 		t.Parallel()
 
 		backend, ok := conf.GetBackend("test")
-		if !ok {
-			t.Fatalf("expect is ok")
-		}
-		if backend.Name != "test" {
-			t.Fatalf("unexpected backend: %s", backend.Name)
-		}
+		require.True(t, ok)
+		require.Equal(t, "test", backend.Name)
 
 		_, ok = conf.GetBackend("unknown")
-		if ok {
-			t.Fatal("expect is not ok")
-		}
+		require.False(t, ok)
 	})
 
 	t.Run("GetAllBackends", func(t *testing.T) {
 		t.Parallel()
 
 		all := conf.GetAllBackends()
-		if len(all) != len(backends) {
-			t.Fatalf("GetAllBackends did not returned all backends")
-		}
+		assert.Equal(t, len(all), len(backends))
 	})
 
 	t.Run("GetAllRoles", func(t *testing.T) {
 		t.Parallel()
 
 		all := conf.GetAllRoles()
-		if len(all) != len(roles)+1 {
-			t.Fatalf("GetAllRoles did not returned all roles")
-		}
+		assert.Equal(t, len(all), len(roles)+1)
 	})
 
 	t.Run("GetRole", func(t *testing.T) {
 		t.Parallel()
 
 		role, err := conf.GetRole("test")
-		if err != nil {
-			t.Fatalf("%+v", err)
-		}
-		if role.Name != "test" {
-			t.Fatalf("unexpected role: %s", role.Name)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "test", role.Name)
 
 		_, err = conf.GetRole("unknown")
-		if err != ErrRoleNotFound {
-			t.Errorf("expect ErrRoleNotFound: %v", err)
-		}
+		assert.Equal(t, ErrRoleNotFound, err)
 	})
 
 	t.Run("GetRpcPermission", func(t *testing.T) {
 		t.Parallel()
 
 		rp, ok := conf.GetRpcPermission("test")
-		if !ok {
-			t.Fatalf("expect is ok")
-		}
-		if rp.Name != "test" {
-			t.Fatalf("unexpected rpc permission: %s", rp.Name)
-		}
+		require.True(t, ok)
+		assert.Equal(t, "test", rp.Name)
 
 		_, ok = conf.GetRpcPermission("unknown")
-		if ok {
-			t.Fatal("expect is not ok")
-		}
+		require.False(t, ok)
 	})
 }
 
@@ -130,27 +103,20 @@ func TestLogger_ZapConfig(t *testing.T) {
 	l := &Logger{}
 
 	c := l.ZapConfig(zapcore.EncoderConfig{})
-	if c == nil {
-		t.Fatal("ZapConfig must return a value")
-	}
+	require.NotNil(t, c)
 }
 
 func TestDatastore_GetEtcdClient(t *testing.T) {
 	tmpDir := t.TempDir()
 	dataDir := filepath.Join(tmpDir, "data")
-	if err := os.Mkdir(dataDir, 0700); err != nil {
-		t.Fatal(err)
-	}
+	err := os.Mkdir(dataDir, 0700)
+	require.NoError(t, err)
 
 	clientPort, err := netutil.FindUnusedPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Logf("Client port: %d", clientPort)
 	peerPort, err := netutil.FindUnusedPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Logf("Peer port: %d", peerPort)
 
 	u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", clientPort)}
@@ -160,29 +126,22 @@ func TestDatastore_GetEtcdClient(t *testing.T) {
 	c.LPUrls[0].Host = fmt.Sprintf("localhost:%d", peerPort)
 	c.LCUrls[0] = *u
 	e, err := embed.StartEtcd(c)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer e.Close()
 
 	select {
 	case <-e.Server.ReadyNotify():
 	case <-time.After(time.Second):
-		t.Fatal("Can not start etcd server within 1 second")
+		require.Fail(t, "Can not start etcd server within 1 second")
 	}
 
 	ds := &Datastore{
 		RawUrl: fmt.Sprintf("etcd://localhost:%d", clientPort),
 	}
-	if err := ds.Inflate(""); err != nil {
-		t.Fatal(err)
-	}
+	err = ds.Inflate("")
+	require.NoError(t, err)
 
 	client, err := ds.GetEtcdClient(&Logger{})
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	if client == nil {
-		t.Fatal("GetEtcdClient should return a value")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, client)
 }
