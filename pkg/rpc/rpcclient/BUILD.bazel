@@ -29,5 +29,9 @@ go_test(
     name = "rpcclient_test",
     srcs = ["client_test.go"],
     embed = [":rpcclient"],
-    deps = ["//pkg/rpc/rpctestutil"],
+    deps = [
+        "//pkg/rpc/rpctestutil",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
 )

@@ -4,6 +4,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.f110.dev/heimdallr/pkg/rpc/rpctestutil"
 )
 
@@ -13,106 +16,56 @@ func TestNewWithClient(t *testing.T) {
 	ca := rpctestutil.NewCertificateAuthorityClient()
 	u := rpctestutil.NewUserClient()
 	c := NewWithClient(a, cl, ca, u)
-	if c == nil {
-		t.Fatal("NewWithClient should return a value")
-	}
+	require.NotNil(t, c)
 
 	_ = c.AddUser("", "")
-	if a.UserAddCall != 1 {
-		t.Error("Expect call UserAdd")
-	}
+	assert.Equal(t, 1, a.UserAddCall)
 	_ = c.DeleteUser("", "")
-	if a.UserDelCall != 1 {
-		t.Error("Expect call UserDel")
-	}
+	assert.Equal(t, 1, a.UserDelCall)
 	_, _ = c.ListAllUser()
-	if a.UserListCall != 1 {
-		t.Error("Expect call UserList")
-	}
+	assert.Equal(t, 1, a.UserListCall)
 	_, _ = c.ListServiceAccount()
-	if a.UserListCall != 2 {
-		t.Error("Expect call UserList")
-	}
+	assert.Equal(t, 2, a.UserListCall)
 	_, _ = c.ListUser("")
-	if a.UserListCall != 3 {
-		t.Error("Expect call UserList")
-	}
+	assert.Equal(t, 3, a.UserListCall)
 	_ = c.NewServiceAccount("", "")
-	if a.UserAddCall != 2 {
-		t.Error("Expect call UserAdd")
-	}
+	assert.Equal(t, 2, a.UserAddCall)
 	_, _ = c.GetUser("", false)
-	if a.UserGetCall != 1 {
-		t.Error("Expect call UserGet")
-	}
+	assert.Equal(t, 1, a.UserGetCall)
 	_ = c.UserBecomeMaintainer("", "")
-	if a.BecomeMaintainerCall != 1 {
-		t.Error("Expect call BecomeMaintainer")
-	}
+	assert.Equal(t, 1, a.BecomeMaintainerCall)
 	_ = c.ToggleAdmin("")
-	if a.ToggleAdminCall != 1 {
-		t.Error("Expect call ToggleAdmin")
-	}
+	assert.Equal(t, 1, a.ToggleAdminCall)
 	_, _ = c.NewToken("", "")
-	if a.TokenNewCall != 1 {
-		t.Error("Expect call TokenNew")
-	}
+	assert.Equal(t, 1, a.TokenNewCall)
 	_, _ = c.ListRole()
-	if a.RoleListCall != 1 {
-		t.Error("Expect call RoleList")
-	}
+	assert.Equal(t, 1, a.RoleListCall)
 	_, _ = c.ListAllBackend()
-	if a.BackendListCall != 1 {
-		t.Error("Expect call BackendList")
-	}
+	assert.Equal(t, 1, a.BackendListCall)
 	_, _ = c.ListAgentBackend()
-	if a.BackendListCall != 2 {
-		t.Error("Expect call BackendList")
-	}
+	assert.Equal(t, 2, a.BackendListCall)
 
 	_, _ = c.ClusterMemberList()
-	if cl.MemberListCall != 1 {
-		t.Error("Expect call MemberList")
-	}
+	assert.Equal(t, 1, cl.MemberListCall)
 	_, _ = c.ListConnectedAgent()
-	if cl.AgentListCall != 1 {
-		t.Error("Expect call AgentList")
-	}
+	assert.Equal(t, 1, cl.AgentListCall)
 
 	_, _ = c.ListCert()
-	if ca.GetSignedListCall != 1 {
-		t.Error("Expect call GetSignedList")
-	}
+	assert.Equal(t, 1, ca.GetSignedListCall)
 	_, _ = c.ListRevokedCert()
-	if ca.GetRevokedListCall != 1 {
-		t.Error("Expect call ListRevokedCert")
-	}
+	assert.Equal(t, 1, ca.GetRevokedListCall)
 	_ = c.NewCert("", "", 0, "", "")
-	if ca.NewClientCertCall != 1 {
-		t.Error("Expect call NewClientCert")
-	}
+	assert.Equal(t, 1, ca.NewClientCertCall)
 	_, _ = c.NewCertByCSR("")
-	if ca.NewClientCertCall != 2 {
-		t.Error("Expect call NewClientCert")
-	}
+	assert.Equal(t, 2, ca.NewClientCertCall)
 	_ = c.NewAgentCert("", "")
-	if ca.NewClientCertCall != 3 {
-		t.Error("Expect call NewClientCert")
-	}
+	assert.Equal(t, 3, ca.NewClientCertCall)
 	_, _ = c.NewAgentCertByCSR("", "'")
-	if ca.NewClientCertCall != 4 {
-		t.Error("Expect call NewClientCert")
-	}
+	assert.Equal(t, 4, ca.NewClientCertCall)
 	_, _ = c.NewServerCert([]byte{})
-	if ca.NewServerCertCall != 1 {
-		t.Error("Expect call NewServerCert")
-	}
+	assert.Equal(t, 1, ca.NewServerCertCall)
 	_ = c.RevokeCert(big.NewInt(0))
-	if ca.RevokeCall != 1 {
-		t.Error("Expect call Revoke")
-	}
+	assert.Equal(t, 1, ca.RevokeCall)
 	_, _ = c.GetCert(big.NewInt(0))
-	if ca.GetCall != 1 {
-		t.Error("Expect call Get")
-	}
+	assert.Equal(t, 1, ca.GetCall)
 }
