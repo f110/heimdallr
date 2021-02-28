@@ -16,6 +16,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -37,9 +40,7 @@ func TestNewHttpProxy(t *testing.T) {
 	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
-	if p == nil {
-		t.Fatal("NewHttpProxy should return a value")
-	}
+	assert.NotNil(t, p, "NewHttpProxy should return a value")
 }
 
 func TestHttpProxy_ServeHTTP(t *testing.T) {
@@ -87,9 +88,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	rpcPermissions := []*configv2.RPCPermission{}
 
 	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signReqPubKey := signReqKey.PublicKey
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
@@ -106,16 +105,13 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		},
 	}
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
-	if err := conf.AccessProxy.Setup(backends); err != nil {
-		t.Fatal(err)
-	}
-	if err := conf.AuthorizationEngine.Setup(roles, rpcPermissions); err != nil {
-		t.Fatal(err)
-	}
+	err = conf.AccessProxy.Setup(backends)
+	require.NoError(t, err)
+	err = conf.AuthorizationEngine.Setup(roles, rpcPermissions)
+	require.NoError(t, err)
 	auth.Init(conf, s, u, nil, nil)
-	if err := logger.Init(conf.Logger); err != nil {
-		t.Fatal(err)
-	}
+	err = logger.Init(conf.Logger)
+	require.NoError(t, err)
 
 	c := rpcclient.NewWithClient(nil, nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
@@ -129,9 +125,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeHTTP(context.Background(), recorder, req)
 
 		res := recorder.Result()
-		if res.StatusCode != http.StatusSeeOther {
-			t.Fatalf("expect StatusSeeOther: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	})
 
 	t.Run("User not found", func(t *testing.T) {
@@ -141,16 +135,12 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
 		req.TLS = newTLSConnectionState()
 		cookie, err := s.Cookie(session.New("foobar@example.com"))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		req.AddCookie(cookie)
 		p.ServeHTTP(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusUnauthorized {
-			t.Fatalf("expect StatusUnauthorized: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 	})
 
 	t.Run("Host not found", func(t *testing.T) {
@@ -158,12 +148,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		defer func() {
 			err := recover()
-			if err == nil {
-				t.Fatal("ServeHTTP should panic but not")
-			}
-			if err != http.ErrAbortHandler {
-				t.Fatalf("expect http.ErrAbortHandler: %v", err)
-			}
+			require.NotNil(t, err, "ServeHTTP should panic")
+			require.Equal(t, http.ErrAbortHandler, err)
 		}()
 
 		recoder := httptest.NewRecorder()
@@ -179,16 +165,12 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
 		req.TLS = newTLSConnectionState()
 		cookie, err := s.Cookie(session.New("foobarbaz@example.com"))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		req.AddCookie(cookie)
 		p.ServeHTTP(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusBadGateway {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 
 	t.Run("Success via http", func(t *testing.T) {
@@ -197,16 +179,12 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		recoder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "http://http.example.com/", nil)
 		cookie, err := s.Cookie(session.New("foobarbaz@example.com"))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		req.AddCookie(cookie)
 		p.ServeHTTP(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusBadGateway {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 
 	t.Run("Backend is not allowed http access", func(t *testing.T) {
@@ -215,16 +193,12 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		recoder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "http://test.example.com/", nil)
 		cookie, err := s.Cookie(session.New("foobarbaz@example.com"))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		req.AddCookie(cookie)
 		p.ServeHTTP(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusForbidden {
-			t.Fatalf("expect StatusUpgradeRequired: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusForbidden, res.StatusCode)
 	})
 
 	t.Run("Webhook from github without signature", func(t *testing.T) {
@@ -235,9 +209,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeGithubWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusBadRequest {
-			t.Fatalf("expect StatusBadRequest: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 	})
 
 	t.Run("Webhook from github with valid signature", func(t *testing.T) {
@@ -254,9 +226,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeGithubWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusBadGateway {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 
 	t.Run("Webhook from slack without client certificate", func(t *testing.T) {
@@ -267,18 +237,14 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeSlackWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusUnauthorized {
-			t.Fatalf("expect StatusUnauthorized: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 	})
 
 	t.Run("Webhook from slack with invalid client certificate", func(t *testing.T) {
 		t.Parallel()
 
 		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		ca := &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
 				Certificate: caCert,
@@ -286,13 +252,9 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			},
 		}
 		serial, err := cert.NewSerialNumber()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca.Local)
-		if err != nil {
-			t.Fatal()
-		}
+		require.NoError(t, err)
 
 		recoder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "http://slack.example.com/command", nil)
@@ -300,18 +262,14 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeSlackWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		if res.StatusCode != http.StatusUnauthorized {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 	})
 
 	t.Run("Webhook from slack with client certificate", func(t *testing.T) {
 		t.Parallel()
 
 		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		ca := &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
 				Certificate: caCert,
@@ -319,13 +277,9 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			},
 		}
 		serial, err := cert.NewSerialNumber()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca.Local)
-		if err != nil {
-			t.Fatal()
-		}
+		require.NoError(t, err)
 
 		recoder := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "http://slack.example.com/command", nil)
@@ -334,8 +288,6 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		res := recoder.Result()
 		// BadGateway is a normal status in test due to backend not found.
-		if res.StatusCode != http.StatusBadGateway {
-			t.Fatalf("expect StatusBadGateway: %s", res.Status)
-		}
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 }

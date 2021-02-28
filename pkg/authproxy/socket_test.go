@@ -87,16 +87,12 @@ func parseResponseMessage(t *testing.T, buf []byte) MessageError {
 
 func TestNewSocketProxy(t *testing.T) {
 	v := NewSocketProxy(&configv2.Config{}, nil)
-	if v == nil {
-		t.Fatal("NewSocketProxy should return a value")
-	}
+	require.NotNil(t, v)
 }
 
 func TestSocketProxy_Accept(t *testing.T) {
 	backendListener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	backendAddr := backendListener.Addr().(*net.TCPAddr)
 	var backendConn net.Conn
 	gotConn := make(chan struct{})
@@ -145,13 +141,9 @@ func TestSocketProxy_Accept(t *testing.T) {
 		},
 	}, nil)
 	err = socketProxy.Config.AccessProxy.Setup(socketProxy.Config.AccessProxy.Backends)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = socketProxy.Config.AuthorizationEngine.Setup(socketProxy.Config.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_ = user.Set(nil, &database.User{Id: "test@example.com", Roles: []string{"test"}})
 	userToken, _ := token.SetUser("test@example.com")
 	auth.Init(socketProxy.Config, nil, user, token, nil)
@@ -165,9 +157,7 @@ func TestSocketProxy_Accept(t *testing.T) {
 		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
-		if msgErr.Code() != SocketErrorCodeInvalidProtocol {
-			t.Errorf("expect invalid protocol code: %v", msgErr.Code())
-		}
+		assert.Equal(t, SocketErrorCodeInvalidProtocol, msgErr.Code())
 	})
 
 	t.Run("Authentication failure", func(t *testing.T) {
@@ -188,9 +178,7 @@ func TestSocketProxy_Accept(t *testing.T) {
 		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
-		if msgErr.Code() != SocketErrorCodeRequestAuth {
-			t.Errorf("expect request auth: %v", msgErr.Code())
-		}
+		assert.Equal(t, SocketErrorCodeRequestAuth, msgErr.Code())
 	})
 
 	t.Run("Failed connect to backend", func(t *testing.T) {
@@ -211,9 +199,7 @@ func TestSocketProxy_Accept(t *testing.T) {
 		socketProxy.Accept(nil, conn, nil)
 
 		msgErr := parseResponseMessage(t, conn.writeBuf.Bytes())
-		if msgErr.Code() != SocketErrorCodeServerUnavailable {
-			t.Errorf("expect Server unavailable: %v", msgErr.Code())
-		}
+		assert.Equal(t, SocketErrorCodeServerUnavailable, msgErr.Code())
 	})
 
 	t.Run("Success", func(t *testing.T) {
@@ -236,37 +222,27 @@ func TestSocketProxy_Accept(t *testing.T) {
 		select {
 		case <-gotConn:
 		case <-time.After(1 * time.Second):
-			t.Fatal("Timeout")
+			require.Fail(t, "Timeout")
 		}
 
-		if backendConn == nil {
-			t.Fatal("did not connect to backend")
-		}
+		require.NotNil(t, backendConn, "did not connect to backend")
 	})
 }
 
 func TestNewClient(t *testing.T) {
 	r, w := io.Pipe()
 	v := NewSocketProxyClient(r, w)
-	if v == nil {
-		t.Error("NewSocketProxyClient should return a value")
-	}
+	require.NotNil(t, v)
 }
 
 func TestClient_Dial(t *testing.T) {
 	hostname, err := os.Hostname()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	serverCert, serverPrivKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{hostname})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	cCert, clientPrivKey, err := cert.GenerateMutualTLSCertificate(ca, caPrivateKey, []string{"test"}, nil)
 	require.NoError(t, err)
 	clientCert := &tls.Certificate{
@@ -278,13 +254,9 @@ func TestClient_Dial(t *testing.T) {
 		t.Parallel()
 
 		port, err := netutil.FindUnusedPort()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		tlsListener := tls.NewListener(l, &tls.Config{
 			ServerName: hostname,
 			Certificates: []tls.Certificate{
@@ -296,48 +268,35 @@ func TestClient_Dial(t *testing.T) {
 		})
 		go func() {
 			c, err := tlsListener.Accept()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			conn := c.(*tls.Conn)
-			if err := conn.Handshake(); err != nil {
-				t.Fatal(err)
-			}
+			err = conn.Handshake()
+			require.NoError(t, err)
 
 			buf := make([]byte, 5)
-			if _, err := conn.Read(buf); err != nil {
-				t.Fatal(err)
-			}
-			if buf[0] != TypeOpen {
-				t.Errorf("Expect TypeOpen: %v", buf[0])
-			}
+			_, err = conn.Read(buf)
+			require.NoError(t, err)
+			assert.Equal(t, TypeOpen, buf[0])
 			l := binary.BigEndian.Uint32(buf[1:5])
 			buf = make([]byte, l)
-			if _, err := conn.Read(buf); err != nil {
-				t.Fatal(err)
-			}
+			_, err = conn.Read(buf)
+			require.NoError(t, err)
 			conn.Write([]byte{TypeOpenSuccess, 0, 0, 0, 0})
 		}()
 
 		r, w := io.Pipe()
 		v := NewSocketProxyClient(r, w)
 		err = v.Dial("", fmt.Sprintf("%d", port), clientCert, "test-token", net.DefaultResolver, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	})
 
 	t.Run("Not has privilege", func(t *testing.T) {
 		t.Parallel()
 
 		port, err := netutil.FindUnusedPort()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		tlsListener := tls.NewListener(l, &tls.Config{
 			ServerName: hostname,
 			Certificates: []tls.Certificate{
@@ -350,26 +309,19 @@ func TestClient_Dial(t *testing.T) {
 
 		go func() {
 			c, err := tlsListener.Accept()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			conn := c.(*tls.Conn)
-			if err := conn.Handshake(); err != nil {
-				t.Fatal(err)
-			}
+			err = conn.Handshake()
+			require.NoError(t, err)
 
 			buf := make([]byte, 5)
-			if _, err := conn.Read(buf); err != nil {
-				t.Fatal(err)
-			}
-			if buf[0] != TypeOpen {
-				t.Errorf("Expect TypeOpen: %v", buf[0])
-			}
+			_, err = conn.Read(buf)
+			require.NoError(t, err)
+			assert.Equal(t, TypeOpen, buf[0])
 			l := binary.BigEndian.Uint32(buf[1:5])
 			buf = make([]byte, l)
-			if _, err := conn.Read(buf); err != nil {
-				t.Fatal(err)
-			}
+			_, err = conn.Read(buf)
+			require.NoError(t, err)
 
 			v := &url.Values{}
 			v.Set("code", "3")

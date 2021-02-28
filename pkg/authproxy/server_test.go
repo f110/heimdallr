@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
@@ -65,9 +67,7 @@ func TestFrontendProxy_ServeHTTP(t *testing.T) {
 		r := httptest.NewRecorder()
 		v.ServeHTTP(r, req)
 
-		if len(mockProxy.webhookRequests) == 0 {
-			t.Errorf("should call ServeGithubWebHook but not")
-		}
+		assert.Greater(t, len(mockProxy.webhookRequests), 0)
 	})
 
 	t.Run("Slack Webhook", func(t *testing.T) {
@@ -78,9 +78,7 @@ func TestFrontendProxy_ServeHTTP(t *testing.T) {
 		r := httptest.NewRecorder()
 		v.ServeHTTP(r, req)
 
-		if len(mockProxy.webhookRequests) == 0 {
-			t.Errorf("should call ServeSlackWebHook but not")
-		}
+		assert.Greater(t, len(mockProxy.webhookRequests), 0)
 	})
 
 	t.Run("other", func(t *testing.T) {
@@ -90,8 +88,6 @@ func TestFrontendProxy_ServeHTTP(t *testing.T) {
 		r := httptest.NewRecorder()
 		v.ServeHTTP(r, req)
 
-		if len(mockProxy.requests) == 0 {
-			t.Errorf("should call ServeHTTP but not")
-		}
+		assert.Greater(t, len(mockProxy.requests), 0)
 	})
 }
