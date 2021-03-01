@@ -17,6 +17,7 @@ import (
 var (
 	format   *string
 	junit    *string
+	step     *bool
 	verbose  *bool
 	e2eDebug *bool
 
@@ -27,6 +28,7 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	format = flag.String("e2e.format", "", "Output format. (json, doc)")
 	junit = flag.String("e2e.junit", "", "JUnit output file path")
+	step = flag.Bool("e2e.step", false, "Step execution")
 	verbose = flag.Bool("e2e.verbose", false, "Verbose output. include stdout and stderr of all child processes.")
 	e2eDebug = flag.Bool("e2e.debug", false, "Debug e2e framework")
 }
@@ -81,7 +83,7 @@ func New(t *testing.T) *Framework {
 	go dnsServer.ListenAndServe()
 
 	return &Framework{
-		BehaviorDriven: btesting.New(t, *junit),
+		BehaviorDriven: btesting.New(t, *junit, *step),
 		Proxy:          p,
 		Agents:         NewAgents(p.Domain, p.CA, p.sessionStore, p.rpcPort, p.signPrivateKey),
 		DNS:            dnsServer,

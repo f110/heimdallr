@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//pkg/netutil",
         "//vendor/github.com/fatih/color",
+        "//vendor/github.com/peterh/liner",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/golang.org/x/xerrors",
     ],

@@ -40,6 +40,7 @@ type ConfigStruct struct {
 	SidecarImageFile   string
 	BuildVersion       string
 	AllInOneManifest   string
+	Step               bool
 	Retain             bool
 }
 
@@ -57,6 +58,7 @@ func Flags(fs *flag.FlagSet) {
 	fs.StringVar(&Config.SidecarImageFile, "sidecar-image-file", "", "Sidecar image file")
 	fs.StringVar(&Config.AllInOneManifest, "all-in-one-manifest", "", "Manifest file for operator")
 	fs.StringVar(&Config.BuildVersion, "build-version", "", "Version string")
+	fs.BoolVar(&Config.Step, "step", false, "Step execution")
 	fs.BoolVar(&Config.Retain, "retain", false, "Do not delete cluster after test")
 }
 
@@ -81,7 +83,7 @@ func New(t *testing.T, conf *rest.Config) *Framework {
 	}
 
 	return &Framework{
-		BehaviorDriven: btesting.New(t, ""),
+		BehaviorDriven: btesting.New(t, "", Config.Step),
 		Proxy:          &Proxy{restConfig: conf, coreClient: coreClient, client: c},
 		EtcdClusters: &EtcdClusters{
 			restConfig: conf,

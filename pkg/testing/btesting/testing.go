@@ -2,6 +2,7 @@ package btesting
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/peterh/liner"
 )
 
 var (
@@ -26,14 +28,16 @@ type BehaviorDriven struct {
 	tracker *Tracker
 
 	junitFile string
+	step      bool
 }
 
-func New(t *testing.T, junitFile string) *BehaviorDriven {
+func New(t *testing.T, junitFile string, step bool) *BehaviorDriven {
 	return &BehaviorDriven{
 		t:         t,
 		junitFile: junitFile,
 		tracker:   DefaultTracker,
 		child:     make([]*Scenario, 0),
+		step:      step,
 	}
 }
 
@@ -79,14 +83,242 @@ func (b *BehaviorDriven) Execute(format string) {
 
 	// 2nd phase:
 	// 2nd phase is an execution phase.
-	for _, c := range child {
-		c.execute(b.t)
-	}
+	r := newExecutionRuntime(child, b.step)
+	r.Execute(b.t)
 }
 
 func (b *BehaviorDriven) Describe(name string, fn func(s *Scenario)) {
 	s := NewScenario(b.t, nil, name, 0, fn, name)
 	b.child = append(b.child, s)
+}
+
+type executionRuntime struct {
+	nodes         []*node
+	line          *liner.State
+	ask           chan string
+	do            chan struct{}
+	hasBreakpoint bool
+}
+
+func newExecutionRuntime(nodes []*node, step bool) *executionRuntime {
+	r := &executionRuntime{
+		nodes: nodes,
+	}
+	if step {
+		line := liner.NewLiner()
+		line.SetCtrlCAborts(true)
+		r.line = line
+		r.ask = make(chan string)
+		r.do = make(chan struct{})
+	}
+
+	return r
+}
+
+func (e *executionRuntime) Execute(t *testing.T) {
+	ctx := context.Background()
+	if e.line != nil {
+		e.hasBreakpoint = e.findBreakpoint()
+		c, cancel := context.WithCancel(context.Background())
+		ctx = c
+		go e.prompt(cancel)
+	}
+
+	for _, v := range e.nodes {
+		e.executeNode(ctx, t, v)
+	}
+	if e.line != nil {
+		e.line.Close()
+	}
+}
+
+func (e *executionRuntime) prompt(cancel context.CancelFunc) {
+	for {
+		p := <-e.ask
+		asn, err := e.line.Prompt(fmt.Sprintf("Next: %s) ", p))
+		if err == liner.ErrPromptAborted {
+			cancel()
+			return
+		}
+		asn = strings.ToLower(asn)
+		switch asn {
+		case "next", "n":
+			e.do <- struct{}{}
+		default:
+			log.Print([]byte(asn))
+		}
+	}
+}
+
+func (e *executionRuntime) findBreakpoint() bool {
+	found := false
+	e.walkNodes(func(n *node) bool {
+		for _, v := range []*hook{
+			n.beforeAll,
+			n.beforeEach,
+			n.subject,
+			n.afterEach,
+			n.afterAll,
+		} {
+			if v == nil {
+				continue
+			}
+			if v.step {
+				found = true
+				return false
+			}
+		}
+
+		return true
+	})
+
+	return found
+}
+
+func (e *executionRuntime) walkNodes(fn func(n *node) bool) {
+	st := newStack()
+	for i := len(e.nodes) - 1; i >= 0; i-- {
+		st.push(e.nodes[i])
+	}
+	for !st.isEmpty() {
+		n := st.pop().(*node)
+		cont := fn(n)
+		if !cont {
+			return
+		}
+
+		for i := len(n.child) - 1; i >= 0; i-- {
+			st.push(n.child[i])
+		}
+	}
+}
+
+func (e *executionRuntime) executeNode(ctx context.Context, t *testing.T, node *node) {
+	node.suite.Trigger()
+
+	if node.deferFunc != nil {
+		defer node.deferFunc()
+	}
+
+	if node.beforeAll != nil && !node.beforeAll.done {
+		e.executeFunc(ctx, t, node, node.beforeAll, nil, "BeforeAll")
+		node.beforeAll.done = true
+	}
+
+	if node.beforeEach != nil {
+		e.executeFunc(ctx, t, node, node.beforeEach, nil, "BeforeEach")
+	}
+
+	if node.subject != nil && !node.subject.done {
+		e.executeFunc(ctx, t, node, node.subject, nil, "Subject")
+		node.subject.done = true
+	}
+
+	if node.fn != nil {
+		c := node.suite.NewCase(node.route)
+		tSpy := &testingSpy{T: t}
+		c.Start()
+		e.executeFunc(ctx, t, node, node.fn, tSpy, "It")
+		success := !node.m.Failed()
+		c.Finish()
+
+		if success {
+			fmt.Fprint(stdout, color.GreenString("S: %s\n", node.route))
+			c.Succeeded()
+		} else {
+			fmt.Fprint(stdout, color.RedString("F: %s\n", node.route))
+			c.FailureMessage = tSpy.message
+			c.Failed()
+		}
+	}
+
+	if node.afterEach != nil {
+		e.executeFunc(ctx, t, node, node.afterEach, nil, "AfterEach")
+	}
+
+	if node.m != nil && node.m.failed {
+		if len(node.m.messages) == 0 {
+			node.m.T.Error("Failed")
+		}
+
+		for _, v := range node.m.messages {
+			node.m.T.Error(v)
+		}
+	}
+
+	if node.m == nil || (node.m != nil && !node.m.failed) {
+		for _, v := range node.child {
+			e.executeNode(ctx, t, v)
+		}
+	}
+
+	if node.afterAll != nil && !node.afterAll.done {
+		e.executeFunc(ctx, t, node, node.afterAll, nil, "AfterAll")
+		node.afterAll.done = true
+	}
+
+	node.suite.Finish()
+}
+
+func (e *executionRuntime) executeFunc(ctx context.Context, t *testing.T, node *node, h *hook, spy *testingSpy, step string) {
+	if e.ask != nil && step != "" {
+		if e.hasBreakpoint && !h.step {
+			goto Continue
+		}
+
+		select {
+		case e.ask <- node.route + " [" + step + "]":
+		case <-ctx.Done():
+			node.m.Fail("abort")
+			return
+		}
+
+		select {
+		case <-e.do:
+		case <-ctx.Done():
+			node.m.Fail("abort")
+			return
+		}
+	}
+
+Continue:
+	done := make(chan *execDone)
+	go func() {
+		success := false
+		defer func() {
+			rErr := recover()
+			if rErr != nil {
+				s := debug.Stack()
+				done <- &execDone{Stack: string(s), Err: rErr}
+			} else if !success {
+				done <- &execDone{Failure: true, Err: errors.New("failed execute")}
+			}
+			close(done)
+		}()
+
+		node.m.route = node.route
+		m := node.m
+		if spy != nil {
+			m = node.m.wrapTesting(spy)
+		}
+		h.fn(m)
+		success = !m.Failed()
+	}()
+
+	select {
+	case err, ok := <-done:
+		if !ok {
+			return
+		}
+
+		if err != nil && err.Err != nil {
+			if err.Stack != "" {
+				t.Log(err.Stack)
+			}
+			t.Fatalf("%s: %+v ", node.route, err.Err)
+		}
+		return
+	}
 }
 
 type Scenario struct {
@@ -97,8 +329,8 @@ type Scenario struct {
 	fn          func(s *Scenario)
 	beforeAll   *hook
 	afterAll    *hook
-	beforeEach  func(*Matcher)
-	afterEach   func(*Matcher)
+	beforeEach  *hook
+	afterEach   *hook
 	subject     *hook
 	subjectDone bool
 	deferFunc   func()
@@ -166,7 +398,7 @@ func (f *Scenario) Context(name string, fn func(s *Scenario)) {
 }
 
 func (f *Scenario) It(name string, fn func(m *Matcher)) {
-	s := NewCase(f.t, f, name, f.depth+1, fn, f.beforeEach, f.afterEach, f.route+" "+name)
+	s := NewCase(f.t, f, name, f.depth+1, &hook{fn: fn}, f.beforeEach, f.afterEach, f.route+" "+name)
 	f.child = append(f.child, s)
 }
 
@@ -179,31 +411,73 @@ func (f *Scenario) BeforeAll(fn func(m *Matcher)) {
 	f.beforeAll = &hook{fn: fn}
 }
 
+func (f *Scenario) SBeforeAll(fn func(m *Matcher)) {
+	f.beforeAll = &hook{step: true, fn: fn}
+}
+
 func (f *Scenario) AfterAll(fn func(m *Matcher)) {
 	f.afterAll = &hook{fn: fn}
+}
+
+func (f *Scenario) SAfterAll(fn func(m *Matcher)) {
+	f.afterAll = &hook{step: true, fn: fn}
 }
 
 func (f *Scenario) BeforeEach(fn func(m *Matcher)) {
 	if f.beforeEach != nil {
 		b := f.beforeEach
-		f.beforeEach = func(m *Matcher) {
-			b(m)
-			fn(m)
+		f.beforeEach = &hook{
+			fn: func(m *Matcher) {
+				b.fn(m)
+				fn(m)
+			},
 		}
 	} else {
-		f.beforeEach = fn
+		f.beforeEach = &hook{fn: fn}
+	}
+}
+
+func (f *Scenario) SBeforeEach(fn func(m *Matcher)) {
+	if f.beforeEach != nil {
+		b := f.beforeEach
+		f.beforeEach = &hook{
+			step: true,
+			fn: func(m *Matcher) {
+				b.fn(m)
+				fn(m)
+			},
+		}
+	} else {
+		f.beforeEach = &hook{step: true, fn: fn}
 	}
 }
 
 func (f *Scenario) AfterEach(fn func(m *Matcher)) {
 	if f.afterEach != nil {
 		a := f.afterEach
-		f.afterEach = func(m *Matcher) {
-			a(m)
-			fn(m)
+		f.afterEach = &hook{
+			fn: func(m *Matcher) {
+				a.fn(m)
+				fn(m)
+			},
 		}
 	} else {
-		f.afterEach = fn
+		f.afterEach = &hook{fn: fn}
+	}
+}
+
+func (f *Scenario) SAfterEach(fn func(m *Matcher)) {
+	if f.afterEach != nil {
+		a := f.afterEach
+		f.afterEach = &hook{
+			step: true,
+			fn: func(m *Matcher) {
+				a.fn(m)
+				fn(m)
+			},
+		}
+	} else {
+		f.afterEach = &hook{step: true, fn: fn}
 	}
 }
 
@@ -215,6 +489,10 @@ func (f *Scenario) Subject(fn func(m *Matcher)) {
 	f.subject = &hook{fn: fn}
 }
 
+func (f *Scenario) SSubject(fn func(m *Matcher)) {
+	f.subject = &hook{step: true, fn: fn}
+}
+
 type Case struct {
 	Name string
 
@@ -222,15 +500,15 @@ type Case struct {
 	depth      int
 	route      string
 	beforeAll  []*hook
-	beforeEach func(*Matcher)
-	afterEach  func(*Matcher)
+	beforeEach *hook
+	afterEach  *hook
 
-	fn func(m *Matcher)
+	fn *hook
 
 	t *testing.T
 }
 
-func NewCase(t *testing.T, s *Scenario, name string, depth int, fn, before, after func(*Matcher), route string) *Case {
+func NewCase(t *testing.T, s *Scenario, name string, depth int, fn, before, after *hook, route string) *Case {
 	return &Case{
 		Name:       name,
 		s:          s,
@@ -267,127 +545,22 @@ type node struct {
 	depth      int
 	parent     *node
 	child      []*node
-	fn         func(*Matcher)
+	fn         *hook
 	m          *Matcher
 	beforeAll  *hook
 	afterAll   *hook
 	subject    *hook
-	beforeEach func(*Matcher)
-	afterEach  func(*Matcher)
+	beforeEach *hook
+	afterEach  *hook
 	deferFunc  func()
 
 	suite *testSuite
 }
 
-func (n *node) execute(t *testing.T) {
-	n.suite.Trigger()
-
-	if n.deferFunc != nil {
-		defer n.deferFunc()
-	}
-
-	if n.beforeAll != nil && !n.beforeAll.done {
-		n.executeFunc(t, n.beforeAll.fn, nil)
-		n.beforeAll.done = true
-	}
-
-	if n.beforeEach != nil {
-		n.executeFunc(t, n.beforeEach, nil)
-	}
-
-	if n.subject != nil && !n.subject.done {
-		n.executeFunc(t, n.subject.fn, nil)
-		n.subject.done = true
-	}
-
-	if n.fn != nil {
-		c := n.suite.NewCase(n.route)
-		tSpy := &testingSpy{T: t}
-		c.Start()
-		success := n.executeFunc(t, n.fn, tSpy)
-		c.Finish()
-
-		if success {
-			fmt.Fprint(stdout, color.GreenString("S: %s\n", n.route))
-			c.Succeeded()
-		} else {
-			fmt.Fprint(stdout, color.RedString("F: %s\n", n.route))
-			c.FailureMessage = tSpy.message
-			c.Failed()
-		}
-	}
-
-	if n.afterEach != nil {
-		n.executeFunc(t, n.afterEach, nil)
-	}
-
-	if n.m != nil && n.m.failed {
-		if len(n.m.messages) == 0 {
-			n.m.T.Error("Failed")
-		}
-
-		for _, v := range n.m.messages {
-			n.m.T.Error(v)
-		}
-	}
-
-	if n.m == nil || (n.m != nil && !n.m.failed) {
-		for _, v := range n.child {
-			v.execute(t)
-		}
-	}
-
-	if n.afterAll != nil && !n.afterAll.done {
-		n.executeFunc(t, n.afterAll.fn, nil)
-		n.afterAll.done = true
-	}
-
-	n.suite.Finish()
-}
-
-func (n *node) executeFunc(t *testing.T, fn func(*Matcher), spy *testingSpy) bool {
-	done := make(chan *execDone)
-	go func() {
-		success := false
-		defer func() {
-			rErr := recover()
-			if rErr != nil {
-				s := debug.Stack()
-				done <- &execDone{Stack: string(s), Err: rErr}
-			} else if !success {
-				done <- &execDone{Failure: true, Err: errors.New("failed execute")}
-			}
-			close(done)
-		}()
-
-		n.m.route = n.route
-		m := n.m
-		if spy != nil {
-			m = n.m.wrapTesting(spy)
-		}
-		fn(m)
-		success = !m.Failed()
-	}()
-
-	select {
-	case err, ok := <-done:
-		if !ok {
-			return true
-		}
-
-		if err != nil && err.Err != nil {
-			if err.Stack != "" {
-				t.Log(err.Stack)
-			}
-			t.Fatalf("%s: %+v ", n.route, err.Err)
-		}
-		return false
-	}
-}
-
 type hook struct {
 	fn   func(*Matcher)
 	done bool
+	step bool
 }
 
 type execDone struct {

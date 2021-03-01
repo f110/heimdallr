@@ -42,7 +42,7 @@ func TestJUnit(t *testing.T) {
 
 func TestTracker(t *testing.T) {
 	stubT := &testing.T{}
-	f := New(stubT, "")
+	f := New(stubT, "", false)
 	f.Describe("About Foo", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
 			s.It("Baz", func(m *Matcher) {
