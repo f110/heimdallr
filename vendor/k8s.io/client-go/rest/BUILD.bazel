@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "client.go",
         "config.go",
+        "exec.go",
         "plugin.go",
         "request.go",
         "transport.go",
@@ -28,6 +29,7 @@ go_library(
         "//vendor/k8s.io/apimachinery/pkg/util/net",
         "//vendor/k8s.io/apimachinery/pkg/util/sets",
         "//vendor/k8s.io/apimachinery/pkg/watch",
+        "//vendor/k8s.io/client-go/pkg/apis/clientauthentication",
         "//vendor/k8s.io/client-go/pkg/version",
         "//vendor/k8s.io/client-go/plugin/pkg/client/auth/exec",
         "//vendor/k8s.io/client-go/rest/watch",
