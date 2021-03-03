@@ -223,10 +223,10 @@ func (e *executionRuntime) executeNode(ctx context.Context, t *testing.T, node *
 		c.Finish()
 
 		if success {
-			fmt.Fprint(stdout, color.GreenString("S: %s\n", node.route))
+			fmt.Fprint(stdout, color.GreenString("✔ %s\n", node.route))
 			c.Succeeded()
 		} else {
-			fmt.Fprint(stdout, color.RedString("F: %s\n", node.route))
+			fmt.Fprint(stdout, color.RedString("× %s\n", node.route))
 			c.FailureMessage = tSpy.message
 			c.Failed()
 		}
