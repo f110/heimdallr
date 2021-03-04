@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "log",
+    srcs = ["log.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/emicklei/go-restful/log",
+    importpath = "github.com/emicklei/go-restful/log",
+    visibility = ["//visibility:public"],
+)
