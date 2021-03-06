@@ -107,12 +107,14 @@ type EtcdClusterStatus struct {
 }
 
 type MemberStatus struct {
-	Id      int64  `json:"id,omitempty"`
-	Name    string `json:"name,omitempty"`
-	PodName string `json:"podName,omitempty"`
-	Leader  bool   `json:"leader,omitempty"`
-	Learner bool   `json:"leaner,omitempty"`
-	Version string `json:"version,omitempty"`
+	Id        int64  `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	PodName   string `json:"podName,omitempty"`
+	Leader    bool   `json:"leader,omitempty"`
+	Learner   bool   `json:"leaner,omitempty"`
+	Version   string `json:"version,omitempty"`
+	DBSize    int64  `json:"dbSize,omitempty"`
+	InUseSize int64  `json:"inUseSize,omitempty"`
 }
 
 type RestoredStatus struct {

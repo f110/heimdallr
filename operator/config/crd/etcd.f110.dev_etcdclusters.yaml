@@ -633,7 +633,13 @@ spec:
               members:
                 items:
                   properties:
+                    dbSize:
+                      format: int64
+                      type: integer
                     id:
+                      format: int64
+                      type: integer
+                    inUseSize:
                       format: int64
                       type: integer
                     leader:

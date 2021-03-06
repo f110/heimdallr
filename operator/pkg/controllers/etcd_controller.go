@@ -1001,6 +1001,8 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 			}
 			ms.PodName = p.Name
 			ms.Learner = p.IsLearner
+			ms.DBSize = p.StatusResponse.DbSize
+			ms.InUseSize = p.StatusResponse.DbSizeInUse
 		}
 
 		cluster.Status.Members = append(cluster.Status.Members, ms)
