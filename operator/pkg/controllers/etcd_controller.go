@@ -393,6 +393,12 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 
 	var targetMember *EtcdMember
 	for _, v := range members {
+		logger.Log.Debug(
+			"candidate pod",
+			zap.String("name", v.Pod.Name),
+			zap.String("phase", string(v.Pod.Status.Phase)),
+			zap.Time("creation", v.Pod.CreationTimestamp.Time),
+		)
 		if !cluster.IsPodReady(v.Pod) && !v.Pod.CreationTimestamp.IsZero() {
 			break
 		}
@@ -935,7 +941,11 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	}
 
 	endpoints := make([]string, 0)
+	runningPods := 0
 	for _, v := range etcdPods {
+		if v.Status.Phase == corev1.PodRunning {
+			runningPods++
+		}
 		endpoints = append(endpoints, v.Endpoint)
 	}
 
@@ -1017,7 +1027,8 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 		}
 		cluster.Status.Ready = true
 	}
-	if len(cluster.Status.Members) == cluster.Spec.Members && !cluster.Status.CreatingCompleted {
+	if len(cluster.Status.Members) == cluster.Spec.Members &&
+		runningPods == cluster.Spec.Members && !cluster.Status.CreatingCompleted {
 		cluster.Status.CreatingCompleted = true
 	}
 

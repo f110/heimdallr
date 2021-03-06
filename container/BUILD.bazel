@@ -237,3 +237,18 @@ sh_binary(
         ":push_operator.digest",
     ],
 )
+
+sh_binary(
+    name = "tag_sidecar",
+    srcs = ["//cmd/release"],
+    args = [
+        "container",
+        "--repository",
+        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["sidecar"],
+        "--sha256",
+        "$(location //container:push_sidecar.digest)",
+        "--tag",
+        VERSION,
+    ],
+    data = [":push_sidecar.digest"],
+)

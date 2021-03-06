@@ -757,7 +757,11 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 				return etcdv1alpha2.ClusterPhaseCreating
 			} else {
 				c.log.Debug("Pod is not ready", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
-				return etcdv1alpha2.ClusterPhaseDegrading
+				if c.Status.CreatingCompleted {
+					return etcdv1alpha2.ClusterPhaseDegrading
+				} else {
+					return etcdv1alpha2.ClusterPhaseCreating
+				}
 			}
 		}
 	}
