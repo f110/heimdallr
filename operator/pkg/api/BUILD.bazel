@@ -9,6 +9,7 @@ k8s_code_generator(
         "//operator/pkg/api/proxy/v1alpha2",
     ],
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
+    controller_tools_version = "v0.5.0",
     crd = "operator/config/crd",
     embed = [
         "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
@@ -21,5 +22,5 @@ k8s_code_generator(
     informerpackage = "go.f110.dev/heimdallr/operator/pkg/informers",
     listerpackage = "go.f110.dev/heimdallr/operator/pkg/listers",
     no_gazelle = True,
-    version = "v0.19",
+    version = "v0.20",
 )
