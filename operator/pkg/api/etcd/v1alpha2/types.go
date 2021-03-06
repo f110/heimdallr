@@ -99,6 +99,7 @@ type EtcdClusterStatus struct {
 	Members                 []MemberStatus   `json:"members,omitempty"`
 	LastReadyTransitionTime *metav1.Time     `json:"lastReadyTransitionTime,omitempty"`
 	LastDefragmentTime      *metav1.Time     `json:"lastDefragmentTime,omitempty"`
+	CreatingCompleted       bool             `json:"creatingCompleted,omitempty"`
 	ClientEndpoint          string           `json:"clientEndpoint,omitempty"`
 	ClientCertSecretName    string           `json:"clientCertSecretName,omitempty"`
 	Backup                  *BackupStatus    `json:"backup,omitempty"`

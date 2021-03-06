@@ -622,6 +622,8 @@ spec:
                 type: string
               clientEndpoint:
                 type: string
+              creatingCompleted:
+                type: boolean
               lastDefragmentTime:
                 format: date-time
                 type: string

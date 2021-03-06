@@ -1006,6 +1006,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 			cluster.Status.LastReadyTransitionTime = &now
 		}
 		cluster.Status.Ready = true
+		cluster.Status.CreatingCompleted = true
 		return nil
 	}
 
@@ -1015,6 +1016,9 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 			cluster.Status.LastReadyTransitionTime = &now
 		}
 		cluster.Status.Ready = true
+	}
+	if len(cluster.Status.Members) == cluster.Spec.Members && !cluster.Status.CreatingCompleted {
+		cluster.Status.CreatingCompleted = true
 	}
 
 	return nil

@@ -98,6 +98,7 @@ go_test(
     name = "controllers_test",
     srcs = [
         "config_converter_test.go",
+        "etcd_cluster_test.go",
         "etcd_controller_test.go",
         "github_controller_test.go",
         "ingress_controller_test.go",
@@ -116,6 +117,7 @@ go_test(
         "//operator/pkg/informers/externalversions",
         "//pkg/config",
         "//pkg/config/configv2",
+        "//pkg/k8s/k8sfactory",
         "//pkg/logger",
         "//vendor/github.com/jarcoal/httpmock",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",

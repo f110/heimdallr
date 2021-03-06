@@ -734,7 +734,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 	}
 
 	if len(c.ownedPods) < c.Spec.Members {
-		if c.Status.LastReadyTransitionTime.IsZero() {
+		if c.Status.LastReadyTransitionTime.IsZero() || !c.Status.CreatingCompleted {
 			return etcdv1alpha2.ClusterPhaseCreating
 		} else {
 			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", zap.Int("ownedPods.len", len(c.ownedPods)))
