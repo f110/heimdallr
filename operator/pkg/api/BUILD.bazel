@@ -11,7 +11,7 @@ k8s_code_generator(
     clientpackage = "go.f110.dev/heimdallr/operator/pkg/client",
     crd = "operator/config/crd",
     embed = [
-        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
+        "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3",

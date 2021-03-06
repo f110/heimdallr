@@ -39,45 +39,45 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-// PodMonitorsGetter has a method to return a PodMonitorInterface.
+// ProbesGetter has a method to return a ProbeInterface.
 // A group's client should implement this interface.
-type PodMonitorsGetter interface {
-	PodMonitors(namespace string) PodMonitorInterface
+type ProbesGetter interface {
+	Probes(namespace string) ProbeInterface
 }
 
-// PodMonitorInterface has methods to work with PodMonitor resources.
-type PodMonitorInterface interface {
-	Create(ctx context.Context, podMonitor *v1.PodMonitor, opts metav1.CreateOptions) (*v1.PodMonitor, error)
-	Update(ctx context.Context, podMonitor *v1.PodMonitor, opts metav1.UpdateOptions) (*v1.PodMonitor, error)
+// ProbeInterface has methods to work with Probe resources.
+type ProbeInterface interface {
+	Create(ctx context.Context, probe *v1.Probe, opts metav1.CreateOptions) (*v1.Probe, error)
+	Update(ctx context.Context, probe *v1.Probe, opts metav1.UpdateOptions) (*v1.Probe, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.PodMonitor, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.PodMonitorList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Probe, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.ProbeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PodMonitor, err error)
-	PodMonitorExpansion
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Probe, err error)
+	ProbeExpansion
 }
 
-// podMonitors implements PodMonitorInterface
-type podMonitors struct {
+// probes implements ProbeInterface
+type probes struct {
 	client rest.Interface
 	ns     string
 }
 
-// newPodMonitors returns a PodMonitors
-func newPodMonitors(c *MonitoringV1Client, namespace string) *podMonitors {
-	return &podMonitors{
+// newProbes returns a Probes
+func newProbes(c *MonitoringV1Client, namespace string) *probes {
+	return &probes{
 		client: c.RESTClient(),
 		ns:     namespace,
 	}
 }
 
-// Get takes name of the podMonitor, and returns the corresponding podMonitor object, and an error if there is any.
-func (c *podMonitors) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.PodMonitor, err error) {
-	result = &v1.PodMonitor{}
+// Get takes name of the probe, and returns the corresponding probe object, and an error if there is any.
+func (c *probes) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Probe, err error) {
+	result = &v1.Probe{}
 	err = c.client.Get().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
 		Do(ctx).
@@ -85,16 +85,16 @@ func (c *podMonitors) Get(ctx context.Context, name string, options metav1.GetOp
 	return
 }
 
-// List takes label and field selectors, and returns the list of PodMonitors that match those selectors.
-func (c *podMonitors) List(ctx context.Context, opts metav1.ListOptions) (result *v1.PodMonitorList, err error) {
+// List takes label and field selectors, and returns the list of Probes that match those selectors.
+func (c *probes) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ProbeList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
 	}
-	result = &v1.PodMonitorList{}
+	result = &v1.ProbeList{}
 	err = c.client.Get().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
 		Do(ctx).
@@ -102,8 +102,8 @@ func (c *podMonitors) List(ctx context.Context, opts metav1.ListOptions) (result
 	return
 }
 
-// Watch returns a watch.Interface that watches the requested podMonitors.
-func (c *podMonitors) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+// Watch returns a watch.Interface that watches the requested probes.
+func (c *probes) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -111,44 +111,44 @@ func (c *podMonitors) Watch(ctx context.Context, opts metav1.ListOptions) (watch
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
 		Watch(ctx)
 }
 
-// Create takes the representation of a podMonitor and creates it.  Returns the server's representation of the podMonitor, and an error, if there is any.
-func (c *podMonitors) Create(ctx context.Context, podMonitor *v1.PodMonitor, opts metav1.CreateOptions) (result *v1.PodMonitor, err error) {
-	result = &v1.PodMonitor{}
+// Create takes the representation of a probe and creates it.  Returns the server's representation of the probe, and an error, if there is any.
+func (c *probes) Create(ctx context.Context, probe *v1.Probe, opts metav1.CreateOptions) (result *v1.Probe, err error) {
+	result = &v1.Probe{}
 	err = c.client.Post().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(podMonitor).
+		Body(probe).
 		Do(ctx).
 		Into(result)
 	return
 }
 
-// Update takes the representation of a podMonitor and updates it. Returns the server's representation of the podMonitor, and an error, if there is any.
-func (c *podMonitors) Update(ctx context.Context, podMonitor *v1.PodMonitor, opts metav1.UpdateOptions) (result *v1.PodMonitor, err error) {
-	result = &v1.PodMonitor{}
+// Update takes the representation of a probe and updates it. Returns the server's representation of the probe, and an error, if there is any.
+func (c *probes) Update(ctx context.Context, probe *v1.Probe, opts metav1.UpdateOptions) (result *v1.Probe, err error) {
+	result = &v1.Probe{}
 	err = c.client.Put().
 		Namespace(c.ns).
-		Resource("podmonitors").
-		Name(podMonitor.Name).
+		Resource("probes").
+		Name(probe.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(podMonitor).
+		Body(probe).
 		Do(ctx).
 		Into(result)
 	return
 }
 
-// Delete takes name of the podMonitor and deletes it. Returns an error if one occurs.
-func (c *podMonitors) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+// Delete takes name of the probe and deletes it. Returns an error if one occurs.
+func (c *probes) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		Name(name).
 		Body(&opts).
 		Do(ctx).
@@ -156,14 +156,14 @@ func (c *podMonitors) Delete(ctx context.Context, name string, opts metav1.Delet
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *podMonitors) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *probes) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
 	if listOpts.TimeoutSeconds != nil {
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(&opts).
@@ -171,12 +171,12 @@ func (c *podMonitors) DeleteCollection(ctx context.Context, opts metav1.DeleteOp
 		Error()
 }
 
-// Patch applies the patch and returns the patched podMonitor.
-func (c *podMonitors) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.PodMonitor, err error) {
-	result = &v1.PodMonitor{}
+// Patch applies the patch and returns the patched probe.
+func (c *probes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Probe, err error) {
+	result = &v1.Probe{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
-		Resource("podmonitors").
+		Resource("probes").
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).

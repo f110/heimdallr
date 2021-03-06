@@ -31,7 +31,7 @@ import (
 	"context"
 	time "time"
 
-	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	versioned "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	internalinterfaces "go.f110.dev/heimdallr/operator/pkg/informers/externalversions/internalinterfaces"
 	v1 "go.f110.dev/heimdallr/operator/pkg/listers/monitoring/v1"

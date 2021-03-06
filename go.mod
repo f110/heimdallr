@@ -9,7 +9,6 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/coreos/go-oidc v2.1.0+incompatible
-	github.com/coreos/prometheus-operator v0.29.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fatih/color v1.10.0
 	github.com/fsnotify/fsnotify v1.4.9
@@ -35,6 +34,7 @@ require (
 	github.com/minio/minio-go/v6 v6.0.44
 	github.com/peterh/liner v1.2.1
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.46.0
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.10.0

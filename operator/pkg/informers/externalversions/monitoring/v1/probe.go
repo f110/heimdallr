@@ -41,59 +41,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ThanosRulerInformer provides access to a shared informer and lister for
-// ThanosRulers.
-type ThanosRulerInformer interface {
+// ProbeInformer provides access to a shared informer and lister for
+// Probes.
+type ProbeInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ThanosRulerLister
+	Lister() v1.ProbeLister
 }
 
-type thanosRulerInformer struct {
+type probeInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewThanosRulerInformer constructs a new informer for ThanosRuler type.
+// NewProbeInformer constructs a new informer for Probe type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewThanosRulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredThanosRulerInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewProbeInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredProbeInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredThanosRulerInformer constructs a new informer for ThanosRuler type.
+// NewFilteredProbeInformer constructs a new informer for Probe type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredThanosRulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredProbeInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1().ThanosRulers(namespace).List(context.TODO(), options)
+				return client.MonitoringV1().Probes(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1().ThanosRulers(namespace).Watch(context.TODO(), options)
+				return client.MonitoringV1().Probes(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&monitoringv1.ThanosRuler{},
+		&monitoringv1.Probe{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *thanosRulerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredThanosRulerInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *probeInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredProbeInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *thanosRulerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&monitoringv1.ThanosRuler{}, f.defaultInformer)
+func (f *probeInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&monitoringv1.Probe{}, f.defaultInformer)
 }
 
-func (f *thanosRulerInformer) Lister() v1.ThanosRulerLister {
-	return v1.NewThanosRulerLister(f.Informer().GetIndexer())
+func (f *probeInformer) Lister() v1.ProbeLister {
+	return v1.NewProbeLister(f.Informer().GetIndexer())
 }

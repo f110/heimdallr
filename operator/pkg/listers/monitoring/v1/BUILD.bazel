@@ -6,6 +6,7 @@ go_library(
         "alertmanager.go",
         "expansion_generated.go",
         "podmonitor.go",
+        "probe.go",
         "prometheus.go",
         "prometheusrule.go",
         "servicemonitor.go",
@@ -14,7 +15,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/operator/pkg/listers/monitoring/v1",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
+        "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
         "//vendor/k8s.io/apimachinery/pkg/api/errors",
         "//vendor/k8s.io/apimachinery/pkg/labels",
         "//vendor/k8s.io/client-go/tools/cache",

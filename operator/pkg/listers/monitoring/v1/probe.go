@@ -34,75 +34,75 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// PrometheusLister helps list Prometheuses.
+// ProbeLister helps list Probes.
 // All objects returned here must be treated as read-only.
-type PrometheusLister interface {
-	// List lists all Prometheuses in the indexer.
+type ProbeLister interface {
+	// List lists all Probes in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Prometheus, err error)
-	// Prometheuses returns an object that can list and get Prometheuses.
-	Prometheuses(namespace string) PrometheusNamespaceLister
-	PrometheusListerExpansion
+	List(selector labels.Selector) (ret []*v1.Probe, err error)
+	// Probes returns an object that can list and get Probes.
+	Probes(namespace string) ProbeNamespaceLister
+	ProbeListerExpansion
 }
 
-// prometheusLister implements the PrometheusLister interface.
-type prometheusLister struct {
+// probeLister implements the ProbeLister interface.
+type probeLister struct {
 	indexer cache.Indexer
 }
 
-// NewPrometheusLister returns a new PrometheusLister.
-func NewPrometheusLister(indexer cache.Indexer) PrometheusLister {
-	return &prometheusLister{indexer: indexer}
+// NewProbeLister returns a new ProbeLister.
+func NewProbeLister(indexer cache.Indexer) ProbeLister {
+	return &probeLister{indexer: indexer}
 }
 
-// List lists all Prometheuses in the indexer.
-func (s *prometheusLister) List(selector labels.Selector) (ret []*v1.Prometheus, err error) {
+// List lists all Probes in the indexer.
+func (s *probeLister) List(selector labels.Selector) (ret []*v1.Probe, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Prometheus))
+		ret = append(ret, m.(*v1.Probe))
 	})
 	return ret, err
 }
 
-// Prometheuses returns an object that can list and get Prometheuses.
-func (s *prometheusLister) Prometheuses(namespace string) PrometheusNamespaceLister {
-	return prometheusNamespaceLister{indexer: s.indexer, namespace: namespace}
+// Probes returns an object that can list and get Probes.
+func (s *probeLister) Probes(namespace string) ProbeNamespaceLister {
+	return probeNamespaceLister{indexer: s.indexer, namespace: namespace}
 }
 
-// PrometheusNamespaceLister helps list and get Prometheuses.
+// ProbeNamespaceLister helps list and get Probes.
 // All objects returned here must be treated as read-only.
-type PrometheusNamespaceLister interface {
-	// List lists all Prometheuses in the indexer for a given namespace.
+type ProbeNamespaceLister interface {
+	// List lists all Probes in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Prometheus, err error)
-	// Get retrieves the Prometheus from the indexer for a given namespace and name.
+	List(selector labels.Selector) (ret []*v1.Probe, err error)
+	// Get retrieves the Probe from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Prometheus, error)
-	PrometheusNamespaceListerExpansion
+	Get(name string) (*v1.Probe, error)
+	ProbeNamespaceListerExpansion
 }
 
-// prometheusNamespaceLister implements the PrometheusNamespaceLister
+// probeNamespaceLister implements the ProbeNamespaceLister
 // interface.
-type prometheusNamespaceLister struct {
+type probeNamespaceLister struct {
 	indexer   cache.Indexer
 	namespace string
 }
 
-// List lists all Prometheuses in the indexer for a given namespace.
-func (s prometheusNamespaceLister) List(selector labels.Selector) (ret []*v1.Prometheus, err error) {
+// List lists all Probes in the indexer for a given namespace.
+func (s probeNamespaceLister) List(selector labels.Selector) (ret []*v1.Probe, err error) {
 	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Prometheus))
+		ret = append(ret, m.(*v1.Probe))
 	})
 	return ret, err
 }
 
-// Get retrieves the Prometheus from the indexer for a given namespace and name.
-func (s prometheusNamespaceLister) Get(name string) (*v1.Prometheus, error) {
+// Get retrieves the Probe from the indexer for a given namespace and name.
+func (s probeNamespaceLister) Get(name string) (*v1.Probe, error) {
 	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("prometheus"), name)
+		return nil, errors.NewNotFound(v1.Resource("probe"), name)
 	}
-	return obj.(*v1.Prometheus), nil
+	return obj.(*v1.Probe), nil
 }

@@ -28,7 +28,7 @@ SOFTWARE.
 package v1
 
 import (
-	v1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	v1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
@@ -37,6 +37,7 @@ type MonitoringV1Interface interface {
 	RESTClient() rest.Interface
 	AlertmanagersGetter
 	PodMonitorsGetter
+	ProbesGetter
 	PrometheusesGetter
 	PrometheusRulesGetter
 	ServiceMonitorsGetter
@@ -54,6 +55,10 @@ func (c *MonitoringV1Client) Alertmanagers(namespace string) AlertmanagerInterfa
 
 func (c *MonitoringV1Client) PodMonitors(namespace string) PodMonitorInterface {
 	return newPodMonitors(c, namespace)
+}
+
+func (c *MonitoringV1Client) Probes(namespace string) ProbeInterface {
+	return newProbes(c, namespace)
 }
 
 func (c *MonitoringV1Client) Prometheuses(namespace string) PrometheusInterface {
