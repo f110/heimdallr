@@ -18,6 +18,7 @@ go_library(
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/apimachinery/pkg/api/resource",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/apimachinery/pkg/runtime",
     ],

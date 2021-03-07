@@ -4,6 +4,7 @@ go_library(
     name = "proxy",
     srcs = [
         "conversion.go",
+        "factory.go",
         "register.go",
     ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/api/proxy",
@@ -11,7 +12,9 @@ go_library(
     deps = [
         "//operator/pkg/api/proxy/v1alpha1",
         "//operator/pkg/api/proxy/v1alpha2",
+        "//operator/pkg/client/versioned/scheme",
         "//operator/pkg/webhook",
+        "//pkg/config",
         "//pkg/logger",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",

@@ -2,6 +2,7 @@ package etcd
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
@@ -19,7 +20,7 @@ func Factory(base *etcdv1alpha2.EtcdCluster, traits ...Trait) *etcdv1alpha2.Etcd
 	}
 	if e.GetObjectKind().GroupVersionKind().Kind == "" {
 		gvks, unversioned, err := scheme.Scheme.ObjectKinds(e)
-		if err == nil && !unversioned && len(gvks) == 0 {
+		if err == nil && !unversioned && len(gvks) > 0 {
 			e.GetObjectKind().SetGroupVersionKind(gvks[0])
 		}
 	}
@@ -84,5 +85,18 @@ func BackupByMinIO(bucket, path string, svc *corev1.Service) Trait {
 				},
 			},
 		}
+	}
+}
+
+func PersistentData(e *etcdv1alpha2.EtcdCluster) {
+	e.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					"storage": resource.MustParse("1Gi"),
+				},
+			},
+		},
 	}
 }

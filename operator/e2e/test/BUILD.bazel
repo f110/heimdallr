@@ -39,6 +39,7 @@ go_test(
     deps = [
         "//operator/e2e/e2eutil",
         "//operator/e2e/framework",
+        "//operator/pkg/api/etcd",
         "//operator/pkg/api/etcd/v1alpha2",
         "//operator/pkg/controllers",
         "//pkg/config/configv2",
@@ -48,6 +49,7 @@ go_test(
         "//pkg/testing/btesting",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/rest",
         "//vendor/k8s.io/klog/v2:klog",

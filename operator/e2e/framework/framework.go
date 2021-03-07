@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -19,12 +20,39 @@ import (
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
 var Config = &ConfigStruct{}
+
+var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
+	Spec: proxyv1alpha2.ProxySpec{
+		Development: true,
+		Domain:      "e2e.f110.dev",
+		Replicas:    3,
+		CertificateAuthority: &proxyv1alpha2.CertificateAuthoritySpec{
+			Local: &proxyv1alpha2.LocalCertificateAuthoritySpec{
+				Name: "e2e",
+			},
+		},
+		BackendSelector: proxyv1alpha2.LabelSelector{
+			LabelSelector: metav1.LabelSelector{},
+		},
+		IdentityProvider: proxyv1alpha2.IdentityProviderSpec{
+			Provider: "google",
+			ClientId: "e2e",
+		},
+		IssuerRef: certmanagermetav1.ObjectReference{
+			Kind: "ClusterIssuer",
+			Name: "self-signed",
+		},
+	},
+}, proxy.EtcdDataStore, proxy.CookieSession)
+
+var EtcdClusterBase = etcd.Factory(nil, etcd.Version("v3.4.3"), etcd.HighAvailability)
 
 type ConfigStruct struct {
 	RandomSeed         int64
@@ -131,22 +159,22 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	_, err := p.coreClient.CoreV1().Secrets(clientSecret.Namespace).Create(context.TODO(), clientSecret, metav1.CreateOptions{})
 	m.NoError(err)
 
-	proxy := ProxyFactory(ProxyBase,
-		ClientSecret("e2e-client-secret", "client-secret"),
-		RootUsers([]string{testUserId}),
-		ProxyVersion(Config.ProxyVersion),
+	proxySpec := proxy.Factory(ProxyBase,
+		proxy.ClientSecret("e2e-client-secret", "client-secret"),
+		proxy.RootUsers([]string{testUserId}),
+		proxy.Version(Config.ProxyVersion),
 	)
-	p.proxy = proxy
-	testServiceBackend, err := e2eutil.DeployTestService(p.coreClient, p.client, proxy, "hello")
+	p.proxy = proxySpec
+	testServiceBackend, err := e2eutil.DeployTestService(p.coreClient, p.client, proxySpec, "hello")
 	m.NoError(err)
 	p.Backend = testServiceBackend
-	disableAuthnTestBackend, err := e2eutil.DeployDisableAuthnTestService(p.coreClient, p.client, proxy, "disauth")
+	disableAuthnTestBackend, err := e2eutil.DeployDisableAuthnTestService(p.coreClient, p.client, proxySpec, "disauth")
 	m.NoError(err)
 	role := &proxyv1alpha2.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "admin",
-			Namespace: proxy.Namespace,
-			Labels:    proxy.Spec.RoleSelector.MatchLabels,
+			Namespace: proxySpec.Namespace,
+			Labels:    proxySpec.Spec.RoleSelector.MatchLabels,
 		},
 		Spec: proxyv1alpha2.RoleSpec{
 			Title:       "administrator",
@@ -158,30 +186,30 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	roleBinding := &proxyv1alpha2.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "admin",
-			Namespace: proxy.Namespace,
+			Namespace: proxySpec.Namespace,
 		},
 		RoleRef: proxyv1alpha2.RoleRef{
 			Name:      "admin",
-			Namespace: proxy.Namespace,
+			Namespace: proxySpec.Namespace,
 		},
 		Subjects: []proxyv1alpha2.Subject{
-			{Kind: "Backend", Name: "dashboard", Namespace: proxy.Namespace, Permission: "all"},
-			{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
-			{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxy.Namespace, Permission: "all"},
+			{Kind: "Backend", Name: "dashboard", Namespace: proxySpec.Namespace, Permission: "all"},
+			{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxySpec.Namespace, Permission: "all"},
+			{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxySpec.Namespace, Permission: "all"},
 		},
 	}
-	_, err = p.client.ProxyV1alpha2().RoleBindings(proxy.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	_, err = p.client.ProxyV1alpha2().RoleBindings(proxySpec.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
 	m.NoError(err)
 
-	_, err = p.client.ProxyV1alpha2().Proxies(proxy.Namespace).Create(context.TODO(), proxy, metav1.CreateOptions{})
+	_, err = p.client.ProxyV1alpha2().Proxies(proxySpec.Namespace).Create(context.TODO(), proxySpec, metav1.CreateOptions{})
 	m.NoError(err)
 
-	m.NoError(e2eutil.WaitForStatusOfProxyBecome(p.client, proxy, proxyv1alpha2.ProxyPhaseRunning, 10*time.Minute))
-	m.NoError(e2eutil.WaitForReadyOfProxy(p.client, proxy, 10*time.Minute))
-	proxy, err = p.client.ProxyV1alpha2().Proxies(proxy.Namespace).Get(context.TODO(), proxy.Name, metav1.GetOptions{})
+	m.NoError(e2eutil.WaitForStatusOfProxyBecome(p.client, proxySpec, proxyv1alpha2.ProxyPhaseRunning, 10*time.Minute))
+	m.NoError(e2eutil.WaitForReadyOfProxy(p.client, proxySpec, 10*time.Minute))
+	proxySpec, err = p.client.ProxyV1alpha2().Proxies(proxySpec.Namespace).Get(context.TODO(), proxySpec.Name, metav1.GetOptions{})
 	m.NoError(err)
 
-	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, proxy, testUserId)
+	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, proxySpec, testUserId)
 	m.NoError(err)
 	err = e2eutil.EnsureExistingTestUser(rpcClient, testUserId, role.Name)
 	m.NoError(err)
@@ -280,8 +308,8 @@ type EtcdClusters struct {
 	clusters map[string]*etcdv1alpha2.EtcdCluster
 }
 
-func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...EtcdClusterTrait) bool {
-	etcdCluster := EtcdClusterFactory(EtcdClusterBase, traits...)
+func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...etcd.Trait) bool {
+	etcdCluster := etcd.Factory(EtcdClusterBase, traits...)
 	_, err := e.client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 	m.Must(err)
 	e.clusters[etcdCluster.GetName()] = etcdCluster

@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/v3/clientv3"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
@@ -24,7 +26,7 @@ func TestEtcdController(t *testing.T) {
 		s.Context("creates a new cluster", func(s *btesting.Scenario) {
 			s.Context("with PersistentVolumeClaim", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
-					f.EtcdClusters.Setup(m, framework.Name("pvc"), framework.PersistentData)
+					f.EtcdClusters.Setup(m, etcd.Name("pvc"), etcd.PersistentData)
 				})
 				s.Defer(func() { f.EtcdClusters.EtcdCluster("pvc").Destroy(f.Client()) })
 
@@ -39,7 +41,7 @@ func TestEtcdController(t *testing.T) {
 
 			s.Context("with EmptyDir", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
-					f.EtcdClusters.Setup(m, framework.Name("memory"))
+					f.EtcdClusters.Setup(m, etcd.Name("memory"))
 				})
 				s.Defer(func() { f.EtcdClusters.EtcdCluster("memory").Destroy(f.Client()) })
 
@@ -59,7 +61,7 @@ func TestEtcdController(t *testing.T) {
 
 				s.Step("create new cluster", func(s *btesting.Scenario) {
 					s.Subject(func(m *btesting.Matcher) {
-						f.EtcdClusters.Setup(m, framework.Name("update"), framework.DisableAntiAffinity)
+						f.EtcdClusters.Setup(m, etcd.Name("update"), etcd.DisableAntiAffinity)
 					})
 
 					s.It("should have 3 pods", func(m *btesting.Matcher) {
@@ -104,7 +106,19 @@ func TestEtcdController(t *testing.T) {
 
 			s.Step("create new cluster", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
-					f.EtcdClusters.Setup(m, framework.Name("restore"), framework.Backup(kind.MinIOBucketName))
+					f.EtcdClusters.Setup(m,
+						etcd.Name("restore"),
+						etcd.BackupByMinIO(
+							kind.MinIOBucketName,
+							"restore-test",
+							&corev1.Service{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "minio",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
+						),
+					)
 				})
 
 				s.It("should have 3 pods", func(m *btesting.Matcher) {
