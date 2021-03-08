@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
@@ -92,6 +94,14 @@ func (m *mainProcess) init() (cmd.State, error) {
 		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.dnsServer = s
+
+	go func() {
+		logger.Log.Info("Listen pprof", zap.Int("port", 8080))
+		err := http.ListenAndServe(":8080", nil)
+		if err != nil && err != http.ErrServerClosed {
+			logger.Log.Warn("Failed listen", zap.Error(err))
+		}
+	}()
 
 	return stateStart, nil
 }
