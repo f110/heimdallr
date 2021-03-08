@@ -249,6 +249,7 @@ sh_binary(
         "$(location //container:push_sidecar.digest)",
         "--tag",
         VERSION,
+        "--override",
     ],
     data = [":push_sidecar.digest"],
 )
