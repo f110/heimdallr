@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"syscall"
 
 	"github.com/spf13/pflag"
+	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd/reverseproxy"
 	"go.f110.dev/heimdallr/pkg/version"
@@ -18,22 +20,28 @@ func printVersion() {
 
 func command(args []string) error {
 	confFile := ""
-	version := false
+	showVersion := false
+	vaultBin := ""
 	fs := pflag.NewFlagSet("heimdallr-proxy", pflag.ContinueOnError)
 	fs.StringVarP(&confFile, "config", "c", confFile, "Config file")
-	fs.BoolVarP(&version, "version", "v", version, "Show version")
+	fs.BoolVarP(&showVersion, "version", "v", showVersion, "Show version")
+	fs.StringVar(&vaultBin, "vault", vaultBin, "A file path of Hashicorp Vault. Development only.")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	if version {
+	if showVersion {
 		printVersion()
 		return nil
 	}
 
 	process := reverseproxy.New()
 	process.ConfFile = confFile
-	process.Loop()
+	process.VaultBin = vaultBin
+	go process.SignalHandling(syscall.SIGTERM, syscall.SIGINT)
+	if err := process.Loop(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
 
 	return nil
 }

@@ -2,6 +2,7 @@ package configv2
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/tls"
@@ -29,6 +30,7 @@ import (
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
+	"go.f110.dev/heimdallr/pkg/cert/vault"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -100,7 +102,11 @@ type AuthorizationEngine struct {
 }
 
 type CertificateAuthority struct {
-	Local *CertificateAuthorityLocal `json:"local"`
+	Local *CertificateAuthorityLocal `json:"local,omitempty"`
+	Vault *CertificateAuthorityVault `json:"vault,omitempty"`
+
+	CertPool    *x509.CertPool    `json:"-"`
+	Certificate *x509.Certificate `json:"-"`
 }
 
 type CertificateAuthorityLocal struct {
@@ -110,10 +116,16 @@ type CertificateAuthorityLocal struct {
 	OrganizationUnit string `json:"organization_unit"`
 	Country          string `json:"country"`
 
-	Subject     pkix.Name         `json:"-"`
-	Certificate *x509.Certificate `json:"-"`
-	PrivateKey  crypto.PrivateKey `json:"-"`
-	CertPool    *x509.CertPool    `json:"-"`
+	Subject    pkix.Name         `json:"-"`
+	PrivateKey crypto.PrivateKey `json:"-"`
+}
+
+type CertificateAuthorityVault struct {
+	Addr  string `json:"addr"`
+	Token string `json:"token"`
+	Role  string `json:"role"`
+
+	Dir string `json:"-"`
 }
 
 type Credential struct {
@@ -360,12 +372,13 @@ func (ca *CertificateAuthority) Load(dir string) error {
 			if err != nil {
 				return xerrors.Errorf(": %v", err)
 			}
-			ca.Local.Certificate = cert
-			ca.Local.CertPool, err = x509.SystemCertPool()
+			ca.Certificate = cert
+
+			ca.CertPool, err = x509.SystemCertPool()
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
-			ca.Local.CertPool.AddCert(cert)
+			ca.CertPool.AddCert(cert)
 		}
 
 		if ca.Local.KeyFile != "" {
@@ -401,6 +414,31 @@ func (ca *CertificateAuthority) Load(dir string) error {
 			OrganizationalUnit: []string{ca.Local.OrganizationUnit},
 			Country:            []string{ca.Local.Country},
 			CommonName:         "Heimdallr CA",
+		}
+	}
+	if ca.Vault != nil {
+		if v, err := filepath.Abs(dir); err != nil {
+			return xerrors.Errorf(": %w", err)
+		} else {
+			ca.Vault.Dir = v
+		}
+
+		if ca.Vault.Addr != "" {
+			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, ca.Vault.Role)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			caCert, err := c.GetCACertificate(context.TODO())
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			certPool, err := c.GetCertPool(context.TODO())
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+
+			ca.CertPool = certPool
+			ca.Certificate = caCert
 		}
 	}
 

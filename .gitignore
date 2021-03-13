@@ -1,6 +1,7 @@
 /data
 /ca.*
 /tls.*
+/vault_ca.*
 /*.p12
 /*.crt
 /*.pem

@@ -147,13 +147,18 @@ func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rp
 		return nil, err
 	}
 
-	c, err := cert.SigningCertificateRequest(signingRequest, s.Config.CertificateAuthority.Local)
+	c, err := s.ca.SignCertificateRequest(ctx, signingRequest, "", false, false)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Audit.Info("Signing Certificate", zap.String("common_name", signingRequest.Subject.CommonName), zap.Int64("serial_number", c.SerialNumber.Int64()), auditBy(ctx))
-	return &rpc.ResponseNewServerCert{Certificate: c.Raw}, nil
+	logger.Audit.Info(
+		"Signing Certificate",
+		zap.String("common_name", signingRequest.Subject.CommonName),
+		zap.Int64("serial_number", c.Certificate.SerialNumber.Int64()),
+		auditBy(ctx),
+	)
+	return &rpc.ResponseNewServerCert{Certificate: c.Certificate.Raw}, nil
 }
 
 func (s *CertificateAuthorityService) GetRevokedList(ctx context.Context, _ *rpc.RequestGetRevokedList) (*rpc.ResponseGetRevokedList, error) {

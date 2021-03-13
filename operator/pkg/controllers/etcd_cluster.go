@@ -208,7 +208,7 @@ func (c *EtcdCluster) CA(s *corev1.Secret) (*corev1.Secret, error) {
 		return s, nil
 	}
 
-	caCert, privateKey, err := cert.CreateCertificateAuthority(fmt.Sprintf("%s-ca", c.Name), "", "", "")
+	caCert, privateKey, err := cert.CreateCertificateAuthority(fmt.Sprintf("%s-ca", c.Name), "", "", "", "ecdsa")
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

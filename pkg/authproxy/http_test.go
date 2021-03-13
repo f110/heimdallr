@@ -243,17 +243,17 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	t.Run("Webhook from slack with invalid client certificate", func(t *testing.T) {
 		t.Parallel()
 
-		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp", "ecdsa")
 		require.NoError(t, err)
 		ca := &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
+				PrivateKey: caPrivateKey,
 			},
+			Certificate: caCert,
 		}
 		serial, err := cert.NewSerialNumber()
 		require.NoError(t, err)
-		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca.Local)
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: "slack.f110.dev"}, serial, "ecdsa", 224, "", ca)
 		require.NoError(t, err)
 
 		recoder := httptest.NewRecorder()
@@ -268,17 +268,17 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	t.Run("Webhook from slack with client certificate", func(t *testing.T) {
 		t.Parallel()
 
-		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+		caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp", "ecdsa")
 		require.NoError(t, err)
 		ca := &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
+				PrivateKey: caPrivateKey,
 			},
+			Certificate: caCert,
 		}
 		serial, err := cert.NewSerialNumber()
 		require.NoError(t, err)
-		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca.Local)
+		_, clientCert, err := cert.CreateNewCertificateForClient(pkix.Name{CommonName: slackCommonName}, serial, "ecdsa", 224, "", ca)
 		require.NoError(t, err)
 
 		recoder := httptest.NewRecorder()

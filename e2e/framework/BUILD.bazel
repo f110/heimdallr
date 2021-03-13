@@ -14,6 +14,7 @@ go_library(
         "//pkg/auth/authn",
         "//pkg/authproxy",
         "//pkg/cert",
+        "//pkg/cert/vault",
         "//pkg/config/configv2",
         "//pkg/config/userconfig",
         "//pkg/database",

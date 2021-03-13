@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.f110.dev/protoc-ddl/probe"
 	"golang.org/x/xerrors"
@@ -52,9 +53,11 @@ type mainProcess struct {
 	datastoreType   string
 	etcdClient      *clientv3.Client
 	conn            *sql.DB
+	vault           *api.Client
 	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
 	clusterDatabase database.ClusterDatabase
+	caDatabase      database.CertificateAuthority
 	tokenDatabase   database.TokenDatabase
 	relayLocator    database.RelayLocator
 
@@ -103,6 +106,16 @@ func (m *mainProcess) setup() (cmd.State, error) {
 	if err := logger.Init(m.Config.Logger); err != nil {
 		return cmd.UnknownState, xerrors.Errorf(": %v", err)
 	}
+
+	if m.Config.CertificateAuthority.Vault != nil {
+		vault, err := api.NewClient(&api.Config{Address: m.Config.CertificateAuthority.Vault.Addr})
+		if err != nil {
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		}
+		vault.SetToken(m.Config.CertificateAuthority.Vault.Token)
+		m.vault = vault
+	}
+
 	switch m.datastoreType {
 	case datastoreTypeEtcd:
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
@@ -119,11 +132,10 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
-		caDatabase, err := etcd.NewCA(ctx, client)
+		m.caDatabase, err = etcd.NewCA(ctx, client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(ctx, client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %v", err)
@@ -146,8 +158,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 
 		repository := dao.NewRepository(conn)
 		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
-		caDatabase := mysql.NewCA(repository)
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.Config.CertificateAuthority)
+		m.caDatabase = mysql.NewCA(repository)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %w", err)
@@ -161,7 +172,23 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		return cmd.UnknownState, xerrors.New("cmd/rpcserver: required external datastore")
 	}
 
-	m.server = rpcserver.NewServer(m.Config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
+	if m.Config.CertificateAuthority != nil {
+		ca, err := cert.NewCertificateAuthority(m.caDatabase, m.Config.CertificateAuthority)
+		if err != nil {
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		}
+		m.ca = ca
+	}
+
+	m.server = rpcserver.NewServer(
+		m.Config,
+		m.userDatabase,
+		m.tokenDatabase,
+		m.clusterDatabase,
+		m.relayLocator,
+		m.ca,
+		m.IsReady,
+	)
 
 	auth.Init(m.Config, nil, m.userDatabase, m.tokenDatabase, nil)
 	return stateStart, nil

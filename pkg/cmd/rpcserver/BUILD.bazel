@@ -18,6 +18,7 @@ go_library(
         "//pkg/database/mysql/entity",
         "//pkg/logger",
         "//pkg/rpc/rpcserver",
+        "//vendor/github.com/hashicorp/vault/api",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.f110.dev/protoc-ddl/probe",
         "//vendor/golang.org/x/xerrors",

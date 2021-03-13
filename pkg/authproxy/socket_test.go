@@ -105,7 +105,7 @@ func TestSocketProxy_Accept(t *testing.T) {
 		close(gotConn)
 	}()
 
-	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp", "ecdsa")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,9 +135,8 @@ func TestSocketProxy_Accept(t *testing.T) {
 			},
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
-			Local: &configv2.CertificateAuthorityLocal{
-				CertPool: caPool,
-			},
+			Local:    &configv2.CertificateAuthorityLocal{},
+			CertPool: caPool,
 		},
 	}, nil)
 	err = socketProxy.Config.AccessProxy.Setup(socketProxy.Config.AccessProxy.Backends)
@@ -239,7 +238,7 @@ func TestClient_Dial(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
-	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp")
+	ca, caPrivateKey, err := cert.CreateCertificateAuthority("test", "", "", "jp", "ecdsa")
 	require.NoError(t, err)
 	serverCert, serverPrivKey, err := cert.GenerateServerCertificate(ca, caPrivateKey, []string{hostname})
 	require.NoError(t, err)

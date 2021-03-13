@@ -32,7 +32,7 @@ func Test_Authenticate(t *testing.T) {
 	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	u := memory.NewUserDatabase()
 	rc := &testRevokedCertClient{}
-	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,10 +91,10 @@ func Test_Authenticate(t *testing.T) {
 			},
 			CertificateAuthority: &configv2.CertificateAuthority{
 				Local: &configv2.CertificateAuthorityLocal{
-					Certificate: caCert,
-					PrivateKey:  caPrivateKey,
-					CertPool:    cp,
+					PrivateKey: caPrivateKey,
 				},
+				Certificate: caCert,
+				CertPool:    cp,
 			},
 		},
 		sessionStore: s,
@@ -210,7 +210,7 @@ func Test_Authenticate(t *testing.T) {
 			block, _ := pem.Decode(pemEncodedCSRBytes)
 			csr, err := x509.ParseCertificateRequest(block.Bytes)
 			require.NoError(t, err)
-			clientCert, err := cert.SigningCertificateRequest(csr, a.Config.CertificateAuthority.Local)
+			clientCert, err := cert.SigningCertificateRequest(csr, a.Config.CertificateAuthority)
 			require.NoError(t, err)
 
 			return clientCert

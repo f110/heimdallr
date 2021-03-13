@@ -64,7 +64,7 @@ func (r *ResourceServer) requireAuthn(next httprouter.Handle) func(http.Response
 			return
 		}
 		_, err := cert.Verify(x509.VerifyOptions{
-			Roots:     r.Config.CertificateAuthority.Local.CertPool,
+			Roots:     r.Config.CertificateAuthority.CertPool,
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {

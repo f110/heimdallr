@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -21,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -37,6 +39,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cert/vault"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/netutil"
@@ -49,19 +52,22 @@ import (
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 const (
-	RootUserId = "root@e2e.f110.dev"
+	RootUserId    = "root@e2e.f110.dev"
+	vaultRoleName = "heimdallr"
 )
 
 var (
 	binaryPath          *string
 	connectorBinaryPath *string
 	tunnelBinaryPath    *string
+	vaultBinaryPath     *string
 )
 
 func init() {
 	binaryPath = flag.String("e2e.binary", "", "")
 	connectorBinaryPath = flag.String("e2e.connector-binary", "", "")
 	tunnelBinaryPath = flag.String("e2e.tunnel-binary", "", "")
+	vaultBinaryPath = flag.String("e2e.vault-binary", "", "")
 }
 
 type mockServer interface {
@@ -168,6 +174,12 @@ func (c *Connector) Stop() error {
 	return nil
 }
 
+type ProxyCond func(*Proxy)
+
+func WithVault(p *Proxy) {
+	p.ca = "vault"
+}
+
 type Proxy struct {
 	Domain     string
 	DomainHost string
@@ -182,7 +194,12 @@ type Proxy struct {
 	internalPort       int
 	rpcPort            int
 	dashboardPort      int
+	vaultPort          int
 	internalToken      string
+	ca                 string
+	vaultCmd           *exec.Cmd
+	vaultAddr          string
+	vaultRootToken     string
 	caPrivateKey       crypto.PrivateKey
 	signPrivateKey     *ecdsa.PrivateKey
 	backends           []*configv2.Backend
@@ -208,7 +225,7 @@ type Proxy struct {
 	rpcClient        *rpcclient.ClientWithUserToken
 }
 
-func NewProxy(t *testing.T) (*Proxy, error) {
+func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "data"), 0700); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -232,7 +249,7 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 	if err := cert.PemEncode(filepath.Join(dir, "publickey.pem"), "PUBLIC KEY", b, nil); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("heimdallr proxy e2e", "test", "e2e", "jp")
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("heimdallr proxy e2e", "test", "e2e", "jp", "ecdsa")
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -294,8 +311,16 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
+	vaultPort, err := netutil.FindUnusedPort()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	vaultRootToken := make([]byte, 32)
+	for i := range vaultRootToken {
+		vaultRootToken[i] = letters[mrand.Intn(len(letters))]
+	}
 
-	return &Proxy{
+	p := &Proxy{
 		Domain:           fmt.Sprintf("e2e.f110.dev:%d", proxyPort),
 		DomainHost:       "e2e.f110.dev",
 		CA:               caCert,
@@ -304,13 +329,22 @@ func NewProxy(t *testing.T) (*Proxy, error) {
 		dir:              dir,
 		identityProvider: idp,
 		signPrivateKey:   signReqKey,
+		ca:               "local",
 		caPrivateKey:     caPrivateKey,
 		proxyPort:        proxyPort,
 		internalPort:     internalPort,
 		rpcPort:          rpcPort,
 		dashboardPort:    dashboardPort,
+		vaultPort:        vaultPort,
+		vaultAddr:        fmt.Sprintf("http://127.0.0.1:%d", vaultPort),
 		internalToken:    string(internalToken),
-	}, nil
+		vaultRootToken:   string(vaultRootToken),
+	}
+	for _, cond := range conds {
+		cond(p)
+	}
+
+	return p, nil
 }
 
 func (p *Proxy) URL(subdomain string, pathAnd ...string) string {
@@ -416,6 +450,10 @@ func (p *Proxy) Cleanup() error {
 		}
 	}
 
+	if p.vaultCmd != nil {
+		p.vaultCmd.Process.Signal(syscall.SIGTERM)
+	}
+
 	return os.RemoveAll(p.dir)
 }
 
@@ -452,6 +490,50 @@ func (p *Proxy) Reload() error {
 		p.runningMockServers = nil
 
 		if err := p.stop(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+
+	if p.ca == "vault" && p.vaultCmd == nil {
+		cmd := exec.Command(
+			*vaultBinaryPath,
+			"server",
+			"-dev",
+			fmt.Sprintf("-dev-listen-address=127.0.0.1:%d", p.vaultPort),
+			fmt.Sprintf("-dev-root-token-id=%s", p.vaultRootToken),
+		)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", p.dir))
+		if err := cmd.Start(); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		p.vaultCmd = cmd
+		if err := netutil.WaitListen(fmt.Sprintf(":%d", p.vaultPort), 10*time.Second); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		vaultClient, err := vault.NewClient(fmt.Sprintf("http://127.0.0.1:%d", p.vaultPort), p.vaultRootToken, "")
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		if err := vaultClient.EnablePKI(context.Background()); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		err = vaultClient.SetRole(context.Background(), vaultRoleName, &vault.Role{
+			AllowedDomains:   []string{rpc.ServerHostname},
+			AllowSubDomains:  true,
+			AllowLocalhost:   true,
+			AllowBareDomains: true,
+			AllowAnyName:     true,
+			EnforceHostnames: false,
+			ServerFlag:       true,
+			ClientFlag:       true,
+			KeyType:          "ec",
+			KeyBits:          256,
+		})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		if err := vaultClient.SetCA(context.Background(), p.CA, p.caPrivateKey); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}
@@ -796,15 +878,7 @@ func (p *Proxy) buildConfig() error {
 			RPCServer: fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 			ProxyFile: "./proxies.yaml",
 		},
-		CertificateAuthority: &configv2.CertificateAuthority{
-			Local: &configv2.CertificateAuthorityLocal{
-				CertFile:         "./ca.crt",
-				KeyFile:          "./ca.key",
-				Organization:     "test",
-				OrganizationUnit: "e2e",
-				Country:          "jp",
-			},
-		},
+		CertificateAuthority: &configv2.CertificateAuthority{},
 		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RoleFile:          "./roles.yaml",
 			RPCPermissionFile: "./rpc_permissions.yaml",
@@ -834,6 +908,23 @@ func (p *Proxy) buildConfig() error {
 			Bind:         fmt.Sprintf(":%d", p.dashboardPort),
 			PublicKeyUrl: fmt.Sprintf("http://:%d/internal/publickey", p.internalPort),
 		},
+	}
+
+	switch p.ca {
+	case "local":
+		conf.CertificateAuthority.Local = &configv2.CertificateAuthorityLocal{
+			CertFile:         "./ca.crt",
+			KeyFile:          "./ca.key",
+			Organization:     "test",
+			OrganizationUnit: "e2e",
+			Country:          "jp",
+		}
+	case "vault":
+		conf.CertificateAuthority.Vault = &configv2.CertificateAuthorityVault{
+			Addr:  p.vaultAddr,
+			Token: p.vaultRootToken,
+			Role:  vaultRoleName,
+		}
 	}
 
 	b, err = yaml.Marshal(conf)

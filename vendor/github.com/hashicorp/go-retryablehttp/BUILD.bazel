@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go-retryablehttp",
+    srcs = ["client.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/hashicorp/go-retryablehttp",
+    importpath = "github.com/hashicorp/go-retryablehttp",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/hashicorp/go-cleanhttp"],
+)

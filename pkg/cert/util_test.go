@@ -20,15 +20,15 @@ import (
 )
 
 func createCAForTest(t *testing.T) *configv2.CertificateAuthority {
-	caCert, caPrivateKey, err := CreateCertificateAuthority("test", "test", "test", "test")
+	caCert, caPrivateKey, err := CreateCertificateAuthority("test", "test", "test", "test", "ecdsa")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ca := &configv2.CertificateAuthority{
 		Local: &configv2.CertificateAuthorityLocal{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
+			PrivateKey: caPrivateKey,
 		},
+		Certificate: caCert,
 	}
 
 	return ca
@@ -43,7 +43,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 		serial, err := NewSerialNumber()
 		require.NoError(t, err)
 
-		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca.Local)
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, "test", ca)
 		require.NoError(t, err)
 
 		_, cert, _, err := pkcs12.DecodeChain(p12, "test")
@@ -57,7 +57,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 		serial, err := NewSerialNumber()
 		require.NoError(t, err)
 
-		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "rsa", 4096, "test", ca.Local)
+		p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "rsa", 4096, "test", ca)
 		require.NoError(t, err)
 
 		privateKey, _, _, err := pkcs12.DecodeChain(p12, "test")
@@ -77,7 +77,7 @@ func TestCreateNewCertificateForClient(t *testing.T) {
 		require.NoError(t, err)
 
 		for _, b := range bits {
-			p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "ecdsa", b, "test", ca.Local)
+			p12, _, err := CreateNewCertificateForClient(pkix.Name{CommonName: "test@f110.dev"}, serial, "ecdsa", b, "test", ca)
 			require.NoError(t, err)
 
 			privateKey, _, _, err := pkcs12.DecodeChain(p12, "test")
@@ -129,7 +129,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 		csr, err := x509.ParseCertificateRequest(block.Bytes)
 		require.NoError(t, err)
 
-		signedCert, err := SigningCertificateRequest(csr, ca.Local)
+		signedCert, err := SigningCertificateRequest(csr, ca)
 		require.NoError(t, err)
 		assert.Equal(t, c.CommonName, signedCert.Subject.CommonName)
 		assert.Equal(t, "test", signedCert.Issuer.CommonName)
@@ -138,7 +138,7 @@ func TestSigningCertificateRequest(t *testing.T) {
 
 func TestGenerateServerCertificate(t *testing.T) {
 	ca := createCAForTest(t)
-	serverCert, privateKey, err := GenerateServerCertificate(ca.Local.Certificate, ca.Local.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
+	serverCert, privateKey, err := GenerateServerCertificate(ca.Certificate, ca.Local.PrivateKey, []string{"test-server.test.f110.dev", "internal.test.f110.dev"})
 	require.NoError(t, err)
 
 	assert.NotNil(t, privateKey)

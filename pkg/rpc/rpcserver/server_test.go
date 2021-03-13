@@ -43,20 +43,22 @@ func TestNewServer(t *testing.T) {
 	err := logger.Init(conf.Logger)
 	require.NoError(t, err)
 
+	ca, err := cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority)
+	require.NoError(t, err)
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
+		ca,
 		nil,
 	)
 	require.NotNil(t, v)
 }
 
 func TestServer_Start(t *testing.T) {
-	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp", "ecdsa")
 	require.NoError(t, err)
 	port, err := netutil.FindUnusedPort()
 	require.NoError(t, err)
@@ -66,9 +68,9 @@ func TestServer_Start(t *testing.T) {
 	conf := &configv2.Config{
 		CertificateAuthority: &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
+				PrivateKey: caPrivateKey,
 			},
+			Certificate: caCert,
 		},
 		RPCServer: &configv2.RPCServer{
 			Bind:        fmt.Sprintf(":%d", port),
@@ -81,13 +83,15 @@ func TestServer_Start(t *testing.T) {
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 
+	ca, err := cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority)
+	require.NoError(t, err)
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
 		memory.NewTokenDatabase(),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
-		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
+		ca,
 		nil,
 	)
 	go func() {
@@ -107,7 +111,7 @@ func TestServer_Start(t *testing.T) {
 func TestServicesViaServer(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
-	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp")
+	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("test", "test", "test", "jp", "ecdsa")
 	require.NoError(t, err)
 	port, err := netutil.FindUnusedPort()
 	require.NoError(t, err)
@@ -129,9 +133,9 @@ func TestServicesViaServer(t *testing.T) {
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
 			Local: &configv2.CertificateAuthorityLocal{
-				Certificate: caCert,
-				PrivateKey:  caPrivateKey,
+				PrivateKey: caPrivateKey,
 			},
+			Certificate: caCert,
 		},
 		AuthorizationEngine: &configv2.AuthorizationEngine{
 			RootUsers: []string{database.SystemUser.Id},
@@ -183,13 +187,15 @@ func TestServicesViaServer(t *testing.T) {
 	_ = cluster.Join(nil)
 	_ = relay.Set(context.Background(), &database.Relay{Name: "test", Addr: "127.0.0.1:10000"})
 
+	ca, err := cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority)
+	require.NoError(t, err)
 	s := NewServer(
 		conf,
 		u,
 		token,
 		cluster,
 		relay,
-		cert.NewCertificateAuthority(memory.NewCA(), conf.CertificateAuthority),
+		ca,
 		func() bool { return true },
 	)
 	go func() {

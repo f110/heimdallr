@@ -21,14 +21,29 @@ var ErrCertificateNotFound = errors.New("cert: certificate not found")
 type CertificateAuthority struct {
 	db database.CertificateAuthority
 	ca *configv2.CertificateAuthority
+
+	vault *vaultCertificateAuthority
 }
 
-func NewCertificateAuthority(db database.CertificateAuthority, ca *configv2.CertificateAuthority) *CertificateAuthority {
-	return &CertificateAuthority{db: db, ca: ca}
+func NewCertificateAuthority(db database.CertificateAuthority, ca *configv2.CertificateAuthority) (*CertificateAuthority, error) {
+	v := &CertificateAuthority{db: db, ca: ca}
+
+	if ca.Vault != nil {
+		vaultCA, err := newVaultCertificateAuthority(db, ca.Vault)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		v.vault = vaultCA
+	}
+	return v, nil
 }
 
 func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr *x509.CertificateRequest, comment string, forAgent, forDevice bool) (*database.SignedCertificate, error) {
-	signedCert, err := SigningCertificateRequest(csr, ca.ca.Local)
+	if ca.vault != nil {
+		return ca.vault.SignCertificateRequest(ctx, csr, comment, forAgent, forDevice)
+	}
+
+	signedCert, err := ca.SignCertificateRequestWithoutRecord(ctx, csr)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -48,7 +63,24 @@ func (ca *CertificateAuthority) SignCertificateRequest(ctx context.Context, csr 
 	return obj, nil
 }
 
+func (ca *CertificateAuthority) SignCertificateRequestWithoutRecord(ctx context.Context, csr *x509.CertificateRequest) (*x509.Certificate, error) {
+	if ca.vault != nil {
+		return ca.vault.SignCertificateRequestWithoutRecord(ctx, csr)
+	}
+
+	signedCert, err := SigningCertificateRequest(csr, ca.ca)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	return signedCert, nil
+}
+
 func (ca *CertificateAuthority) Revoke(ctx context.Context, certificate *database.SignedCertificate) error {
+	if ca.vault != nil {
+		return ca.vault.Revoke(ctx, certificate)
+	}
+
 	err := ca.db.SetRevokedCertificate(ctx, &database.RevokedCertificate{
 		CommonName:   certificate.Certificate.Subject.CommonName,
 		SerialNumber: certificate.Certificate.SerialNumber,
@@ -66,17 +98,29 @@ func (ca *CertificateAuthority) Revoke(ctx context.Context, certificate *databas
 }
 
 func (ca *CertificateAuthority) NewClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string) (*database.SignedCertificate, error) {
+	if ca.vault != nil {
+		return ca.vault.NewClientCertificate(ctx, name, keyType, keyBits, password, comment)
+	}
+
 	return ca.newClientCertificate(ctx, name, keyType, keyBits, password, comment, false, false)
 }
 
 func (ca *CertificateAuthority) NewAgentCertificate(ctx context.Context, name, password, comment string) (*database.SignedCertificate, error) {
+	if ca.vault != nil {
+		return ca.vault.NewAgentCertificate(ctx, name, password, comment)
+	}
+
 	return ca.newClientCertificate(ctx, name, database.DefaultPrivateKeyType, database.DefaultPrivateKeyBits, password, comment, true, false)
 
 }
 
 func (ca *CertificateAuthority) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
+	if ca.vault != nil {
+		return ca.vault.NewServerCertificate(commonName)
+	}
+
 	// TODO: Should use a serial key which created by database.CertificateAuthority
-	certificate, privateKey, err := GenerateServerCertificate(ca.ca.Local.Certificate, ca.ca.Local.PrivateKey, []string{commonName})
+	certificate, privateKey, err := GenerateServerCertificate(ca.ca.Certificate, ca.ca.Local.PrivateKey, []string{commonName})
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
@@ -86,6 +130,10 @@ func (ca *CertificateAuthority) NewServerCertificate(commonName string) (*x509.C
 }
 
 func (ca *CertificateAuthority) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
+	if ca.vault != nil {
+		return ca.vault.GetSignedCertificates(ctx)
+	}
+
 	certificates, err := ca.db.GetSignedCertificate(ctx, nil)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -95,6 +143,10 @@ func (ca *CertificateAuthority) GetSignedCertificates(ctx context.Context) ([]*d
 }
 
 func (ca *CertificateAuthority) GetSignedCertificate(ctx context.Context, serial *big.Int) (*database.SignedCertificate, error) {
+	if ca.vault != nil {
+		return ca.vault.GetSignedCertificate(ctx, serial)
+	}
+
 	certificates, err := ca.db.GetSignedCertificate(ctx, serial)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -110,10 +162,18 @@ func (ca *CertificateAuthority) GetSignedCertificate(ctx context.Context, serial
 }
 
 func (ca *CertificateAuthority) GetRevokedCertificates(ctx context.Context) ([]*database.RevokedCertificate, error) {
+	if ca.vault != nil {
+		return ca.vault.GetRevokedCertificates(ctx)
+	}
+
 	return ca.db.GetRevokedCertificate(ctx, nil)
 }
 
 func (ca *CertificateAuthority) WatchRevokeCertificate() chan *database.RevokedCertificate {
+	if ca.vault != nil {
+		return ca.vault.WatchRevokeCertificate()
+	}
+
 	return ca.db.WatchRevokeCertificate()
 }
 
@@ -133,7 +193,7 @@ func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, 
 		keyType,
 		keyBits,
 		password,
-		ca.ca.Local,
+		ca.ca,
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)

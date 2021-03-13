@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "vault",
+    srcs = ["vault.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cert/vault",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/hashicorp/vault/api",
+        "//vendor/golang.org/x/xerrors",
+    ],
+)

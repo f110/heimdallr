@@ -41,10 +41,11 @@ type Framework struct {
 	DNS    *dns.Server
 }
 
-func New(t *testing.T) *Framework {
-	p, err := NewProxy(t)
+func New(t *testing.T, cond ...ProxyCond) *Framework {
+	t.Helper()
+	p, err := NewProxy(t, cond...)
 	if err != nil {
-		t.Fatalf("Failed setup proxy: %v", err)
+		t.Fatalf("Failed setup proxy: %+v", err)
 	}
 
 	dnsPort, err := netutil.FindUnusedPort()

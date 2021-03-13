@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-	c, p, err := cert.CreateCertificateAuthority("for test", "test", "", "jp")
+	c, p, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
 		panic(err)
 	}
@@ -226,10 +226,10 @@ func newAuthorization(t *testing.T, backend *configv2.Backend, role *configv2.Ro
 			},
 			CertificateAuthority: &configv2.CertificateAuthority{
 				Local: &configv2.CertificateAuthorityLocal{
-					Certificate: caCert,
-					PrivateKey:  caPrivateKey,
-					CertPool:    certPool,
+					PrivateKey: caPrivateKey,
 				},
+				Certificate: caCert,
+				CertPool:    certPool,
 			},
 		},
 	}

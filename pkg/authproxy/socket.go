@@ -158,7 +158,7 @@ func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 	}
 	cert := conn.ConnectionState().PeerCertificates[0]
 	_, err := cert.Verify(x509.VerifyOptions{
-		Roots:     s.Config.CertificateAuthority.Local.CertPool,
+		Roots:     s.Config.CertificateAuthority.CertPool,
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	})
 	if err != nil {

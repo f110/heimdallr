@@ -1,13 +1,9 @@
 package rpcserver
 
 import (
-	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"net"
 	"net/http"
 	"sync"
@@ -39,6 +35,7 @@ var (
 type Server struct {
 	Config *configv2.Config
 
+	ca            *cert.CertificateAuthority
 	server        *grpc.Server
 	privKey       crypto.PrivateKey
 	serverMetrics *grpc_prometheus.ServerMetrics
@@ -90,6 +87,7 @@ func NewServer(
 
 	return &Server{
 		Config:        conf,
+		ca:            ca,
 		server:        s,
 		serverMetrics: r,
 	}
@@ -97,28 +95,9 @@ func NewServer(
 
 func (s *Server) Start() error {
 	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", rpc.ServerHostname))
-	c, privKey, err := cert.GenerateServerCertificate(
-		s.Config.CertificateAuthority.Local.Certificate,
-		s.Config.CertificateAuthority.Local.PrivateKey,
-		[]string{rpc.ServerHostname},
-	)
+	serverCert, privKey, err := s.ca.NewServerCertificate(rpc.ServerHostname)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	b, err := x509.MarshalECPrivateKey(privKey.(*ecdsa.PrivateKey))
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	key := new(bytes.Buffer)
-	if err := pem.Encode(key, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-		return xerrors.Errorf(": %v", err)
-	}
-	pemEncodedPrivateKey := key.Bytes()
-	s.privKey = privKey
-
-	cb := new(bytes.Buffer)
-	if err := pem.Encode(cb, &pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.Errorf(": %w", err)
 	}
 
 	l, err := net.Listen("tcp", s.Config.RPCServer.Bind)
@@ -126,9 +105,9 @@ func (s *Server) Start() error {
 		return xerrors.Errorf(": %v", err)
 	}
 
-	tlsCert, err := tls.X509KeyPair(cb.Bytes(), pemEncodedPrivateKey)
-	if err != nil {
-		return xerrors.Errorf(": %v", err)
+	tlsCert := tls.Certificate{
+		Certificate: [][]byte{serverCert.Raw},
+		PrivateKey:  privKey,
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},

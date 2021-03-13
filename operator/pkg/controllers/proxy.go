@@ -587,7 +587,7 @@ func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 		}
 	}
 
-	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, organization, administratorUnit, country)
+	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, organization, administratorUnit, country, "ecdsa")
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}

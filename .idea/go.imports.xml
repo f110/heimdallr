@@ -11,6 +11,7 @@
         <option value="github.com/magiconair/properties/assert" />
         <option value="github.com/mitchellh/go-testing-interface" />
         <option value="github.com/smartystreets/assertions/assert" />
+        <option value="golang.org/x/net/context" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/fmt" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/time" />
         <option value="gotest.tools/assert" />

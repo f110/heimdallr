@@ -21,7 +21,7 @@ import (
 )
 
 func newCertificateAuthorityConfig(t *testing.T) *configv2.CertificateAuthority {
-	caCert, caPrivateKey, err := CreateCertificateAuthority("for test", "test", "", "jp")
+	caCert, caPrivateKey, err := CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,15 +30,16 @@ func newCertificateAuthorityConfig(t *testing.T) *configv2.CertificateAuthority 
 
 	return &configv2.CertificateAuthority{
 		Local: &configv2.CertificateAuthorityLocal{
-			Certificate: caCert,
-			PrivateKey:  caPrivateKey,
-			CertPool:    cp,
+			PrivateKey: caPrivateKey,
 		},
+		Certificate: caCert,
+		CertPool:    cp,
 	}
 }
 
 func TestCertificateAuthority_NewClientCertificate(t *testing.T) {
-	ca := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	ca, err := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	require.NoError(t, err)
 
 	doneCh := make(chan struct{})
 	revokedCertEventCh := make(chan *database.RevokedCertificate, 1)
@@ -90,7 +91,8 @@ func TestCertificateAuthority_NewClientCertificate(t *testing.T) {
 }
 
 func TestCertificateAuthority_NewAgentCertificate(t *testing.T) {
-	ca := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	ca, err := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	require.NoError(t, err)
 
 	data, err := ca.NewAgentCertificate(context.Background(), "test", "defaultpassword", "for testing")
 	require.NoError(t, err)
@@ -113,7 +115,8 @@ func TestCertificateAuthority_NewAgentCertificate(t *testing.T) {
 }
 
 func TestCertificateAuthority_NewServerCertificate(t *testing.T) {
-	ca := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	ca, err := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	require.NoError(t, err)
 
 	c, _, err := ca.NewServerCertificate("test.example.com")
 	require.NoError(t, err)
@@ -122,7 +125,8 @@ func TestCertificateAuthority_NewServerCertificate(t *testing.T) {
 }
 
 func TestCertificateAuthority_SignCertificateRequest(t *testing.T) {
-	ca := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	ca, err := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
+	require.NoError(t, err)
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)

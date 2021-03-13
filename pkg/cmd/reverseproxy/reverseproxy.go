@@ -1,18 +1,27 @@
 package reverseproxy
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
-	"os/signal"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/hashicorp/vault/api"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/embed"
 	"go.f110.dev/protoc-ddl/probe"
@@ -26,6 +35,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cert/vault"
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -49,11 +60,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/session"
 )
 
-type state int
-type stateFunc func() error
-
 const (
-	stateInit state = iota
+	stateInit cmd.State = iota
 	stateSetup
 	stateStartRPCServer
 	stateSetupRPCConn
@@ -62,9 +70,8 @@ const (
 	stateWaitServerShutdown
 	stateShuttingDownRPCServer
 	stateWaitRPCServerShutdown
-	stateEmbedEtcdShutdown
-	stateWaitEtcdShutdown
-	stateFinish
+	stateEmbedMiddlewareShutdown
+	stateWaitMiddlewareShutdown
 )
 
 const (
@@ -74,7 +81,10 @@ const (
 )
 
 type mainProcess struct {
+	*cmd.FSM
+
 	ConfFile string
+	VaultBin string
 
 	wg              sync.WaitGroup
 	config          *configv2.Config
@@ -89,6 +99,7 @@ type mainProcess struct {
 	clusterDatabase database.ClusterDatabase
 	sessionStore    session.Store
 	connector       *connector.Server
+	vaultClient     *api.Client
 
 	rpcServerConn *grpc.ClientConn
 	revokedCert   *rpcclient.RevokedCertificateWatcher
@@ -98,83 +109,47 @@ type mainProcess struct {
 	dashboard   *dashboard.Server
 	rpcServer   *rpcserver.Server
 
-	etcd *embed.Etcd
+	etcd  *embed.Etcd
+	vault *exec.Cmd
 
 	mu    sync.Mutex
 	ready bool
 
-	stateCh         chan state
 	rpcServerDoneCh chan struct{}
 }
 
 func New() *mainProcess {
-	m := &mainProcess{
-		stateCh: make(chan state),
-	}
+	m := &mainProcess{}
+	m.FSM = cmd.NewFSM(
+		map[cmd.State]cmd.StateFunc{
+			stateInit:                    m.init,
+			stateSetup:                   m.setup,
+			stateStartRPCServer:          m.startRPCServer,
+			stateSetupRPCConn:            m.setupAfterStartingRPCServer,
+			stateRun:                     m.run,
+			stateShuttingDown:            m.shuttingDown,
+			stateWaitServerShutdown:      m.waitServerShutdown,
+			stateShuttingDownRPCServer:   m.shuttingDownRPCServer,
+			stateWaitRPCServerShutdown:   m.waitRPCServerShutdown,
+			stateEmbedMiddlewareShutdown: m.embedMiddlewareShutdown,
+			stateWaitMiddlewareShutdown:  m.waitMiddlewareShutdown,
+		},
+		stateInit,
+		stateShuttingDown,
+	)
 
-	m.signalHandling()
 	return m
 }
 
-func (m *mainProcess) NextState(state state) error {
-	m.stateCh <- state
-	return nil
-}
-
-func (m *mainProcess) Loop() {
-	go func() {
-		m.stateCh <- stateInit
-	}()
-
-	for {
-		s := <-m.stateCh
-
-		var fn stateFunc
-		switch s {
-		case stateInit:
-			fn = m.ReadConfig
-		case stateSetup:
-			fn = m.Setup
-		case stateStartRPCServer:
-			fn = m.StartRPCServer
-		case stateSetupRPCConn:
-			fn = m.SetupAfterStartingRPCServer
-		case stateRun:
-			fn = m.Start
-		case stateShuttingDown:
-			fn = m.Shutdown
-		case stateWaitServerShutdown:
-			fn = m.WaitShutdown
-		case stateShuttingDownRPCServer:
-			fn = m.ShutdownRPCServer
-		case stateWaitRPCServerShutdown:
-			fn = m.WaitRPCServerShutdown
-		case stateEmbedEtcdShutdown:
-			fn = m.ShutdownEtcd
-		case stateWaitEtcdShutdown:
-			fn = m.WaitEtcdShutdown
-		case stateFinish:
-			return
-		}
-
-		go func() {
-			if err := fn(); err != nil {
-				fmt.Fprintf(os.Stderr, "%+v\n", err)
-				_ = m.NextState(stateShuttingDown)
-			}
-		}()
-	}
-}
-
-func (m *mainProcess) ReadConfig() error {
+func (m *mainProcess) init() (cmd.State, error) {
 	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return err
+		return cmd.UnknownState, err
 	}
 	m.config = conf
 	m.configReloader, err = configutil.NewReloader(conf)
 	if err != nil {
-		return err
+		return cmd.UnknownState, err
 	}
 
 	if m.config.Datastore.DatastoreEtcd != nil {
@@ -185,10 +160,10 @@ func (m *mainProcess) ReadConfig() error {
 		m.datastoreType = datastoreNone
 	}
 
-	return m.NextState(stateSetup)
+	return stateSetup, nil
 }
 
-func (m *mainProcess) Shutdown() error {
+func (m *mainProcess) shuttingDown() (cmd.State, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
 
@@ -246,22 +221,22 @@ func (m *mainProcess) Shutdown() error {
 	case <-done:
 	}
 
-	return m.NextState(stateWaitServerShutdown)
+	return stateWaitServerShutdown, nil
 }
 
-func (m *mainProcess) WaitShutdown() error {
+func (m *mainProcess) waitServerShutdown() (cmd.State, error) {
 	m.wg.Wait()
-	return m.NextState(stateShuttingDownRPCServer)
+	return stateShuttingDownRPCServer, nil
 }
 
-func (m *mainProcess) WaitRPCServerShutdown() error {
+func (m *mainProcess) waitRPCServerShutdown() (cmd.State, error) {
 	if m.rpcServerDoneCh != nil {
 		<-m.rpcServerDoneCh
 	}
-	return m.NextState(stateEmbedEtcdShutdown)
+	return stateEmbedMiddlewareShutdown, nil
 }
 
-func (m *mainProcess) ShutdownRPCServer() error {
+func (m *mainProcess) shuttingDownRPCServer() (cmd.State, error) {
 	if m.config != nil {
 		switch m.datastoreType {
 		case datastoreTypeEtcd:
@@ -299,30 +274,20 @@ func (m *mainProcess) ShutdownRPCServer() error {
 		}
 	}
 
-	return m.NextState(stateWaitRPCServerShutdown)
+	return stateWaitRPCServerShutdown, nil
 }
 
-func (m *mainProcess) ShutdownEtcd() error {
+func (m *mainProcess) embedMiddlewareShutdown() (cmd.State, error) {
 	if m.etcd != nil {
 		m.etcd.Server.Stop()
 	}
-
-	return m.NextState(stateWaitEtcdShutdown)
-}
-
-func (m *mainProcess) signalHandling() {
-	signalCh := make(chan os.Signal)
-	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT)
-
-	go func() {
-		for sig := range signalCh {
-			switch sig {
-			case syscall.SIGTERM, os.Interrupt:
-				_ = m.NextState(stateShuttingDown)
-				return
-			}
+	if m.vault != nil {
+		if err := m.vault.Process.Signal(syscall.SIGTERM); err != nil {
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
-	}()
+	}
+
+	return stateWaitMiddlewareShutdown, nil
 }
 
 func (m *mainProcess) IsReady() bool {
@@ -425,17 +390,150 @@ func (m *mainProcess) startEmbedEtcd() error {
 	return nil
 }
 
-func (m *mainProcess) Setup() error {
+func (m *mainProcess) startVault() error {
+	vaultPort, err := netutil.FindUnusedPort()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	r, w := io.Pipe()
+	vaultCmd := exec.CommandContext(
+		context.Background(),
+		m.VaultBin,
+		"server",
+		"-dev",
+		fmt.Sprintf("-dev-listen-address=127.0.0.1:%d", vaultPort),
+	)
+	vaultCmd.Stdout = w
+	if err := vaultCmd.Start(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	m.vault = vaultCmd
+	logger.Log.Debug("Start Vault", zap.Int("pid", vaultCmd.Process.Pid), zap.Int("port", vaultPort))
+
+	rootToken := ""
+	scan := bufio.NewScanner(r)
+	for scan.Scan() {
+		line := scan.Text()
+		if strings.HasPrefix(line, "Root Token:") {
+			rootToken = strings.TrimSpace(strings.TrimPrefix(line, "Root Token: "))
+			break
+		}
+	}
+	logger.Log.Debug("Vault root token", zap.String("token", rootToken))
+
+	m.config.CertificateAuthority.Vault.Addr = fmt.Sprintf("http://127.0.0.1:%d", vaultPort)
+	m.config.CertificateAuthority.Vault.Token = rootToken
+	vaultClient, err := vault.NewClient(m.config.CertificateAuthority.Vault.Addr, rootToken, "")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	if err := vaultClient.EnablePKI(context.TODO()); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	logger.Log.Debug("Enable PKI Engine", zap.String("path", "pki/"))
+
+	var caCert *x509.Certificate
+	var privateKey *rsa.PrivateKey
+	if _, err := os.Stat(filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt")); os.IsNotExist(err) {
+		crt, key, err := cert.CreateCertificateAuthority("Heimdallr with Vault", "", "", "", "rsa")
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		pemBundle := new(bytes.Buffer)
+		if err := pem.Encode(pemBundle, &pem.Block{Bytes: crt.Raw, Type: "CERTIFICATE"}); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		b, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		if err := pem.Encode(pemBundle, &pem.Block{Bytes: b, Type: "RSA PRIVATE KEY"}); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		if err := os.WriteFile(
+			filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt"),
+			pemBundle.Bytes(),
+			0400,
+		); err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		caCert = crt
+		privateKey = key.(*rsa.PrivateKey)
+	} else {
+		buf, err := os.ReadFile(filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt"))
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		for {
+			b, rest := pem.Decode(buf)
+			if b == nil {
+				break
+			}
+			switch b.Type {
+			case "CERTIFICATE":
+				crt, err := x509.ParseCertificate(b.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %w", err)
+				}
+				caCert = crt
+			case "RSA PRIVATE KEY":
+				key, err := x509.ParsePKCS8PrivateKey(b.Bytes)
+				if err != nil {
+					return xerrors.Errorf(": %w", err)
+				}
+				privateKey = key.(*rsa.PrivateKey)
+			}
+			buf = rest
+		}
+	}
+
+	if err := vaultClient.SetCA(context.Background(), caCert, privateKey); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	m.config.CertificateAuthority.CertPool, err = vaultClient.GetCertPool(context.Background())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	m.config.CertificateAuthority.Certificate, err = vaultClient.GetCACertificate(context.Background())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	err = vaultClient.SetRole(context.Background(), m.config.CertificateAuthority.Vault.Role, &vault.Role{
+		AllowedDomains:   []string{rpc.ServerHostname},
+		AllowSubDomains:  true,
+		AllowLocalhost:   true,
+		AllowBareDomains: true,
+		EnforceHostnames: false,
+		ServerFlag:       true,
+		ClientFlag:       true,
+	})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func (m *mainProcess) setup() (cmd.State, error) {
 	if err := logger.Init(m.config.Logger); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	if m.config.Datastore.DatastoreEtcd != nil && m.config.Datastore.DatastoreEtcd.Embed {
 		if err := m.startEmbedEtcd(); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 	}
 
+	if m.VaultBin != "" && m.config.CertificateAuthority.Vault != nil {
+		if err := m.startVault(); err != nil {
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		}
+	}
+
+	var caDatabase database.CertificateAuthority
 	switch m.datastoreType {
 	case datastoreTypeEtcd:
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
@@ -443,7 +541,7 @@ func (m *mainProcess) Setup() error {
 
 		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		go m.watchGRPCConnState(client.ActiveConnection())
 
@@ -451,44 +549,50 @@ func (m *mainProcess) Setup() error {
 
 		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
-		caDatabase, err := etcd.NewCA(ctx, client)
+		caDatabase, err = etcd.NewCA(ctx, client)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return cmd.UnknownState, xerrors.Errorf(": %w", err)
 			}
 		}
 	case datastoreTypeMySQL:
 		conn, err := m.config.Datastore.GetMySQLConn()
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
 		repository := dao.NewRepository(conn)
 		m.userDatabase = mysql.NewUserDatabase(repository, database.SystemUser)
-		caDatabase := mysql.NewCA(repository)
-		m.ca = cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
+		caDatabase = mysql.NewCA(repository)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = mysql.NewTokenDatabase(repository)
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
+	}
+
+	if m.config.CertificateAuthority != nil {
+		ca, err := cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
+		if err != nil {
+			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		}
+		m.ca = ca
 	}
 
 	if m.config.AccessProxy.HTTP.Bind != "" {
@@ -505,13 +609,13 @@ func (m *mainProcess) Setup() error {
 	}
 
 	auth.Init(m.config, nil, m.userDatabase, m.tokenDatabase, nil)
-	return m.NextState(stateStartRPCServer)
+	return stateStartRPCServer, nil
 }
 
-func (m *mainProcess) SetupAfterStartingRPCServer() error {
+func (m *mainProcess) setupAfterStartingRPCServer() (cmd.State, error) {
 	rpcclient.OverrideGrpcLogger()
 
-	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.Local.CertPool})
+	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.CertPool})
 	conn, err := grpc.Dial(
 		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),
@@ -520,7 +624,7 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %v", err)
 	}
 	m.rpcServerConn = conn
 
@@ -530,14 +634,14 @@ func (m *mainProcess) SetupAfterStartingRPCServer() error {
 
 	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.AccessProxy.Credential.InternalToken)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return cmd.UnknownState, xerrors.Errorf(": %v", err)
 	}
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.tokenDatabase, m.revokedCert)
-	return m.NextState(stateRun)
+	return stateRun, nil
 }
 
-func (m *mainProcess) StartRPCServer() error {
+func (m *mainProcess) startRPCServer() (cmd.State, error) {
 	if m.config.RPCServer != nil && m.config.RPCServer.Bind != "" {
 		errCh := make(chan error)
 
@@ -548,7 +652,15 @@ func (m *mainProcess) StartRPCServer() error {
 				m.rpcServerDoneCh <- struct{}{}
 			}()
 
-			m.rpcServer = rpcserver.NewServer(m.config, m.userDatabase, m.tokenDatabase, m.clusterDatabase, m.relayLocator, m.ca, m.IsReady)
+			m.rpcServer = rpcserver.NewServer(
+				m.config,
+				m.userDatabase,
+				m.tokenDatabase,
+				m.clusterDatabase,
+				m.relayLocator,
+				m.ca,
+				m.IsReady,
+			)
 			if err := m.rpcServer.Start(); err != nil {
 				errCh <- err
 			}
@@ -558,7 +670,6 @@ func (m *mainProcess) StartRPCServer() error {
 		go func() {
 			logger.Log.Debug("Waiting for start rpcserver")
 			if err := netutil.WaitListen(m.config.RPCServer.Bind, time.Second); err != nil {
-				errCh <- err
 				return
 			}
 			successCh <- struct{}{}
@@ -566,23 +677,23 @@ func (m *mainProcess) StartRPCServer() error {
 
 		select {
 		case err := <-errCh:
-			return err
+			return cmd.UnknownState, err
 		case <-successCh:
 		}
 
 		if m.datastoreType == datastoreTypeEtcd {
 			c, err := etcd.NewCompactor(m.etcdClient)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return cmd.UnknownState, xerrors.Errorf(": %v", err)
 			}
 			go c.Start(context.Background())
 		}
 	}
 
-	return m.NextState(stateSetupRPCConn)
+	return stateSetupRPCConn, nil
 }
 
-func (m *mainProcess) Start() error {
+func (m *mainProcess) run() (cmd.State, error) {
 	if m.config.AccessProxy.HTTP.Bind != "" {
 		m.wg.Add(1)
 		go func() {
@@ -599,10 +710,10 @@ func (m *mainProcess) Start() error {
 		}()
 
 		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.Bind, time.Second); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.BindInternalApi, time.Second); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 	}
 
@@ -619,20 +730,20 @@ func (m *mainProcess) Start() error {
 		}()
 
 		if err := netutil.WaitListen(m.config.Dashboard.Bind, 5*time.Second); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return cmd.UnknownState, xerrors.Errorf(": %v", err)
 		}
 	}
 
-	return nil
+	return cmd.WaitState, nil
 }
 
-func (m *mainProcess) WaitEtcdShutdown() error {
+func (m *mainProcess) waitMiddlewareShutdown() (cmd.State, error) {
 	if m.etcd != nil {
 		<-m.etcd.Server.StopNotify()
 		logger.Log.Debug("Shutdown embed etcd")
 	}
 
-	return m.NextState(stateFinish)
+	return cmd.CloseState, nil
 }
 
 func (m *mainProcess) watchGRPCConnState(conn *grpc.ClientConn) {

@@ -122,3 +122,10 @@ kind_binary(
     name = "kind",
     version = "0.10.0",
 )
+
+load("//build/rules/vault:def.bzl", "vault_binary")
+
+vault_binary(
+    name = "vault",
+    version = "1.6.3",
+)

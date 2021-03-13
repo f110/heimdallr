@@ -26,7 +26,7 @@ const (
 	CertificateExpirationYear = 10 // year
 )
 
-func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType string, keyBits int, password string, ca *configv2.CertificateAuthorityLocal) ([]byte, *x509.Certificate, error) {
+func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType string, keyBits int, password string, ca *configv2.CertificateAuthority) ([]byte, *x509.Certificate, error) {
 	now := time.Now()
 	cert := &x509.Certificate{
 		SerialNumber: serial,
@@ -68,7 +68,7 @@ func CreateNewCertificateForClient(name pkix.Name, serial *big.Int, keyType stri
 		publicKey = key.Public()
 	}
 
-	b, err := x509.CreateCertificate(rand.Reader, cert, ca.Certificate, publicKey, ca.PrivateKey)
+	b, err := x509.CreateCertificate(rand.Reader, cert, ca.Certificate, publicKey, ca.Local.PrivateKey)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %v", err)
 	}
@@ -120,7 +120,7 @@ func CreateCertificateRequest(subject pkix.Name, dnsName []string, privateKey cr
 	return buf.Bytes(), nil
 }
 
-func SigningCertificateRequest(r *x509.CertificateRequest, ca *configv2.CertificateAuthorityLocal) (*x509.Certificate, error) {
+func SigningCertificateRequest(r *x509.CertificateRequest, ca *configv2.CertificateAuthority) (*x509.Certificate, error) {
 	serialNumber, err := NewSerialNumber()
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
@@ -132,7 +132,7 @@ func SigningCertificateRequest(r *x509.CertificateRequest, ca *configv2.Certific
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(CertificateExpirationYear, 0, 0),
 	}
-	cert, err := x509.CreateCertificate(rand.Reader, n, ca.Certificate, r.PublicKey, ca.PrivateKey)
+	cert, err := x509.CreateCertificate(rand.Reader, n, ca.Certificate, r.PublicKey, ca.Local.PrivateKey)
 	if err != nil {
 		return nil, xerrors.Errorf(": %v", err)
 	}
@@ -246,15 +246,29 @@ func CreateCertificateAuthorityForConfig(conf *configv2.Config) (*x509.Certifica
 		conf.CertificateAuthority.Local.Organization,
 		conf.CertificateAuthority.Local.OrganizationUnit,
 		conf.CertificateAuthority.Local.Country,
+		"ecdsa",
 	)
 }
 
-func CreateCertificateAuthority(commonName, org, orgUnit, country string) (*x509.Certificate, crypto.PrivateKey, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, nil, xerrors.Errorf(": %v", err)
+func CreateCertificateAuthority(commonName, org, orgUnit, country, keyType string) (*x509.Certificate, crypto.PrivateKey, error) {
+	var privateKey crypto.PrivateKey
+	var publicKey crypto.PublicKey
+	switch keyType {
+	case "ecdsa":
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %v", err)
+		}
+		privateKey = key
+		publicKey = &key.PublicKey
+	case "rsa":
+		key, err := rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			return nil, nil, xerrors.Errorf(": %w", err)
+		}
+		privateKey = key
+		publicKey = &key.PublicKey
 	}
-	publicKey := &privateKey.PublicKey
 
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {

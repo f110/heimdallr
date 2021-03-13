@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,212 +21,233 @@ import (
 )
 
 func TestL7ReverseProxy(t *testing.T) {
-	f := framework.New(t)
-	defer f.Execute()
+	cond := [][]framework.ProxyCond{
+		{}, // default
+		{framework.WithVault},
+	}
 
-	f.Describe("L7 Reverse Proxy", func(s *btesting.Scenario) {
-		s.BeforeEach(func(m *btesting.Matcher) { m.Must(f.Proxy.Reload()) })
-		s.Defer(func() { f.Proxy.Cleanup() })
+	for _, c := range cond {
+		name := ""
+		if len(c) > 0 {
+			for _, v := range c {
+				n := runtime.FuncForPC(reflect.ValueOf(v).Pointer()).Name()
+				s := strings.Split(n, ".")
+				name += s[len(s)-1]
+			}
+		} else {
+			name = "Default"
+		}
+		t.Run(name, func(t *testing.T) {
+			f := framework.New(t, c...)
+			defer f.Execute()
 
-		s.Context("authorization flow", func(s *btesting.Scenario) {
-			s.BeforeAll(func(m *btesting.Matcher) {
-				f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
-				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
-				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
-			})
-			s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
+			f.Describe("L7 Reverse Proxy", func(s *btesting.Scenario) {
+				s.BeforeEach(func(m *btesting.Matcher) { m.Must(f.Proxy.Reload()) })
+				s.Defer(func() { f.Proxy.Cleanup() })
 
-			s.Step("request backend url", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					f.Agents.User("test@f110.dev").Get(m, f.Proxy.URL("test"))
-				})
+				s.Context(
+					"authorization flow", func(s *btesting.Scenario) {
+						s.BeforeAll(func(m *btesting.Matcher) {
+							f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+							f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
+							f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
+						})
+						s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
 
-				s.It("should redirect to entry point", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusSeeOther)
-					u, err := m.LastResponse().Location()
-					m.NoError(err)
-					m.Contains(u.String(), f.Proxy.URL("", "/auth"))
-				})
-			})
+						s.Step("request backend url", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								f.Agents.User("test@f110.dev").Get(m, f.Proxy.URL("test"))
+							})
 
-			s.Step("enter authorization flow", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
-					f.Agents.User("test@f110.dev").SaveCookie()
-				})
+							s.It("should redirect to entry point", func(m *btesting.Matcher) {
+								m.StatusCode(http.StatusSeeOther)
+								u, err := m.LastResponse().Location()
+								m.NoError(err)
+								m.Contains(u.String(), f.Proxy.URL("", "/auth"))
+							})
+						})
 
-				s.It("should redirect to OpenID Connect auth endpoint", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusFound)
-					u, err := m.LastResponse().Location()
-					m.NoError(err)
-					m.Contains(u.String(), "custom-idp/auth")
-				})
+						s.Step("enter authorization flow", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
+								f.Agents.User("test@f110.dev").SaveCookie()
+							})
 
-				s.It("receive the cookie", func(m *btesting.Matcher) {
-					cookie := m.LastResponse().FindCookie(session.CookieName)
-					m.NotNil(cookie)
-					m.Equal(f.Proxy.DomainHost, cookie.Domain)
-					m.True(cookie.HttpOnly)
-					m.True(cookie.Secure)
-					sess, err := f.Agents.DecodeCookieValue(cookie.Name, cookie.Value)
-					m.NoError(err)
-					m.Empty(sess.Id)
-					m.NotEmpty(sess.Unique)
-				})
-			})
+							s.It("should redirect to OpenID Connect auth endpoint", func(m *btesting.Matcher) {
+								m.StatusCode(http.StatusFound)
+								u, err := m.LastResponse().Location()
+								m.NoError(err)
+								m.Contains(u.String(), "custom-idp/auth")
+							})
 
-			s.Step("show authorization view of identity provider", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
-				})
+							s.It("receive the cookie", func(m *btesting.Matcher) {
+								cookie := m.LastResponse().FindCookie(session.CookieName)
+								m.NotNil(cookie)
+								m.Equal(f.Proxy.DomainHost, cookie.Domain)
+								m.True(cookie.HttpOnly)
+								m.True(cookie.Secure)
+								sess, err := f.Agents.DecodeCookieValue(cookie.Name, cookie.Value)
+								m.NoError(err)
+								m.Empty(sess.Id)
+								m.NotEmpty(sess.Unique)
+							})
+						})
 
-				s.It("should get a page", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusOK)
-				})
-			})
+						s.Step("show authorization view of identity provider", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
+							})
 
-			s.Step("login identity provider", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					agent := f.Agents.User("test@f110.dev")
-					authResponse := &framework.AuthResponse{}
-					m.Must(agent.ParseLastResponseBody(authResponse))
-					agent.Post(m, authResponse.LoginURL, fmt.Sprintf(`{"id":"test@f110.dev","query":"%s"}`, authResponse.Query))
-				})
+							s.It("should get a page", func(m *btesting.Matcher) {
+								m.StatusCode(http.StatusOK)
+							})
+						})
 
-				s.It("should redirect to callback", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusFound)
-					u, err := m.LastResponse().Location()
-					m.NoError(err)
-					m.Contains(u.String(), "auth/callback")
-				})
-			})
+						s.Step("login identity provider", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								agent := f.Agents.User("test@f110.dev")
+								authResponse := &framework.AuthResponse{}
+								m.Must(agent.ParseLastResponseBody(authResponse))
+								agent.Post(m, authResponse.LoginURL, fmt.Sprintf(`{"id":"test@f110.dev","query":"%s"}`, authResponse.Query))
+							})
 
-			s.Step("follow redirect", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
-				})
+							s.It("should redirect to callback", func(m *btesting.Matcher) {
+								m.StatusCode(http.StatusFound)
+								u, err := m.LastResponse().Location()
+								m.NoError(err)
+								m.Contains(u.String(), "auth/callback")
+							})
+						})
 
-				s.It("should redirect to backend", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusFound)
-					u, err := m.LastResponse().Location()
-					m.NoError(err)
-					m.Equal(f.Proxy.URL("test"), u.String())
-				})
-			})
-		})
+						s.Step(
+							"follow redirect", func(s *btesting.Scenario) {
+								s.Subject(func(m *btesting.Matcher) {
+									m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
+								})
 
-		s.Context("access to the unknown backend", func(s *btesting.Scenario) {
-			s.Context("by authenticated user", func(s *btesting.Scenario) {
-				s.BeforeAll(func(m *btesting.Matcher) {
-					f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
-					f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
-					f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
-				})
-				s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
-
-				s.It("should close connection", func(m *btesting.Matcher) {
-					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("unknown"))
-				})
-			})
-
-			s.Context("by unauthenticated agent", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					f.Agents.Unauthorized().Get(m, f.Proxy.URL("unknown"))
-				})
-
-				s.It("should close connection", func(m *btesting.Matcher) {
-					m.ResetConnection()
-				})
-			})
-		})
-
-		s.Context("access to the backend", func(s *btesting.Scenario) {
-			s.BeforeAll(func(m *btesting.Matcher) {
-				f.Proxy.Backend(&configv2.Backend{
-					Name: "test1",
-					HTTP: []*configv2.HTTPBackend{{Path: "/"}},
-					Permissions: []*configv2.Permission{
-						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
-					},
-				})
-				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test1", Permission: "all"}}})
-				f.Proxy.Role(&configv2.Role{Name: "test2"})
-				f.Proxy.User(&database.User{Id: "test1@f110.dev", Roles: []string{"test"}})
-				f.Proxy.User(&database.User{Id: "test2@f110.dev", Roles: []string{"test2"}})
-			})
-			s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
-
-			s.Context("by unauthenticated agent", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					f.Agents.Unauthorized().Get(m, f.Proxy.URL("test1"))
-				})
-
-				s.It("should redirect to IdP", func(m *btesting.Matcher) {
-					m.StatusCode(http.StatusSeeOther)
-					u, err := m.LastResponse().Location()
-					m.NoError(err)
-					m.Equal(f.Proxy.URL("test1"), u.Query().Get("from"))
-				})
-			})
-
-			s.Context("by authenticated user", func(s *btesting.Scenario) {
-				s.Context("who allowed an access", func(s *btesting.Scenario) {
-					s.Subject(func(m *btesting.Matcher) {
-						f.Agents.Authorized("test1@f110.dev").Get(m, f.Proxy.URL("test1", "index.html"))
+								s.It("should redirect to backend", func(m *btesting.Matcher) {
+									m.StatusCode(http.StatusFound)
+									u, err := m.LastResponse().Location()
+									m.NoError(err)
+									m.Equal(f.Proxy.URL("test"), u.String())
+								})
+							})
 					})
 
-					s.It("should proxy to backend", func(m *btesting.Matcher) {
-						m.Equal(http.StatusBadGateway, m.LastResponse().StatusCode, "returns status 502 (BadGateway) because the upstream is down")
+				s.Context("access to the unknown backend", func(s *btesting.Scenario) {
+					s.Context("by authenticated user", func(s *btesting.Scenario) {
+						s.BeforeAll(func(m *btesting.Matcher) {
+							f.Proxy.Backend(&configv2.Backend{Name: "test", Permissions: []*configv2.Permission{{Name: "all", Locations: []configv2.Location{{Any: "/"}}}}})
+							f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
+							f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"test"}})
+						})
+						s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
+
+						s.It("should close connection", func(m *btesting.Matcher) {
+							f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("unknown"))
+						})
+					})
+
+					s.Context("by unauthenticated agent", func(s *btesting.Scenario) {
+						s.Subject(func(m *btesting.Matcher) {
+							f.Agents.Unauthorized().Get(m, f.Proxy.URL("unknown"))
+						})
+
+						s.It("should close connection", func(m *btesting.Matcher) {
+							m.ResetConnection()
+						})
 					})
 				})
 
-				s.Context("who not allowed an access", func(s *btesting.Scenario) {
-					s.Subject(func(m *btesting.Matcher) {
-						f.Agents.Authorized("test2@f110.dev").Get(m, f.Proxy.URL("test1"))
+				s.Context("access to the backend", func(s *btesting.Scenario) {
+					s.BeforeAll(func(m *btesting.Matcher) {
+						f.Proxy.Backend(&configv2.Backend{
+							Name: "test1",
+							HTTP: []*configv2.HTTPBackend{{Path: "/"}},
+							Permissions: []*configv2.Permission{
+								{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+							},
+						})
+						f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test1", Permission: "all"}}})
+						f.Proxy.Role(&configv2.Role{Name: "test2"})
+						f.Proxy.User(&database.User{Id: "test1@f110.dev", Roles: []string{"test"}})
+						f.Proxy.User(&database.User{Id: "test2@f110.dev", Roles: []string{"test2"}})
+					})
+					s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
+
+					s.Context("by unauthenticated agent", func(s *btesting.Scenario) {
+						s.Subject(func(m *btesting.Matcher) {
+							f.Agents.Unauthorized().Get(m, f.Proxy.URL("test1"))
+						})
+
+						s.It("should redirect to IdP", func(m *btesting.Matcher) {
+							m.StatusCode(http.StatusSeeOther)
+							u, err := m.LastResponse().Location()
+							m.NoError(err)
+							m.Equal(f.Proxy.URL("test1"), u.Query().Get("from"))
+						})
 					})
 
-					s.It("should not proxy to the backend", func(m *btesting.Matcher) {
-						m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
+					s.Context("by authenticated user", func(s *btesting.Scenario) {
+						s.Context("who allowed an access", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								f.Agents.Authorized("test1@f110.dev").Get(m, f.Proxy.URL("test1", "index.html"))
+							})
+
+							s.It("should proxy to backend", func(m *btesting.Matcher) {
+								m.Equal(http.StatusBadGateway, m.LastResponse().StatusCode, "returns status 502 (BadGateway) because the upstream is down")
+							})
+						})
+
+						s.Context("who not allowed an access", func(s *btesting.Scenario) {
+							s.Subject(func(m *btesting.Matcher) {
+								f.Agents.Authorized("test2@f110.dev").Get(m, f.Proxy.URL("test1"))
+							})
+
+							s.It("should not proxy to the backend", func(m *btesting.Matcher) {
+								m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
+							})
+						})
+					})
+				})
+
+				s.Context("access to the backend which via connector", func(s *btesting.Scenario) {
+					var api1, api2 *btesting.MockServer
+					s.BeforeAll(func(m *btesting.Matcher) {
+						api1 = f.Proxy.MockServer()
+						api2 = f.Proxy.MockServer()
+						f.Proxy.Backend(&configv2.Backend{
+							Name: "test",
+							HTTP: []*configv2.HTTPBackend{
+								{Path: "/api1", Agent: true},
+								{Path: "/api2", Agent: true},
+							},
+							Permissions: []*configv2.Permission{
+								{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+							},
+						})
+						f.Proxy.Connector("test/api1", api1)
+						f.Proxy.Connector("test/api2", api2)
+						f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
+						f.Proxy.User(&database.User{Id: "test3@f110.dev", Roles: []string{"test"}})
+					})
+					s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
+
+					s.Context("by authenticated user", func(s *btesting.Scenario) {
+						s.Subject(func(m *btesting.Matcher) {
+							f.Agents.Authorized("test3@f110.dev").Get(m, f.Proxy.URL("test", "/api1"))
+						})
+
+						s.It("should proxy to backend", func(m *btesting.Matcher) {
+							m.Equal(http.StatusOK, m.LastResponse().StatusCode)
+							m.Len(api1.Requests(), 1)
+							m.Len(api2.Requests(), 0)
+						})
 					})
 				})
 			})
 		})
-
-		s.Context("access to the backend which via connector", func(s *btesting.Scenario) {
-			var api1, api2 *btesting.MockServer
-			s.BeforeAll(func(m *btesting.Matcher) {
-				api1 = f.Proxy.MockServer()
-				api2 = f.Proxy.MockServer()
-				f.Proxy.Backend(&configv2.Backend{
-					Name: "test",
-					HTTP: []*configv2.HTTPBackend{
-						{Path: "/api1", Agent: true},
-						{Path: "/api2", Agent: true},
-					},
-					Permissions: []*configv2.Permission{
-						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
-					},
-				})
-				f.Proxy.Connector("test/api1", api1)
-				f.Proxy.Connector("test/api2", api2)
-				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test", Permission: "all"}}})
-				f.Proxy.User(&database.User{Id: "test3@f110.dev", Roles: []string{"test"}})
-			})
-			s.AfterAll(func(m *btesting.Matcher) { f.Proxy.ClearConf() })
-
-			s.Context("by authenticated user", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
-					f.Agents.Authorized("test3@f110.dev").Get(m, f.Proxy.URL("test", "/api1"))
-				})
-
-				s.It("should proxy to backend", func(m *btesting.Matcher) {
-					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
-					m.Len(api1.Requests(), 1)
-					m.Len(api2.Requests(), 0)
-				})
-			})
-		})
-	})
+	}
 }
 
 func TestL4Proxy(t *testing.T) {

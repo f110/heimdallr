@@ -153,7 +153,7 @@ func (a *authentication) findUser(ctx context.Context, req *http.Request) (*data
 			return nil, nil, ErrInvalidCertificate
 		}
 		_, err := cert.Verify(x509.VerifyOptions{
-			Roots:     a.Config.CertificateAuthority.Local.CertPool,
+			Roots:     a.Config.CertificateAuthority.CertPool,
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {

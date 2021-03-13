@@ -466,7 +466,7 @@ func (s *Server) handleDownloadCACert(w http.ResponseWriter, _ *http.Request, _ 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename=ca.crt")
 	buf := new(bytes.Buffer)
-	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: s.Config.CertificateAuthority.Local.Certificate.Raw}); err != nil {
+	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: s.Config.CertificateAuthority.Certificate.Raw}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

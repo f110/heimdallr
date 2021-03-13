@@ -26,6 +26,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.12.1 // indirect
+	github.com/hashicorp/vault/api v1.0.4
 	github.com/jarcoal/httpmock v1.0.5
 	github.com/jetstack/cert-manager v1.0.1
 	github.com/julienschmidt/httprouter v1.3.0

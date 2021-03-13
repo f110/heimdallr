@@ -5,10 +5,12 @@ go_library(
     srcs = [
         "certificate_authority.go",
         "util.go",
+        "vault_certificate_authority.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cert",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cert/vault",
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
