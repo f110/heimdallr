@@ -33,8 +33,6 @@ certificate_authority:
     organization: test
     organization_unit: dev
     country: jp
-  vault:
-    role: heimdallr
 rpc_server:
   bind: :4002
   metrics_bind: :4005
