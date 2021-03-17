@@ -1231,6 +1231,22 @@ echo '' > /etc/resolv.conf
 					"--ready-file",
 					"/var/run/sidecar/ready",
 				},
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Port: intstr.FromInt(8080),
+							Path: "/liveness",
+						},
+					},
+				},
+				ReadinessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Port: intstr.FromInt(8080),
+							Path: "/readiness",
+						},
+					},
+				},
 				VolumeMounts: []corev1.VolumeMount{
 					runVolume.ToMount(),
 				},

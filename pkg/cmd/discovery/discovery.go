@@ -96,7 +96,10 @@ func (m *mainProcess) init() (cmd.State, error) {
 	m.dnsServer = s
 
 	go func() {
-		logger.Log.Info("Listen pprof", zap.Int("port", 8080))
+		http.HandleFunc("/liveness", func(w http.ResponseWriter, req *http.Request) {})
+		http.HandleFunc("/readiness", func(w http.ResponseWriter, req *http.Request) {})
+
+		logger.Log.Info("Listen pprof and probe", zap.Int("port", 8080))
 		err := http.ListenAndServe(":8080", nil)
 		if err != nil && err != http.ErrServerClosed {
 			logger.Log.Warn("Failed listen", zap.Error(err))
