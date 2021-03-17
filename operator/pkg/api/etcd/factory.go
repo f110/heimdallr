@@ -38,6 +38,12 @@ func Name(v string) Trait {
 	}
 }
 
+func Namespace(v string) Trait {
+	return func(e *etcdv1alpha2.EtcdCluster) {
+		e.SetNamespace(v)
+	}
+}
+
 func Ready(e *etcdv1alpha2.EtcdCluster) {
 	e.Status.Ready = true
 	now := metav1.Now()

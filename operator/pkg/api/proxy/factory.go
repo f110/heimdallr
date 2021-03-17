@@ -29,6 +29,18 @@ func Factory(base *proxyv1alpha2.Proxy, traits ...Trait) *proxyv1alpha2.Proxy {
 	return p
 }
 
+func Namespace(v string) Trait {
+	return func(p *proxyv1alpha2.Proxy) {
+		p.SetNamespace(v)
+	}
+}
+
+func Name(v string) Trait {
+	return func(p *proxyv1alpha2.Proxy) {
+		p.SetName(v)
+	}
+}
+
 func EtcdDataStore(p *proxyv1alpha2.Proxy) {
 	p.Spec.DataStore = &proxyv1alpha2.ProxyDataStoreSpec{
 		Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -287,11 +286,11 @@ Continue:
 		success := false
 		defer func() {
 			rErr := recover()
+			s := debug.Stack()
 			if rErr != nil {
-				s := debug.Stack()
 				done <- &execDone{Stack: string(s), Err: rErr}
 			} else if !success {
-				done <- &execDone{Failure: true, Err: errors.New("failed execute")}
+				done <- &execDone{Failure: true, Err: fmt.Errorf("failed execute: %v", node.m.messages), Stack: string(s)}
 			}
 			close(done)
 		}()

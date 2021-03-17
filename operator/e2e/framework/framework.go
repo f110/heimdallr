@@ -50,9 +50,13 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 			Name: "self-signed",
 		},
 	},
-}, proxy.EtcdDataStore, proxy.CookieSession)
+}, proxy.Namespace(metav1.NamespaceDefault), proxy.EtcdDataStore, proxy.CookieSession)
 
-var EtcdClusterBase = etcd.Factory(nil, etcd.Version("v3.4.3"), etcd.HighAvailability)
+var EtcdClusterBase = etcd.Factory(nil,
+	etcd.Namespace(metav1.NamespaceDefault),
+	etcd.Version("v3.4.3"),
+	etcd.HighAvailability,
+)
 
 type ConfigStruct struct {
 	RandomSeed         int64
@@ -160,6 +164,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	m.NoError(err)
 
 	proxySpec := proxy.Factory(ProxyBase,
+		proxy.Name("e2e"),
 		proxy.ClientSecret("e2e-client-secret", "client-secret"),
 		proxy.RootUsers([]string{testUserId}),
 		proxy.Version(Config.ProxyVersion),
