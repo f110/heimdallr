@@ -1,5 +1,5 @@
-VERSION = "latest"
-RELEASE_BRANCH = "master"
+VERSION = "v0.12"
+RELEASE_BRANCH = "release-v0.12"
 
 PLATFORMS = [
     "linux_amd64",
