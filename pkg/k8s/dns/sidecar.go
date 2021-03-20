@@ -60,11 +60,23 @@ func NewSidecar(ctx context.Context, addr string, client kubernetes.Interface, n
 			s.toIP[fmt.Sprintf("%s/%s", v.Namespace, strings.ReplaceAll(ip.String(), ".", "-"))] = ip
 		}
 	}
-	w, err := client.CoreV1().Pods(namespace).Watch(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	go s.watch(w)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				w, err := client.CoreV1().Pods(namespace).Watch(context.Background(), metav1.ListOptions{})
+				if err != nil {
+					logger.Log.Error("Failed watch pod", zap.Error(err))
+					return
+				}
+
+				s.watch(w)
+			}
+
+		}
+	}()
 
 	mux := dns.NewServeMux()
 	s.s.Handler = mux
@@ -166,7 +178,10 @@ func (s *Sidecar) watch(ch watch.Interface) {
 	s.watchCancel = cancel
 	for {
 		select {
-		case event := <-ch.ResultChan():
+		case event, ok := <-ch.ResultChan():
+			if !ok {
+				return
+			}
 			logger.Log.Debug("Got new event", zap.String("type", string(event.Type)))
 			if event.Object == nil {
 				logger.Log.Debug("Skip event because Object is nil")
