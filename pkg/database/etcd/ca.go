@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -40,26 +41,15 @@ func init() {
 	gob.Register(rsa.PublicKey{})
 }
 
-func NewCA(ctx context.Context, client *clientv3.Client) (*CA, error) {
-	res, err := client.Get(ctx, "ca/revoke/", clientv3.WithPrefix())
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	revoked := make([]*database.RevokedCertificate, 0, res.Count)
-	for _, v := range res.Kvs {
-		r := &database.RevokedCertificate{}
-		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
-		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+func NewCA(client *clientv3.Client) *CA {
+	ca := &CA{client: client}
+	go func() {
+		if err := ca.watch(); err != nil {
+			logger.Log.Warn("Close watch channel", zap.Error(err))
 		}
-		revoked = append(revoked, r)
-	}
+	}()
 
-	watchCtx, cancel := context.WithCancel(context.Background())
-	ca := &CA{client: client, watchCancel: cancel, revokedList: revoked}
-	go ca.watchRevokeList(watchCtx, res.Header.Revision)
-	return ca, nil
+	return ca
 }
 
 func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) ([]*database.SignedCertificate, error) {
@@ -201,15 +191,70 @@ func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
 }
 
 func (c *CA) Close() {
-	c.watchCancel()
+	if c.watchCancel != nil {
+		c.watchCancel()
+	}
 }
 
-func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
+func (c *CA) init(ctx context.Context) ([]*database.RevokedCertificate, int64, error) {
+	res, err := c.client.Get(ctx, "ca/revoke/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, -1, xerrors.Errorf(": %w", err)
+	}
+
+	revoked := make([]*database.RevokedCertificate, 0, res.Count)
+	for _, v := range res.Kvs {
+		r := &database.RevokedCertificate{}
+		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
+		if err != nil {
+			return nil, -1, xerrors.Errorf(": %w", err)
+		}
+		revoked = append(revoked, r)
+	}
+
+	return revoked, res.Header.Revision, nil
+}
+
+func (c *CA) watch() error {
+	if c.watchCancel != nil {
+		c.watchCancel()
+	}
+	watchCtx, cancel := context.WithCancel(context.Background())
+	c.watchCancel = cancel
+
+	for {
+		revoked, revision, err := c.init(watchCtx)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+
+		c.mu.Lock()
+		c.revokedList = revoked
+		c.mu.Unlock()
+
+		err = c.watchRevokeList(watchCtx, revision)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return nil
+		}
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+	}
+}
+
+func (c *CA) watchRevokeList(ctx context.Context, revision int64) error {
 	logger.Log.Debug("Start watching revoke list")
+	defer logger.Log.Debug("Stop watching revoke list")
+
 	watchCh := c.client.Watch(ctx, "ca/revoke/", clientv3.WithPrefix(), clientv3.WithRev(revision))
 	for {
 		select {
-		case res := <-watchCh:
+		case res, ok := <-watchCh:
+			if !ok {
+				logger.Log.Debug("Watch channel was closed")
+				return nil
+			}
+
 			for _, event := range res.Events {
 				if event.Type != clientv3.EventTypePut {
 					continue
@@ -238,7 +283,7 @@ func (c *CA) watchRevokeList(ctx context.Context, revision int64) {
 				c.wMu.Unlock()
 			}
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		}
 	}
 }

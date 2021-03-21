@@ -551,10 +551,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %w", err)
 		}
-		caDatabase, err = etcd.NewCA(ctx, client)
-		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
-		}
+		caDatabase = etcd.NewCA(client)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return cmd.UnknownState, xerrors.Errorf(": %w", err)

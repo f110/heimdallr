@@ -46,6 +46,7 @@ go_test(
         "//vendor/github.com/stretchr/testify/require",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.etcd.io/etcd/v3/embed",
+        "//vendor/go.etcd.io/etcd/v3/etcdserver/etcdserverpb",
         "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
         "//vendor/sigs.k8s.io/yaml",
     ],
