@@ -56,6 +56,7 @@ type ProxySpec struct {
 
 type CertificateAuthoritySpec struct {
 	Local *LocalCertificateAuthoritySpec `json:"local,omitempty"`
+	Vault *VaultCertificateAuthoritySpec `json:"vault,omitempty"`
 }
 
 type LocalCertificateAuthoritySpec struct {
@@ -64,6 +65,12 @@ type LocalCertificateAuthoritySpec struct {
 	Organization      string `json:"organization,omitempty"`
 	AdministratorUnit string `json:"administratorUnit,omitempty"`
 	Country           string `json:"country,omitempty"`
+}
+
+type VaultCertificateAuthoritySpec struct {
+	Addr  string `json:"addr"`
+	Token string `json:"token"`
+	Role  string `json:"role"`
 }
 
 type ProxyDataStoreSpec struct {

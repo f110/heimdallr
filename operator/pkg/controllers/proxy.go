@@ -759,11 +759,7 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			RPCPermissionFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, rpcPermissionFilename),
 			RootUsers:         r.Spec.RootUsers,
 		},
-		CertificateAuthority: &configv2.CertificateAuthority{
-			Local: &configv2.CertificateAuthorityLocal{
-				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-			},
-		},
+		CertificateAuthority: &configv2.CertificateAuthority{},
 		IdentityProvider: &configv2.IdentityProvider{
 			Provider:         r.Spec.IdentityProvider.Provider,
 			ClientId:         r.Spec.IdentityProvider.ClientId,
@@ -788,6 +784,18 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	}
 	if r.Spec.HttpPort != 0 {
 		conf.AccessProxy.HTTP.BindHttp = fmt.Sprintf(":%d", proxyHttpPort)
+	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Local != nil {
+		conf.CertificateAuthority.Local = &configv2.CertificateAuthorityLocal{
+			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+		}
+	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Vault != nil {
+		conf.CertificateAuthority.Vault = &configv2.CertificateAuthorityVault{
+			Addr:  r.Spec.CertificateAuthority.Vault.Addr,
+			Token: r.Spec.CertificateAuthority.Vault.Token,
+			Role:  r.Spec.CertificateAuthority.Vault.Role,
+		}
 	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
@@ -816,11 +824,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			Level:    logLevel,
 			Encoding: "console",
 		},
-		CertificateAuthority: &configv2.CertificateAuthority{
-			Local: &configv2.CertificateAuthorityLocal{
-				CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
-			},
-		},
+		CertificateAuthority: &configv2.CertificateAuthority{},
 		Dashboard: &configv2.Dashboard{
 			Bind:         fmt.Sprintf(":%d", dashboardPort),
 			RPCServer:    fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
@@ -828,6 +832,19 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 			PublicKeyUrl: fmt.Sprintf("http://%s.%s.svc:%d/internal/publickey", r.ServiceNameForInternalApi(), r.Namespace, internalApiPort),
 		},
 	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Local != nil {
+		conf.CertificateAuthority.Local = &configv2.CertificateAuthorityLocal{
+			CertFile: fmt.Sprintf("%s/%s", caCertMountPath, caCertificateFilename),
+		}
+	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Vault != nil {
+		conf.CertificateAuthority.Vault = &configv2.CertificateAuthorityVault{
+			Addr:  r.Spec.CertificateAuthority.Vault.Addr,
+			Token: r.Spec.CertificateAuthority.Vault.Token,
+			Role:  r.Spec.CertificateAuthority.Vault.Role,
+		}
+	}
+
 	b, err := yaml.Marshal(conf)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -900,6 +917,13 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			Organization:     r.Spec.CertificateAuthority.Local.Organization,
 			OrganizationUnit: r.Spec.CertificateAuthority.Local.AdministratorUnit,
 			Country:          r.Spec.CertificateAuthority.Local.Country,
+		}
+	}
+	if r.Spec.CertificateAuthority != nil && r.Spec.CertificateAuthority.Vault != nil {
+		conf.CertificateAuthority.Vault = &configv2.CertificateAuthorityVault{
+			Addr:  r.Spec.CertificateAuthority.Vault.Addr,
+			Token: r.Spec.CertificateAuthority.Vault.Token,
+			Role:  r.Spec.CertificateAuthority.Vault.Role,
 		}
 	}
 	if r.Spec.Monitor.PrometheusMonitoring {

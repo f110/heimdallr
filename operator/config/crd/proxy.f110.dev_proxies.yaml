@@ -575,6 +575,19 @@ spec:
                       organization:
                         type: string
                     type: object
+                  vault:
+                    properties:
+                      addr:
+                        type: string
+                      role:
+                        type: string
+                      token:
+                        type: string
+                    required:
+                    - addr
+                    - role
+                    - token
+                    type: object
                 type: object
               dashboardReplicas:
                 description: The number of replicas of dashboard. Default value is
