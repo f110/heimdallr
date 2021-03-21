@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	defaultEtcdVersion = "v3.4.0"
+	defaultEtcdVersion = "v3.4.15"
 )
 
 type EtcdController struct {
