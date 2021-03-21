@@ -1150,7 +1150,6 @@ echo '' > /etc/resolv.conf
 			},
 		}
 	}
-
 	runVolume := &podVolume{
 		Name: "share",
 		Path: "/var/run/sidecar",
@@ -1158,6 +1157,47 @@ echo '' > /etc/resolv.conf
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
 	}
+
+	sidecar := corev1.Container{
+		Name:            "sidecar",
+		Image:           fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Args: []string{
+			"--port",
+			"53",
+			"--namespace",
+			c.Namespace,
+			"--cluster-domain",
+			c.ClusterDomain,
+			"--ttl",
+			"5",
+			"--ready-file",
+			"/var/run/sidecar/ready",
+		},
+		LivenessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Port: intstr.FromInt(8080),
+					Path: "/liveness",
+				},
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Port: intstr.FromInt(8080),
+					Path: "/readiness",
+				},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			runVolume.ToMount(),
+		},
+	}
+	if c.Spec.Development {
+		sidecar.Args = append(sidecar.Args, "--log-level=debug")
+	}
+
 	return corev1.PodSpec{
 		Affinity:           affinity,
 		Subdomain:          c.ServerDiscoveryServiceName(),
@@ -1215,42 +1255,7 @@ echo '' > /etc/resolv.conf
 					runVolume.ToMount(),
 				},
 			},
-			{
-				Name:            "sidecar",
-				Image:           fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version),
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Args: []string{
-					"--port",
-					"53",
-					"--namespace",
-					c.Namespace,
-					"--cluster-domain",
-					c.ClusterDomain,
-					"--ttl",
-					"5",
-					"--ready-file",
-					"/var/run/sidecar/ready",
-				},
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Port: intstr.FromInt(8080),
-							Path: "/liveness",
-						},
-					},
-				},
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Port: intstr.FromInt(8080),
-							Path: "/readiness",
-						},
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					runVolume.ToMount(),
-				},
-			},
+			sidecar,
 		},
 		Volumes: []corev1.Volume{
 			clientCertVolume.ToVolume(),

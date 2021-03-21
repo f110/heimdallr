@@ -65,6 +65,8 @@ type EtcdClusterSpec struct {
 	DefragmentSchedule  string                                `json:"defragmentSchedule"`
 	Backup              *BackupSpec                           `json:"backup,omitempty"`
 	VolumeClaimTemplate *corev1.PersistentVolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
+	// Development indicates the development mode.
+	Development bool `json:"development,omitempty"`
 }
 
 type BackupSpec struct {

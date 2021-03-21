@@ -442,6 +442,9 @@ spec:
                 type: object
               defragmentSchedule:
                 type: string
+              development:
+                description: Development indicates the development mode.
+                type: boolean
               members:
                 type: integer
               version:
