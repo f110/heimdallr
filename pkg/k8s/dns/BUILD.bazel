@@ -11,9 +11,10 @@ go_library(
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/k8s.io/api/core/v1:core",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/watch",
-        "//vendor/k8s.io/client-go/kubernetes",
+        "//vendor/k8s.io/apimachinery/pkg/labels",
+        "//vendor/k8s.io/client-go/informers",
+        "//vendor/k8s.io/client-go/informers/core/v1:core",
+        "//vendor/k8s.io/client-go/tools/cache",
     ],
 )
 
@@ -31,6 +32,7 @@ go_test(
         "//vendor/github.com/stretchr/testify/require",
         "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/client-go/informers",
         "//vendor/k8s.io/client-go/kubernetes/fake",
     ],
 )

@@ -11,9 +11,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
+	corev1informer "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -22,18 +23,19 @@ type Sidecar struct {
 	s *dns.Server
 
 	clusterDomain string
+	namespace     string
 	ttl           uint32
 
-	mu     sync.RWMutex
-	toIP   map[string]net.IP
-	fromIP map[string]string
-
-	watchCancel context.CancelFunc
+	podInformer corev1informer.PodInformer
+	mu          sync.RWMutex
+	toIP        map[string]net.IP
+	fromIP      map[string]string
 }
 
-func NewSidecar(ctx context.Context, addr string, client kubernetes.Interface, namespace, clusterDomain string, ttl int) (*Sidecar, error) {
+func NewSidecar(addr string, sharedInformerFactory informers.SharedInformerFactory, namespace, clusterDomain string, ttl int) (*Sidecar, error) {
 	s := &Sidecar{
 		clusterDomain: clusterDomain,
+		namespace:     namespace,
 		ttl:           uint32(ttl),
 		toIP:          make(map[string]net.IP),
 		fromIP:        make(map[string]string),
@@ -43,40 +45,12 @@ func NewSidecar(ctx context.Context, addr string, client kubernetes.Interface, n
 		},
 	}
 
-	podList, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	for _, v := range podList.Items {
-		if len(v.Status.PodIPs) == 0 {
-			continue
-		}
-
-		for _, i := range v.Status.PodIPs {
-			ip := net.ParseIP(i.IP)
-
-			ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
-			s.fromIP[ptr.String()] = fmt.Sprintf("%s.%s.pod.%s.", strings.ReplaceAll(i.IP, ".", "-"), v.Namespace, s.clusterDomain)
-			s.toIP[fmt.Sprintf("%s/%s", v.Namespace, strings.ReplaceAll(ip.String(), ".", "-"))] = ip
-		}
-	}
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				w, err := client.CoreV1().Pods(namespace).Watch(context.Background(), metav1.ListOptions{})
-				if err != nil {
-					logger.Log.Error("Failed watch pod", zap.Error(err))
-					return
-				}
-
-				s.watch(w)
-			}
-
-		}
-	}()
+	s.podInformer = sharedInformerFactory.Core().V1().Pods()
+	s.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    s.addPod,
+		UpdateFunc: s.updatePod,
+		DeleteFunc: s.deletePod,
+	})
 
 	mux := dns.NewServeMux()
 	s.s.Handler = mux
@@ -173,66 +147,78 @@ func (s *Sidecar) handleReadiness(w dns.ResponseWriter, msg *dns.Msg) {
 	w.WriteMsg(res)
 }
 
-func (s *Sidecar) watch(ch watch.Interface) {
-	ctx, cancel := context.WithCancel(context.Background())
-	s.watchCancel = cancel
-	for {
-		select {
-		case event, ok := <-ch.ResultChan():
-			if !ok {
-				return
-			}
-			logger.Log.Debug("Got new event", zap.String("type", string(event.Type)))
-			if event.Object == nil {
-				logger.Log.Debug("Skip event because Object is nil")
-				continue
-			}
+func (s *Sidecar) addPod(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		logger.Log.Info("Event is not Pod", logger.TypeOf("type", obj))
+	}
 
-			pod, ok := event.Object.(*corev1.Pod)
-			if !ok {
-				logger.Log.Debug("Skip event because Object is not Pod", logger.TypeOf("type", event.Object))
-				continue
-			}
-			if pod.Status.PodIP == "" {
-				logger.Log.Debug("Skip event because Pod doesn't have PodIP")
-				continue
-			}
+	for _, i := range pod.Status.PodIPs {
+		ip := net.ParseIP(i.IP)
 
-			switch event.Type {
-			case watch.Added, watch.Modified:
-				for _, i := range pod.Status.PodIPs {
-					ip := net.ParseIP(i.IP)
-
-					ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
-					s.mu.Lock()
-					s.fromIP[ptr.String()] = fmt.Sprintf("%s.%s.pod.%s.", strings.ReplaceAll(i.IP, ".", "-"), pod.Namespace, s.clusterDomain)
-					s.toIP[fmt.Sprintf("%s/%s", pod.Namespace, strings.ReplaceAll(ip.String(), ".", "-"))] = ip
-					s.mu.Unlock()
-				}
-			case watch.Deleted:
-				for _, i := range pod.Status.PodIPs {
-					ip := net.ParseIP(i.IP)
-
-					ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
-					s.mu.Lock()
-					delete(s.fromIP, ptr.String())
-					delete(s.toIP, fmt.Sprintf("%s/%s", pod.Namespace, strings.ReplaceAll(ip.String(), ".", "-")))
-					s.mu.Unlock()
-				}
-			}
-		case <-ctx.Done():
-			return
-		}
+		ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
+		s.mu.Lock()
+		s.fromIP[ptr.String()] = fmt.Sprintf("%s.%s.pod.%s.", strings.ReplaceAll(i.IP, ".", "-"), pod.Namespace, s.clusterDomain)
+		s.toIP[fmt.Sprintf("%s/%s", pod.Namespace, strings.ReplaceAll(ip.String(), ".", "-"))] = ip
+		s.mu.Unlock()
 	}
 }
 
+func (s *Sidecar) updatePod(_, new interface{}) {
+	s.addPod(new)
+}
+
+func (s *Sidecar) deletePod(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		logger.Log.Info("Event is not Pod", logger.TypeOf("type", obj))
+	}
+
+	for _, i := range pod.Status.PodIPs {
+		ip := net.ParseIP(i.IP)
+
+		ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
+		s.mu.Lock()
+		delete(s.fromIP, ptr.String())
+		delete(s.toIP, fmt.Sprintf("%s/%s", pod.Namespace, strings.ReplaceAll(ip.String(), ".", "-")))
+		s.mu.Unlock()
+	}
+}
+
+func (s *Sidecar) load() error {
+	pods, err := s.podInformer.Lister().Pods(s.namespace).List(labels.Everything())
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	for _, v := range pods {
+		if len(v.Status.PodIPs) == 0 {
+			continue
+		}
+
+		for _, i := range v.Status.PodIPs {
+			ip := net.ParseIP(i.IP)
+
+			ptr := net.IPv4(ip[15], ip[14], ip[13], ip[12])
+			s.fromIP[ptr.String()] = fmt.Sprintf("%s.%s.pod.%s.", strings.ReplaceAll(i.IP, ".", "-"), v.Namespace, s.clusterDomain)
+			s.toIP[fmt.Sprintf("%s/%s", v.Namespace, strings.ReplaceAll(ip.String(), ".", "-"))] = ip
+		}
+	}
+
+	return nil
+}
+
 func (s *Sidecar) Start() error {
+	if !cache.WaitForCacheSync(context.Background().Done(), s.podInformer.Informer().HasSynced) {
+		return xerrors.Errorf("can not sync cache")
+	}
+
+	if err := s.load(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
 	return s.s.ListenAndServe()
 }
 
 func (s *Sidecar) Shutdown(ctx context.Context) error {
-	if s.watchCancel != nil {
-		s.watchCancel()
-	}
 	return s.s.ShutdownContext(ctx)
 }

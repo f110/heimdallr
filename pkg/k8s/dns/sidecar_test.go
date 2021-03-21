@@ -1,7 +1,6 @@
 package dns
 
 import (
-	"context"
 	"net"
 	"testing"
 
@@ -10,12 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 func TestSidecar_handleQuery(t *testing.T) {
 	coreClient := k8sfake.NewSimpleClientset()
-	coreClient.Tracker().Add(&corev1.Pod{
+	sharedInformerFactory := informers.NewSharedInformerFactory(coreClient, 0)
+	sharedInformerFactory.Core().V1().Pods().Informer().GetIndexer().Add(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: metav1.NamespaceDefault,
 			Name:      "test",
@@ -27,9 +28,11 @@ func TestSidecar_handleQuery(t *testing.T) {
 			},
 		},
 	})
-	s, err := NewSidecar(context.Background(), "", coreClient, metav1.NamespaceDefault, "cluster.local", 10)
+
+	s, err := NewSidecar("", sharedInformerFactory, metav1.NamespaceDefault, "cluster.local", 10)
 	require.NoError(t, err)
-	defer s.Shutdown(context.Background())
+	err = s.load()
+	require.NoError(t, err)
 
 	t.Run("Resolve", func(t *testing.T) {
 		cases := []struct {
