@@ -1363,7 +1363,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            "proxy",
+							Name:            "dashboard",
 							Image:           fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{dashboardCommand},
