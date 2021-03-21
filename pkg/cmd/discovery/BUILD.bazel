@@ -12,6 +12,7 @@ go_library(
         "//vendor/github.com/spf13/pflag",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
+        "//vendor/k8s.io/client-go/informers",
         "//vendor/k8s.io/client-go/kubernetes",
         "//vendor/k8s.io/client-go/tools/clientcmd",
     ],

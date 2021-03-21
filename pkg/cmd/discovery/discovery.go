@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -37,8 +38,8 @@ type mainProcess struct {
 	dev           bool
 	readyFile     string
 
-	coreClient *kubernetes.Clientset
-	dnsServer  *dns.Sidecar
+	sharedInformerFactory informers.SharedInformerFactory
+	dnsServer             *dns.Sidecar
 }
 
 func New() *mainProcess {
@@ -87,9 +88,9 @@ func (m *mainProcess) init() (cmd.State, error) {
 	if err != nil {
 		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}
-	m.coreClient = coreClient
+	m.sharedInformerFactory = informers.NewSharedInformerFactoryWithOptions(coreClient, 0, informers.WithNamespace(m.namespace))
 
-	s, err := dns.NewSidecar(context.Background(), fmt.Sprintf(":%d", m.port), coreClient, m.namespace, m.clusterDomain, m.ttl)
+	s, err := dns.NewSidecar(fmt.Sprintf(":%d", m.port), m.sharedInformerFactory, m.namespace, m.clusterDomain, m.ttl)
 	if err != nil {
 		return cmd.UnknownState, xerrors.Errorf(": %w", err)
 	}
@@ -110,6 +111,7 @@ func (m *mainProcess) init() (cmd.State, error) {
 }
 
 func (m *mainProcess) start() (cmd.State, error) {
+	m.sharedInformerFactory.Start(context.Background().Done())
 	if _, err := os.Stat(m.readyFile); !os.IsNotExist(err) {
 		logger.Log.Info("Delete readiness file before start DNS server", zap.String("path", m.readyFile))
 		if err := os.Remove(m.readyFile); err != nil {
