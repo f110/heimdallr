@@ -1190,6 +1190,10 @@ echo '' > /etc/resolv.conf
 				},
 			},
 		},
+		Ports: []corev1.ContainerPort{
+			{Name: "dns", Protocol: corev1.ProtocolUDP, ContainerPort: 53},
+			{Name: "pprof", Protocol: corev1.ProtocolTCP, ContainerPort: 8080},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			runVolume.ToMount(),
 		},

@@ -1097,6 +1097,10 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 									},
 								},
 							},
+							Ports: []corev1.ContainerPort{
+								{Name: "https", Protocol: corev1.ProtocolTCP, ContainerPort: proxyPort},
+								{Name: "internal", Protocol: corev1.ProtocolTCP, ContainerPort: internalApiPort},
+							},
 							Resources: resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
@@ -1245,6 +1249,10 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 			Port:       r.Spec.HttpPort,
 			TargetPort: intstr.FromInt(proxyHttpPort),
 		})
+		deployment.Spec.Template.Spec.Containers[0].Ports = append(
+			deployment.Spec.Template.Spec.Containers[0].Ports,
+			corev1.ContainerPort{Name: "http", Protocol: corev1.ProtocolTCP, ContainerPort: proxyHttpPort},
+		)
 	}
 
 	internalApiSvc := &corev1.Service{
@@ -1384,6 +1392,9 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 									},
 								},
 							},
+							Ports: []corev1.ContainerPort{
+								{Name: "http", Protocol: corev1.ProtocolTCP, ContainerPort: dashboardPort},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -1519,6 +1530,10 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 									},
 								},
 								InitialDelaySeconds: 10,
+							},
+							Ports: []corev1.ContainerPort{
+								{Name: "https", Protocol: corev1.ProtocolTCP, ContainerPort: rpcServerPort},
+								{Name: "metrics", Protocol: corev1.ProtocolTCP, ContainerPort: rpcMetricsServerPort},
 							},
 							Resources: resources,
 							VolumeMounts: []corev1.VolumeMount{
