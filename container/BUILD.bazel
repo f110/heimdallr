@@ -107,9 +107,10 @@ container_push(
 
 pkg_tar(
     name = "bin_operator",
-    srcs = ["//operator/cmd/heimdallrcontroller"],
+    files = {
+        "//operator/cmd/heimdallrcontroller:linux": "/usr/local/bin/heimdallrcontroller",
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(
@@ -132,8 +133,10 @@ container_push(
 pkg_tar(
     name = "bin_sidecar",
     srcs = ["//cmd/discovery-sidecar"],
+    files = {
+        "//cmd/discovery-sidecar:linux": "/usr/local/bin/discovery-sidecar"
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(

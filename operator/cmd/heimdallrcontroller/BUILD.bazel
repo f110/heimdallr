@@ -33,3 +33,11 @@ go_binary(
     embed = [":heimdallrcontroller_lib"],
     visibility = ["//visibility:public"],
 )
+
+go_binary(
+    name = "linux",
+    embed = [":heimdallrcontroller_lib"],
+    visibility = ["//visibility:public"],
+    goos = "linux",
+    goarch = "amd64",
+)

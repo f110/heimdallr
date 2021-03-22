@@ -18,3 +18,11 @@ go_library(
         "//vendor/golang.org/x/xerrors",
     ],
 )
+
+go_binary(
+    name = "linux",
+    embed = [":discovery-sidecar_lib"],
+    visibility = ["//visibility:public"],
+    goos = "linux",
+    goarch = "amd64",
+)
