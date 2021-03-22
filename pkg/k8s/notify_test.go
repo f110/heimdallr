@@ -13,21 +13,20 @@ import (
 
 func TestNewVolumeWatcher(t *testing.T) {
 	fired := make(chan struct{})
-	w, err := NewVolumeWatcher("/tmp", func() {
+	dir := t.TempDir()
+	w, err := NewVolumeWatcher(dir, func() {
 		fired <- struct{}{}
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer w.Stop()
 
 	eventCh := make(chan fsnotify.Event)
 	w.watcher.Events = eventCh
-	eventCh <- fsnotify.Event{Op: fsnotify.Create, Name: "/tmp/..data"}
+	eventCh <- fsnotify.Event{Op: fsnotify.Create, Name: filepath.Join(dir, "..data")}
 
 	select {
 	case <-time.After(50 * time.Millisecond):
-		t.Fatal("not fired")
+		assert.Fail(t, "not fired")
 	case <-fired:
 	}
 }
