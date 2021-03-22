@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ClientRedirectUrl = "http://localhost:6391/callback"
+	ClientRedirectUrl = "http://127.0.0.1:6391/callback"
 	Directory         = ".heimdallr"
 )
 
