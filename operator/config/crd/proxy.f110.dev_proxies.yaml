@@ -486,6 +486,8 @@ spec:
           spec:
             description: ProxySpec defines the desired state of Proxy
             properties:
+              antiAffinity:
+                type: boolean
               backendSelector:
                 properties:
                   matchExpressions:
@@ -599,6 +601,7 @@ spec:
                   etcd:
                     properties:
                       antiAffinity:
+                        description: Deprecated. Use ProxySpec.AntiAffinity instead.
                         type: boolean
                       backup:
                         properties:

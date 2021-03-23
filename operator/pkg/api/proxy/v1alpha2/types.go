@@ -36,6 +36,7 @@ type ProxySpec struct {
 	BackendSelector       LabelSelector `json:"backendSelector,omitempty"`
 	RoleSelector          LabelSelector `json:"roleSelector,omitempty"`
 	RpcPermissionSelector LabelSelector `json:"rpcPermissionSelector,omitempty"`
+	AntiAffinity          bool          `json:"antiAffinity,omitempty"`
 	Monitor               MonitorSpec   `json:"monitor,omitempty"`
 	// Deprecated. Use DataStore.Etcd.Backup instead.
 	Backup BackupSpec `json:"backup,omitempty"`
@@ -78,8 +79,9 @@ type ProxyDataStoreSpec struct {
 }
 
 type ProxyDataStoreEtcdSpec struct {
-	Version      string          `json:"version,omitempty"`
-	Defragment   DefragmentSpec  `json:"defragment,omitempty"`
+	Version    string         `json:"version,omitempty"`
+	Defragment DefragmentSpec `json:"defragment,omitempty"`
+	// Deprecated. Use ProxySpec.AntiAffinity instead.
 	AntiAffinity bool            `json:"antiAffinity,omitempty"`
 	Backup       *EtcdBackupSpec `json:"backup,omitempty"`
 }

@@ -455,7 +455,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 	}
 	if r.Spec.DataStore != nil && r.Spec.DataStore.Etcd != nil {
 		ec.Spec.DefragmentSchedule = r.Spec.DataStore.Etcd.Defragment.Schedule
-		ec.Spec.AntiAffinity = r.Spec.DataStore.Etcd.AntiAffinity
+		ec.Spec.AntiAffinity = r.Spec.AntiAffinity || r.Spec.DataStore.Etcd.AntiAffinity
 	}
 	if r.Spec.DataStore.Etcd != nil && r.Spec.DataStore.Etcd.Backup != nil {
 		ec.Spec.Backup = &etcdv1alpha2.BackupSpec{
@@ -1209,6 +1209,23 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 			},
 		},
 	}
+	if r.Spec.AntiAffinity {
+		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: r.LabelsForMain(),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
 
 	minAvailable := intstr.FromInt(int(r.Spec.Replicas / 2))
 	pdb := &policyv1beta1.PodDisruptionBudget{
@@ -1413,6 +1430,23 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 			},
 		},
 	}
+	if r.Spec.AntiAffinity {
+		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: r.LabelsForDashboard(),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
 
 	minAvailable := intstr.FromInt(int(replicas / 2))
 	pdb := &policyv1beta1.PodDisruptionBudget{
@@ -1603,6 +1637,23 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 				},
 			},
 		},
+	}
+	if r.Spec.AntiAffinity {
+		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: r.LabelsForRPCServer(),
+							},
+						},
+					},
+				},
+			},
+		}
 	}
 
 	svc := &corev1.Service{
