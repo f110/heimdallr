@@ -118,11 +118,6 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 		return xerrors.New("Cluster does not exist. You create the cluster first.")
 	}
 
-	log.Printf("Apply manifest: %s", manifestFile)
-	if err := kindCluster.Apply(manifestFile, "heimdev"); err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
 	containerImages := []*kind.ContainerImageFile{
 		{
 			File:       controllerImage,
@@ -136,6 +131,11 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 		},
 	}
 	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	log.Printf("Apply manifest: %s", manifestFile)
+	if err := kindCluster.Apply(manifestFile, "heimdev"); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
