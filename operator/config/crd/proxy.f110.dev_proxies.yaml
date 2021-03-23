@@ -857,6 +857,11 @@ spec:
                   namespace:
                     type: string
                 type: object
+              rpcReplicas:
+                description: The number of replicas of the rpc server. Default value
+                  is 2.
+                format: int32
+                type: integer
               rpcServerResources:
                 description: 'RPCServerResources field is able tot control the resource
                   requirements and limits of rpc server. If it isn''t set, Use the

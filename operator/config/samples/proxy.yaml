@@ -3,11 +3,10 @@ kind: Proxy
 metadata:
   name: proxy-sample
 spec:
-  replicas: 6
+  replicas: 3
   version: v0.10.1
   domain: local-proxy.f110.dev
   port: 443
-  antiAffinity: true
   certificateAuthority:
     local:
       organization: test

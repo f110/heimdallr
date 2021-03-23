@@ -31,6 +31,8 @@ type ProxySpec struct {
 	Session              SessionSpec               `json:"session"`
 	// The number of replicas of the proxy.
 	Replicas int32 `json:"replicas"`
+	// The number of replicas of the rpc server. Default value is 2.
+	RPCReplicas int32 `json:"rpcReplicas,omitempty"`
 	// The number of replicas of dashboard. Default value is "3".
 	DashboardReplicas     int32         `json:"dashboardReplicas,omitempty"`
 	BackendSelector       LabelSelector `json:"backendSelector,omitempty"`

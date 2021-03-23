@@ -1509,6 +1509,9 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		resources = *r.Spec.RPCServerResources
 	}
 	var replicas int32 = 2
+	if r.Spec.RPCReplicas > 0 {
+		replicas = r.Spec.RPCReplicas
+	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.DeploymentNameForRPCServer(),
