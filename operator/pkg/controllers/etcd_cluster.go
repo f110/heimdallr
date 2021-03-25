@@ -1133,18 +1133,21 @@ echo '' > /etc/resolv.conf
 	if antiAffinity {
 		affinity = &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 					{
-						LabelSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{
-									Key:      etcd.LabelNameClusterName,
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{c.Name},
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      etcd.LabelNameClusterName,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{c.Name},
+									},
 								},
 							},
+							TopologyKey: "kubernetes.io/hostname",
 						},
-						TopologyKey: "kubernetes.io/hostname",
 					},
 				},
 			},
