@@ -61,7 +61,7 @@ func TestEtcdController(t *testing.T) {
 
 				s.Step("create new cluster", func(s *btesting.Scenario) {
 					s.Subject(func(m *btesting.Matcher) {
-						f.EtcdClusters.Setup(m, etcd.Name("update"), etcd.DisableAntiAffinity)
+						f.EtcdClusters.Setup(m, etcd.Name("update"))
 					})
 
 					s.It("should have 3 pods", func(m *btesting.Matcher) {
