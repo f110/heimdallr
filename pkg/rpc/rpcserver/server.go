@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"sync"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -121,14 +122,19 @@ func (s *Server) Start() error {
 		handler := promhttp.InstrumentMetricHandler(registry, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", handler)
-		logger.Log.Info("Start RPC metrics server", zap.String("listen", s.Config.RPCServer.MetricsBind))
+		mux.HandleFunc("/pprof/", pprof.Index)
+		mux.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/pprof/trace", pprof.Trace)
+		logger.Log.Info("Start RPC metrics and pprof server", zap.String("listen", s.Config.RPCServer.MetricsBind))
 		http.ListenAndServe(s.Config.RPCServer.MetricsBind, mux)
 	}()
 
 	return s.server.Serve(listener)
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
+func (s *Server) Shutdown(_ context.Context) error {
 	logger.Log.Info("Shutdown RPC server")
 	s.server.GracefulStop()
 	return nil
