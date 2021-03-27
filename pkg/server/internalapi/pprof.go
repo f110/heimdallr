@@ -19,9 +19,9 @@ func NewProf() *Prof {
 }
 
 func (p *Prof) Route(mux *httprouter.Router) {
-	mux.HandlerFunc(http.MethodGet, "/prof/", pprof.Index)
-	mux.HandlerFunc(http.MethodGet, "/prof/cmdline", pprof.Cmdline)
-	mux.HandlerFunc(http.MethodGet, "/prof/profile", pprof.Profile)
-	mux.HandlerFunc(http.MethodGet, "/prof/symbol", pprof.Symbol)
-	mux.HandlerFunc(http.MethodGet, "/prof/trace", pprof.Trace)
+	mux.HandlerFunc(http.MethodGet, "/pprof/", pprof.Index)
+	mux.HandlerFunc(http.MethodGet, "/pprof/cmdline", pprof.Cmdline)
+	mux.HandlerFunc(http.MethodGet, "/pprof/profile", pprof.Profile)
+	mux.HandlerFunc(http.MethodGet, "/pprof/symbol", pprof.Symbol)
+	mux.HandlerFunc(http.MethodGet, "/pprof/trace", pprof.Trace)
 }
