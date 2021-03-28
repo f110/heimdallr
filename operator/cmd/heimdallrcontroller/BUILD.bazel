@@ -37,7 +37,7 @@ go_binary(
 go_binary(
     name = "linux",
     embed = [":heimdallrcontroller_lib"],
-    visibility = ["//visibility:public"],
-    goos = "linux",
     goarch = "amd64",
+    goos = "linux",
+    visibility = ["//visibility:public"],
 )

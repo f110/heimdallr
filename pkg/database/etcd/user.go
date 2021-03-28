@@ -6,11 +6,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strings"
-	"sync"
 	"time"
 
 	"go.etcd.io/etcd/v3/clientv3"
+	"go.etcd.io/etcd/v3/mvcc/mvccpb"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
@@ -29,64 +28,35 @@ type state struct {
 }
 
 type UserDatabase struct {
-	client *clientv3.Client
-
-	mu     sync.RWMutex
-	users  map[string]*database.User
-	tokens map[string]*database.AccessToken
-
-	watchCtx    context.Context
-	watchCancel context.CancelFunc
+	client     *clientv3.Client
+	cache      *Cache
+	tokenCache *Cache
 }
 
 var _ database.UserDatabase = &UserDatabase{}
 
-func NewUserDatabase(ctx context.Context, client *clientv3.Client, systemUsers ...*database.User) (*UserDatabase, error) {
-	res, err := client.Get(ctx, "user/", clientv3.WithPrefix())
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	allUser := make([]*database.User, 0, res.Count)
-	for _, v := range res.Kvs {
-		user, err := database.UnmarshalUser(v)
-		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
-		}
-
-		allUser = append(allUser, user)
-	}
-	users := make(map[string]*database.User)
-	for _, v := range allUser {
-		users[v.Id] = v
-	}
+func NewUserDatabase(_ context.Context, client *clientv3.Client, systemUsers ...*database.User) (*UserDatabase, error) {
+	initData := make([]*mvccpb.KeyValue, 0, len(systemUsers))
 	for _, v := range systemUsers {
-		users[v.Id] = v
-	}
-
-	watchCtx, watchCancel := context.WithCancel(context.Background())
-	u := &UserDatabase{client: client, users: users, watchCtx: watchCtx, watchCancel: watchCancel}
-	go u.watchUser(res.Header.Revision)
-
-	res, err = client.Get(ctx, "user_token/", clientv3.WithPrefix())
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
-
-	tokens := make([]*database.AccessToken, 0, res.Count)
-	for _, v := range res.Kvs {
-		token := &database.AccessToken{}
-		if err := yaml.Unmarshal(v.Value, token); err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+		value, err := database.MarshalUser(v)
+		if err != nil {
+			return nil, xerrors.Errorf(": %w", err)
 		}
-		tokens = append(tokens, token)
+		kv := &mvccpb.KeyValue{
+			Value:   value,
+			Key:     []byte(fmt.Sprintf("user/%s", v.Id)),
+			Version: 1,
+		}
+		initData = append(initData, kv)
 	}
-	t := make(map[string]*database.AccessToken)
-	for _, v := range tokens {
-		t[v.Value] = v
+
+	u := &UserDatabase{
+		client:     client,
+		cache:      NewCache(client, "user/", initData),
+		tokenCache: NewCache(client, "user_token/", nil),
 	}
-	u.tokens = t
-	go u.watchToken(res.Header.Revision)
+	go u.cache.Start(context.Background())
+	go u.tokenCache.Start(context.Background())
 
 	return u, nil
 }
@@ -114,43 +84,56 @@ func (d *UserDatabase) Get(id string, opts ...database.UserDatabaseOption) (*dat
 		return user, nil
 	}
 
-	d.mu.RLock()
-	defer d.mu.RUnlock()
+	all, err := d.cache.All()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	for _, v := range all {
+		user, err := database.UnmarshalUser(v)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
 
-	if d.users == nil {
-		return nil, database.ErrClosed
+		if user.Id == id {
+			return user, nil
+		}
 	}
 
-	if v, ok := d.users[id]; ok {
-		return v, nil
-	} else {
-		return nil, database.ErrUserNotFound
-	}
+	return nil, database.ErrUserNotFound
 }
 
 func (d *UserDatabase) GetAll() ([]*database.User, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	if d.users == nil {
-		return nil, database.ErrClosed
+	all, err := d.cache.All()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	users := make([]*database.User, 0, len(d.users))
-	for _, v := range d.users {
-		users = append(users, v)
+	users := make([]*database.User, 0, d.cache.Len())
+	for _, v := range all {
+		user, err := database.UnmarshalUser(v)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+
+		users = append(users, user)
 	}
 
 	return users, nil
 }
 
 func (d *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName string) (string, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
+	all, err := d.cache.All()
+	if err != nil {
+		return "", xerrors.Errorf(": %w", err)
+	}
 
-	for _, v := range d.users {
-		if v.LoginName == loginName {
-			return v.Id, nil
+	for _, v := range all {
+		user, err := database.UnmarshalUser(v)
+		if err != nil {
+			return "", xerrors.Errorf(": %w", err)
+		}
+		if user.LoginName == loginName {
+			return user.Id, nil
 		}
 	}
 
@@ -158,36 +141,41 @@ func (d *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName strin
 }
 
 func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	if d.users == nil {
-		return nil, database.ErrClosed
+	all, err := d.cache.All()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	users := make([]*database.User, 0, len(d.users))
-	for _, v := range d.users {
-		if !v.ServiceAccount() {
+	users := make([]*database.User, 0, d.cache.Len())
+	for _, v := range all {
+		user, err := database.UnmarshalUser(v)
+		if err != nil {
+			return nil, xerrors.Errorf(": %v", err)
+		}
+		if !user.ServiceAccount() {
 			continue
 		}
-		users = append(users, v)
+
+		users = append(users, user)
 	}
 
 	return users, nil
 }
 
 func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	if d.tokens == nil {
-		return nil, database.ErrClosed
+	all, err := d.tokenCache.All()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	tokens := make([]*database.AccessToken, 0)
-	for _, v := range d.tokens {
-		if v.UserId == id {
-			tokens = append(tokens, v)
+	for _, v := range all {
+		token := &database.AccessToken{}
+		if err := yaml.Unmarshal(v.Value, token); err != nil {
+			continue
+		}
+		if token.UserId == id {
+			tokens = append(tokens, token)
 		}
 	}
 
@@ -195,15 +183,19 @@ func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, erro
 }
 
 func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
-	if d.tokens == nil {
-		return nil, database.ErrClosed
+	all, err := d.tokenCache.All()
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	if v, ok := d.tokens[value]; ok {
-		return v, nil
+	for _, v := range all {
+		token := &database.AccessToken{}
+		if err := yaml.Unmarshal(v.Value, token); err != nil {
+			continue
+		}
+		if token.Value == value {
+			return token, nil
+		}
 	}
 
 	return nil, database.ErrAccessTokenNotFound
@@ -234,10 +226,6 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 		return xerrors.New("etcd: Failed update database")
 	}
 
-	d.mu.Lock()
-	d.users[user.Id] = user
-	d.mu.Unlock()
-
 	return nil
 }
 
@@ -252,10 +240,6 @@ func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.Acces
 		return err
 	}
 
-	d.mu.Lock()
-	d.tokens[token.Value] = token
-	d.mu.Unlock()
-
 	return nil
 }
 
@@ -264,10 +248,6 @@ func (d *UserDatabase) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return xerrors.Errorf(": $v", err)
 	}
-
-	d.mu.Lock()
-	delete(d.users, id)
-	d.mu.Unlock()
 
 	return nil
 }
@@ -392,115 +372,7 @@ func (d *UserDatabase) key(id string) string {
 	return fmt.Sprintf("user/%s", id)
 }
 
-func (d *UserDatabase) watchUser(revision int64) {
-	logger.Log.Debug("Start watching users")
-	defer d.Close()
-
-	watchCh := d.client.Watch(d.watchCtx, "user/", clientv3.WithPrefix(), clientv3.WithRev(revision))
-Watch:
-	for {
-		select {
-		case res, ok := <-watchCh:
-			if !ok {
-				break Watch
-			}
-			d.watchUserEvent(res.Events)
-		case <-d.watchCtx.Done():
-		}
-	}
-}
-
-func (d *UserDatabase) watchUserEvent(events []*clientv3.Event) {
-	for _, event := range events {
-		switch event.Type {
-		case clientv3.EventTypePut:
-			user, err := database.UnmarshalUser(event.Kv)
-			if err != nil {
-				logger.Log.Debug("Failed parse KVS", zap.Error(err))
-				continue
-			}
-			if user.Id == "" {
-				logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
-				continue
-			}
-
-			d.mu.Lock()
-			d.users[user.Id] = user
-			d.mu.Unlock()
-			logger.Log.Debug("Add new user", zap.String("id", user.Id))
-		case clientv3.EventTypeDelete:
-			key := strings.Split(string(event.Kv.Key), "/")
-			id := key[len(key)-1]
-			d.mu.Lock()
-			if _, ok := d.users[id]; !ok {
-				logger.Log.Debug("User not found", zap.String("id", id))
-				d.mu.Unlock()
-				continue
-			}
-			delete(d.users, id)
-			d.mu.Unlock()
-			logger.Log.Debug("Remove user", zap.String("id", id))
-		}
-	}
-}
-
-func (d *UserDatabase) watchToken(revision int64) {
-	logger.Log.Debug("Start watching tokens")
-	defer d.Close()
-
-	watchCh := d.client.Watch(d.watchCtx, "user_token/", clientv3.WithPrefix(), clientv3.WithRev(revision))
-Watch:
-	for {
-		select {
-		case res, ok := <-watchCh:
-			if !ok {
-				break Watch
-			}
-			d.watchTokenEvent(res.Events)
-		case <-d.watchCtx.Done():
-			return
-		}
-	}
-}
-
-func (d *UserDatabase) watchTokenEvent(events []*clientv3.Event) {
-	for _, event := range events {
-		switch event.Type {
-		case clientv3.EventTypePut:
-			token := &database.AccessToken{}
-			if err := yaml.Unmarshal(event.Kv.Value, token); err != nil {
-				continue
-			}
-			if token.Value == "" {
-				logger.Log.Info("Failed parse value", zap.ByteString("value", event.Kv.Value))
-				continue
-			}
-
-			d.mu.Lock()
-			d.tokens[token.Value] = token
-			d.mu.Unlock()
-			logger.Log.Debug("Add new token", zap.String("value", token.Value))
-		case clientv3.EventTypeDelete:
-			key := strings.Split(string(event.Kv.Key), "/")
-			value := key[len(key)-1]
-			d.mu.Lock()
-			if _, ok := d.tokens[value]; !ok {
-				logger.Log.Warn("Token not found", zap.String("value", value))
-				d.mu.Unlock()
-				continue
-			}
-			delete(d.tokens, value)
-			d.mu.Unlock()
-			logger.Log.Debug("Remove token", zap.String("value", value))
-		}
-	}
-}
-
 func (d *UserDatabase) Close() {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.watchCancel()
-	d.users = nil
-	d.tokens = nil
+	d.cache.Close()
+	d.tokenCache.Close()
 }
