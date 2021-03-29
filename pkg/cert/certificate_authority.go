@@ -169,7 +169,7 @@ func (ca *CertificateAuthority) GetRevokedCertificates(ctx context.Context) ([]*
 	return ca.db.GetRevokedCertificate(ctx, nil)
 }
 
-func (ca *CertificateAuthority) WatchRevokeCertificate() chan *database.RevokedCertificate {
+func (ca *CertificateAuthority) WatchRevokeCertificate() chan struct{} {
 	if ca.vault != nil {
 		return ca.vault.WatchRevokeCertificate()
 	}

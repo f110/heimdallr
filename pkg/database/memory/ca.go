@@ -19,7 +19,7 @@ type CA struct {
 	mu                  sync.Mutex
 	signedCertificates  []*database.SignedCertificate
 	revokedCertificates []*database.RevokedCertificate
-	watcher             []chan *database.RevokedCertificate
+	watcher             []chan struct{}
 }
 
 var _ database.CertificateAuthority = &CA{}
@@ -28,12 +28,12 @@ func NewCA() *CA {
 	return &CA{
 		signedCertificates:  make([]*database.SignedCertificate, 0),
 		revokedCertificates: make([]*database.RevokedCertificate, 0),
-		watcher:             make([]chan *database.RevokedCertificate, 0),
+		watcher:             make([]chan struct{}, 0),
 	}
 }
 
-func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
-	ch := make(chan *database.RevokedCertificate)
+func (c *CA) WatchRevokeCertificate() chan struct{} {
+	ch := make(chan struct{}, 1)
 	c.mu.Lock()
 	c.watcher = append(c.watcher, ch)
 	c.mu.Unlock()
@@ -88,7 +88,7 @@ func (c *CA) SetRevokedCertificate(_ context.Context, certificate *database.Revo
 
 	for i, v := range c.watcher {
 		select {
-		case v <- certificate:
+		case v <- struct{}{}:
 		default:
 			c.watcher = append(c.watcher[:i], c.watcher[i+1:]...)
 		}

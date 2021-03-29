@@ -280,6 +280,7 @@ message RequestWatchRevokedCert {}
 
 message ResponseWatchRevokedCert {
     repeated CertItem items = 1;
+    bool update = 2;
 }
 
 message RequestNewServerCert {

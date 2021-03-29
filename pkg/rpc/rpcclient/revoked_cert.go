@@ -64,6 +64,21 @@ func (w *RevokedCertificateWatcher) Error() error {
 func (w *RevokedCertificateWatcher) watch() error {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.InternalTokenMetadataKey, w.token)
 
+	revoked, err := w.client.GetRevokedList(ctx, &rpc.RequestGetRevokedList{})
+	if err != nil {
+		return err
+	}
+	c := make([]*RevokedCert, len(revoked.Items))
+	for i, v := range revoked.Items {
+		s := big.NewInt(0)
+		s.SetBytes(v.SerialNumber)
+		c[i] = &RevokedCert{SerialNumber: s}
+	}
+
+	w.mu.Lock()
+	w.items = c
+	w.mu.Unlock()
+
 	watch, err := w.client.WatchRevokedCert(ctx, &rpc.RequestWatchRevokedCert{})
 	if err != nil {
 		w.err = err
@@ -86,21 +101,27 @@ func (w *RevokedCertificateWatcher) watch() error {
 			w.err = err
 			return err
 		}
-		if len(res.Items) == 0 {
+		if !res.Update {
 			continue
 		}
-		logger.Log.Debug("Got event from rpcserver", zap.Int("length", len(res.Items)))
+		logger.Log.Debug("Got event from rpcserver")
 
-		c := make([]*RevokedCert, len(res.Items))
-		for i, v := range res.Items {
+		revoked, err := w.client.GetRevokedList(ctx, &rpc.RequestGetRevokedList{})
+		if err != nil {
+			logger.Log.Warn("Could not get revoked certs", zap.Error(err))
+			continue
+		}
+
+		c := make([]*RevokedCert, len(revoked.Items))
+		for i, v := range revoked.Items {
 			s := big.NewInt(0)
 			s.SetBytes(v.SerialNumber)
 			c[i] = &RevokedCert{SerialNumber: s}
-			logger.Log.Debug("Revoke Cert", zap.Int64("serial_number", s.Int64()))
 		}
 
 		w.mu.Lock()
-		w.items = append(w.items)
+		w.items = c
 		w.mu.Unlock()
+		logger.Log.Debug("Renew revoked items", zap.Int("Len", len(w.items)))
 	}
 }

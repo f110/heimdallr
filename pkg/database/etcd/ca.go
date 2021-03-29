@@ -7,29 +7,19 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"math/big"
-	"sync"
 
 	"go.etcd.io/etcd/v3/clientv3"
-	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/database"
-	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 type CA struct {
-	client      *clientv3.Client
-	watchCancel context.CancelFunc
-
-	mu          sync.RWMutex
-	revokedList []*database.RevokedCertificate
-
-	wMu     sync.RWMutex
-	watchCh []chan *database.RevokedCertificate
+	cache  *Cache
+	client *clientv3.Client
 }
 
 var _ database.CertificateAuthority = &CA{}
@@ -42,12 +32,8 @@ func init() {
 }
 
 func NewCA(client *clientv3.Client) *CA {
-	ca := &CA{client: client}
-	go func() {
-		if err := ca.watch(); err != nil {
-			logger.Log.Warn("Close watch channel", zap.Error(err))
-		}
-	}()
+	ca := &CA{client: client, cache: NewCache(client, "ca/revoke/", nil)}
+	ca.cache.Start(context.Background())
 
 	return ca
 }
@@ -181,109 +167,10 @@ func (c *CA) NewSerialNumber(ctx context.Context) (*big.Int, error) {
 	return serial, nil
 }
 
-func (c *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
-	ch := make(chan *database.RevokedCertificate)
-	c.wMu.Lock()
-	c.watchCh = append(c.watchCh, ch)
-	c.wMu.Unlock()
-
-	return ch
+func (c *CA) WatchRevokeCertificate() chan struct{} {
+	return c.cache.Notify()
 }
 
 func (c *CA) Close() {
-	if c.watchCancel != nil {
-		c.watchCancel()
-	}
-}
-
-func (c *CA) init(ctx context.Context) ([]*database.RevokedCertificate, int64, error) {
-	res, err := c.client.Get(ctx, "ca/revoke/", clientv3.WithPrefix())
-	if err != nil {
-		return nil, -1, xerrors.Errorf(": %w", err)
-	}
-
-	revoked := make([]*database.RevokedCertificate, 0, res.Count)
-	for _, v := range res.Kvs {
-		r := &database.RevokedCertificate{}
-		err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(r)
-		if err != nil {
-			return nil, -1, xerrors.Errorf(": %w", err)
-		}
-		revoked = append(revoked, r)
-	}
-
-	return revoked, res.Header.Revision, nil
-}
-
-func (c *CA) watch() error {
-	if c.watchCancel != nil {
-		c.watchCancel()
-	}
-	watchCtx, cancel := context.WithCancel(context.Background())
-	c.watchCancel = cancel
-
-	for {
-		revoked, revision, err := c.init(watchCtx)
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		c.mu.Lock()
-		c.revokedList = revoked
-		c.mu.Unlock()
-
-		err = c.watchRevokeList(watchCtx, revision)
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			return nil
-		}
-		if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-	}
-}
-
-func (c *CA) watchRevokeList(ctx context.Context, revision int64) error {
-	logger.Log.Debug("Start watching revoke list")
-	defer logger.Log.Debug("Stop watching revoke list")
-
-	watchCh := c.client.Watch(ctx, "ca/revoke/", clientv3.WithPrefix(), clientv3.WithRev(revision))
-	for {
-		select {
-		case res, ok := <-watchCh:
-			if !ok {
-				logger.Log.Debug("Watch channel was closed")
-				return nil
-			}
-
-			for _, event := range res.Events {
-				if event.Type != clientv3.EventTypePut {
-					continue
-				}
-
-				r := &database.RevokedCertificate{}
-				err := gob.NewDecoder(bytes.NewReader(event.Kv.Value)).Decode(r)
-				if err != nil {
-					logger.Log.Warn("Failed parse revoked event", zap.Error(err))
-					continue
-				}
-
-				c.mu.Lock()
-				c.revokedList = append(c.revokedList, r)
-				c.mu.Unlock()
-				logger.Log.Debug("Add new revoked certificate", zap.String("serial", r.SerialNumber.Text(16)))
-
-				c.wMu.Lock()
-				for i, ch := range c.watchCh {
-					select {
-					case ch <- r:
-					default:
-						c.watchCh = append(c.watchCh[:i], c.watchCh[i+1:]...)
-					}
-				}
-				c.wMu.Unlock()
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
+	c.cache.Close()
 }

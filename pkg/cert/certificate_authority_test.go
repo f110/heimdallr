@@ -16,7 +16,6 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
-	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/memory"
 )
 
@@ -41,15 +40,7 @@ func TestCertificateAuthority_NewClientCertificate(t *testing.T) {
 	ca, err := NewCertificateAuthority(memory.NewCA(), newCertificateAuthorityConfig(t))
 	require.NoError(t, err)
 
-	doneCh := make(chan struct{})
-	revokedCertEventCh := make(chan *database.RevokedCertificate, 1)
 	watchCh := ca.WatchRevokeCertificate()
-	go func() {
-		close(doneCh)
-		v := <-watchCh
-		revokedCertEventCh <- v
-	}()
-	<-doneCh
 
 	data, err := ca.NewClientCertificate(
 		context.Background(),
@@ -78,8 +69,10 @@ func TestCertificateAuthority_NewClientCertificate(t *testing.T) {
 	require.NoError(t, err)
 
 	select {
-	case revoked := <-revokedCertEventCh:
-		require.Equal(t, "test@example.com", revoked.CommonName)
+	case <-watchCh:
+		revoked, err := ca.GetRevokedCertificates(context.Background())
+		require.NoError(t, err)
+		assert.Len(t, revoked, 1)
 	case <-time.After(time.Second):
 		require.Fail(t, "Expect getting a revoked cert via watch channel")
 	}

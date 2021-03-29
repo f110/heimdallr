@@ -21,7 +21,7 @@ type CA struct {
 	dao *dao.Repository
 
 	mu sync.Mutex
-	ch []chan *database.RevokedCertificate
+	ch []chan struct{}
 
 	startWatchChOnce sync.Once
 	lastWatchTime    time.Time
@@ -173,8 +173,8 @@ func (ca *CA) SetRevokedCertificate(ctx context.Context, certificate *database.R
 	return nil
 }
 
-func (ca *CA) WatchRevokeCertificate() chan *database.RevokedCertificate {
-	ch := make(chan *database.RevokedCertificate)
+func (ca *CA) WatchRevokeCertificate() chan struct{} {
+	ch := make(chan struct{})
 	ca.mu.Lock()
 	defer ca.mu.Unlock()
 
@@ -232,30 +232,18 @@ func (ca *CA) checkRevokedCertificate() {
 		ca.lastWatchTime = now
 		return
 	}
-	updated := make([]*entity.RevokedCertificate, 0)
+	updated := false
 	for _, v := range revoked {
 		if v.CreatedAt.After(ca.lastWatchTime) {
-			updated = append(updated, v)
+			updated = true
 		}
 	}
 
 	ca.mu.Lock()
-	for _, v := range updated {
-		sn := big.NewInt(0)
-		sn.SetBytes(v.SerialNumber)
-		rev := &database.RevokedCertificate{
-			CommonName:   v.CommonName,
-			SerialNumber: sn,
-			IssuedAt:     v.IssuedAt,
-			RevokedAt:    v.RevokedAt,
-			Agent:        v.Agent,
-			Device:       v.Device,
-			Comment:      v.Comment,
-		}
-
+	if updated {
 		for _, ch := range ca.ch {
 			select {
-			case ch <- rev:
+			case ch <- struct{}{}:
 			default:
 			}
 		}

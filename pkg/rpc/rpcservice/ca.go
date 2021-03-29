@@ -180,29 +180,16 @@ func (s *CertificateAuthorityService) WatchRevokedCert(_ *rpc.RequestWatchRevoke
 		close(ch)
 	}()
 
-	revoked, err := s.ca.GetRevokedCertificates(context.Background())
-	if err != nil {
-		return err
-	}
-
-	res := make([]*rpc.CertItem, len(revoked))
-	for i, v := range revoked {
-		res[i] = rpc.DatabaseRevokedCertToRPCCert(v)
-	}
-	if err := ss.Send(&rpc.ResponseWatchRevokedCert{Items: res}); err != nil {
-		return err
-	}
-
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
 	for {
 		select {
-		case v := <-ch:
-			if err := ss.Send(&rpc.ResponseWatchRevokedCert{Items: []*rpc.CertItem{rpc.DatabaseRevokedCertToRPCCert(v)}}); err != nil {
+		case <-ch:
+			if err := ss.Send(&rpc.ResponseWatchRevokedCert{Update: true}); err != nil {
 				return err
 			}
 		case <-t.C:
-			if err := ss.Send(&rpc.ResponseWatchRevokedCert{Items: []*rpc.CertItem{}}); err != nil {
+			if err := ss.Send(&rpc.ResponseWatchRevokedCert{}); err != nil {
 				return err
 			}
 		case <-ss.Context().Done():

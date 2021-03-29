@@ -52,6 +52,7 @@ var SystemRPCPermission = &RPCPermission{
 	Allow: []string{
 		"proxy.rpc.certificateauthority.watchrevokedcert",
 		"proxy.rpc.certificateauthority.newservercert",
+		"proxy.rpc.certificateauthority.getrevokedlist",
 		"proxy.rpc.cluster.defragmentdatastore",
 		"proxy.rpc.authority.signrequest",
 		"proxy.rpc.authority.getpublickey",

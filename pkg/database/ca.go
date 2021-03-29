@@ -22,7 +22,7 @@ type CertificateAuthority interface {
 	GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) ([]*RevokedCertificate, error)
 	SetSignedCertificate(ctx context.Context, certificate *SignedCertificate) error
 	SetRevokedCertificate(ctx context.Context, certificate *RevokedCertificate) error
-	WatchRevokeCertificate() chan *RevokedCertificate
+	WatchRevokeCertificate() chan struct{}
 	NewSerialNumber(ctx context.Context) (*big.Int, error)
 }
 
