@@ -518,7 +518,7 @@ func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdC
 			},
 			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
 				{
-					TargetPort:  intOrStringFromInt(EtcdMetricsPort),
+					Port:        "metrics",
 					Path:        "/metrics",
 					Scheme:      "http",
 					HonorLabels: true,
