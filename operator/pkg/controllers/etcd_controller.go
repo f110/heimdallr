@@ -222,24 +222,20 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	cluster := NewEtcdCluster(c, ec.clusterDomain, ec.Log(), ec.etcdClientMockOpt)
-	caSecret, err := ec.setupCA(ctx, cluster)
-	if err != nil {
+	cluster.Init(ec.secretLister)
+	if err := ec.setupCA(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	serverCertSecret, err := ec.setupServerCert(ctx, cluster, caSecret)
-	if err != nil {
+	if err := ec.setupServerCert(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	_, err = ec.setupClientCert(ctx, cluster, caSecret)
-	if err != nil {
+	if err := ec.setupClientCert(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	cluster.SetCASecret(caSecret)
-	cluster.SetServerCertSecret(serverCertSecret)
 	if err := cluster.GetOwnedPods(ec.podLister, ec.pvcLister); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if err = ec.ensureServiceAccount(ctx, cluster); err != nil {
+	if err := ec.ensureServiceAccount(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -303,7 +299,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		ec.Log().Debug("Update EtcdCluster")
-		_, err = ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
+		_, err := ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -633,77 +629,65 @@ func (ec *EtcdController) sendBackupToContainer(cluster *EtcdCluster, pod *corev
 	return nil
 }
 
-func (ec *EtcdController) setupCA(ctx context.Context, cluster *EtcdCluster) (*corev1.Secret, error) {
-	caSecret, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.CASecretName())
-	if err != nil && apierrors.IsNotFound(err) {
-		caSecret, err = cluster.CA(nil)
-		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
-		}
-
+func (ec *EtcdController) setupCA(ctx context.Context, cluster *EtcdCluster) error {
+	caSecret, err := cluster.CA()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if caSecret.CreationTimestamp.IsZero() {
 		caSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, caSecret, metav1.CreateOptions{})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return xerrors.Errorf(": %w", err)
 		}
-		return caSecret, nil
-	} else if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		cluster.SetCASecret(caSecret)
 	}
 
-	return caSecret, nil
+	return nil
 }
 
-func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdCluster, ca *corev1.Secret) (*corev1.Secret, error) {
-	certS, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.ServerCertSecretName())
-	if err != nil && apierrors.IsNotFound(err) {
-		certS, err = cluster.ServerCertSecret(ca)
+func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdCluster) error {
+	serverCertSecret, err := cluster.ServerCertSecret()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if serverCertSecret.CreationTimestamp.IsZero() {
+		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, serverCertSecret, metav1.CreateOptions{})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return xerrors.Errorf(": %w", err)
 		}
-
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, certS, metav1.CreateOptions{})
-		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
-		}
-		return certS, nil
-	} else if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		cluster.SetServerCertSecret(serverCertSecret)
 	}
 
-	if cluster.ShouldUpdateServerCertificate(certS.Data[serverCertSecretCertName]) {
-		certS, err = cluster.ServerCertSecret(ca)
+	if cluster.ShouldUpdateServerCertificate(serverCertSecret.Data[serverCertSecretCertName]) {
+		serverCertSecret, err = cluster.ServerCertSecret()
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return xerrors.Errorf(": %w", err)
 		}
 
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(ctx, certS, metav1.UpdateOptions{})
+		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(ctx, serverCertSecret, metav1.UpdateOptions{})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return xerrors.Errorf(": %w", err)
 		}
-		return certS, nil
+		cluster.SetServerCertSecret(serverCertSecret)
 	}
 
-	return certS, nil
+	return nil
 }
 
-func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdCluster, ca *corev1.Secret) (*corev1.Secret, error) {
-	certS, err := ec.secretLister.Secrets(cluster.Namespace).Get(cluster.ClientCertSecretName())
-	if err != nil && apierrors.IsNotFound(err) {
-		certS, err = cluster.ClientCertSecret(ca)
+func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdCluster) error {
+	clientCertSecret, err := cluster.ClientCertSecret()
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if clientCertSecret.CreationTimestamp.IsZero() {
+		clientCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, clientCertSecret, metav1.CreateOptions{})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return xerrors.Errorf(": %w", err)
 		}
-
-		certS, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, certS, metav1.CreateOptions{})
-		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
-		}
-		return certS, nil
-	} else if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		cluster.SetClientCertSecret(clientCertSecret)
 	}
 
-	return certS, nil
+	return nil
 }
 
 func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {

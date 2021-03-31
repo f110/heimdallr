@@ -24,19 +24,19 @@ import (
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
-	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	listers "k8s.io/client-go/listers/core/v1"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/version"
 )
@@ -106,7 +106,8 @@ type EtcdCluster struct {
 	ownedPods             []*corev1.Pod
 	ownedPVC              map[string]*corev1.PersistentVolumeClaim
 	caSecret              *corev1.Secret
-	serverCertSecret      Certificate
+	serverCertSecret      *Certificate
+	clientCertSecret      *corev1.Secret
 	podsOnce              sync.Once
 	expectedPods          []*EtcdMember
 
@@ -120,6 +121,32 @@ func NewEtcdCluster(c *etcdv1alpha2.EtcdCluster, clusterDomain string, log *zap.
 		ClusterDomain: clusterDomain,
 		log:           log,
 		mockOpt:       mockOpt,
+	}
+}
+
+func (c *EtcdCluster) Init(secretLister listers.SecretLister) {
+	caSecret, err := secretLister.Secrets(c.Namespace).Get(c.CASecretName())
+	if err == nil {
+		c.caSecret = caSecret
+	}
+
+	certS, err := secretLister.Secrets(c.Namespace).Get(c.ServerCertSecretName())
+	if err == nil {
+		tlsKeyPair, err := tls.X509KeyPair(certS.Data[serverCertSecretCertName], certS.Data[serverCertSecretPrivateKeyName])
+		if err != nil {
+			c.log.Warn("Failed decode a server certificate", zap.String("name", certS.Name))
+		}
+
+		serverCert, err := NewCertificate(certS, tlsKeyPair)
+		if err != nil {
+			c.log.Warn("Failed encode a private key", zap.Error(err))
+		}
+		c.serverCertSecret = &serverCert
+	}
+
+	clientS, err := secretLister.Secrets(c.Namespace).Get(c.ClientCertSecretName())
+	if err == nil {
+		c.clientCertSecret = clientS
 	}
 }
 
@@ -148,11 +175,15 @@ func (c *EtcdCluster) SetServerCertSecret(cert *corev1.Secret) {
 		c.log.Warn("Failed decode a server certificate", zap.String("name", cert.Name))
 	}
 
-	serverCert, err := NewCertificate(tlsKeyPair)
+	serverCert, err := NewCertificate(cert, tlsKeyPair)
 	if err != nil {
 		c.log.Warn("Failed encode a private key", zap.Error(err))
 	}
-	c.serverCertSecret = serverCert
+	c.serverCertSecret = &serverCert
+}
+
+func (c *EtcdCluster) SetClientCertSecret(cert *corev1.Secret) {
+	c.clientCertSecret = cert
 }
 
 func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister listers.PersistentVolumeClaimLister) error {
@@ -203,9 +234,9 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 	return nil
 }
 
-func (c *EtcdCluster) CA(s *corev1.Secret) (*corev1.Secret, error) {
-	if s != nil {
-		return s, nil
+func (c *EtcdCluster) CA() (*corev1.Secret, error) {
+	if c.caSecret != nil {
+		return c.caSecret, nil
 	}
 
 	caCert, privateKey, err := cert.CreateCertificateAuthority(fmt.Sprintf("%s-ca", c.Name), "", "", "", "ecdsa")
@@ -219,23 +250,19 @@ func (c *EtcdCluster) CA(s *corev1.Secret) (*corev1.Secret, error) {
 	caCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
 
-	s = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.CASecretName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		Data: map[string][]byte{
-			caSecretCertName:       caCertBuf,
-			caSecretPrivateKeyName: privateKeyBuf,
-		},
-	}
-
-	return s, nil
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(c.CASecretName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Data(caSecretCertName, caCertBuf),
+		k8sfactory.Data(caSecretPrivateKeyName, privateKeyBuf),
+	)
+	c.caSecret = secret
+	return secret, nil
 }
 
-func (c *EtcdCluster) ServerCert(ca *corev1.Secret) (Certificate, error) {
-	certPair, err := c.parseCASecret(ca)
+func (c *EtcdCluster) ServerCert() (Certificate, error) {
+	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
 		return Certificate{}, xerrors.Errorf(": %w", err)
 	}
@@ -259,7 +286,7 @@ func (c *EtcdCluster) ServerCert(ca *corev1.Secret) (Certificate, error) {
 		return Certificate{}, err
 	}
 
-	return NewCertificate(tlsKeyPair)
+	return NewCertificate(nil, tlsKeyPair)
 }
 
 func (c *EtcdCluster) DNSNames() []string {
@@ -274,20 +301,25 @@ func (c *EtcdCluster) DNSNames() []string {
 	return dnsNames
 }
 
-func (c *EtcdCluster) ServerCertSecret(ca *corev1.Secret) (*corev1.Secret, error) {
-	serverCert, err := c.ServerCert(ca)
+func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
+	if c.serverCertSecret != nil {
+		return c.serverCertSecret.ToSecret(), nil
+	}
+
+	serverCert, err := c.ServerCert()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
+	c.serverCertSecret = &serverCert
 
-	s := serverCert.ToSecret()
-	s.ObjectMeta = metav1.ObjectMeta{
-		Name:            c.ServerCertSecretName(),
-		Namespace:       c.Namespace,
-		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-	}
-
-	return s, nil
+	secret := k8sfactory.SecretFactory(
+		serverCert.ToSecret(),
+		k8sfactory.Name(c.ServerCertSecretName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+	)
+	c.serverCertSecret.secret = secret
+	return secret, nil
 }
 
 func (c *EtcdCluster) CASecretName() string {
@@ -298,8 +330,12 @@ func (c *EtcdCluster) ServerCertSecretName() string {
 	return fmt.Sprintf("etcd-%s-server-cert", c.Name)
 }
 
-func (c *EtcdCluster) ClientCertSecret(ca *corev1.Secret) (*corev1.Secret, error) {
-	certPair, err := c.parseCASecret(ca)
+func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
+	if c.clientCertSecret != nil {
+		return c.clientCertSecret, nil
+	}
+
+	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -321,19 +357,16 @@ func (c *EtcdCluster) ClientCertSecret(ca *corev1.Secret) (*corev1.Secret, error
 	clientCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
 
-	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.ClientCertSecretName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		Data: map[string][]byte{
-			clientCertSecretCACertName:     ca.Data[caSecretCertName],
-			clientCertSecretCertName:       clientCertBuf,
-			clientCertSecretPrivateKeyName: privateKeyBuf,
-		},
-	}
-	return s, nil
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(c.ClientCertSecretName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Data(clientCertSecretCACertName, c.caSecret.Data[caSecretCertName]),
+		k8sfactory.Data(clientCertSecretCertName, clientCertBuf),
+		k8sfactory.Data(clientCertSecretPrivateKeyName, privateKeyBuf),
+	)
+	c.clientCertSecret = secret
+	return secret, nil
 }
 
 func (c *EtcdCluster) ClientCertSecretName() string {
@@ -341,13 +374,11 @@ func (c *EtcdCluster) ClientCertSecretName() string {
 }
 
 func (c *EtcdCluster) ServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.ServiceAccountName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-	}
+	return k8sfactory.ServiceAccountFactory(nil,
+		k8sfactory.Name(c.ServiceAccountName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+	)
 }
 
 func (c *EtcdCluster) ServiceAccountName() string {
@@ -355,115 +386,69 @@ func (c *EtcdCluster) ServiceAccountName() string {
 }
 
 func (c *EtcdCluster) EtcdRole() *rbacv1.Role {
-	return &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s-etcd", c.Name),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"*"},
-				Resources: []string{"pods"},
-				Verbs:     []string{"list", "watch"},
-			},
-		},
-	}
+	return k8sfactory.RoleFactory(nil,
+		k8sfactory.Name(fmt.Sprintf("%s-etcd", c.Name)),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.PolicyRule([]string{"*"}, []string{"pods"}, []string{"list", "watch"}),
+	)
 }
 
 func (c *EtcdCluster) EtcdRoleBinding() *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s-etcd", c.Name),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     fmt.Sprintf("%s-etcd", c.Name),
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind: "ServiceAccount",
-				Name: c.ServiceAccountName(),
-			},
-		},
-	}
+	return k8sfactory.RoleBindingFactory(nil,
+		k8sfactory.Name(fmt.Sprintf("%s-etcd", c.Name)),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Role(c.EtcdRole()),
+		k8sfactory.Subject(c.ServiceAccount()),
+	)
 }
 
 func (c *EtcdCluster) DefragmentCronJob() *batchv1beta1.CronJob {
-	podSpec := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Containers: []corev1.Container{
-			{
-				Name:  "etcdctl",
-				Image: fmt.Sprintf("quay.io/coreos/etcd:%s", c.Spec.Version),
-				Command: []string{"/usr/local/bin/etcdctl",
-					fmt.Sprintf("--endpoints=https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
-					fmt.Sprintf("--cacert=/etc/etcd-ca/%s", caCertificateFilename),
-					fmt.Sprintf("--cert=/etc/etcd-client/%s", clientCertSecretCertName),
-					fmt.Sprintf("--key=/etc/etcd-client/%s", clientCertSecretPrivateKeyName),
-					"defrag",
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "ca",
-						MountPath: "/etc/etcd-ca",
-					},
-					{
-						Name:      "cert",
-						MountPath: "/etc/etcd-client",
-					},
-				},
-			},
-		},
-		Volumes: []corev1.Volume{
-			{
-				Name: "ca",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: c.CASecretName(),
-						Items: []corev1.KeyToPath{
-							{Key: caSecretCertName, Path: caSecretCertName},
-						},
-					},
-				},
-			},
-			{
-				Name: "cert",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: c.ClientCertSecretName(),
-					},
-				},
-			},
-		},
-	}
+	caVolume := k8sfactory.NewSecretVolumeSource(
+		"ca",
+		"/etc/etcd-ca",
+		c.caSecret,
+		corev1.KeyToPath{Key: caSecretCertName, Path: caSecretCertName},
+	)
+	clientCertVolume := k8sfactory.NewSecretVolumeSource("cert", "/etc/etcd-client", c.clientCertSecret)
 
-	return &batchv1beta1.CronJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.DefragmentCronJobName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		Spec: batchv1beta1.CronJobSpec{
-			Schedule: c.Spec.DefragmentSchedule,
-			JobTemplate: batchv1beta1.JobTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						etcd.LabelNameClusterName: c.Name,
-						etcd.LabelNameRole:        "defragment",
-					},
-				},
-				Spec: batchv1.JobSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: podSpec,
-					},
-				},
+	cont := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("etcdctl"),
+		k8sfactory.Image(
+			fmt.Sprintf("quay.io/coreos/etcd:%s", c.Spec.Version),
+			[]string{"/usr/local/bin/etcdctl",
+				fmt.Sprintf("--endpoints=https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
+				fmt.Sprintf("--cacert=/etc/etcd-ca/%s", caCertificateFilename),
+				fmt.Sprintf("--cert=/etc/etcd-client/%s", clientCertSecretCertName),
+				fmt.Sprintf("--key=/etc/etcd-client/%s", clientCertSecretPrivateKeyName),
+				"defrag",
 			},
-		},
-	}
+		),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(clientCertVolume),
+	)
+	pod := k8sfactory.PodFactory(nil,
+		k8sfactory.Container(cont),
+		k8sfactory.RestartPolicy(corev1.RestartPolicyNever),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(clientCertVolume),
+	)
+	job := k8sfactory.JobFactory(nil,
+		k8sfactory.Label(
+			etcd.LabelNameClusterName, c.Name,
+			etcd.LabelNameRole, "defragment",
+		),
+		k8sfactory.Pod(pod),
+	)
+
+	return k8sfactory.CronJobFactory(nil,
+		k8sfactory.Name(c.DefragmentCronJobName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Schedule(c.Spec.DefragmentSchedule),
+		k8sfactory.Job(job),
+	)
 }
 
 func (c *EtcdCluster) DefragmentCronJobName() string {
@@ -662,36 +647,17 @@ func (c *EtcdCluster) ServerDiscoveryServiceName() string {
 }
 
 func (c *EtcdCluster) DiscoveryService() *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.ServerDiscoveryServiceName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-			Labels: map[string]string{
-				etcd.LabelNameClusterName: c.Name,
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     corev1.ServiceTypeClusterIP,
-			ClusterIP:                corev1.ClusterIPNone,
-			PublishNotReadyAddresses: true,
-			Selector: map[string]string{
-				etcd.LabelNameClusterName: c.Name,
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "etcd-server-ssl",
-					Protocol: corev1.ProtocolTCP,
-					Port:     EtcdPeerPort,
-				},
-				{
-					Name:     "etcd-client-ssl",
-					Protocol: corev1.ProtocolTCP,
-					Port:     EtcdClientPort,
-				},
-			},
-		},
-	}
+	return k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(c.ServerDiscoveryServiceName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Label(etcd.LabelNameClusterName, c.Name),
+		k8sfactory.ClusterIP,
+		k8sfactory.IPNone,
+		k8sfactory.Selector(etcd.LabelNameClusterName, c.Name),
+		k8sfactory.Port("etcd-server-ssl", corev1.ProtocolTCP, EtcdPeerPort),
+		k8sfactory.Port("etcd-client-ssl", corev1.ProtocolTCP, EtcdClientPort),
+	)
 }
 
 func (c *EtcdCluster) ClientServiceName() string {
@@ -699,29 +665,15 @@ func (c *EtcdCluster) ClientServiceName() string {
 }
 
 func (c *EtcdCluster) ClientService() *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.ClientServiceName(),
-			Namespace:       c.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-			Labels: map[string]string{
-				etcd.LabelNameClusterName: c.Name,
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{
-				etcd.LabelNameClusterName: c.Name,
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "https",
-					Protocol: corev1.ProtocolTCP,
-					Port:     EtcdClientPort,
-				},
-			},
-		},
-	}
+	return k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(c.ClientServiceName()),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.Label(etcd.LabelNameClusterName, c.Name),
+		k8sfactory.ClusterIP,
+		k8sfactory.Selector(etcd.LabelNameClusterName, c.Name),
+		k8sfactory.Port("https", corev1.ProtocolTCP, EtcdClientPort),
+	)
 }
 
 func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
@@ -983,81 +935,46 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 		antiAffinity = false
 	}
 	podName := fmt.Sprintf("%s-%d", c.Name, index)
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      podName,
-			Namespace: c.Namespace,
-			Labels: map[string]string{
-				etcd.LabelNameClusterName: c.Name,
-				etcd.LabelNameEtcdVersion: etcdVersion,
-				etcd.LabelNameRole:        "etcd",
-			},
-			Annotations: map[string]string{
-				etcd.AnnotationKeyServerCertificate: string(c.serverCertSecret.MarshalCertificate()),
-			},
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(c, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster"))},
-		},
-		Spec: c.etcdPodSpec(podName, etcdVersion, clusterState, initialCluster, antiAffinity),
-	}
+	pod := k8sfactory.PodFactory(nil,
+		k8sfactory.Name(podName),
+		k8sfactory.Namespace(c.Namespace),
+		k8sfactory.Label(
+			etcd.LabelNameClusterName, c.Name,
+			etcd.LabelNameEtcdVersion, etcdVersion,
+			etcd.LabelNameRole, "etcd",
+		),
+		k8sfactory.Annotation(etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate())),
+		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+	)
+	return c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
 }
 
-func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) corev1.PodSpec {
-	initContainers := make([]corev1.Container, 0)
+func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) *corev1.Pod {
 	memberManipulateScript := template.Must(template.New("").Parse(addMemberScript))
 
-	caVolume := &podVolume{
-		Name: "ca",
-		Path: "/etc/etcd-ca",
-		Source: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: c.CASecretName(),
-				Items: []corev1.KeyToPath{
-					{Key: caSecretCertName, Path: caSecretCertName},
-				},
-			},
-		},
-	}
-	serverCertVolume := &podVolume{
-		Name: "cert",
-		Path: "/etc/etcd-cert",
-		Source: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: c.ServerCertSecretName(),
-			},
-		},
-	}
-	clientCertVolume := &podVolume{
-		Name: "client-cert",
-		Path: "/etc/etcd-client-cert",
-		Source: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: c.ClientCertSecretName(),
-			},
-		},
-	}
-	dataVolume := &podVolume{
-		Name: "data",
-		Path: "/data",
-		Source: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
-		},
-	}
-	if c.Spec.VolumeClaimTemplate != nil {
-		dataVolume.Source = corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: podName,
-			},
-		}
-	}
-
-	initContainers = append(initContainers,
-		corev1.Container{
-			Name:         "wipe-data",
-			Image:        "busybox:latest",
-			Command:      []string{"/bin/sh", "-c", "rm -rf /data/*"},
-			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
-		},
+	caVolume := k8sfactory.NewSecretVolumeSource(
+		"ca",
+		"/etc/etcd-ca",
+		c.caSecret,
+		corev1.KeyToPath{Key: caSecretCertName, Path: caSecretCertName},
 	)
+	serverCertVolume := k8sfactory.NewSecretVolumeSource(
+		"cert",
+		"/etc/etcd-cert",
+		c.serverCertSecret.ToSecret(),
+	)
+	clientCertVolume := k8sfactory.NewSecretVolumeSource(
+		"client-cert",
+		"/etc/etcd-client-cert",
+		c.clientCertSecret,
+	)
+	dataVolume := k8sfactory.NewEmptyDirVolumeSource("data", "/data")
+	if c.Spec.VolumeClaimTemplate != nil {
+		dataVolume = k8sfactory.NewPersistentVolumeClaimVolumeSource("data", "/data", podName)
+	}
+	runVolume := k8sfactory.NewEmptyDirVolumeSource("share", "/var/run/sidecar")
+
+	var addMemberContainer *corev1.Container
 	if clusterState == "existing" {
 		buf := new(bytes.Buffer)
 		err := memberManipulateScript.Execute(buf, struct {
@@ -1078,24 +995,15 @@ func (c *EtcdCluster) etcdPodSpec(podName, etcdVersion, clusterState string, ini
 		if err != nil {
 			panic(err)
 		}
-		// Add cluster member will execute init container.
-		initContainers = append(initContainers,
-			corev1.Container{
-				Name:    "add-member",
-				Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
-				Command: []string{"/bin/sh", "-c", buf.String()},
-				Env: []corev1.EnvVar{
-					{
-						Name: "MY_POD_IP",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "status.podIP",
-							},
-						},
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{clientCertVolume.ToMount()},
-			},
+
+		addMemberContainer = k8sfactory.ContainerFactory(nil,
+			k8sfactory.Name("add-member"),
+			k8sfactory.Image(
+				fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
+				[]string{"/bin/sh", "-c", buf.String()},
+			),
+			k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
+			k8sfactory.Volume(clientCertVolume),
 		)
 	}
 
@@ -1128,150 +1036,80 @@ do
 done
 echo '' > /etc/resolv.conf
 /usr/local/bin/etcd %s`, strings.Join(etcdArgs, " "))
-	args := []string{"-c", etcdScript}
-	var affinity *corev1.Affinity
-	if antiAffinity {
-		affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						Weight: 100,
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							LabelSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{
-										Key:      etcd.LabelNameClusterName,
-										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{c.Name},
-									},
-								},
-							},
-							TopologyKey: "kubernetes.io/hostname",
-						},
-					},
-				},
-			},
-		}
-	}
-	runVolume := &podVolume{
-		Name: "share",
-		Path: "/var/run/sidecar",
-		Source: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
-		},
-	}
+	etcdContainer := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("etcd"),
+		k8sfactory.Image(fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion), []string{"/bin/sh"}),
+		k8sfactory.Args("-c", etcdScript),
+		k8sfactory.EnvFromField("MY_POD_NAME", "metadata.name"),
+		k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
+		k8sfactory.Port("client", corev1.ProtocolTCP, EtcdClientPort),
+		k8sfactory.Port("peer", corev1.ProtocolTCP, EtcdPeerPort),
+		k8sfactory.Port("metrics", corev1.ProtocolTCP, EtcdMetricsPort),
+		k8sfactory.LivenessProbe(k8sfactory.TCPProbe(EtcdClientPort)),
+		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(EtcdMetricsPort, "/health")),
+		k8sfactory.Volume(serverCertVolume),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(dataVolume),
+		k8sfactory.Volume(runVolume),
+	)
 
-	sidecar := corev1.Container{
-		Name:            "sidecar",
-		Image:           fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version),
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args: []string{
-			"--port",
-			"53",
-			"--namespace",
-			c.Namespace,
-			"--cluster-domain",
-			c.ClusterDomain,
-			"--ttl",
-			"5",
-			"--ready-file",
-			"/var/run/sidecar/ready",
-		},
-		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Port: intstr.FromInt(8080),
-					Path: "/liveness",
-				},
-			},
-		},
-		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Port: intstr.FromInt(8080),
-					Path: "/readiness",
-				},
-			},
-		},
-		Ports: []corev1.ContainerPort{
-			{Name: "dns", Protocol: corev1.ProtocolUDP, ContainerPort: 53},
-			{Name: "pprof", Protocol: corev1.ProtocolTCP, ContainerPort: 8080},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			runVolume.ToMount(),
-		},
+	sidecarArgs := []string{
+		"--port", "53",
+		"--namespace", c.Namespace,
+		"--cluster-domain", c.ClusterDomain,
+		"--ttl", "5",
+		"--ready-file", "/var/run/sidecar/ready",
 	}
 	if c.Spec.Development {
-		sidecar.Args = append(sidecar.Args, "--log-level=debug")
+		sidecarArgs = append(sidecarArgs, "--log-level", "debug")
+	}
+	sidecarContainer := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("sidecar"),
+		k8sfactory.Image(fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version), nil),
+		k8sfactory.PullPolicy(corev1.PullIfNotPresent),
+		k8sfactory.Args(sidecarArgs...),
+		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(8080, "/liveness")),
+		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(8080, "/readiness")),
+		k8sfactory.Port("dns", corev1.ProtocolUDP, 53),
+		k8sfactory.Port("pprof", corev1.ProtocolTCP, 8080),
+		k8sfactory.Volume(runVolume),
+	)
+
+	pod = k8sfactory.PodFactory(pod,
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(serverCertVolume),
+		k8sfactory.Volume(clientCertVolume),
+		k8sfactory.Volume(dataVolume),
+		k8sfactory.Volume(runVolume),
+		k8sfactory.Subdomain(c.ServerDiscoveryServiceName()),
+		k8sfactory.ServiceAccount(c.ServiceAccountName()),
+		k8sfactory.RestartPolicy(corev1.RestartPolicyNever),
+		k8sfactory.InitContainer(
+			k8sfactory.ContainerFactory(nil,
+				k8sfactory.Name("wipe-data"),
+				k8sfactory.Image("busybox:latest", []string{"/bin/sh", "-c", "rm -rf /data/*"}),
+				k8sfactory.Volume(dataVolume),
+			),
+		),
+		k8sfactory.InitContainer(addMemberContainer),
+		k8sfactory.Container(etcdContainer),
+		k8sfactory.Container(sidecarContainer),
+	)
+	if antiAffinity {
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.PreferredInterPodAntiAffinity(
+				100,
+				k8sfactory.MatchExpression(metav1.LabelSelectorRequirement{
+					Key:      etcd.LabelNameClusterName,
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   []string{c.Name},
+				}),
+				"kubernetes.io/hostname",
+			),
+		)
 	}
 
-	return corev1.PodSpec{
-		Affinity:           affinity,
-		Subdomain:          c.ServerDiscoveryServiceName(),
-		RestartPolicy:      corev1.RestartPolicyNever,
-		ServiceAccountName: c.ServiceAccountName(),
-		InitContainers:     initContainers,
-		Containers: []corev1.Container{
-			{
-				Name:    "etcd",
-				Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
-				Command: []string{"/bin/sh"},
-				Args:    args,
-				Env: []corev1.EnvVar{
-					{
-						Name: "MY_POD_NAME",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.name",
-							},
-						},
-					},
-					{
-						Name: "MY_POD_IP",
-						ValueFrom: &corev1.EnvVarSource{
-							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "status.podIP",
-							},
-						},
-					},
-				},
-				Ports: []corev1.ContainerPort{
-					{Name: "client", ContainerPort: EtcdClientPort, Protocol: corev1.ProtocolTCP},
-					{Name: "peer", ContainerPort: EtcdPeerPort, Protocol: corev1.ProtocolTCP},
-					{Name: "metrics", ContainerPort: EtcdMetricsPort, Protocol: corev1.ProtocolTCP},
-				},
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						TCPSocket: &corev1.TCPSocketAction{
-							Port: intstr.FromInt(EtcdClientPort),
-						},
-					},
-				},
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Port: intstr.FromInt(EtcdMetricsPort),
-							Path: "/health",
-						},
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					serverCertVolume.ToMount(),
-					caVolume.ToMount(),
-					dataVolume.ToMount(),
-					runVolume.ToMount(),
-				},
-			},
-			sidecar,
-		},
-		Volumes: []corev1.Volume{
-			clientCertVolume.ToVolume(),
-			serverCertVolume.ToVolume(),
-			caVolume.ToVolume(),
-			dataVolume.ToVolume(),
-			runVolume.ToVolume(),
-		},
-	}
+	return pod
 }
 
 func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
@@ -1451,10 +1289,11 @@ type etcdPod struct {
 type Certificate struct {
 	tls.Certificate
 
+	secret     *corev1.Secret
 	privateKey []byte
 }
 
-func NewCertificate(source tls.Certificate) (Certificate, error) {
+func NewCertificate(secret *corev1.Secret, source tls.Certificate) (Certificate, error) {
 	var privateKey []byte
 	switch key := source.PrivateKey.(type) {
 	case *ecdsa.PrivateKey:
@@ -1467,18 +1306,16 @@ func NewCertificate(source tls.Certificate) (Certificate, error) {
 		privateKey = x509.MarshalPKCS1PrivateKey(key)
 	}
 
-	return Certificate{Certificate: source, privateKey: privateKey}, nil
+	return Certificate{Certificate: source, secret: secret, privateKey: privateKey}, nil
 }
 
 func (c *Certificate) ToSecret() *corev1.Secret {
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: c.privateKey})
 
-	return &corev1.Secret{
-		Data: map[string][]byte{
-			serverCertSecretCertName:       c.MarshalCertificate(),
-			serverCertSecretPrivateKeyName: privateKeyBuf,
-		},
-	}
+	return k8sfactory.SecretFactory(c.secret,
+		k8sfactory.Data(serverCertSecretCertName, c.MarshalCertificate()),
+		k8sfactory.Data(serverCertSecretPrivateKeyName, privateKeyBuf),
+	)
 }
 
 func (c *Certificate) MarshalCertificate() []byte {

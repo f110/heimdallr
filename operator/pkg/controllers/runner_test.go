@@ -141,6 +141,7 @@ func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
 
 func (f *commonTestRunner) RegisterSecretFixture(s ...*corev1.Secret) {
 	for _, v := range s {
+		v.CreationTimestamp = metav1.Now()
 		f.coreClient.Tracker().Add(v)
 		f.coreSharedInformerFactory.Core().V1().Secrets().Informer().GetIndexer().Add(v)
 	}
@@ -342,6 +343,8 @@ func (f *commonTestRunner) expectActionWithCaller(action core.Action) expectActi
 }
 
 func (f *commonTestRunner) actionMatcher() {
+	f.t.Helper()
+
 	actions := filterInformerActions(f.client.Actions())
 	for i, action := range actions {
 		if len(f.actions) < i+1 {
@@ -521,6 +524,8 @@ func newEtcdControllerTestRunner(t *testing.T) (*etcdControllerTestRunner, *Mock
 }
 
 func (f *etcdControllerTestRunner) Run(t *testing.T, e *etcdv1alpha2.EtcdCluster) {
+	t.Helper()
+
 	key, err := cache.MetaNamespaceKeyFunc(e)
 	if err != nil {
 		t.Fatal(err)
@@ -687,6 +692,8 @@ func filterInformerActions(actions []core.Action) []core.Action {
 }
 
 func checkAction(t *testing.T, expected expectAction, actual core.Action) {
+	t.Helper()
+
 	if !(expected.Matches(actual.GetVerb(), actual.GetResource().Resource) && actual.GetSubresource() == expected.GetSubresource()) {
 		t.Errorf("Expected\n\t%#v\ngot\n\t%#v", expected, actual)
 		return

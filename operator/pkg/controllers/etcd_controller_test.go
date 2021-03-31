@@ -469,9 +469,9 @@ func podIsReady(pod *corev1.Pod) {
 }
 
 func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunner) {
-	ca, _ := c.CA(nil)
-	serverS, _ := c.ServerCertSecret(ca)
-	clientS, _ := c.ClientCertSecret(ca)
+	ca, _ := c.CA()
+	serverS, _ := c.ServerCertSecret()
+	clientS, _ := c.ClientCertSecret()
 	c.SetCASecret(ca)
 	c.SetServerCertSecret(serverS)
 	f.RegisterSecretFixture(ca)
