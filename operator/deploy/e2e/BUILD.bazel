@@ -8,10 +8,10 @@ kustomization(
     ],
 )
 
-load("//build/rules:manifest-finalizer.bzl", "finalize_manifest")
+load("//build/rules:tools.bzl", "cleanup_manifest")
 load("//:RELEASE.bzl", "VERSION")
 
-finalize_manifest(
+cleanup_manifest(
     name = "all-in-one",
     src = ":e2e",
     version = "e2e",

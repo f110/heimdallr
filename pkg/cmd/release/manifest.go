@@ -1,13 +1,13 @@
-package main
+package release
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,12 +26,12 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 
 		kind, err := detectKind(v)
 		if err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 		switch kind {
 		case "CustomResourceDefinition":
@@ -41,10 +41,12 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 		}
 
 		if err := e.Encode(v); err != nil {
-			return err
+			return xerrors.Errorf(": %w", err)
 		}
 	}
-	e.Close()
+	if err := e.Close(); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
 
 	return nil
 }
@@ -52,11 +54,11 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 func detectKind(v interface{}) (string, error) {
 	b, err := yaml.Marshal(v)
 	if err != nil {
-		return "", err
+		return "", xerrors.Errorf(": %w", err)
 	}
 	bc := &basic{}
 	if err := yaml.Unmarshal(b, bc); err != nil {
-		return "", err
+		return "", xerrors.Errorf(": %w", err)
 	}
 
 	if bc.Kind != "" {
@@ -88,24 +90,32 @@ func editDeployment(v map[interface{}]interface{}, version string) {
 	}
 }
 
-func main() {
-	var in, out, version string
-	pflag.CommandLine.StringVar(&in, "in", "", "Input file")
-	pflag.CommandLine.StringVar(&out, "out", "", "Output path")
-	pflag.CommandLine.StringVar(&version, "version", "", "Version string")
-	pflag.Parse()
-
-	reader, err := os.Open(in)
+func manifestCleaner(input, output, version string) error {
+	reader, err := os.Open(input)
 	if err != nil {
-		panic(err)
+		return xerrors.Errorf(": %w", err)
 	}
-	writer, err := os.Create(out)
+	writer, err := os.Create(output)
 	if err != nil {
-		panic(err)
+		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := finalizer(reader, writer, version); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	return finalizer(reader, writer, version)
+}
+
+func ManifestCleaner(rootCmd *cobra.Command) {
+	input := ""
+	output := ""
+	version := ""
+	cleaner := &cobra.Command{
+		Use: "manifest-cleaner",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return manifestCleaner(input, output, version)
+		},
 	}
+	cleaner.Flags().StringVar(&input, "input", "", "Input file")
+	cleaner.Flags().StringVar(&output, "output", "", "Output path")
+	cleaner.Flags().StringVar(&version, "version", "", "Version string")
+
+	rootCmd.AddCommand(cleaner)
 }

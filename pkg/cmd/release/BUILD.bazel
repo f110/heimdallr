@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "container.go",
         "github.go",
+        "manifest.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/release",
     visibility = ["//visibility:public"],
@@ -17,6 +18,7 @@ go_library(
         "//vendor/github.com/spf13/cobra",
         "//vendor/golang.org/x/oauth2",
         "//vendor/golang.org/x/xerrors",
+        "//vendor/gopkg.in/yaml.v2:yaml_v2",
     ],
 )
 
