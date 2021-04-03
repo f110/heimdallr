@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
 func TestIngressController(t *testing.T) {
@@ -38,98 +40,49 @@ func TestIngressController(t *testing.T) {
 
 func ingressControllerFixtures() (*networkingv1.IngressClass, *networkingv1.Ingress, *corev1.Service, *corev1.Service) {
 	// IngressClass is a cluster scope
-	ingClass := &networkingv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-			Labels: map[string]string{
-				"instance": "test",
-			},
-		},
-		Spec: networkingv1.IngressClassSpec{
-			Controller: ingressClassControllerName,
-		},
-	}
+	ingClass := k8sfactory.IngressClassFactory(nil,
+		k8sfactory.Name("test"),
+		k8sfactory.Label("instance", "test"),
+		k8sfactory.Controller(ingressClassControllerName),
+	)
 
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "api",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{
-				"k8s-app": "api",
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name: "http",
-					Port: 80,
-				},
-			},
-		},
-	}
+	svc := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name("api"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.ClusterIP,
+		k8sfactory.MatchLabelSelector(map[string]string{"k8s-app": "api"}),
+		k8sfactory.Port("http", corev1.ProtocolTCP, 80),
+	)
 
-	svcWeb := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "web",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{
-				"k8s-app": "web",
-			},
-			Ports: []corev1.ServicePort{
-				{Name: "http", Port: 80},
-			},
-		},
-	}
+	svcWeb := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name("web"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.ClusterIP,
+		k8sfactory.MatchLabelSelector(map[string]string{"k8s-app": "web"}),
+		k8sfactory.Port("http", corev1.ProtocolTCP, 80),
+	)
 
-	pt := networkingv1.PathTypeImplementationSpecific
-	ing := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: &ingClass.Name,
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: "test.f110.dev",
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Path:     "/api",
-									PathType: &pt,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: svc.Name,
-											Port: networkingv1.ServiceBackendPort{
-												Name: "http",
-											},
-										},
-									},
-								},
-								{
-									Path:     "/web",
-									PathType: &pt,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: svcWeb.Name,
-											Port: networkingv1.ServiceBackendPort{
-												Name: "http",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	ingRule := k8sfactory.IngressRuleFactory(nil,
+		k8sfactory.Host("test.f110.dev"),
+		k8sfactory.Path(
+			"/api",
+			networkingv1.PathTypeImplementationSpecific,
+			svc,
+			"http",
+		),
+		k8sfactory.Path(
+			"/web",
+			networkingv1.PathTypeImplementationSpecific,
+			svcWeb,
+			"http",
+		),
+	)
+	ing := k8sfactory.IngressFactory(nil,
+		k8sfactory.Name("test"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.IngressClass(ingClass),
+		k8sfactory.Rule(ingRule),
+	)
 
 	return ingClass, ing, svc, svcWeb
 }

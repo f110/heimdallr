@@ -6,11 +6,14 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 func Name(v string) Trait {
 	return func(object interface{}) {
-		m, ok := object.(metav1.Object)
+		m, ok := object.(interface {
+			SetName(string)
+		})
 		if ok {
 			m.SetName(v)
 			return
@@ -30,6 +33,22 @@ func Namespace(v string) Trait {
 			m.SetNamespace(v)
 			return
 		}
+	}
+}
+
+func UID() Trait {
+	return func(object interface{}) {
+		m, ok := object.(metav1.Object)
+		if ok {
+			m.SetUID(uuid.NewUUID())
+		}
+	}
+}
+
+func Created(object interface{}) {
+	m, ok := object.(metav1.Object)
+	if ok {
+		m.SetCreationTimestamp(metav1.Now())
 	}
 }
 

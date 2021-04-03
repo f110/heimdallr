@@ -17,7 +17,7 @@ func Factory(base *etcdv1alpha2.EtcdCluster, traits ...k8sfactory.Trait) *etcdv1
 	if base == nil {
 		e = &etcdv1alpha2.EtcdCluster{}
 	} else {
-		e = base
+		e = base.DeepCopy()
 	}
 	if e.GetObjectKind().GroupVersionKind().Kind == "" {
 		gvks, unversioned, err := scheme.Scheme.ObjectKinds(e)
@@ -110,6 +110,16 @@ func DisableAntiAffinity(object interface{}) {
 		return
 	}
 	e.Spec.AntiAffinity = false
+}
+
+func Phase(p etcdv1alpha2.EtcdClusterPhase) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+		e.Status.Phase = p
+	}
 }
 
 func Backup(interval, maxBackups int) k8sfactory.Trait {

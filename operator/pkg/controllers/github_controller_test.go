@@ -18,7 +18,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
 func TestGitHubController(t *testing.T) {
@@ -100,78 +102,56 @@ func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {
 	}
 }
 
-func githubControllerFixtures(t *testing.T, name string) (proxy *proxyv1alpha2.Proxy, backend *proxyv1alpha2.Backend, secret []*corev1.Secret) {
+func githubControllerFixtures(t *testing.T, name string) (*proxyv1alpha2.Proxy, *proxyv1alpha2.Backend, []*corev1.Secret) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 	buf := new(bytes.Buffer)
 	err = pem.Encode(buf, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
 	require.NoError(t, err)
 
-	p := &proxyv1alpha2.Proxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: proxyv1alpha2.ProxySpec{
-			Domain: "test-proxy.f110.dev",
-		},
-		Status: proxyv1alpha2.ProxyStatus{
-			GithubWebhookSecretName: "github-webhook-secret",
-		},
+	p := proxy.Factory(nil,
+		k8sfactory.Name("test"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		proxy.Domain("test-proxy.f110.dev"),
+	)
+	p.Status.GithubWebhookSecretName = "github-webhook-secret"
+
+	b := proxy.BackendFactory(nil,
+		k8sfactory.Name(name),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		proxy.Layer("test"),
+		proxy.Permission(proxy.PermissionFactory(nil,
+			proxy.Name("all"),
+			proxy.Location("Any", "/hook"),
+			proxy.Webhook("github"),
+			proxy.GitHubWebhookConfiguration(&proxyv1alpha2.GitHubHookConfiguration{
+				Path:                 "/hook",
+				ContentType:          "application/json",
+				Events:               []string{"push"},
+				CredentialSecretName: "github-secret",
+				Repositories:         []string{"f110/heimdallr"},
+				AppIdKey:             "appid",
+				InstallationIdKey:    "installationid",
+				PrivateKeyKey:        "privatekey",
+			}),
+		)),
+	)
+	b.Status.DeployedBy = []*proxyv1alpha2.ProxyReference{
+		{Name: p.Name, Namespace: metav1.NamespaceDefault, Url: fmt.Sprintf("https://test.test.%s", p.Spec.Domain)},
 	}
 
-	b := &proxyv1alpha2.Backend{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: proxyv1alpha2.BackendSpec{
-			Layer: "test",
-			Permissions: []proxyv1alpha2.Permission{
-				{
-					Name:      "webhook",
-					Locations: []proxyv1alpha2.Location{{Any: "/hook"}},
-					Webhook:   "github",
-					WebhookConfiguration: &proxyv1alpha2.WebhookConfiguration{
-						GitHub: &proxyv1alpha2.GitHubHookConfiguration{
-							Path:                 "/hook",
-							ContentType:          "application/json",
-							Events:               []string{"push"},
-							CredentialSecretName: "github-secret",
-							Repositories:         []string{"f110/heimdallr"},
-							AppIdKey:             "appid",
-							InstallationIdKey:    "installationid",
-							PrivateKeyKey:        "privatekey",
-						},
-					},
-				},
-			},
-		},
-		Status: proxyv1alpha2.BackendStatus{
-			DeployedBy: []*proxyv1alpha2.ProxyReference{
-				{Name: p.Name, Namespace: metav1.NamespaceDefault, Url: fmt.Sprintf("https://test.test.%s", p.Spec.Domain)},
-			},
-		},
-	}
-
-	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "github-secret",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Data: map[string][]byte{
-			"appid":          []byte("1"),
-			"installationid": []byte("2"),
-			"privatekey":     buf.Bytes(),
-		},
-	}
-	webhookSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "github-webhook-secret",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Data: map[string][]byte{githubWebhookSecretFilename: []byte("test")},
-	}
+	s := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name("github-secret"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Data("appid", []byte("1")),
+		k8sfactory.Data("installationid", []byte("2")),
+		k8sfactory.Data("privatekey", buf.Bytes()),
+	)
+	webhookSecret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name("github-webhook-secret"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Data(githubWebhookSecretFilename, []byte("test")),
+	)
 
 	return p, b, []*corev1.Secret{s, webhookSecret}
 }

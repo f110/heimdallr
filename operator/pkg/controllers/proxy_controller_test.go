@@ -10,159 +10,102 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
-func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alpha2.Backend, []*proxyv1alpha2.Role, []*proxyv1alpha2.RpcPermission, []*proxyv1alpha2.RoleBinding, []corev1.Service) {
-	proxy := &proxyv1alpha2.Proxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: metav1.NamespaceDefault,
-			UID:       uuid.NewUUID(),
-		},
-		Spec: proxyv1alpha2.ProxySpec{
-			Domain: "test-proxy.f110.dev",
-			DataStore: &proxyv1alpha2.ProxyDataStoreSpec{
-				Etcd: &proxyv1alpha2.ProxyDataStoreEtcdSpec{
-					Version: "v3.4.9",
-					Backup: &proxyv1alpha2.EtcdBackupSpec{
-						IntervalInSecond: 24 * 60,
-						MaxBackups:       5,
-						Storage: proxyv1alpha2.EtcdBackupStorageSpec{
-							MinIO: &proxyv1alpha2.EtcdBackupMinIOSpec{
-								ServiceSelector: proxyv1alpha2.ObjectSelector{
-									Name:      "minio",
-									Namespace: metav1.NamespaceDefault,
-								},
-								CredentialSelector: proxyv1alpha2.AWSCredentialSelector{
-									Name:               "minio-token",
-									Namespace:          metav1.NamespaceDefault,
-									AccessKeyIDKey:     "accesskey",
-									SecretAccessKeyKey: "secretkey",
-								},
-								Bucket: "test",
-								Path:   "backup-test",
-								Secure: false,
-							},
-						},
+func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alpha2.Backend, []*proxyv1alpha2.Role, []*proxyv1alpha2.RpcPermission, []*proxyv1alpha2.RoleBinding, []*corev1.Service) {
+	p := proxy.Factory(nil,
+		k8sfactory.Name(name),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.UID(),
+		proxy.Domain("test-proxy.f110.dev"),
+		proxy.EtcdDataStore,
+		proxy.EnableAntiAffinity,
+		proxy.EtcdBackup(24*60, 5),
+		proxy.EtcdBackupToMinIO(
+			"test",
+			"bucket-test",
+			false,
+			"minio",
+			metav1.NamespaceDefault,
+			proxyv1alpha2.AWSCredentialSelector{
+				Name:               "minio-token",
+				Namespace:          metav1.NamespaceDefault,
+				AccessKeyIDKey:     "accesskey",
+				SecretAccessKeyKey: "secretkey",
+			},
+		),
+		proxy.BackendMatchLabelSelector(metav1.NamespaceAll, map[string]string{"instance": "test"}),
+		proxy.RoleMatchLabelSelector(metav1.NamespaceAll, map[string]string{"instance": "test"}),
+		proxy.RpcPermissionMatchLabelSelector(metav1.NamespaceAll, map[string]string{"instance": "test"}),
+		proxy.CookieSession,
+		proxy.IdentityProvider("google", "client-id", "client-secret", "client-secret"),
+	)
+
+	clientSecret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name("client-secret"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Data("client-secret", []byte("hidden")),
+	)
+
+	backend := proxy.BackendFactory(nil,
+		k8sfactory.Name("test"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		k8sfactory.Label("instance", "test"),
+		proxy.Layer("test"),
+		proxy.HTTP([]*proxyv1alpha2.BackendHTTPSpec{
+			{
+				Path: "/",
+				ServiceSelector: &proxyv1alpha2.ServiceSelector{
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "test"},
 					},
 				},
 			},
-			BackendSelector: proxyv1alpha2.LabelSelector{
-				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"instance": "test"},
-				},
-			},
-			RoleSelector: proxyv1alpha2.LabelSelector{
-				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"instance": "test"},
-				},
-			},
-			RpcPermissionSelector: proxyv1alpha2.LabelSelector{
-				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"instance": "test"},
-				},
-			},
-			Session: proxyv1alpha2.SessionSpec{
-				Type: config.SessionTypeSecureCookie,
-			},
-			IdentityProvider: proxyv1alpha2.IdentityProviderSpec{
-				Provider: "google",
-				ClientSecretRef: proxyv1alpha2.SecretSelector{
-					Name: "client-secret",
-					Key:  "client-secret",
-				},
-			},
-		},
-	}
+		}),
+		proxy.Permission(proxy.PermissionFactory(nil,
+			proxy.Name("all"),
+			proxy.Location("Any", "/"),
+		)),
+	)
+	backends := []*proxyv1alpha2.Backend{backend}
 
-	clientSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-secret",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Data: map[string][]byte{"client-secret": []byte("hidden")},
-	}
-
-	backends := []*proxyv1alpha2.Backend{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test",
-				Namespace:         metav1.NamespaceDefault,
-				CreationTimestamp: metav1.Now(),
-				Labels:            map[string]string{"instance": "test"},
-			},
-			Spec: proxyv1alpha2.BackendSpec{
-				Layer: "test",
-				HTTP: []*proxyv1alpha2.BackendHTTPSpec{
-					{
-						Path: "/",
-						ServiceSelector: &proxyv1alpha2.ServiceSelector{
-							LabelSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{"app": "test"},
-							},
-						},
-					},
-				},
-				Permissions: []proxyv1alpha2.Permission{
-					{Name: "all", Locations: []proxyv1alpha2.Location{{Any: "/"}}},
-				},
-			},
-		},
-	}
-
-	roles := []*proxyv1alpha2.Role{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test",
-				Namespace:         metav1.NamespaceDefault,
-				CreationTimestamp: metav1.Now(),
-				Labels:            map[string]string{"instance": "test"},
-			},
-			Spec: proxyv1alpha2.RoleSpec{
-				Title:       "test",
-				Description: "for testing",
-			},
-		},
-	}
+	role := proxy.RoleFactory(nil,
+		k8sfactory.Name("test"),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		k8sfactory.Label("instance", "test"),
+		proxy.Title("test"),
+		proxy.Description("for testing"),
+	)
+	roles := []*proxyv1alpha2.Role{role}
 	rpcPermissions := []*proxyv1alpha2.RpcPermission{}
 	roleBindings := []*proxyv1alpha2.RoleBinding{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-test",
-				Namespace:         metav1.NamespaceDefault,
-				CreationTimestamp: metav1.Now(),
-			},
-			Subjects: []proxyv1alpha2.Subject{
-				{Kind: "Backend", Name: "test", Namespace: metav1.NamespaceDefault, Permission: "all"},
-			},
-			RoleRef: proxyv1alpha2.RoleRef{
-				Name:      "test",
-				Namespace: metav1.NamespaceDefault,
-			},
-		},
+		proxy.RoleBindingFactory(nil,
+			k8sfactory.Name("test-test"),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Created,
+			proxy.Role(role),
+			proxy.Subject(backend, "all"),
+		),
 	}
 
-	services := []corev1.Service{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-backend-svc",
-				Namespace: metav1.NamespaceDefault,
-				Labels:    map[string]string{"app": "test"},
-			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{Name: "http", Port: 80},
-				},
-			},
-		},
+	services := []*corev1.Service{
+		k8sfactory.ServiceFactory(nil,
+			k8sfactory.Name("test-backend-svc"),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Label("app", "test"),
+			k8sfactory.Port("http", corev1.ProtocolTCP, 80),
+		),
 	}
 
-	return proxy, clientSecret, backends, roles, rpcPermissions, roleBindings, services
+	return p, clientSecret, backends, roles, rpcPermissions, roleBindings, services
 }
 
 func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
@@ -195,7 +138,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
 			Clientset:      f.client,
 			ServiceLister:  f.c.serviceLister,
@@ -205,7 +148,7 @@ func TestProxyController(t *testing.T) {
 			RoleBindings:   roleBindings,
 		})
 
-		for _, v := range proxy.Secrets() {
+		for _, v := range hp.Secrets() {
 			_, err := v.Create()
 			if err != nil {
 				t.Fatal(err)
@@ -229,7 +172,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterSecretFixture(clientSecret)
 		f.RegisterBackendFixture(backends...)
 
-		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
 			Clientset:      f.client,
 			ServiceLister:  f.c.serviceLister,
@@ -238,12 +181,12 @@ func TestProxyController(t *testing.T) {
 			RpcPermissions: rpcPermissions,
 			RoleBindings:   roleBindings,
 		})
-		ec, _ := proxy.EtcdCluster()
+		ec, _ := hp.EtcdCluster()
 		ec = etcd.Factory(ec, etcd.Ready)
 		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range proxy.Secrets() {
+		for _, v := range hp.Secrets() {
 			s, err := v.Create()
-			proxy.ControlObject(s)
+			hp.ControlObject(s)
 
 			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
@@ -268,7 +211,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
 			Clientset:      f.client,
 			ServiceLister:  f.c.serviceLister,
@@ -277,9 +220,9 @@ func TestProxyController(t *testing.T) {
 			RpcPermissions: rpcPermissions,
 			RoleBindings:   roleBindings,
 		})
-		ec, _ := proxy.EtcdCluster()
+		ec, _ := hp.EtcdCluster()
 		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range proxy.Secrets() {
+		for _, v := range hp.Secrets() {
 			s, err := v.Create()
 			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
@@ -319,7 +262,7 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyRoleBindingFixture(roleBindings...)
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
 			Clientset:      f.client,
 			ServiceLister:  f.c.serviceLister,
@@ -328,10 +271,10 @@ func TestProxyController(t *testing.T) {
 			RpcPermissions: rpcPermissions,
 			RoleBindings:   roleBindings,
 		})
-		ec, _ := proxy.EtcdCluster()
+		ec, _ := hp.EtcdCluster()
 		ec = etcd.Factory(ec, etcd.Ready)
 		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range proxy.Secrets() {
+		for _, v := range hp.Secrets() {
 			s, err := v.Create()
 			if err != nil {
 				t.Fatal(err)
@@ -339,7 +282,7 @@ func TestProxyController(t *testing.T) {
 			f.RegisterSecretFixture(s)
 		}
 		f.RegisterProxyFixture(p)
-		f.RegisterFixtures(proxy.PrepareCompleted(ec)...)
+		f.RegisterFixtures(hp.PrepareCompleted(ec)...)
 
 		f.ExpectUpdateProxyStatus()
 		f.ExpectCreateDeployment()
@@ -352,7 +295,7 @@ func TestProxyController(t *testing.T) {
 
 		updatedP, err := f.client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(proxy.Namespace).Get(context.TODO(), proxy.ReverseProxyConfigName(), metav1.GetOptions{})
+		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(hp.Namespace).Get(context.TODO(), hp.ReverseProxyConfigName(), metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.NotEmpty(t, updatedP.Status.CASecretName)
@@ -391,11 +334,11 @@ func TestProxyController(t *testing.T) {
 		f.RegisterProxyRoleFixture(roles...)
 		f.RegisterProxyRoleBindingFixture(roleBindings...)
 		for _, s := range services {
-			f.RegisterServiceFixture(&s)
+			f.RegisterServiceFixture(s)
 		}
 		f.RegisterSecretFixture(clientSecret)
 
-		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
 			Clientset:      f.client,
 			ServiceLister:  f.c.serviceLister,
@@ -404,20 +347,20 @@ func TestProxyController(t *testing.T) {
 			RpcPermissions: rpcPermissions,
 			RoleBindings:   roleBindings,
 		})
-		ec, _ := proxy.EtcdCluster()
+		ec, _ := hp.EtcdCluster()
 		ec = etcd.Factory(ec, etcd.Ready)
-		f.RegisterFixtures(proxy.PrepareCompleted(ec)...)
-		proxy.Datastore = ec
+		f.RegisterFixtures(hp.PrepareCompleted(ec)...)
+		hp.Datastore = ec
 		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range proxy.Secrets() {
+		for _, v := range hp.Secrets() {
 			s, err := v.Create()
 			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
 		}
 		f.RegisterProxyFixture(p)
-		err := proxy.Init(f.coreSharedInformerFactory.Core().V1().Secrets().Lister())
+		err := hp.Init(f.coreSharedInformerFactory.Core().V1().Secrets().Lister())
 		require.NoError(t, err)
-		pcs, err := proxy.IdealRPCServer()
+		pcs, err := hp.IdealRPCServer()
 		require.NoError(t, err)
 		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
 		registerFixtureFromProcess(f, pcs)

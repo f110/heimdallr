@@ -29,7 +29,7 @@ func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {
 	return p
 }
 
-func PodIsReady(v interface{}) {
+func Ready(v interface{}) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
