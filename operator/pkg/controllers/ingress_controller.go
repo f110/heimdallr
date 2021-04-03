@@ -23,6 +23,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 	proxyListers "go.f110.dev/heimdallr/operator/pkg/listers/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
 const (
@@ -176,24 +177,15 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		}
 
 		backends = append(backends,
-			&proxyv1alpha2.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ingress.Name,
-					Namespace: ingress.Namespace,
-					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(ingress, networkingv1.SchemeGroupVersion.WithKind("Ingress")),
-					},
-					Annotations: map[string]string{
-						proxy.AnnotationKeyIngressName: fmt.Sprintf("%s/%s", ingress.Namespace, ingress.Name),
-					},
-					Labels: ingClass.Labels,
-				},
-				Spec: proxyv1alpha2.BackendSpec{
-					FQDN:         rule.Host,
-					DisableAuthn: true,
-					HTTP:         httpRouting,
-				},
-			},
+			proxy.BackendFactory(nil,
+				k8sfactory.Name(ingress.Name),
+				k8sfactory.Namespace(ingress.Namespace),
+				k8sfactory.Annotation(proxy.AnnotationKeyIngressName, fmt.Sprintf("%s/%s", ingress.Namespace, ingress.Name)),
+				k8sfactory.LabelMap(ingClass.Labels),
+				proxy.FQDN(rule.Host),
+				proxy.DisableAuthn,
+				proxy.HTTP(httpRouting),
+			),
 		)
 	}
 
