@@ -5,9 +5,32 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 
+	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
+
+func (r *HeimdallrProxy) PrepareCompleted(ec *etcdv1alpha2.EtcdCluster) []runtime.Object {
+	return []runtime.Object{
+		r.Certificate(),
+		k8sfactory.SecretFactory(nil,
+			k8sfactory.Name(ec.Status.ClientCertSecretName),
+			k8sfactory.Namespace(r.Namespace),
+			k8sfactory.Data("ca.crt", []byte("")),
+			k8sfactory.Data("client.crt", []byte("")),
+			k8sfactory.Data("client.key", []byte("")),
+		),
+		k8sfactory.SecretFactory(nil,
+			k8sfactory.Name(r.CertificateSecretName()),
+			k8sfactory.Namespace(r.Namespace),
+			k8sfactory.Data("ca.crt", []byte("")),
+			k8sfactory.Data("client.crt", []byte("")),
+			k8sfactory.Data("client.key", []byte("")),
+		),
+	}
+}
 
 func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 	t.Run("MinIO", func(t *testing.T) {

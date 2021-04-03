@@ -1,17 +1,18 @@
 package etcd
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
-type Trait func(e *etcdv1alpha2.EtcdCluster)
-
-func Factory(base *etcdv1alpha2.EtcdCluster, traits ...Trait) *etcdv1alpha2.EtcdCluster {
+func Factory(base *etcdv1alpha2.EtcdCluster, traits ...k8sfactory.Trait) *etcdv1alpha2.EtcdCluster {
 	var e *etcdv1alpha2.EtcdCluster
 	if base == nil {
 		e = &etcdv1alpha2.EtcdCluster{}
@@ -32,69 +33,139 @@ func Factory(base *etcdv1alpha2.EtcdCluster, traits ...Trait) *etcdv1alpha2.Etcd
 	return e
 }
 
-func Name(v string) Trait {
-	return func(e *etcdv1alpha2.EtcdCluster) {
-		e.SetName(v)
+func Ready(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
 	}
-}
 
-func Namespace(v string) Trait {
-	return func(e *etcdv1alpha2.EtcdCluster) {
-		e.SetNamespace(v)
-	}
-}
-
-func Ready(e *etcdv1alpha2.EtcdCluster) {
 	e.Status.Ready = true
 	now := metav1.Now()
 	e.Status.LastReadyTransitionTime = &now
+	e.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
+	e.Status.ClientCertSecretName = fmt.Sprintf("%s-client-cert", e.Name)
 }
 
-func CreatingCompleted(e *etcdv1alpha2.EtcdCluster) {
+func CreatingCompleted(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
+
 	e.Status.CreatingCompleted = true
 }
 
-func Version(v string) Trait {
-	return func(e *etcdv1alpha2.EtcdCluster) {
+func Member(v int) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+		e.Spec.Members = v
+	}
+}
+
+func Version(v string) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+
 		e.Spec.Version = v
 	}
 }
 
-func HighAvailability(e *etcdv1alpha2.EtcdCluster) {
+func DefragmentSchedule(v string) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+
+		e.Spec.DefragmentSchedule = v
+	}
+}
+
+func HighAvailability(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
 	e.Spec.Members = 3
 	e.Spec.AntiAffinity = true
 }
 
-func DisableAntiAffinity(e *etcdv1alpha2.EtcdCluster) {
+func EnableAntiAffinity(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
+	e.Spec.AntiAffinity = true
+}
+
+func DisableAntiAffinity(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
 	e.Spec.AntiAffinity = false
 }
 
-func BackupByMinIO(bucket, path string, svc *corev1.Service) Trait {
-	return func(e *etcdv1alpha2.EtcdCluster) {
+func Backup(interval, maxBackups int) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
 		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
-			IntervalInSecond: 60,
-			MaxBackups:       5,
-			Storage: etcdv1alpha2.BackupStorageSpec{
-				MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
-					Bucket: bucket,
-					Path:   path,
-					ServiceSelector: etcdv1alpha2.ObjectSelector{
-						Name:      svc.Name,
-						Namespace: svc.Namespace,
-					},
-					CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
-						Name:               "minio-token",
-						Namespace:          metav1.NamespaceDefault,
-						AccessKeyIDKey:     "accesskey",
-						SecretAccessKeyKey: "secretkey",
-					},
-				},
-			},
+			IntervalInSecond: interval,
+			MaxBackups:       maxBackups,
 		}
 	}
 }
 
-func PersistentData(e *etcdv1alpha2.EtcdCluster) {
+func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds etcdv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+
+		e.Spec.Backup.Storage.MinIO = &etcdv1alpha2.BackupStorageMinIOSpec{
+			Bucket: bucket,
+			Path:   path,
+			Secure: secure,
+			ServiceSelector: etcdv1alpha2.ObjectSelector{
+				Name:      svcName,
+				Namespace: svcNamespace,
+			},
+			CredentialSelector: creds,
+		}
+	}
+}
+
+func BackupToGCS(bucket, path string, creds etcdv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+
+		e.Spec.Backup.Storage.GCS = &etcdv1alpha2.BackupStorageGCSSpec{
+			Bucket:             bucket,
+			Path:               path,
+			CredentialSelector: creds,
+		}
+	}
+}
+
+func PersistentData(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
+
 	e.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},

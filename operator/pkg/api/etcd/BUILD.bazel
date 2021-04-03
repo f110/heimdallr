@@ -14,6 +14,7 @@ go_library(
         "//operator/pkg/api/etcd/v1alpha2",
         "//operator/pkg/client/versioned/scheme",
         "//operator/pkg/webhook",
+        "//pkg/k8s/k8sfactory",
         "//pkg/logger",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",

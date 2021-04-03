@@ -23,6 +23,7 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
@@ -50,10 +51,10 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 			Name: "self-signed",
 		},
 	},
-}, proxy.Namespace(metav1.NamespaceDefault), proxy.EtcdDataStore, proxy.CookieSession)
+}, k8sfactory.Namespace(metav1.NamespaceDefault), proxy.EtcdDataStore, proxy.CookieSession)
 
 var EtcdClusterBase = etcd.Factory(nil,
-	etcd.Namespace(metav1.NamespaceDefault),
+	k8sfactory.Namespace(metav1.NamespaceDefault),
 	etcd.Version("v3.4.3"),
 	etcd.HighAvailability,
 )
@@ -164,7 +165,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	m.NoError(err)
 
 	proxySpec := proxy.Factory(ProxyBase,
-		proxy.Name("e2e"),
+		k8sfactory.Name("e2e"),
 		proxy.ClientSecret("e2e-client-secret", "client-secret"),
 		proxy.RootUsers([]string{testUserId}),
 		proxy.Version(Config.ProxyVersion),
@@ -313,7 +314,7 @@ type EtcdClusters struct {
 	clusters map[string]*etcdv1alpha2.EtcdCluster
 }
 
-func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...etcd.Trait) bool {
+func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...k8sfactory.Trait) bool {
 	etcdCluster := etcd.Factory(EtcdClusterBase, traits...)
 	_, err := e.client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
 	m.Must(err)

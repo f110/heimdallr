@@ -31,6 +31,25 @@ func (s *VolumeSource) PathJoin(elem ...string) string {
 	return filepath.Join(append([]string{s.Mount.MountPath}, elem...)...)
 }
 
+func NewConfigMapVolumeSource(name, path, configMapName string) *VolumeSource {
+	return &VolumeSource{
+		Mount: corev1.VolumeMount{
+			Name:      name,
+			MountPath: path,
+		},
+		Source: corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapName,
+					},
+				},
+			},
+		},
+	}
+}
+
 func NewSecretVolumeSource(name, path string, source *corev1.Secret, items ...corev1.KeyToPath) *VolumeSource {
 	return &VolumeSource{
 		Mount: corev1.VolumeMount{

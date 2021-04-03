@@ -36,10 +36,12 @@ import (
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/operator/pkg/client/versioned/scheme"
 	"go.f110.dev/heimdallr/operator/pkg/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
+	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/netutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
@@ -104,16 +106,19 @@ type process struct {
 }
 
 type HeimdallrProxy struct {
-	Name                string
-	Namespace           string
-	Object              *proxyv1alpha2.Proxy
-	Spec                proxyv1alpha2.ProxySpec
-	Datastore           *etcdv1alpha2.EtcdCluster
-	CASecret            *corev1.Secret
-	SigningPrivateKey   *corev1.Secret
-	GithubWebhookSecret *corev1.Secret
-	CookieSecret        *corev1.Secret
-	InternalTokenSecret *corev1.Secret
+	Name                      string
+	Namespace                 string
+	Object                    *proxyv1alpha2.Proxy
+	Spec                      proxyv1alpha2.ProxySpec
+	Datastore                 *etcdv1alpha2.EtcdCluster
+	CASecret                  *corev1.Secret
+	SigningPrivateKey         *corev1.Secret
+	GithubWebhookSecret       *corev1.Secret
+	CookieSecret              *corev1.Secret
+	InternalTokenSecret       *corev1.Secret
+	ServerCertSecret          *corev1.Secret
+	IdentityProviderSecret    *corev1.Secret
+	DatastoreClientCertSecret *corev1.Secret
 
 	RPCServer       *process
 	ProxyServer     *process
@@ -234,6 +239,45 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	}
 
 	return r
+}
+
+func (r *HeimdallrProxy) Init(secretLister listers.SecretLister) error {
+	caSecret, err := secretLister.Secrets(r.Namespace).Get(r.CASecretName())
+	if err == nil {
+		r.CASecret = caSecret
+	}
+	privateKeySecret, err := secretLister.Secrets(r.Namespace).Get(r.PrivateKeySecretName())
+	if err == nil {
+		r.SigningPrivateKey = privateKeySecret
+	}
+	githubSecret, err := secretLister.Secrets(r.Namespace).Get(r.GithubSecretName())
+	if err == nil {
+		r.GithubWebhookSecret = githubSecret
+	}
+	cookieSecret, err := secretLister.Secrets(r.Namespace).Get(r.CookieSecretName())
+	if err == nil {
+		r.CookieSecret = cookieSecret
+	}
+	internalTokenSecret, err := secretLister.Secrets(r.Namespace).Get(r.InternalTokenSecretName())
+	if err == nil {
+		r.InternalTokenSecret = internalTokenSecret
+	}
+	serverCertSecret, err := secretLister.Secrets(r.Namespace).Get(r.CertificateSecretName())
+	if err == nil {
+		r.ServerCertSecret = serverCertSecret
+	}
+	idpSecret, err := secretLister.Secrets(r.Namespace).Get(r.Spec.IdentityProvider.ClientSecretRef.Name)
+	if err == nil {
+		r.IdentityProviderSecret = idpSecret
+	}
+	if r.Datastore != nil && r.Datastore.Status.ClientCertSecretName != "" {
+		datastoreClientCertSecret, err := secretLister.Secrets(r.Namespace).Get(r.Datastore.Status.ClientCertSecretName)
+		if err == nil {
+			r.DatastoreClientCertSecret = datastoreClientCertSecret
+		}
+	}
+
+	return nil
 }
 
 func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
@@ -414,7 +458,7 @@ func (r *HeimdallrProxy) Certificate() runtime.Object {
 				DNSNames:   domains,
 			},
 		}
-	case "v1":
+	default: // v1
 		return &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
 			Spec: certmanagerv1.CertificateSpec{
@@ -440,54 +484,51 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 		etcdVersion = r.Spec.DataStore.Etcd.Version
 	}
 
-	ec := &etcdv1alpha2.EtcdCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.EtcdClusterName(),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
-			},
-		},
-		Spec: etcdv1alpha2.EtcdClusterSpec{
-			Members: 3,
-			Version: etcdVersion,
-		},
-	}
+	ec := etcd.Factory(nil,
+		k8sfactory.Name(r.EtcdClusterName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		etcd.Member(3),
+		etcd.Version(etcdVersion),
+	)
 	if r.Spec.DataStore != nil && r.Spec.DataStore.Etcd != nil {
-		ec.Spec.DefragmentSchedule = r.Spec.DataStore.Etcd.Defragment.Schedule
-		ec.Spec.AntiAffinity = r.Spec.AntiAffinity || r.Spec.DataStore.Etcd.AntiAffinity
-	}
-	if r.Spec.DataStore.Etcd != nil && r.Spec.DataStore.Etcd.Backup != nil {
-		ec.Spec.Backup = &etcdv1alpha2.BackupSpec{
-			IntervalInSecond: r.Spec.DataStore.Etcd.Backup.IntervalInSecond,
-			MaxBackups:       r.Spec.DataStore.Etcd.Backup.MaxBackups,
+		ec = etcd.Factory(ec, etcd.DefragmentSchedule(r.Spec.DataStore.Etcd.Defragment.Schedule))
+		if r.Spec.AntiAffinity {
+			ec = etcd.Factory(ec, etcd.EnableAntiAffinity)
 		}
-		switch {
-		case r.Spec.DataStore.Etcd.Backup.Storage.MinIO != nil:
-			ec.Spec.Backup.Storage.MinIO = &etcdv1alpha2.BackupStorageMinIOSpec{
-				ServiceSelector: etcdv1alpha2.ObjectSelector{
-					Name:      r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name,
-					Namespace: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace,
-				},
-				CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
-					Name:               r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name,
-					Namespace:          r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace,
-					AccessKeyIDKey:     r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey,
-					SecretAccessKeyKey: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey,
-				},
-				Bucket: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket,
-				Path:   r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path,
-				Secure: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure,
-			}
-		case r.Spec.DataStore.Etcd.Backup.Storage.GCS != nil:
-			ec.Spec.Backup.Storage.GCS = &etcdv1alpha2.BackupStorageGCSSpec{
-				Bucket: r.Spec.DataStore.Etcd.Backup.Storage.GCS.Bucket,
-				Path:   r.Spec.DataStore.Etcd.Backup.Storage.GCS.Path,
-				CredentialSelector: etcdv1alpha2.GCPCredentialSelector{
-					Name:                  r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Name,
-					Namespace:             r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Namespace,
-					ServiceAccountJSONKey: r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey,
-				},
+
+		if r.Spec.DataStore.Etcd.Backup != nil {
+			ec = etcd.Factory(ec, etcd.Backup(r.Spec.DataStore.Etcd.Backup.IntervalInSecond, r.Spec.DataStore.Etcd.Backup.MaxBackups))
+
+			switch {
+			case r.Spec.DataStore.Etcd.Backup.Storage.MinIO != nil:
+				ec = etcd.Factory(ec,
+					etcd.BackupToMinIO(
+						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket,
+						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path,
+						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure,
+						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name,
+						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace,
+						etcdv1alpha2.AWSCredentialSelector{
+							Name:               r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name,
+							Namespace:          r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace,
+							AccessKeyIDKey:     r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey,
+							SecretAccessKeyKey: r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey,
+						},
+					),
+				)
+			case r.Spec.DataStore.Etcd.Backup.Storage.GCS != nil:
+				ec = etcd.Factory(ec,
+					etcd.BackupToGCS(
+						r.Spec.DataStore.Etcd.Backup.Storage.GCS.Bucket,
+						r.Spec.DataStore.Etcd.Backup.Storage.GCS.Path,
+						etcdv1alpha2.GCPCredentialSelector{
+							Name:                  r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Name,
+							Namespace:             r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Namespace,
+							ServiceAccountJSONKey: r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey,
+						},
+					),
+				)
 			}
 		}
 	}
@@ -606,16 +647,12 @@ func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.CASecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: map[string][]byte{
-			caPrivateKeyFilename:  privKeyBuf.Bytes(),
-			caCertificateFilename: certBuf.Bytes(),
-		},
-	}
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(r.CASecretName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(caPrivateKeyFilename, privKeyBuf.Bytes()),
+		k8sfactory.Data(caCertificateFilename, certBuf.Bytes()),
+	)
 
 	r.CASecret = secret
 	return secret, nil
@@ -635,15 +672,11 @@ func (r *HeimdallrProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.PrivateKeySecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: map[string][]byte{
-			privateKeyFilename: buf.Bytes(),
-		},
-	}
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(r.PrivateKeySecretName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(privateKeyFilename, buf.Bytes()),
+	)
 
 	r.SigningPrivateKey = secret
 	return secret, nil
@@ -655,15 +688,11 @@ func (r *HeimdallrProxy) NewGithubSecret() (*corev1.Secret, error) {
 		b[i] = letters[mrand.Intn(len(letters))]
 	}
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.GithubSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: map[string][]byte{
-			githubWebhookSecretFilename: b,
-		},
-	}
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(r.GithubSecretName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(githubWebhookSecretFilename, b),
+	)
 
 	r.GithubWebhookSecret = secret
 	return secret, nil
@@ -683,15 +712,11 @@ func (r *HeimdallrProxy) NewCookieSecret() (*corev1.Secret, error) {
 	buf.WriteRune('\n')
 	buf.Write(blockKey)
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.CookieSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: map[string][]byte{
-			cookieSecretFilename: buf.Bytes(),
-		},
-	}
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(r.CookieSecretName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(cookieSecretFilename, buf.Bytes()),
+	)
 
 	r.CookieSecret = secret
 	return secret, nil
@@ -702,15 +727,11 @@ func (r *HeimdallrProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 	for i := range b {
 		b[i] = letters[mrand.Intn(len(letters))]
 	}
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.InternalTokenSecretName(),
-			Namespace: r.Namespace,
-		},
-		Data: map[string][]byte{
-			internalTokenFilename: b,
-		},
-	}
+	secret := k8sfactory.SecretFactory(nil,
+		k8sfactory.Name(r.InternalTokenSecretName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(internalTokenFilename, b),
+	)
 
 	r.InternalTokenSecret = secret
 	return secret, nil
@@ -802,14 +823,11 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ConfigNameForMain(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string]string),
-	}
-	configMap.Data[configFilename] = string(b)
+	configMap := k8sfactory.ConfigMapFactory(nil,
+		k8sfactory.Name(r.ConfigNameForMain()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(configFilename, b),
+	)
 
 	return configMap, nil
 }
@@ -850,14 +868,11 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ConfigNameForDashboard(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string]string),
-	}
-	configMap.Data[configFilename] = string(b)
+	configMap := k8sfactory.ConfigMapFactory(nil,
+		k8sfactory.Name(r.ConfigNameForDashboard()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(configFilename, b),
+	)
 
 	return configMap, nil
 }
@@ -935,14 +950,11 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ConfigNameForRPCServer(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string]string),
-	}
-	configMap.Data[configFilename] = string(b)
+	configMap := k8sfactory.ConfigMapFactory(nil,
+		k8sfactory.Name(r.ConfigNameForRPCServer()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(configFilename, b),
+	)
 
 	return configMap, nil
 }
@@ -995,16 +1007,13 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ReverseProxyConfigName(),
-			Namespace: r.Namespace,
-		},
-		Data: make(map[string]string),
-	}
-	configMap.Data[roleFilename] = string(roleBinary)
-	configMap.Data[proxyFilename] = string(proxyBinary)
-	configMap.Data[rpcPermissionFilename] = string(rpcPermissionBinary)
+	configMap := k8sfactory.ConfigMapFactory(nil,
+		k8sfactory.Name(r.ReverseProxyConfigName()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Data(roleFilename, roleBinary),
+		k8sfactory.Data(proxyFilename, proxyBinary),
+		k8sfactory.Data(rpcPermissionFilename, rpcPermissionBinary),
+	)
 
 	r.Object.Status.NumOfBackends = len(r.Backends())
 	r.Object.Status.NumOfRoles = len(r.Roles())
@@ -1036,269 +1045,129 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	if r.Spec.ProxyResources != nil {
 		resources = *r.Spec.ProxyResources
 	}
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.DeploymentNameForMain(),
-			Namespace: r.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &r.Spec.Replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForMain(),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: r.LabelsForMain(),
-					Annotations: map[string]string{
-						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:            "proxy",
-							Image:           fmt.Sprintf("%s:%s", ProxyImageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{defaultCommand},
-							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTP,
-										Path:   "/readiness",
-										Port:   intstr.FromInt(internalApiPort),
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTP,
-										Path:   "/liveness",
-										Port:   intstr.FromInt(internalApiPort),
-									},
-								},
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name: netutil.IPAddressEnvKey,
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
-									},
-								},
-								{
-									Name: netutil.NamespaceEnvKey,
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-							},
-							Ports: []corev1.ContainerPort{
-								{Name: "https", Protocol: corev1.ProtocolTCP, ContainerPort: proxyPort},
-								{Name: "internal", Protocol: corev1.ProtocolTCP, ContainerPort: internalApiPort},
-							},
-							Resources: resources,
-							VolumeMounts: []corev1.VolumeMount{
-								{Name: "server-cert", MountPath: serverCertMountPath, ReadOnly: true},
-								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
-								{Name: "signing-priv-key", MountPath: signPrivateKeyPath, ReadOnly: true},
-								{Name: "github-secret", MountPath: githubSecretPath, ReadOnly: true},
-								{Name: "cookie-secret", MountPath: sessionSecretPath, ReadOnly: true},
-								{Name: "config", MountPath: configMountPath, ReadOnly: true},
-								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
-								{Name: "idp-secret", MountPath: identityProviderSecretPath, ReadOnly: true},
-								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
-								{Name: "datastore-client-cert", MountPath: datastoreCertMountPath, ReadOnly: true},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "server-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.CertificateSecretName(),
-								},
-							},
-						},
-						{
-							Name: "ca-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.CASecretName(),
-									Items: []corev1.KeyToPath{
-										{Key: caCertificateFilename, Path: caCertificateFilename},
-									},
-								},
-							},
-						},
-						{
-							Name: "signing-priv-key",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.PrivateKeySecretName(),
-								},
-							},
-						},
-						{
-							Name: "github-secret",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.GithubSecretName(),
-								},
-							},
-						},
-						{
-							Name: "cookie-secret",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.CookieSecretName(),
-								},
-							},
-						},
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: r.ConfigNameForMain(),
-									},
-								},
-							},
-						},
-						{
-							Name: "config-proxy",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: r.ReverseProxyConfigName(),
-									},
-								},
-							},
-						},
-						{
-							Name: "idp-secret",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.Spec.IdentityProvider.ClientSecretRef.Name,
-								},
-							},
-						},
-						{
-							Name: "internal-token",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.InternalTokenSecretName(),
-								},
-							},
-						},
-						{
-							Name: "datastore-client-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.Datastore.Status.ClientCertSecretName,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+
+	caVolume := k8sfactory.NewSecretVolumeSource(
+		"ca-cert",
+		caCertMountPath,
+		r.CASecret,
+		corev1.KeyToPath{Key: caCertificateFilename, Path: caCertificateFilename},
+	)
+	serverCertVolume := k8sfactory.NewSecretVolumeSource("server-cert", serverCertMountPath, r.ServerCertSecret)
+	signingPrivateKeyVolume := k8sfactory.NewSecretVolumeSource("signing-priv-key", signPrivateKeyPath, r.SigningPrivateKey)
+	githubSecretVolume := k8sfactory.NewSecretVolumeSource("github-secret", githubSecretPath, r.GithubWebhookSecret)
+	cookieSecretVolume := k8sfactory.NewSecretVolumeSource("cookie-secret", sessionSecretPath, r.CookieSecret)
+	configVolume := k8sfactory.NewConfigMapVolumeSource("config", configMountPath, r.ConfigNameForMain())
+	configProxyVolume := k8sfactory.NewConfigMapVolumeSource("config-proxy", proxyConfigMountPath, r.ReverseProxyConfigName())
+	idpSecretVolume := k8sfactory.NewSecretVolumeSource("idp-secret", identityProviderSecretPath, r.IdentityProviderSecret)
+	internalTokenVolume := k8sfactory.NewSecretVolumeSource("internal-token", internalTokenMountPath, r.InternalTokenSecret)
+	datastoreClientCertVolume := k8sfactory.NewSecretVolumeSource("datastore-client-cert", datastoreCertMountPath, r.DatastoreClientCertSecret)
+	proxyContainer := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("proxy"),
+		k8sfactory.Image(fmt.Sprintf("%s:%s", ProxyImageRepository, r.Version()), []string{defaultCommand}),
+		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
+		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(internalApiPort, "/readiness")),
+		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(internalApiPort, "/liveness")),
+		k8sfactory.EnvFromField(netutil.IPAddressEnvKey, "status.podIP"),
+		k8sfactory.EnvFromField(netutil.NamespaceEnvKey, "metadata.namespace"),
+		k8sfactory.Port("https", corev1.ProtocolTCP, proxyPort),
+		k8sfactory.Port("internal", corev1.ProtocolTCP, internalApiPort),
+		k8sfactory.Requests(resources.Requests),
+		k8sfactory.Limits(resources.Limits),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(serverCertVolume),
+		k8sfactory.Volume(signingPrivateKeyVolume),
+		k8sfactory.Volume(githubSecretVolume),
+		k8sfactory.Volume(cookieSecretVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(configProxyVolume),
+		k8sfactory.Volume(idpSecretVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(datastoreClientCertVolume),
+	)
+	pod := k8sfactory.PodFactory(nil,
+		k8sfactory.LabelMap(r.LabelsForMain()),
+		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
+		k8sfactory.Container(proxyContainer),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(serverCertVolume),
+		k8sfactory.Volume(signingPrivateKeyVolume),
+		k8sfactory.Volume(githubSecretVolume),
+		k8sfactory.Volume(cookieSecretVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(configProxyVolume),
+		k8sfactory.Volume(idpSecretVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(datastoreClientCertVolume),
+	)
+	if r.Spec.HttpPort != 0 {
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.Port("http", corev1.ProtocolTCP, proxyHttpPort),
+		)
 	}
 	if r.Spec.AntiAffinity {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						Weight: 100,
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							TopologyKey: "kubernetes.io/hostname",
-							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: r.LabelsForMain(),
-							},
-						},
-					},
-				},
-			},
-		}
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.PreferredInterPodAntiAffinity(
+				100,
+				k8sfactory.MatchLabel(r.LabelsForMain()),
+				"kubernetes.io/hostname",
+			),
+		)
 	}
+	deployment := k8sfactory.DeploymentFactory(nil,
+		k8sfactory.Name(r.DeploymentNameForMain()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.Replicas(r.Spec.Replicas),
+		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
+		k8sfactory.Pod(pod),
+	)
 
-	minAvailable := intstr.FromInt(int(r.Spec.Replicas / 2))
-	pdb := &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.PodDisruptionBudgetNameForMain(),
-			Namespace: r.Namespace,
-		},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForMain(),
-			},
-			MinAvailable: &minAvailable,
-		},
-	}
+	pdb := k8sfactory.PodDisruptionBudgetFactory(nil,
+		k8sfactory.Name(r.PodDisruptionBudgetNameForMain()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.MinAvailable(int(r.Spec.Replicas/2)),
+		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
+	)
 
 	var port int32 = 443
 	if r.Spec.Port != 0 {
 		port = r.Spec.Port
 	}
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ServiceNameForMain(),
-			Namespace: r.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:           corev1.ServiceTypeLoadBalancer,
-			Selector:       r.LabelsForMain(),
-			LoadBalancerIP: r.Spec.LoadBalancerIP,
-			Ports: []corev1.ServicePort{
-				tcpServicePort("https", int(port), proxyPort),
-			},
-			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
-		},
-	}
+	svc := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(r.ServiceNameForMain()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.LoadBalancer,
+		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
+		k8sfactory.TargetPort("https", corev1.ProtocolTCP, port, intstr.FromInt(proxyPort)),
+		k8sfactory.TrafficPolicyLocal,
+	)
 	if r.Spec.HttpPort != 0 {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:       "http",
-			Port:       r.Spec.HttpPort,
-			TargetPort: intstr.FromInt(proxyHttpPort),
-		})
-		deployment.Spec.Template.Spec.Containers[0].Ports = append(
-			deployment.Spec.Template.Spec.Containers[0].Ports,
-			corev1.ContainerPort{Name: "http", Protocol: corev1.ProtocolTCP, ContainerPort: proxyHttpPort},
+		svc = k8sfactory.ServiceFactory(svc,
+			k8sfactory.Port("http", corev1.ProtocolTCP, r.Spec.HttpPort),
 		)
 	}
 
-	internalApiSvc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ServiceNameForInternalApi(),
-			Namespace: r.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: r.LabelsForMain(),
-			Ports: []corev1.ServicePort{
-				tcpServicePort("http", internalApiPort, internalApiPort),
-			},
-		},
-	}
+	internalApiSvc := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(r.ServiceNameForInternalApi()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.ClusterIP,
+		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
+		k8sfactory.Port("http", corev1.ProtocolTCP, internalApiPort),
+	)
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	serverCert := r.Certificate()
-
 	return &process{
 		Deployment:          deployment,
 		PodDisruptionBudget: pdb,
 		Service:             []*corev1.Service{svc, internalApiSvc},
 		ConfigMaps:          []*corev1.ConfigMap{conf, reverseProxyConf},
-		Certificate:         serverCert,
 	}, nil
 }
 
@@ -1307,55 +1176,18 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	volumes := []corev1.Volume{
-		{
-			Name: "config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: r.ConfigNameForDashboard(),
-					},
-				},
-			},
-		},
-		{
-			Name: "internal-token",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: r.InternalTokenSecretName(),
-				},
-			},
-		},
-		{
-			Name: "ca-cert",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: r.CASecretName(),
-					Items: []corev1.KeyToPath{
-						{Key: caCertificateFilename, Path: caCertificateFilename},
-					},
-				},
-			},
-		},
-	}
-	volumeMounts := []corev1.VolumeMount{
-		{Name: "config", MountPath: configMountPath},
-		{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
-		{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
-	}
+	caVolume := k8sfactory.NewSecretVolumeSource(
+		"ca-cert",
+		caCertMountPath,
+		r.CASecret,
+		corev1.KeyToPath{Key: caCertificateFilename, Path: caCertificateFilename},
+	)
+	configVolume := k8sfactory.NewConfigMapVolumeSource("config", configMountPath, r.ConfigNameForDashboard())
+	internalTokenVolume := k8sfactory.NewSecretVolumeSource("internal-token", internalTokenMountPath, r.InternalTokenSecret)
 
+	var privateKeyVolume *k8sfactory.VolumeSource
 	if r.selfSignedIssuer {
-		volumes = append(volumes, corev1.Volume{
-			Name: "privatekey",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: r.PrivateKeySecretName(),
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
-		)
+		privateKeyVolume = k8sfactory.NewSecretVolumeSource("privatekey", signPrivateKeyPath, r.SigningPrivateKey)
 	}
 
 	conf, err := r.ConfigForDashboard()
@@ -1364,117 +1196,71 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
+	dashboardContainer := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("dashboard"),
+		k8sfactory.Image(fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()), []string{dashboardCommand}),
+		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
+		k8sfactory.PullPolicy(corev1.PullIfNotPresent),
+		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(dashboardPort, "/liveness")),
+		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(dashboardPort, "/readiness")),
+		k8sfactory.Requests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}),
+		k8sfactory.Limits(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		}),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(privateKeyVolume),
+	)
+	pod := k8sfactory.PodFactory(nil,
+		k8sfactory.LabelMap(r.LabelsForDashboard()),
+		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
+		k8sfactory.Container(dashboardContainer),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(privateKeyVolume),
+	)
+	if r.Spec.AntiAffinity {
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.PreferredInterPodAntiAffinity(
+				100,
+				k8sfactory.MatchLabel(r.LabelsForDashboard()),
+				"kubernetes.io/hostname",
+			),
+		)
+	}
 	replicas := r.Spec.DashboardReplicas
 	if replicas == 0 {
 		replicas = 3 // This is default value of DashboardReplicas.
 	}
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.DeploymentNameForDashboard(),
-			Namespace: r.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForDashboard(),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: r.LabelsForDashboard(),
-					Annotations: map[string]string{
-						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:            "dashboard",
-							Image:           fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{dashboardCommand},
-							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readiness",
-										Port: intstr.FromInt(dashboardPort),
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/liveness",
-										Port: intstr.FromInt(dashboardPort),
-									},
-								},
-							},
-							Ports: []corev1.ContainerPort{
-								{Name: "http", Protocol: corev1.ProtocolTCP, ContainerPort: dashboardPort},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-							},
-							VolumeMounts: volumeMounts,
-						},
-					},
-					Volumes: volumes,
-				},
-			},
-		},
-	}
-	if r.Spec.AntiAffinity {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						Weight: 100,
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							TopologyKey: "kubernetes.io/hostname",
-							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: r.LabelsForDashboard(),
-							},
-						},
-					},
-				},
-			},
-		}
-	}
+	deployment := k8sfactory.DeploymentFactory(nil,
+		k8sfactory.Name(r.DeploymentNameForDashboard()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.Replicas(replicas),
+		k8sfactory.MatchLabelSelector(r.LabelsForDashboard()),
+		k8sfactory.Pod(pod),
+	)
 
-	minAvailable := intstr.FromInt(int(replicas / 2))
-	pdb := &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.PodDisruptionBudgetNameForDashboard(),
-			Namespace: r.Namespace,
-		},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForDashboard(),
-			},
-			MinAvailable: &minAvailable,
-		},
-	}
+	pdb := k8sfactory.PodDisruptionBudgetFactory(nil,
+		k8sfactory.Name(r.PodDisruptionBudgetNameForDashboard()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.MatchLabelSelector(r.LabelsForDashboard()),
+		k8sfactory.MinAvailable(int(replicas/2)),
+	)
 
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ServiceNameForDashboard(),
-			Namespace: r.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: r.LabelsForDashboard(),
-			Type:     corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				tcpServicePort("http", dashboardPort, dashboardPort),
-			},
-		},
-	}
+	svc := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(r.ServiceNameForDashboard()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.MatchLabelSelector(r.LabelsForDashboard()),
+		k8sfactory.ClusterIP,
+		k8sfactory.Port("http", corev1.ProtocolTCP, dashboardPort),
+	)
 
 	return &process{
 		Deployment:          deployment,
@@ -1495,6 +1281,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
+	caVolume := k8sfactory.NewSecretVolumeSource("ca-cert", caCertMountPath, r.CASecret)
+	signingPrivateKeyVolume := k8sfactory.NewSecretVolumeSource("signing-priv-key", signPrivateKeyPath, r.SigningPrivateKey)
+	configVolume := k8sfactory.NewConfigMapVolumeSource("config", configMountPath, r.ConfigNameForRPCServer())
+	configProxyVolume := k8sfactory.NewConfigMapVolumeSource("config-proxy", proxyConfigMountPath, r.ReverseProxyConfigName())
+	internalTokenVolume := k8sfactory.NewSecretVolumeSource("internal-token", internalTokenMountPath, r.InternalTokenSecret)
+	datastoreClientCertVolume := k8sfactory.NewSecretVolumeSource("datastore-client-cert", datastoreCertMountPath, r.DatastoreClientCertSecret)
+
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -1508,171 +1301,77 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	if r.Spec.RPCServerResources != nil {
 		resources = *r.Spec.RPCServerResources
 	}
+	rpcServerContainer := k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("rpcserver"),
+		k8sfactory.Image(fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()), []string{rpcServerCommand}),
+		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
+		k8sfactory.LivenessProbe(k8sfactory.ExecProbe(
+			"/usr/local/bin/grpc_health_probe",
+			fmt.Sprintf("-addr=:%d", rpcServerPort),
+			"-tls",
+			fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
+			fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
+		)),
+		k8sfactory.ReadinessProbe(k8sfactory.ExecProbe(
+			"/usr/local/bin/grpc_health_probe",
+			fmt.Sprintf("-addr=:%d", rpcServerPort),
+			"-tls",
+			fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
+			fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
+		)),
+		k8sfactory.Port("https", corev1.ProtocolTCP, rpcServerPort),
+		k8sfactory.Port("metrics", corev1.ProtocolTCP, rpcMetricsServerPort),
+		k8sfactory.Requests(resources.Requests),
+		k8sfactory.Limits(resources.Limits),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(signingPrivateKeyVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(configProxyVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(datastoreClientCertVolume),
+	)
+	pod := k8sfactory.PodFactory(nil,
+		k8sfactory.LabelMap(r.LabelsForRPCServer()),
+		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
+		k8sfactory.Container(rpcServerContainer),
+		k8sfactory.Volume(caVolume),
+		k8sfactory.Volume(signingPrivateKeyVolume),
+		k8sfactory.Volume(configVolume),
+		k8sfactory.Volume(configProxyVolume),
+		k8sfactory.Volume(internalTokenVolume),
+		k8sfactory.Volume(datastoreClientCertVolume),
+	)
+	if r.Spec.AntiAffinity {
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.PreferredInterPodAntiAffinity(
+				100,
+				k8sfactory.MatchLabel(r.LabelsForRPCServer()),
+				"kubernetes.io/hostname",
+			),
+		)
+	}
 	var replicas int32 = 2
 	if r.Spec.RPCReplicas > 0 {
 		replicas = r.Spec.RPCReplicas
 	}
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.DeploymentNameForRPCServer(),
-			Namespace: r.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForRPCServer(),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: r.LabelsForRPCServer(),
-					Annotations: map[string]string{
-						fmt.Sprintf("checksum/%s", configFilename): hex.EncodeToString(confHash[:]),
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:            "rpcserver",
-							Image:           fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{rpcServerCommand},
-							Args:            []string{"-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"/usr/local/bin/grpc_health_probe",
-											fmt.Sprintf("-addr=:%d", rpcServerPort),
-											"-tls",
-											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-											fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
-										},
-									},
-								},
-								InitialDelaySeconds: 5,
-							},
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"/usr/local/bin/grpc_health_probe",
-											fmt.Sprintf("-addr=:%d", rpcServerPort),
-											"-tls",
-											fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-											fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
-										},
-									},
-								},
-								InitialDelaySeconds: 10,
-							},
-							Ports: []corev1.ContainerPort{
-								{Name: "https", Protocol: corev1.ProtocolTCP, ContainerPort: rpcServerPort},
-								{Name: "metrics", Protocol: corev1.ProtocolTCP, ContainerPort: rpcMetricsServerPort},
-							},
-							Resources: resources,
-							VolumeMounts: []corev1.VolumeMount{
-								{Name: "ca-cert", MountPath: caCertMountPath, ReadOnly: true},
-								{Name: "privatekey", MountPath: signPrivateKeyPath, ReadOnly: true},
-								{Name: "config", MountPath: configMountPath, ReadOnly: true},
-								{Name: "config-proxy", MountPath: proxyConfigMountPath, ReadOnly: true},
-								{Name: "internal-token", MountPath: internalTokenMountPath, ReadOnly: true},
-								{Name: "datastore-client-cert", MountPath: datastoreCertMountPath, ReadOnly: true},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "ca-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.CASecretName(),
-								},
-							},
-						},
-						{
-							Name: "privatekey",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.PrivateKeySecretName(),
-								},
-							},
-						},
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: r.ConfigNameForRPCServer(),
-									},
-								},
-							},
-						},
-						{
-							Name: "config-proxy",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: r.ReverseProxyConfigName(),
-									},
-								},
-							},
-						},
-						{
-							Name: "internal-token",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.InternalTokenSecretName(),
-								},
-							},
-						},
-						{
-							Name: "datastore-client-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: r.Datastore.Status.ClientCertSecretName,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	if r.Spec.AntiAffinity {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						Weight: 100,
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							TopologyKey: "kubernetes.io/hostname",
-							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: r.LabelsForRPCServer(),
-							},
-						},
-					},
-				},
-			},
-		}
-	}
+	deployment := k8sfactory.DeploymentFactory(nil,
+		k8sfactory.Name(r.DeploymentNameForRPCServer()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.Replicas(replicas),
+		k8sfactory.MatchLabelSelector(r.LabelsForRPCServer()),
+		k8sfactory.Pod(pod),
+	)
 
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.ServiceNameForRPCServer(),
-			Namespace: r.Namespace,
-			Labels:    r.LabelsForRPCServer(),
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: r.LabelsForRPCServer(),
-			Type:     corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				tcpServicePort("h2", rpcServerPort, rpcServerPort),
-			},
-		},
-	}
+	svc := k8sfactory.ServiceFactory(nil,
+		k8sfactory.Name(r.ServiceNameForRPCServer()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.LabelMap(r.LabelsForRPCServer()),
+		k8sfactory.MatchLabelSelector(r.LabelsForRPCServer()),
+		k8sfactory.ClusterIP,
+		k8sfactory.Port("h2", corev1.ProtocolTCP, rpcServerPort),
+	)
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
@@ -1706,19 +1405,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		}
 	}
 
-	minAvailable := intstr.FromInt(1)
-	pdb := &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.PodDisruptionBudgetNameForRPCServer(),
-			Namespace: r.Namespace,
-		},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.LabelsForRPCServer(),
-			},
-			MinAvailable: &minAvailable,
-		},
-	}
+	pdb := k8sfactory.PodDisruptionBudgetFactory(nil,
+		k8sfactory.Name(r.PodDisruptionBudgetNameForRPCServer()),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
+		k8sfactory.MatchLabelSelector(r.LabelsForRPCServer()),
+		k8sfactory.MinAvailable(1),
+	)
 
 	return &process{
 		Deployment:          deployment,
@@ -1764,11 +1457,6 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	}
 
 	return nil
-}
-
-func intOrStringFromInt(val int) *intstr.IntOrString {
-	v := intstr.FromInt(val)
-	return &v
 }
 
 type RoleBindings []*proxyv1alpha2.RoleBinding

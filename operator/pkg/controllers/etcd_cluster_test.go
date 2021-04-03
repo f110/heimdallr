@@ -22,7 +22,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 
 	cases := []struct {
 		Name        string
-		Traits      []etcd.Trait
+		Traits      []k8sfactory.Trait
 		Pods        []*corev1.Pod
 		ExpectPhase etcdv1alpha2.EtcdClusterPhase
 	}{
@@ -50,7 +50,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 			},
-			Traits:      []etcd.Trait{etcd.Ready},
+			Traits:      []k8sfactory.Trait{etcd.Ready},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
 		},
 		{
@@ -78,7 +78,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 				k8sfactory.PodFactory(etcdPodBase),
 			},
-			Traits:      []etcd.Trait{etcd.Ready},
+			Traits:      []k8sfactory.Trait{etcd.Ready},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
 		},
 		{
@@ -87,7 +87,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 			},
-			Traits:      []etcd.Trait{etcd.Ready, etcd.CreatingCompleted},
+			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
 		},
 		{
@@ -101,7 +101,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 					k8sfactory.Annotation(etcd.AnnotationKeyTemporaryMember, "yes"),
 				),
 			},
-			Traits:      []etcd.Trait{etcd.Ready, etcd.CreatingCompleted},
+			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseUpdating,
 		},
 		{
@@ -111,7 +111,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady, k8sfactory.PodFailed),
 			},
-			Traits:      []etcd.Trait{etcd.Ready, etcd.CreatingCompleted},
+			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
 		},
 		{
@@ -121,13 +121,13 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.PodIsReady),
 				k8sfactory.PodFactory(etcdPodBase),
 			},
-			Traits:      []etcd.Trait{etcd.Ready, etcd.CreatingCompleted},
+			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
 		},
 	}
 
 	for _, tt := range cases {
-		e := etcd.Factory(nil, etcd.Name("test"), etcd.HighAvailability)
+		e := etcd.Factory(nil, k8sfactory.Name("test"), etcd.HighAvailability)
 		e = etcd.Factory(e, tt.Traits...)
 		ec := NewEtcdCluster(e, clusterDomain, logger.Log, nil)
 		if len(tt.Pods) > 0 {

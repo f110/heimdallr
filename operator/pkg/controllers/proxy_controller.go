@@ -400,6 +400,9 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	} else if ec != nil {
 		lp.Datastore = ec
 	}
+	if err := lp.Init(c.secretLister); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
 
 	if err := c.preCheck(lp); err != nil {
 		if apierrors.IsNotFound(errors.Unwrap(err)) {
@@ -500,6 +503,16 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 		} else if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
+	}
+
+	serverCert := lp.Certificate()
+	if err := c.createOrUpdateCertificate(ctx, lp, serverCert); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	_, err := c.secretLister.Secrets(lp.Object.Namespace).Get(lp.CertificateSecretName())
+	if err != nil {
+		return controllerbase.WrapRetryError(xerrors.Errorf(": %w", err))
 	}
 
 	if err := c.reconcileEtcdCluster(ctx, lp); err != nil {

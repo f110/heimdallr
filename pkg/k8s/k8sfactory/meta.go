@@ -1,7 +1,9 @@
 package k8sfactory
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -63,6 +65,16 @@ func Label(v ...string) Trait {
 	}
 }
 
+func LabelMap(label map[string]string) Trait {
+	return func(object interface{}) {
+		m, ok := object.(metav1.Object)
+		if ok {
+			m.SetLabels(label)
+			return
+		}
+	}
+}
+
 func ControlledBy(v runtime.Object, s *runtime.Scheme) Trait {
 	return func(object interface{}) {
 		m, ok := object.(metav1.Object)
@@ -94,5 +106,18 @@ func MatchLabel(v map[string]string) *metav1.LabelSelector {
 func MatchExpression(v ...metav1.LabelSelectorRequirement) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
 		MatchExpressions: v,
+	}
+}
+
+func MatchLabelSelector(label map[string]string) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Service:
+			obj.Spec.Selector = label
+		case *appsv1.Deployment:
+			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
+		case *policyv1beta1.PodDisruptionBudget:
+			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
+		}
 	}
 }

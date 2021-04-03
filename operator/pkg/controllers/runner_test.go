@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jarcoal/httpmock"
+	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
@@ -23,6 +24,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/scale/scheme"
@@ -76,7 +78,7 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 	}
 }
 
-func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
+func (f *commonTestRunner) RegisterFixtures(objs ...kruntime.Object) {
 	for _, v := range objs {
 		switch obj := v.(type) {
 		case *proxyv1alpha2.Proxy:
@@ -97,6 +99,8 @@ func (f *commonTestRunner) RegisterFixtures(objs ...interface{}) {
 			f.RegisterDeploymentFixture(obj)
 		case *policyv1beta1.PodDisruptionBudget:
 			f.RegisterPodDisruptionBudgetFixture(obj)
+		case *certmanagerv1.Certificate:
+			f.RegisterCertificateFixture(obj)
 		}
 	}
 }
@@ -200,6 +204,13 @@ func (f *commonTestRunner) RegisterIngressFixture(i *networkingv1.Ingress) {
 func (f *commonTestRunner) RegisterIngressClassFixture(ic *networkingv1.IngressClass) {
 	f.coreClient.Tracker().Add(ic)
 	f.coreSharedInformerFactory.Networking().V1().IngressClasses().Informer().GetIndexer().Add(ic)
+}
+
+func (f *commonTestRunner) RegisterCertificateFixture(c ...*certmanagerv1.Certificate) {
+	for _, v := range c {
+		f.client.Tracker().Add(v)
+		f.sharedInformerFactory.Certmanager().V1().Certificates().Informer().GetIndexer().Add(v)
+	}
 }
 
 func (f *commonTestRunner) ExpectCreateSecret() {
@@ -397,7 +408,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 
 	f.commonTestRunner.coreClient.Resources = []*metav1.APIResourceList{
 		{
-			GroupVersion: "cert-manager.io/v1alpha2",
+			GroupVersion: "cert-manager.io/v1",
 			APIResources: []metav1.APIResource{
 				{
 					Kind: "Certificate",
@@ -416,6 +427,8 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 }
 
 func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha2.Proxy) {
+	t.Helper()
+
 	key, err := cache.MetaNamespaceKeyFunc(p)
 	if err != nil {
 		t.Fatal(err)

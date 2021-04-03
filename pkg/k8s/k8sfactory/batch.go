@@ -1,6 +1,7 @@
 package k8sfactory
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -77,6 +78,11 @@ func Pod(p *corev1.Pod) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *batchv1.Job:
+			obj.Spec.Template = corev1.PodTemplateSpec{
+				ObjectMeta: p.ObjectMeta,
+				Spec:       p.Spec,
+			}
+		case *appsv1.Deployment:
 			obj.Spec.Template = corev1.PodTemplateSpec{
 				ObjectMeta: p.ObjectMeta,
 				Spec:       p.Spec,

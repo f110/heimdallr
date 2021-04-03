@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/config"
 )
@@ -213,7 +213,7 @@ func TestProxyController(t *testing.T) {
 			f.ExpectCreateSecret()
 		}
 		f.ExpectUpdateProxyStatus()
-		f.ExpectCreateEtcdCluster()
+		f.ExpectCreateCertificate()
 
 		f.Run(t, p)
 	})
@@ -227,6 +227,7 @@ func TestProxyController(t *testing.T) {
 		p.Status.CASecretName = p.Name + "-ca"
 		f.RegisterProxyFixture(p)
 		f.RegisterSecretFixture(clientSecret)
+		f.RegisterBackendFixture(backends...)
 
 		proxy := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
@@ -238,6 +239,7 @@ func TestProxyController(t *testing.T) {
 			RoleBindings:   roleBindings,
 		})
 		ec, _ := proxy.EtcdCluster()
+		ec = etcd.Factory(ec, etcd.Ready)
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
 			s, err := v.Create()
@@ -249,6 +251,7 @@ func TestProxyController(t *testing.T) {
 
 		f.ExpectUpdateProxyStatus()
 		f.ExpectUpdateSecret()
+		f.ExpectCreateCertificate()
 		f.Run(t, p)
 
 		caSecret, err := f.coreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
@@ -283,6 +286,7 @@ func TestProxyController(t *testing.T) {
 		}
 
 		f.ExpectUpdateProxyStatus()
+		f.ExpectCreateCertificate()
 		f.Run(t, p)
 
 		etcdC, err := f.client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
@@ -325,8 +329,7 @@ func TestProxyController(t *testing.T) {
 			RoleBindings:   roleBindings,
 		})
 		ec, _ := proxy.EtcdCluster()
-		ec.Status.Ready = true
-		ec.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
+		ec = etcd.Factory(ec, etcd.Ready)
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
 			s, err := v.Create()
@@ -335,7 +338,8 @@ func TestProxyController(t *testing.T) {
 			}
 			f.RegisterSecretFixture(s)
 		}
-		f.client.Tracker().Add(p)
+		f.RegisterProxyFixture(p)
+		f.RegisterFixtures(proxy.PrepareCompleted(ec)...)
 
 		f.ExpectUpdateProxyStatus()
 		f.ExpectCreateDeployment()
@@ -401,8 +405,8 @@ func TestProxyController(t *testing.T) {
 			RoleBindings:   roleBindings,
 		})
 		ec, _ := proxy.EtcdCluster()
-		ec.Status.Ready = true
-		ec.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
+		ec = etcd.Factory(ec, etcd.Ready)
+		f.RegisterFixtures(proxy.PrepareCompleted(ec)...)
 		proxy.Datastore = ec
 		f.RegisterEtcdClusterFixture(ec)
 		for _, v := range proxy.Secrets() {
@@ -410,7 +414,9 @@ func TestProxyController(t *testing.T) {
 			require.NoError(t, err)
 			f.RegisterSecretFixture(s)
 		}
-		f.client.Tracker().Add(p)
+		f.RegisterProxyFixture(p)
+		err := proxy.Init(f.coreSharedInformerFactory.Core().V1().Secrets().Lister())
+		require.NoError(t, err)
 		pcs, err := proxy.IdealRPCServer()
 		require.NoError(t, err)
 		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
@@ -424,7 +430,6 @@ func TestProxyController(t *testing.T) {
 		f.ExpectCreateService()
 		f.ExpectCreateConfigMap()
 		f.ExpectUpdateProxyStatus()
-		f.ExpectCreateCertificate()
 		f.ExpectUpdateBackendStatus()
 		// Expect to create the dashboard
 		f.ExpectCreateDeployment()

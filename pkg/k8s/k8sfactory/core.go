@@ -246,8 +246,20 @@ func HTTPProbe(port int, path string) *corev1.Probe {
 	}
 }
 
+func ExecProbe(command ...string) *corev1.Probe {
+	return &corev1.Probe{
+		Handler: corev1.Handler{
+			Exec: &corev1.ExecAction{Command: command},
+		},
+	}
+}
+
 func Volume(vol *VolumeSource) Trait {
 	return func(object interface{}) {
+		if vol == nil {
+			return
+		}
+
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.VolumeMounts = append(obj.VolumeMounts, vol.Mount)
@@ -308,6 +320,20 @@ func ClusterIP(object interface{}) {
 	}
 }
 
+func LoadBalancer(object interface{}) {
+	switch obj := object.(type) {
+	case *corev1.Service:
+		obj.Spec.Type = corev1.ServiceTypeLoadBalancer
+	}
+}
+
+func TrafficPolicyLocal(object interface{}) {
+	switch obj := object.(type) {
+	case *corev1.Service:
+		obj.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+	}
+}
+
 func IPNone(object interface{}) {
 	switch obj := object.(type) {
 	case *corev1.Service:
@@ -347,6 +373,20 @@ func Port(name string, protocol corev1.Protocol, port int32) Trait {
 	}
 }
 
+func TargetPort(name string, protocol corev1.Protocol, port int32, targetPort intstr.IntOrString) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Service:
+			obj.Spec.Ports = append(obj.Spec.Ports, corev1.ServicePort{
+				Name:       name,
+				Protocol:   protocol,
+				Port:       port,
+				TargetPort: targetPort,
+			})
+		}
+	}
+}
+
 func SecretFactory(base *corev1.Secret, traits ...Trait) *corev1.Secret {
 	var s *corev1.Secret
 	if base == nil {
@@ -371,14 +411,57 @@ func SecretFactory(base *corev1.Secret, traits ...Trait) *corev1.Secret {
 
 func Data(key string, value []byte) Trait {
 	return func(v interface{}) {
-		s, ok := v.(*corev1.Secret)
-		if !ok {
-			return
+		switch obj := v.(type) {
+		case *corev1.Secret:
+			if obj.Data == nil {
+				obj.Data = make(map[string][]byte)
+			}
+			obj.Data[key] = value
+		case *corev1.ConfigMap:
+			if obj.Data == nil {
+				obj.Data = make(map[string]string)
+			}
+			obj.Data[key] = string(value)
 		}
+	}
+}
 
-		if s.Data == nil {
-			s.Data = make(map[string][]byte)
+func ConfigMapFactory(base *corev1.ConfigMap, traits ...Trait) *corev1.ConfigMap {
+	var cm *corev1.ConfigMap
+	if base == nil {
+		cm = &corev1.ConfigMap{}
+	} else {
+		cm = base.DeepCopy()
+	}
+
+	if cm.GetObjectKind().GroupVersionKind().Kind == "" {
+		gvks, unversioned, err := scheme.Scheme.ObjectKinds(cm)
+		if err == nil && !unversioned && len(gvks) > 0 {
+			cm.GetObjectKind().SetGroupVersionKind(gvks[0])
 		}
-		s.Data[key] = value
+	}
+
+	for _, v := range traits {
+		v(cm)
+	}
+
+	return cm
+}
+
+func Requests(req corev1.ResourceList) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Container:
+			obj.Resources.Requests = req
+		}
+	}
+}
+
+func Limits(lim corev1.ResourceList) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Container:
+			obj.Resources.Limits = lim
+		}
 	}
 }
