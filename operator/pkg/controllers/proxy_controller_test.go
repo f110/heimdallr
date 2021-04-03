@@ -135,8 +135,7 @@ func TestProxyController(t *testing.T) {
 		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterProxyFixture(p)
-		f.RegisterSecretFixture(clientSecret)
+		f.RegisterFixtures(p, clientSecret)
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
@@ -168,8 +167,7 @@ func TestProxyController(t *testing.T) {
 
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
 		p.Status.CASecretName = p.Name + "-ca"
-		f.RegisterProxyFixture(p)
-		f.RegisterSecretFixture(clientSecret)
+		f.RegisterFixtures(p, clientSecret)
 		f.RegisterBackendFixture(backends...)
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
@@ -208,8 +206,7 @@ func TestProxyController(t *testing.T) {
 		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterProxyFixture(p)
-		f.RegisterSecretFixture(clientSecret)
+		f.RegisterFixtures(p, clientSecret)
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
@@ -256,11 +253,10 @@ func TestProxyController(t *testing.T) {
 		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterProxyFixture(p)
+		f.RegisterFixtures(p, clientSecret)
 		f.RegisterBackendFixture(backends...)
 		f.RegisterProxyRoleFixture(roles...)
 		f.RegisterProxyRoleBindingFixture(roleBindings...)
-		f.RegisterSecretFixture(clientSecret)
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
@@ -281,7 +277,6 @@ func TestProxyController(t *testing.T) {
 			}
 			f.RegisterSecretFixture(s)
 		}
-		f.RegisterProxyFixture(p)
 		f.RegisterFixtures(hp.PrepareCompleted(ec)...)
 
 		f.ExpectUpdateProxyStatus()
@@ -329,14 +324,11 @@ func TestProxyController(t *testing.T) {
 		f := newProxyControllerTestRunner(t)
 
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
-		f.RegisterProxyFixture(p)
+		f.RegisterFixtures(p, clientSecret)
 		f.RegisterBackendFixture(backends...)
 		f.RegisterProxyRoleFixture(roles...)
 		f.RegisterProxyRoleBindingFixture(roleBindings...)
-		for _, s := range services {
-			f.RegisterServiceFixture(s)
-		}
-		f.RegisterSecretFixture(clientSecret)
+		f.RegisterServiceFixture(services...)
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,

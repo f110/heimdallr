@@ -36,7 +36,7 @@ func TestEtcdController(t *testing.T) {
 		f, _ := newEtcdControllerTestRunner(t)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhasePending))
-		f.RegisterEtcdClusterFixture(e)
+		f.RegisterFixtures(e)
 
 		// Setup
 		f.ExpectUpdateEtcdClusterStatus()
@@ -68,12 +68,11 @@ func TestEtcdController(t *testing.T) {
 		f, _ := newEtcdControllerTestRunner(t)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseCreating))
-		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		member := cluster.AllMembers()[0]
 		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Ready)
-		f.RegisterPodFixture(member.Pod)
+		f.RegisterFixtures(e, member.Pod)
 
 		f.ExpectCreatePod()
 		f.ExpectUpdateEtcdClusterStatus()
@@ -147,7 +146,6 @@ func TestEtcdController(t *testing.T) {
 			f, _ := newEtcdControllerTestRunner(t)
 
 			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
-			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers() {
@@ -155,7 +153,7 @@ func TestEtcdController(t *testing.T) {
 				f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-			f.RegisterPodFixture(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+			f.RegisterFixtures(e, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
 			f.ExpectDeletePod()
 			f.ExpectUpdateEtcdClusterStatus()
@@ -168,7 +166,6 @@ func TestEtcdController(t *testing.T) {
 			f, _ := newEtcdControllerTestRunner(t)
 
 			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
-			f.RegisterEtcdClusterFixture(e)
 			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(f)
 			for _, v := range cluster.AllMembers()[1:] {
@@ -176,7 +173,7 @@ func TestEtcdController(t *testing.T) {
 				f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-			f.RegisterPodFixture(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+			f.RegisterFixtures(e, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
 			f.ExpectCreatePod()
 			f.ExpectUpdateEtcdClusterStatus()
@@ -190,15 +187,13 @@ func TestEtcdController(t *testing.T) {
 		f, _ := newEtcdControllerTestRunner(t)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
-		f.RegisterEtcdClusterFixture(e)
 		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(f)
 		for _, v := range cluster.AllMembers() {
 			f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-		f.RegisterPodFixture(tempMemberPod)
-		f.RegisterPodFixture(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+		f.RegisterFixtures(e, tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
 		f.ExpectDeletePod()
 		f.ExpectUpdateEtcdClusterStatus()
