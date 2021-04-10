@@ -96,8 +96,17 @@ func LabelMap(label map[string]string) Trait {
 
 func ControlledBy(v runtime.Object, s *runtime.Scheme) Trait {
 	return func(object interface{}) {
+		owner, ok := v.(metav1.Object)
+		if !ok {
+			return
+		}
+
 		m, ok := object.(metav1.Object)
 		if ok {
+			if metav1.IsControlledBy(m, owner) {
+				return
+			}
+
 			gvks, _, err := s.ObjectKinds(v)
 			if err != nil {
 				return
