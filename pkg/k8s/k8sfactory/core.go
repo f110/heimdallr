@@ -465,3 +465,34 @@ func Limits(lim corev1.ResourceList) Trait {
 		}
 	}
 }
+
+func EventFactory(base *corev1.Event, traits ...Trait) *corev1.Event {
+	var e *corev1.Event
+	if base == nil {
+		e = &corev1.Event{}
+	} else {
+		e = base.DeepCopy()
+	}
+
+	if e.GetObjectKind().GroupVersionKind().Kind == "" {
+		gvks, unversioned, err := scheme.Scheme.ObjectKinds(e)
+		if err == nil && !unversioned && len(gvks) > 0 {
+			e.GetObjectKind().SetGroupVersionKind(gvks[0])
+		}
+	}
+
+	for _, v := range traits {
+		v(e)
+	}
+
+	return e
+}
+
+func Reason(v string) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Event:
+			obj.Reason = v
+		}
+	}
+}
