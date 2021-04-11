@@ -187,3 +187,18 @@ func PersistentData(object interface{}) {
 		},
 	}
 }
+
+func MemberStatus(statuses []etcdv1alpha2.MemberStatus) k8sfactory.Trait {
+	return func(object interface{}) {
+		e, ok := object.(*etcdv1alpha2.EtcdCluster)
+		if !ok {
+			return
+		}
+
+		if statuses == nil {
+			e.Status.Members = make([]etcdv1alpha2.MemberStatus, 0)
+		} else {
+			e.Status.Members = statuses
+		}
+	}
+}

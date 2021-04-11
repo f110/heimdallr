@@ -15,6 +15,7 @@ import (
 
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -27,58 +28,96 @@ func TestEtcdController(t *testing.T) {
 		k8sfactory.Created,
 		etcd.Member(3),
 		etcd.EnableAntiAffinity,
+		etcd.MemberStatus(nil),
 	)
 
 	t.Run("CreatingFirstMember", func(t *testing.T) {
 		t.Parallel()
 
-		// In this case, we don't need mocking etcd client.
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhasePending))
-		f.RegisterFixtures(e)
-
-		// Setup
-		f.ExpectUpdateEtcdClusterStatus()
-		f.ExpectCreateSecret()
-		f.ExpectCreateSecret()
-		f.ExpectCreateSecret()
-		f.ExpectCreateServiceAccount()
-		f.ExpectCreateRole()
-		f.ExpectCreateRoleBinding()
-		// Create first node
-		f.ExpectCreatePod()
-		f.ExpectCreateService()
-		f.ExpectCreateService()
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
-
-		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
-		require.Len(t, pods.Items, 1)
 
-		assert.Contains(t, pods.Items[0].Spec.Containers[0].Args[1], "--initial-cluster-state=new")
-		require.NotNil(t, pods.Items[0].Spec.Affinity)
-		assert.NotNil(t, pods.Items[0].Spec.Affinity.PodAntiAffinity)
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhasePending))
+		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		runner.AssertUpdateAction(t, "status", updated)
+		namespace := k8sfactory.Namespace(e.Namespace)
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("etcd-%s-ca", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("etcd-%s-server-cert", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("etcd-%s-client-cert", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceAccountFactory(nil, k8sfactory.Namef("%s-etcd", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.RoleFactory(nil, k8sfactory.Namef("%s-etcd", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.RoleBindingFactory(nil, k8sfactory.Namef("%s-etcd", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-client", e.Name), namespace))
+		updated = etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseInitializing))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
+
+		pod, err := runner.CoreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
+		require.NoError(t, err)
+
+		assert.Contains(t, pod.Spec.Containers[0].Args[1], "--initial-cluster-state=new")
+		require.NotNil(t, pod.Spec.Affinity)
+		assert.NotNil(t, pod.Spec.Affinity.PodAntiAffinity)
 	})
 
 	t.Run("CreatingMember", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseCreating))
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		member := cluster.AllMembers()[0]
 		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Ready)
-		f.RegisterFixtures(e, member.Pod)
+		runner.RegisterFixtures(e, member.Pod)
 
-		f.ExpectCreatePod()
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
 
-		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		updated := e.DeepCopy()
+		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
+
+		pods, err := runner.CoreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
 		require.NoError(t, err)
 		assert.Len(t, pods.Items, 2)
 
@@ -104,23 +143,43 @@ func TestEtcdController(t *testing.T) {
 	t.Run("PreparingUpdate", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
 			v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready)
-			f.RegisterPodFixture(v.Pod)
+			runner.RegisterFixtures(v.Pod)
 		}
 		e = etcd.Factory(e, etcd.Version("v3.3.0"))
-		f.RegisterEtcdClusterFixture(e)
 
-		f.ExpectCreatePod()
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
 
-		pods, err := f.coreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		updated := e.DeepCopy()
+		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
+
+		pods, err := runner.CoreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
 		require.NoError(t, err)
 		require.Len(t, pods.Items, 4)
 
@@ -143,72 +202,150 @@ func TestEtcdController(t *testing.T) {
 		t.Run("DeleteMember", func(t *testing.T) {
 			t.Parallel()
 
-			f, _ := newEtcdControllerTestRunner(t)
+			runner := controllertest.NewTestRunner()
+			etcdMockCluster := NewMockCluster()
+			etcdMockMaintenance := NewMockMaintenance()
+			mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+			controller, err := NewEtcdController(
+				runner.SharedInformerFactory,
+				runner.CoreSharedInformerFactory,
+				runner.CoreClient,
+				runner.Client,
+				nil,
+				"cluster.local",
+				false,
+				nil,
+				mockOpt,
+			)
+			require.NoError(t, err)
 
 			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
-			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-			cluster.registerBasicObjectOfEtcdCluster(f)
+			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers() {
 				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
+				runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-			f.RegisterFixtures(e, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
-			f.ExpectDeletePod()
-			f.ExpectUpdateEtcdClusterStatus()
-			f.Run(t, e)
+			err = runner.Reconcile(controller, e)
+			require.NoError(t, err)
+
+			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating))
+			updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+			updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+			runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+			runner.AssertUpdateAction(t, "status", updated)
+			runner.AssertNoUnexpectedAction(t)
 		})
 
 		t.Run("StartMember", func(t *testing.T) {
 			t.Parallel()
 
-			f, _ := newEtcdControllerTestRunner(t)
+			runner := controllertest.NewTestRunner()
+			etcdMockCluster := NewMockCluster()
+			etcdMockMaintenance := NewMockMaintenance()
+			mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+			controller, err := NewEtcdController(
+				runner.SharedInformerFactory,
+				runner.CoreSharedInformerFactory,
+				runner.CoreClient,
+				runner.Client,
+				nil,
+				"cluster.local",
+				false,
+				nil,
+				mockOpt,
+			)
+			require.NoError(t, err)
 
 			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
-			cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-			cluster.registerBasicObjectOfEtcdCluster(f)
+			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers()[1:] {
 				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
+				runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-			f.RegisterFixtures(e, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
-			f.ExpectCreatePod()
-			f.ExpectUpdateEtcdClusterStatus()
-			f.Run(t, e)
+			err = runner.Reconcile(controller, e)
+			require.NoError(t, err)
+
+			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating))
+			updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+			updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+			runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+			runner.AssertUpdateAction(t, "status", updated)
+			runner.AssertNoUnexpectedAction(t)
 		})
 	})
 
 	t.Run("TeardownUpdating", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-		f.RegisterFixtures(e, tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
+		runner.RegisterFixtures(tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready))
 
-		f.ExpectDeletePod()
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating))
+		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
 	})
 
 	t.Run("Repair", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
-		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		runner.RegisterFixtures(e)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for i, v := range cluster.AllMembers() {
 			v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready)
 
@@ -217,12 +354,18 @@ func TestEtcdController(t *testing.T) {
 			}
 		}
 		for _, v := range cluster.AllMembers() {
-			f.RegisterPodFixture(v.Pod)
+			runner.RegisterFixtures(v.Pod)
 		}
 
-		f.ExpectDeletePod()
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseDegrading))
+		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
 	})
 }
 
@@ -234,15 +377,32 @@ func TestEtcdController_Backup(t *testing.T) {
 		k8sfactory.Created,
 		etcd.Member(3),
 		etcd.EnableAntiAffinity,
+		etcd.MemberStatus(nil),
 	)
 
 	t.Run("MinIO", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		transport := httpmock.NewMockTransport()
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			transport,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		minIOService, minIOSecret := minIOFixtures()
-		f.RegisterFixtures(minIOService, minIOSecret)
+		runner.RegisterFixtures(minIOService, minIOSecret)
 
 		e := etcd.Factory(etcdClusterBase,
 			k8sfactory.Name(normalizeName(t.Name())),
@@ -265,29 +425,33 @@ func TestEtcdController_Backup(t *testing.T) {
 			},
 			MaxBackups: 0,
 		}
-		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 		}
 
 		// Get bucket location
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodGet,
 			"/etcdcontroller/?location=",
 			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
 		)
 		// Put object
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodPut,
 			fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
 			httpmock.NewStringResponder(http.StatusOK, ""),
 		)
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
 
-		updatedEC, err := f.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+		updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
+
+		updatedEC, err := runner.Client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.NotNil(t, updatedEC.Status.Backup)
@@ -299,10 +463,26 @@ func TestEtcdController_Backup(t *testing.T) {
 	t.Run("MinIO_Rotate", func(t *testing.T) {
 		t.Parallel()
 
-		f, _ := newEtcdControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		transport := httpmock.NewMockTransport()
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			nil,
+			"cluster.local",
+			false,
+			transport,
+			mockOpt,
+		)
+		require.NoError(t, err)
 
 		minIOService, minIOSecret := minIOFixtures()
-		f.RegisterFixtures(minIOService, minIOSecret)
+		runner.RegisterFixtures(minIOService, minIOSecret)
 
 		e := etcd.Factory(etcdClusterBase,
 			k8sfactory.Name(normalizeName(t.Name())),
@@ -322,32 +502,52 @@ func TestEtcdController_Backup(t *testing.T) {
 				},
 			),
 		)
-		f.RegisterEtcdClusterFixture(e)
-		cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(f)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			f.RegisterPodFixture(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready))
 		}
 
 		// Get bucket location
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodGet,
 			"/etcdcontroller/?location=",
 			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
 		)
 		// Put object
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodPut,
 			fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
 			httpmock.NewStringResponder(http.StatusOK, ""),
 		)
-		f.ExpectUpdateEtcdClusterStatus()
-		f.Run(t, e)
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
 	})
 }
 
 func TestEtcdController_Restore(t *testing.T) {
-	f, _ := newEtcdControllerTestRunner(t)
+	runner := controllertest.NewTestRunner()
+	etcdMockCluster := NewMockCluster()
+	etcdMockMaintenance := NewMockMaintenance()
+	mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+	transport := httpmock.NewMockTransport()
+	controller, err := NewEtcdController(
+		runner.SharedInformerFactory,
+		runner.CoreSharedInformerFactory,
+		runner.CoreClient,
+		runner.Client,
+		nil,
+		"cluster.local",
+		false,
+		transport,
+		mockOpt,
+	)
+	require.NoError(t, err)
 
 	e := etcd.Factory(nil,
 		k8sfactory.Name(normalizeName(t.Name())),
@@ -381,38 +581,41 @@ func TestEtcdController_Restore(t *testing.T) {
 			},
 		},
 	}
-	f.RegisterEtcdClusterFixture(e)
-	cluster := NewEtcdCluster(e, f.c.clusterDomain, logger.Log, nil)
-	cluster.registerBasicObjectOfEtcdCluster(f)
+	cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+	cluster.registerBasicObjectOfEtcdCluster(runner)
 	for _, v := range cluster.AllMembers() {
 		v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready)
 
 		v.Pod.Status.Phase = corev1.PodSucceeded
-		f.RegisterPodFixture(v.Pod)
+		runner.RegisterFixtures(v.Pod)
 	}
 
 	// Get bucket location
-	f.transport.RegisterResponder(
+	transport.RegisterResponder(
 		http.MethodGet,
 		"/etcdcontroller/?location=",
 		httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
 	)
 	// Put object
-	f.transport.RegisterResponder(
+	transport.RegisterResponder(
 		http.MethodPut,
 		fmt.Sprintf(`=~/backup/%s_\d+\z`, strings.Replace(t.Name(), "/", "-", -1)),
 		httpmock.NewStringResponder(http.StatusOK, ""),
 	)
 
 	// Delete all members
-	f.ExpectDeletePod()
-	f.ExpectDeletePod()
-	f.ExpectDeletePod()
-	f.ExpectUpdateEtcdClusterStatus()
-	f.ExpectUpdateEtcdClusterStatus()
-	f.Run(t, e)
+	err = runner.Reconcile(controller, e)
+	require.NoError(t, err)
 
-	updatedEC, err := f.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+	updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	runner.AssertUpdateAction(t, "status", updated)
+	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
+	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-3", e.Name), k8sfactory.Namespace(e.Namespace)))
+	runner.AssertNoUnexpectedAction(t)
+
+	updatedEC, err := runner.Client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	require.NotNil(t, updatedEC.Status.Restored)
@@ -436,18 +639,11 @@ func minIOFixtures() (*corev1.Service, *corev1.Secret) {
 	return svc, secret
 }
 
-func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(f *etcdControllerTestRunner) {
+func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.TestRunner) {
 	ca, _ := c.CA()
 	serverS, _ := c.ServerCertSecret()
 	clientS, _ := c.ClientCertSecret()
 	c.SetCASecret(ca)
 	c.SetServerCertSecret(serverS)
-	f.RegisterSecretFixture(ca)
-	f.RegisterSecretFixture(serverS)
-	f.RegisterSecretFixture(clientS)
-	f.RegisterServiceFixture(c.DiscoveryService())
-	f.RegisterServiceFixture(c.ClientService())
-	f.RegisterServiceAccountFixture(c.ServiceAccount())
-	f.RegisterRoleFixture(c.EtcdRole())
-	f.RegisterRoleBindingFixture(c.EtcdRoleBinding())
+	runner.RegisterFixtures(ca, serverS, clientS, c.DiscoveryService(), c.ClientService(), c.ServiceAccount(), c.EtcdRole(), c.EtcdRoleBinding())
 }

@@ -62,7 +62,7 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
 		c.Log().Info(fmt.Sprintf(format, args...))
 	})
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events("")})
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events(metav1.NamespaceAll)})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: base.Name()})
 	c.recoder = recorder
 

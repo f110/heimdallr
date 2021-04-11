@@ -59,6 +59,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.20.4
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
+	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
 	k8s.io/klog/v2 v2.4.0
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0

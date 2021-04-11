@@ -10,7 +10,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := logger.Init(&configv2.Logger{Level: "debug"}); err != nil {
+	if err := logger.Init(&configv2.Logger{Level: "debug", Encoding: "console"}); err != nil {
 		fmt.Fprintf(os.Stderr, "failure initialize logger: %+v\n", err)
 		os.Exit(1)
 	}

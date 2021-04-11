@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/jarcoal/httpmock"
 	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	"github.com/stretchr/testify/assert"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	"golang.org/x/xerrors"
@@ -29,13 +31,53 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/scale/scheme"
 	core "k8s.io/client-go/testing"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/gengo/namer"
+	"k8s.io/gengo/types"
 
 	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
 	"go.f110.dev/heimdallr/operator/pkg/client/versioned/fake"
 	informers "go.f110.dev/heimdallr/operator/pkg/informers/externalversions"
 )
+
+type ActionVerb string
+
+const (
+	ActionUpdate ActionVerb = "update"
+	ActionCreate ActionVerb = "create"
+)
+
+func (a ActionVerb) String() string {
+	return string(a)
+}
+
+type Action struct {
+	Verb        ActionVerb
+	Subresource string
+	Object      kruntime.Object
+	Visited     bool
+}
+
+func (a Action) Resource() string {
+	if a.Subresource != "" {
+		return resourceName(a.Object) + "/" + a.Subresource
+	}
+	return resourceName(a.Object)
+}
+
+func resourceName(v kruntime.Object) string {
+	t := reflect.TypeOf(v)
+	kind := t.Elem().Name()
+
+	plural := namer.NewAllLowercasePluralNamer(nil)
+	return plural.Name(&types.Type{
+		Name: types.Name{
+			Name: kind,
+		},
+	})
+}
 
 type expectAction struct {
 	core.Action
@@ -46,6 +88,7 @@ type commonTestRunner struct {
 	t           *testing.T
 	actions     []expectAction
 	coreActions []expectAction
+	Actions     []*Action
 
 	client     *fake.Clientset
 	coreClient *k8sfake.Clientset
@@ -80,7 +123,8 @@ func newCommonTestRunner(t *testing.T) *commonTestRunner {
 
 func (f *commonTestRunner) RegisterFixtures(objs ...kruntime.Object) {
 	for _, v := range objs {
-		switch obj := v.(type) {
+		copied := v.DeepCopyObject()
+		switch obj := copied.(type) {
 		case *proxyv1alpha2.Proxy:
 			f.RegisterProxyFixture(obj)
 		case *proxyv1alpha2.Backend:
@@ -348,6 +392,159 @@ func (f *commonTestRunner) ExpectUpdateConfigMap() {
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
+func (f *commonTestRunner) AssertUpdateAction(t *testing.T, subresource string, obj kruntime.Object) bool {
+	t.Helper()
+
+	return f.AssertAction(t, Action{
+		Verb:        ActionUpdate,
+		Subresource: subresource,
+		Object:      obj,
+	})
+}
+
+func (f *commonTestRunner) AssertCreateAction(t *testing.T, obj kruntime.Object) bool {
+	t.Helper()
+
+	return f.AssertAction(t, Action{
+		Verb:   ActionCreate,
+		Object: obj,
+	})
+}
+
+func (f *commonTestRunner) AssertAction(t *testing.T, e Action) bool {
+	t.Helper()
+
+	matchVerb := false
+	matchObj := false
+	var obj kruntime.Object
+Match:
+	for _, v := range f.editActions() {
+		if v.Visited {
+			continue
+		}
+		if v.Verb != e.Verb {
+			continue
+		}
+
+		matchVerb = true
+		switch v.Verb {
+		case ActionCreate:
+			if reflect.TypeOf(v.Object) != reflect.TypeOf(e.Object) {
+				continue
+			}
+
+			// Event is a special case.
+			if reflect.TypeOf(e.Object) == reflect.TypeOf(&corev1.Event{}) &&
+				reflect.TypeOf(v.Object) == reflect.TypeOf(&corev1.Event{}) {
+				expect := e.Object.(*corev1.Event)
+				actual := v.Object.(*corev1.Event)
+				if expect.Reason == actual.Reason {
+					matchObj = true
+					v.Visited = true
+					break
+				}
+			}
+
+			actualActionObjMeta, ok := v.Object.(metav1.Object)
+			if !ok {
+				continue
+			}
+			objMeta, ok := e.Object.(metav1.Object)
+			if !ok {
+				continue
+			}
+
+			if actualActionObjMeta.GetNamespace() == objMeta.GetNamespace() &&
+				actualActionObjMeta.GetName() == objMeta.GetName() {
+				matchObj = true
+				v.Visited = true
+				break Match
+			}
+		case ActionUpdate:
+			obj = v.Object
+			if reflect.DeepEqual(v.Object, e.Object) {
+				matchObj = true
+				v.Visited = true
+				break Match
+			}
+		}
+	}
+	if !matchVerb {
+		assert.Fail(t, "The expect action was not called")
+	} else if !matchObj {
+		msg := "The expect action was called but the matched object was not found"
+		if obj != nil {
+			assert.Fail(t, msg, cmp.Diff(e.Object, obj))
+		} else {
+			assert.Fail(t, msg)
+		}
+	}
+
+	return matchVerb && matchObj
+}
+
+func (f *commonTestRunner) AssertNoUnexpectedAction(t *testing.T) {
+	unexpectedActions := make([]*Action, 0)
+	for _, v := range f.editActions() {
+		if v.Visited {
+			continue
+		}
+		unexpectedActions = append(unexpectedActions, v)
+	}
+
+	msg := ""
+	if len(unexpectedActions) > 0 {
+		line := make([]string, 0, len(unexpectedActions))
+		for _, v := range unexpectedActions {
+			key := ""
+			meta, ok := v.Object.(metav1.Object)
+			if ok {
+				key = fmt.Sprintf(" %s/%s", meta.GetNamespace(), meta.GetName())
+			}
+			kind := ""
+			if v.Object != nil {
+				kind = reflect.TypeOf(v.Object).Elem().Name()
+			}
+			line = append(line, fmt.Sprintf("%s %s%s", v.Verb, kind, key))
+		}
+		msg = strings.Join(line, " ")
+	}
+
+	assert.Len(t, unexpectedActions, 0, "There are %d unexpected actions: %s", len(unexpectedActions), msg)
+}
+
+func (f *commonTestRunner) editActions() []*Action {
+	if f.Actions != nil {
+		return f.Actions
+	}
+
+	actions := make([]*Action, 0)
+	for _, v := range append(f.client.Actions(), f.coreClient.Actions()...) {
+		switch a := v.(type) {
+		case k8stesting.CreateActionImpl:
+			actions = append(actions, &Action{
+				Verb:        ActionVerb(v.GetVerb()),
+				Subresource: v.GetSubresource(),
+				Object:      a.GetObject(),
+			})
+		case k8stesting.UpdateActionImpl:
+			actions = append(actions, &Action{
+				Verb:        ActionVerb(v.GetVerb()),
+				Subresource: v.GetSubresource(),
+				Object:      a.GetObject(),
+			})
+		case k8stesting.DeleteActionImpl:
+			actions = append(actions, &Action{
+				Verb:        ActionVerb(v.GetVerb()),
+				Subresource: v.GetSubresource(),
+			})
+		}
+	}
+	f.Actions = actions
+
+	return actions
+}
+
 func (f *commonTestRunner) expectActionWithCaller(action core.Action) expectAction {
 	_, file, line, _ := runtime.Caller(2)
 	return expectAction{Action: action, Caller: fmt.Sprintf("%s:%d", file, line)}
@@ -356,36 +553,40 @@ func (f *commonTestRunner) expectActionWithCaller(action core.Action) expectActi
 func (f *commonTestRunner) actionMatcher() {
 	f.t.Helper()
 
-	actions := filterInformerActions(f.client.Actions())
+	actions := excludeReadActions(f.client.Actions())
 	for i, action := range actions {
 		if len(f.actions) < i+1 {
 			f.t.Errorf("%d unexpected actions:", len(actions)-len(f.actions))
 			for _, v := range actions[i:] {
-				f.t.Logf("unexpected action: %+v", v)
+				f.t.Logf("unexpected action: %s %s", v.GetVerb(), v.GetResource().Resource)
 			}
 			break
 		}
 
 		expectedAction := f.actions[i]
-		checkAction(f.t, expectedAction, action)
+		if !checkAction(f.t, expectedAction, action) {
+			f.t.FailNow()
+		}
 	}
 
 	if len(f.actions) > len(actions) {
 		f.t.Errorf("%d additional expected actions:%+v", len(f.actions)-len(actions), f.actions[len(actions):])
 	}
 
-	kubeActions := filterInformerActions(f.coreClient.Actions())
+	kubeActions := excludeReadActions(f.coreClient.Actions())
 	for i, action := range kubeActions {
 		if len(f.coreActions) < i+1 {
 			f.t.Errorf("%d unexpected actions:", len(kubeActions)-len(f.coreActions))
 			for _, v := range kubeActions[i:] {
-				f.t.Logf("unexpected action: %+v", v)
+				f.t.Logf("unexpected action: %s %s", v.GetVerb(), v.GetResource().Resource)
 			}
 			break
 		}
 
 		expectedAction := f.coreActions[i]
-		checkAction(f.t, expectedAction, action)
+		if !checkAction(f.t, expectedAction, action) {
+			f.t.FailNow()
+		}
 	}
 
 	if len(f.coreActions) > len(kubeActions) {
@@ -680,7 +881,7 @@ func IsError(t *testing.T, actual, expect error) {
 	}
 }
 
-func filterInformerActions(actions []core.Action) []core.Action {
+func excludeReadActions(actions []core.Action) []core.Action {
 	ret := make([]core.Action, 0)
 	for _, action := range actions {
 		if len(action.GetNamespace()) == 0 {
@@ -688,14 +889,7 @@ func filterInformerActions(actions []core.Action) []core.Action {
 		}
 
 		switch action.GetVerb() {
-		case "list", "watch":
-			switch action.GetResource().Resource {
-			case "proxies", "etcdclusters", "backends", "roles", "rpcpermissions":
-				continue
-			case "jobs":
-				continue
-			}
-		case "get":
+		case "get", "list", "watch":
 			continue
 		}
 		ret = append(ret, action)
@@ -704,18 +898,20 @@ func filterInformerActions(actions []core.Action) []core.Action {
 	return ret
 }
 
-func checkAction(t *testing.T, expected expectAction, actual core.Action) {
+func checkAction(t *testing.T, expected expectAction, actual core.Action) bool {
 	t.Helper()
 
 	if !(expected.Matches(actual.GetVerb(), actual.GetResource().Resource) && actual.GetSubresource() == expected.GetSubresource()) {
-		t.Errorf("Expected\n\t%#v\ngot\n\t%#v", expected, actual)
-		return
+		t.Errorf("Expected %s %s Got %s %s", expected.GetVerb(), expected.GetResource().Resource, actual.GetVerb(), actual.GetResource().Resource)
+		return false
 	}
 
 	if reflect.TypeOf(actual) != reflect.TypeOf(expected.Action) {
 		t.Errorf("Action has wrong type. Expected: %s. Got: %s", reflect.TypeOf(expected.Action).Name(), reflect.TypeOf(actual).Name())
-		return
+		return false
 	}
+
+	return true
 }
 
 func normalizeName(name string) string {

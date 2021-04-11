@@ -577,10 +577,6 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 			break
 		}
 	}
-	_, err := ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
 
 	members := cluster.AllExistMembers()
 
