@@ -1,6 +1,8 @@
 package k8sfactory
 
 import (
+	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -24,6 +26,10 @@ func Name(v string) Trait {
 			obj.Name = v
 		}
 	}
+}
+
+func Namef(format string, a ...interface{}) Trait {
+	return Name(fmt.Sprintf(format, a...))
 }
 
 func Namespace(v string) Trait {
