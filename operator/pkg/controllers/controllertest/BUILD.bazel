@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "controllertest",
+    srcs = ["runner.go"],
+    importpath = "go.f110.dev/heimdallr/operator/pkg/controllers/controllertest",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//operator/pkg/api/etcd/v1alpha2",
+        "//operator/pkg/api/proxy/v1alpha2",
+        "//operator/pkg/client/versioned/fake",
+        "//operator/pkg/controllers/controllerbase",
+        "//operator/pkg/informers/externalversions",
+        "//vendor/github.com/google/go-cmp/cmp",
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/k8s.io/api/apps/v1:apps",
+        "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/api/networking/v1:networking",
+        "//vendor/k8s.io/api/policy/v1beta1",
+        "//vendor/k8s.io/api/rbac/v1:rbac",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+        "//vendor/k8s.io/client-go/informers",
+        "//vendor/k8s.io/client-go/kubernetes/fake",
+        "//vendor/k8s.io/client-go/testing",
+        "//vendor/k8s.io/gengo/namer",
+        "//vendor/k8s.io/gengo/types",
+    ],
+)
