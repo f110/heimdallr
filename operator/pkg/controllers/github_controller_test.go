@@ -13,13 +13,13 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
@@ -27,72 +27,95 @@ func TestGitHubController(t *testing.T) {
 	t.Run("CreateHook", func(t *testing.T) {
 		t.Parallel()
 
-		f := newGitHubControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		transport := httpmock.NewMockTransport()
+		controller, err := NewGitHubController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			transport,
+		)
+		require.NoError(t, err)
 
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodPost,
 			"https://api.github.com/app/installations/2/access_tokens",
 			httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
 		)
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodGet,
 			"https://api.github.com/repos/f110/heimdallr/hooks",
 			httpmock.NewStringResponder(http.StatusOK, `[]`),
 		)
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodPost,
 			"https://api.github.com/repos/f110/heimdallr/hooks",
 			httpmock.NewStringResponder(http.StatusOK, `{}`),
 		)
 
-		proxy, backend, secrets := githubControllerFixtures(t, "test")
-		f.RegisterProxyFixture(proxy)
-		f.RegisterBackendFixture(backend)
-		f.RegisterSecretFixture(secrets...)
+		p, backend, secrets := githubControllerFixtures(t, "test")
+		runner.RegisterFixtures(p)
+		for _, v := range secrets {
+			runner.RegisterFixtures(v)
+		}
 
-		f.ExpectUpdateBackend()
-		f.ExpectUpdateBackendStatus()
-		f.Run(t, backend)
-
-		ExpectCall(t, f.transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
-
-		updatedB, err := f.client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		err = runner.Reconcile(controller, backend)
 		require.NoError(t, err)
-		assert.Contains(t, updatedB.Finalizers, githubControllerFinalizerName)
+
+		updated, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
+
+		ExpectCall(t, transport.GetCallCountInfo(), http.MethodPost, "https://api.github.com/repos/f110/heimdallr/hooks")
 	})
 
 	t.Run("DeleteHook", func(t *testing.T) {
 		t.Parallel()
 
-		f := newGitHubControllerTestRunner(t)
+		runner := controllertest.NewTestRunner()
+		transport := httpmock.NewMockTransport()
+		controller, err := NewGitHubController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			transport,
+		)
+		require.NoError(t, err)
 
-		proxy, backend, secrets := githubControllerFixtures(t, "test")
-		now := metav1.Now()
-		backend.DeletionTimestamp = &now
-		backend.Finalizers = append(backend.Finalizers, githubControllerFinalizerName)
+		p, backend, secrets := githubControllerFixtures(t, "test")
+		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
 		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1alpha2.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
 			UpdateTime: metav1.Now(),
 		})
-		f.RegisterProxyFixture(proxy)
-		f.RegisterBackendFixture(backend)
-		f.RegisterSecretFixture(secrets...)
+		runner.RegisterFixtures(p)
+		for _, v := range secrets {
+			runner.RegisterFixtures(v)
+		}
 
-		f.transport.RegisterResponder(
+		transport.RegisterResponder(
 			http.MethodPost,
 			"https://api.github.com/app/installations/2/access_tokens",
 			httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
 		)
-		f.transport.RegisterRegexpResponder(
+		transport.RegisterRegexpResponder(
 			http.MethodDelete,
 			regexp.MustCompile(`/repos/f110/heimdallr/hooks/1234$`),
 			httpmock.NewStringResponder(http.StatusNoContent, ""),
 		)
 
-		f.ExpectUpdateBackendStatus()
-		f.ExpectUpdateBackend()
-		f.Run(t, backend)
+		err = runner.Finalize(controller, backend)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		runner.AssertUpdateAction(t, "", updated)
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertNoUnexpectedAction(t)
 	})
 }
 

@@ -277,7 +277,7 @@ func (r *TestRunner) AssertDeleteAction(t *testing.T, obj runtime.Object) bool {
 	})
 }
 
-func (r *TestRunner) AssertAction(t *testing.T, e Action) bool {
+func (r *TestRunner) AssertAction(t *testing.T, expect Action) bool {
 	t.Helper()
 
 	matchVerb := false
@@ -288,14 +288,17 @@ Match:
 		if got.Visited {
 			continue
 		}
-		if got.Verb != e.Verb {
+		if got.Verb != expect.Verb {
+			continue
+		}
+		if expect.Subresource != "" && got.Subresource != expect.Subresource {
 			continue
 		}
 
 		matchVerb = true
 		switch got.Verb {
 		case ActionCreate:
-			if reflect.TypeOf(got.Object) != reflect.TypeOf(e.Object) {
+			if reflect.TypeOf(got.Object) != reflect.TypeOf(expect.Object) {
 				continue
 			}
 
@@ -303,7 +306,7 @@ Match:
 			if !ok {
 				continue
 			}
-			objMeta, ok := e.Object.(metav1.Object)
+			objMeta, ok := expect.Object.(metav1.Object)
 			if !ok {
 				continue
 			}
@@ -315,19 +318,23 @@ Match:
 				break Match
 			}
 		case ActionUpdate:
+			if got.Subresource != expect.Subresource {
+				continue
+			}
+
 			obj = got.Object
-			if reflect.DeepEqual(got.Object, e.Object) {
+			if reflect.DeepEqual(got.Object, expect.Object) {
 				matchObj = true
 				got.Visited = true
 				break Match
 			}
 		case ActionDelete:
-			expectMeta, ok := e.Object.(metav1.Object)
+			expectMeta, ok := expect.Object.(metav1.Object)
 			if !ok {
 				continue
 			}
 
-			if resourceName(e.Object) == got.GroupVersionResource.Resource &&
+			if resourceName(expect.Object) == got.GroupVersionResource.Resource &&
 				got.Name == expectMeta.GetName() && got.Namespace == expectMeta.GetNamespace() {
 				matchObj = true
 				got.Visited = true
@@ -340,7 +347,7 @@ Match:
 	} else if !matchObj {
 		msg := "The expect action was called but the matched object was not found"
 		if obj != nil {
-			assert.Fail(t, msg, cmp.Diff(e.Object, obj))
+			assert.Fail(t, msg, cmp.Diff(expect.Object, obj))
 		} else {
 			assert.Fail(t, msg)
 		}
@@ -376,7 +383,7 @@ func (r *TestRunner) AssertNoUnexpectedAction(t *testing.T) {
 			if v.Object != nil {
 				kind = reflect.TypeOf(v.Object).Elem().Name()
 			}
-			line = append(line, fmt.Sprintf("%s %s%s", v.Verb, kind, key))
+			line = append(line, fmt.Sprintf("%s %s %s", v.Verb, kind, key))
 		}
 		msg = strings.Join(line, " ")
 	}
