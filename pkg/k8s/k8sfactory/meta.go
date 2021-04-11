@@ -58,6 +58,14 @@ func Created(object interface{}) {
 	}
 }
 
+func Delete(object interface{}) {
+	m, ok := object.(metav1.Object)
+	if ok {
+		n := metav1.Now()
+		m.SetDeletionTimestamp(&n)
+	}
+}
+
 func Annotation(k, v string) Trait {
 	return func(object interface{}) {
 		m, ok := object.(metav1.Object)
@@ -152,6 +160,26 @@ func MatchLabelSelector(label map[string]string) Trait {
 			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
 		case *policyv1beta1.PodDisruptionBudget:
 			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
+		}
+	}
+}
+
+func Finalizer(v string) Trait {
+	return func(object interface{}) {
+		m, ok := object.(metav1.Object)
+		if ok {
+			found := false
+			for _, f := range m.GetFinalizers() {
+				if f == v {
+					found = true
+					break
+				}
+			}
+			if found {
+				return
+			}
+
+			m.SetFinalizers(append(m.GetFinalizers(), v))
 		}
 	}
 }
