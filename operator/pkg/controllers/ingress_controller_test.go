@@ -10,24 +10,30 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
 func TestIngressController(t *testing.T) {
 	t.Run("CreateBackend", func(t *testing.T) {
 		t.Parallel()
-		f := newIngressControllerTestRunner(t)
+
+		runner := controllertest.NewTestRunner()
+		controller := NewIngressController(
+			runner.CoreSharedInformerFactory,
+			runner.SharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+		)
 
 		ingClass, ing, svc, svcWeb := ingressControllerFixtures()
-		f.RegisterIngressClassFixture(ingClass)
-		f.RegisterIngressFixture(ing)
-		f.RegisterServiceFixture(svc, svcWeb)
+		runner.RegisterFixtures(ingClass, ing, svc, svcWeb)
 
-		f.ExpectUpdateIngress()
-		f.ExpectCreateBackend()
-		f.Run(t, ing)
+		err := runner.Reconcile(controller, ing)
+		require.NoError(t, err)
 
-		updatedB, err := f.client.ProxyV1alpha2().Backends(ing.Namespace).Get(context.TODO(), ing.Name, metav1.GetOptions{})
+		updatedB, err := runner.Client.ProxyV1alpha2().Backends(ing.Namespace).Get(context.TODO(), ing.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, ingClass.Labels, updatedB.Labels)
 		assert.Equal(t, ing.Spec.Rules[0].Host, updatedB.Spec.FQDN)
@@ -35,6 +41,10 @@ func TestIngressController(t *testing.T) {
 		require.Len(t, updatedB.Spec.HTTP, 2)
 		assert.Equal(t, svc.Name, updatedB.Spec.HTTP[0].ServiceSelector.Name)
 		assert.Equal(t, svcWeb.Name, updatedB.Spec.HTTP[1].ServiceSelector.Name)
+
+		//runner.AssertUpdateAction(t, "status", ing)
+		runner.AssertCreateAction(t, proxy.BackendFactory(nil, k8sfactory.Namef("%s", ing.Name), k8sfactory.Namespace(ing.Namespace)))
+		runner.AssertNoUnexpectedAction(t)
 	})
 }
 

@@ -147,6 +147,10 @@ func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 			r.registerRoleBindingFixture(obj)
 		case *appsv1.Deployment:
 			r.registerDeploymentFixture(obj)
+		case *networkingv1.Ingress:
+			r.registerIngressFixture(obj)
+		case *networkingv1.IngressClass:
+			r.registerIngressClassFixture(obj)
 		case *policyv1beta1.PodDisruptionBudget:
 			r.registerPodDisruptionBudgetFixture(obj)
 		case *certmanagerv1.Certificate:
