@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "v1alpha1",
+    srcs = [
+        "etcdcluster.go",
+        "expansion_generated.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/listers/etcd/v1alpha1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/api/etcd/v1alpha1",
+        "//vendor/k8s.io/apimachinery/pkg/api/errors",
+        "//vendor/k8s.io/apimachinery/pkg/labels",
+        "//vendor/k8s.io/client-go/tools/cache",
+    ],
+)

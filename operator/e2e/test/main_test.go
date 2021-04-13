@@ -15,9 +15,9 @@ import (
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
-	"go.f110.dev/heimdallr/operator/pkg/controllers"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/k8s/controllers"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
 )

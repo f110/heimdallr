@@ -10,8 +10,8 @@ import (
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
-	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
+	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
@@ -108,6 +108,7 @@ func TestEtcdController(t *testing.T) {
 				s.Subject(func(m *btesting.Matcher) {
 					f.EtcdClusters.Setup(m,
 						k8sfactory.Name("restore"),
+						etcd.Backup(600, 5),
 						etcd.BackupToMinIO(
 							kind.MinIOBucketName,
 							"restore-test",

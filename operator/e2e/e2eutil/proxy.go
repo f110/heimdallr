@@ -27,9 +27,9 @@ import (
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 
-	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
 	"go.f110.dev/heimdallr/pkg/cert"
+	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"

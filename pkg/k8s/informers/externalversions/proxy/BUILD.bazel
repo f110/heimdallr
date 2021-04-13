@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "proxy",
+    srcs = ["interface.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions/proxy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/informers/externalversions/internalinterfaces",
+        "//pkg/k8s/informers/externalversions/proxy/v1alpha1",
+        "//pkg/k8s/informers/externalversions/proxy/v1alpha2",
+    ],
+)

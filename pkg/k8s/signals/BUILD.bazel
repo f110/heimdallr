@@ -1,0 +1,11 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "signals",
+    srcs = [
+        "signals.go",
+        "signals_posix.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/signals",
+    visibility = ["//visibility:public"],
+)

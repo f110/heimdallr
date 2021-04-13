@@ -16,7 +16,7 @@ run-rpcserver:
 	bazel run //cmd/heim-rpcserver -- -c $(CURDIR)/rpcserver_config_debug.yaml
 
 run-operator:
-	bazel run //operator/cmd/heimdallrcontroller -- $(OPERATOR_ARG)
+	bazel run //cmd/heimdallrcontroller -- $(OPERATOR_ARG)
 
 test:
 	bazel test //...
@@ -32,7 +32,7 @@ gen:
 
 gen-operator:
 	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
-	bazel run //operator/pkg/controllers:rbac
+	bazel run //pkg/k8s/controllers:rbac
 
 create-cluster:
 	bazel run //:create_cluster

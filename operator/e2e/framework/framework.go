@@ -18,11 +18,11 @@ import (
 	"k8s.io/client-go/rest"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
-	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
-	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
+	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
+	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )

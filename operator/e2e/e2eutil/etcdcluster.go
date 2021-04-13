@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/etcd/v1alpha2"
-	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/operator/pkg/client/versioned"
+	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 

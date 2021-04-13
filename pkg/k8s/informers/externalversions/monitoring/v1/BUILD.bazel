@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "monitoring",
+    srcs = [
+        "alertmanager.go",
+        "interface.go",
+        "podmonitor.go",
+        "probe.go",
+        "prometheus.go",
+        "prometheusrule.go",
+        "servicemonitor.go",
+        "thanosruler.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions/monitoring/v1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/client/versioned",
+        "//pkg/k8s/informers/externalversions/internalinterfaces",
+        "//pkg/k8s/listers/monitoring/v1:monitoring",
+        "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/apimachinery/pkg/watch",
+        "//vendor/k8s.io/client-go/tools/cache",
+    ],
+)

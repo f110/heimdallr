@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
-	proxyv1alpha1 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha1"
+	proxyv1alpha1 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha1"
 )
 
 func Generate(rootCmd *cobra.Command) {

@@ -108,7 +108,7 @@ container_push(
 pkg_tar(
     name = "bin_operator",
     files = {
-        "//operator/cmd/heimdallrcontroller:linux": "/usr/local/bin/heimdallrcontroller",
+        "//cmd/heimdallrcontroller:linux": "/usr/local/bin/heimdallrcontroller",
     },
     mode = "0755",
 )

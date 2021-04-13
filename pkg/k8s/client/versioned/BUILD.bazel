@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "versioned",
+    srcs = [
+        "clientset.go",
+        "doc.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/client/versioned",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/client/versioned/typed/certmanager/v1:certmanager",
+        "//pkg/k8s/client/versioned/typed/certmanager/v1alpha2",
+        "//pkg/k8s/client/versioned/typed/certmanager/v1alpha3",
+        "//pkg/k8s/client/versioned/typed/certmanager/v1beta1",
+        "//pkg/k8s/client/versioned/typed/etcd/v1alpha1",
+        "//pkg/k8s/client/versioned/typed/etcd/v1alpha2",
+        "//pkg/k8s/client/versioned/typed/monitoring/v1:monitoring",
+        "//pkg/k8s/client/versioned/typed/proxy/v1alpha1",
+        "//pkg/k8s/client/versioned/typed/proxy/v1alpha2",
+        "//vendor/k8s.io/client-go/discovery",
+        "//vendor/k8s.io/client-go/rest",
+        "//vendor/k8s.io/client-go/util/flowcontrol",
+    ],
+)
