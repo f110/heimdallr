@@ -33,6 +33,16 @@ func Factory(base *proxyv1alpha2.Proxy, traits ...k8sfactory.Trait) *proxyv1alph
 	return p
 }
 
+func Phase(v proxyv1alpha2.ProxyPhase) k8sfactory.Trait {
+	return func(object interface{}) {
+		p, ok := object.(*proxyv1alpha2.Proxy)
+		if !ok {
+			return
+		}
+		p.Status.Phase = v
+	}
+}
+
 func IdentityProvider(provider, clientId, secretName, key string) k8sfactory.Trait {
 	return func(object interface{}) {
 		p, ok := object.(*proxyv1alpha2.Proxy)

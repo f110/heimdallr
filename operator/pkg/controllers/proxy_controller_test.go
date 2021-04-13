@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -14,9 +15,349 @@ import (
 	"go.f110.dev/heimdallr/operator/pkg/api/etcd"
 	"go.f110.dev/heimdallr/operator/pkg/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/operator/pkg/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/operator/pkg/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
+
+func TestProxyController(t *testing.T) {
+	t.Run("NewProxyController", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+		controllertest.AssertRetry(t, err)
+
+		namespace := k8sfactory.Namespace(p.Namespace)
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-ca", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-privkey", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-github-secret", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-cookie-secret", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-internal-token", p.Name), namespace))
+		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("Remove ownerReference in Secret", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Status.CASecretName = p.Name + "-ca"
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:           p,
+			Clientset:      runner.Client,
+			ServiceLister:  controller.serviceLister,
+			Backends:       backends,
+			Roles:          roles,
+			RpcPermissions: rpcPermissions,
+			RoleBindings:   roleBindings,
+		})
+		ec, _ := hp.EtcdCluster()
+		ec = etcd.Factory(ec, etcd.Ready)
+		runner.RegisterFixtures(ec)
+		var caSecret *corev1.Secret
+		for _, v := range hp.Secrets() {
+			s, err := v.Create()
+			hp.ControlObject(s)
+
+			require.NoError(t, err)
+			runner.RegisterFixtures(s)
+
+			if v.Name == hp.CASecretName() {
+				caSecret = s
+			}
+		}
+		require.NotNil(t, caSecret)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+		controllertest.AssertRetry(t, err)
+
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertUpdateAction(t, "", k8sfactory.SecretFactory(caSecret, k8sfactory.ClearOwnerReference))
+		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertNoUnexpectedAction(t)
+
+		caSecret, err = runner.CoreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.Len(t, caSecret.OwnerReferences, 0)
+	})
+
+	t.Run("Preparing phase when EtcdCluster is not ready", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		runner.RegisterFixtures(clientSecret)
+
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:           p,
+			Clientset:      runner.Client,
+			ServiceLister:  controller.serviceLister,
+			Backends:       backends,
+			Roles:          roles,
+			RpcPermissions: rpcPermissions,
+			RoleBindings:   roleBindings,
+		})
+		runner.RegisterFixtures(k8sfactory.SecretFactory(nil, k8sfactory.Name(hp.CertificateSecretName()), k8sfactory.Namespace(p.Namespace)))
+		ec, _ := hp.EtcdCluster()
+		runner.RegisterFixtures(ec)
+		for _, v := range hp.Secrets() {
+			s, err := v.Create()
+			require.NoError(t, err)
+			runner.RegisterFixtures(s)
+		}
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+		controllertest.AssertRetry(t, err)
+
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertNoUnexpectedAction(t)
+
+		etcdC, err := runner.Client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
+		require.NotNil(t, etcdC.Spec.Backup)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)
+		require.NotNil(t, etcdC.Spec.Backup.Storage.MinIO)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket, etcdC.Spec.Backup.Storage.MinIO.Bucket)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path, etcdC.Spec.Backup.Storage.MinIO.Path)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure, etcdC.Spec.Backup.Storage.MinIO.Secure)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Name)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Namespace)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Name)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Namespace)
+	})
+
+	t.Run("Finish preparing phase", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:           p,
+			Clientset:      runner.Client,
+			ServiceLister:  controller.serviceLister,
+			Backends:       backends,
+			Roles:          roles,
+			RpcPermissions: rpcPermissions,
+			RoleBindings:   roleBindings,
+		})
+		ec, _ := hp.EtcdCluster()
+		ec = etcd.Factory(ec, etcd.Ready)
+		runner.RegisterFixtures(ec)
+		for _, v := range hp.Secrets() {
+			s, err := v.Create()
+			require.NoError(t, err)
+			runner.RegisterFixtures(s)
+		}
+		runner.RegisterFixtures(hp.PrepareCompleted(ec)...)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+		controllertest.AssertRetry(t, err)
+
+		namespace := k8sfactory.Namespace(p.Namespace)
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, setProxyStatus))
+		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-proxy", p.Name), namespace))
+		runner.AssertNoUnexpectedAction(t)
+
+		updatedP, err := runner.Client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		proxyConfigMap, err := runner.CoreClient.CoreV1().ConfigMaps(hp.Namespace).Get(context.TODO(), hp.ReverseProxyConfigName(), metav1.GetOptions{})
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, updatedP.Status.CASecretName)
+		assert.NotEmpty(t, updatedP.Status.SigningPrivateKeySecretName)
+		assert.NotEmpty(t, updatedP.Status.GithubWebhookSecretName)
+		assert.NotEmpty(t, updatedP.Status.InternalTokenSecretName)
+		assert.NotEmpty(t, updatedP.Status.CookieSecretName)
+
+		assert.NotEmpty(t, proxyConfigMap.Data[proxyFilename])
+		assert.NotEmpty(t, proxyConfigMap.Data[roleFilename])
+		assert.NotEmpty(t, proxyConfigMap.Data[rpcPermissionFilename])
+
+		roleConfig := make([]*config.Role, 0)
+		if err := yaml.Unmarshal([]byte(proxyConfigMap.Data[roleFilename]), &roleConfig); err != nil {
+			t.Fatal(err)
+		}
+		roleMap := make(map[string]*config.Role)
+		for _, v := range roleConfig {
+			roleMap[v.Name] = v
+		}
+		assert.Len(t, roleConfig, 2)
+		assert.Contains(t, roleMap, "test")
+		assert.Contains(t, roleMap, "admin")
+		assert.Len(t, roleMap["test"].Bindings, 1)
+		assert.Len(t, roleMap["admin"].Bindings, 1)
+	})
+
+	t.Run("RPC server is ready", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, services)
+
+		hp := NewHeimdallrProxy(HeimdallrProxyParams{
+			Spec:           p,
+			Clientset:      runner.Client,
+			ServiceLister:  controller.serviceLister,
+			Backends:       backends,
+			Roles:          roles,
+			RpcPermissions: rpcPermissions,
+			RoleBindings:   roleBindings,
+		})
+		ec, _ := hp.EtcdCluster()
+		ec = etcd.Factory(ec, etcd.Ready)
+		runner.RegisterFixtures(hp.PrepareCompleted(ec)...)
+		hp.Datastore = ec
+		runner.RegisterFixtures(ec)
+		for _, v := range hp.Secrets() {
+			s, err := v.Create()
+			require.NoError(t, err)
+			runner.RegisterFixtures(s)
+		}
+		err := hp.Init(runner.CoreSharedInformerFactory.Core().V1().Secrets().Lister())
+		require.NoError(t, err)
+		pcs, err := hp.IdealRPCServer()
+		require.NoError(t, err)
+		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
+		registerFixtureFromProcess(runner, pcs)
+
+		err = runner.Reconcile(controller, p)
+		require.NoError(t, err)
+
+		namespace := k8sfactory.Namespace(p.Namespace)
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseRunning), setProxyStatus))
+		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-internal", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		updatedBackend := backends[0].DeepCopy()
+		updatedBackend.Status.DeployedBy = []*proxyv1alpha2.ProxyReference{
+			{Name: p.Name, Namespace: p.Namespace, Url: fmt.Sprintf("https://%s.%s.%s", updatedBackend.Name, updatedBackend.Spec.Layer, p.Spec.Domain)},
+		}
+		runner.AssertUpdateAction(t, "status", updatedBackend)
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus))
+		runner.AssertNoUnexpectedAction(t)
+
+		updatedP, err := runner.Client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.False(t, updatedP.Status.Ready)
+		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha2.ProxyPhaseRunning)
+
+		for _, backend := range backends {
+			updatedB, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.NotEmpty(t, updatedB.Status.DeployedBy)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Name, p.Name)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Namespace, p.Namespace)
+			assert.Equal(t, updatedB.Status.DeployedBy[0].Url, fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, p.Spec.Domain))
+		}
+	})
+}
+
+func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyController) {
+	runner := controllertest.NewTestRunner()
+	controller, err := NewProxyController(
+		runner.SharedInformerFactory,
+		runner.CoreSharedInformerFactory,
+		runner.CoreClient,
+		runner.Client,
+	)
+	require.NoError(t, err)
+
+	return runner, controller
+}
+
+func registerFixtureFromProcess(runner *controllertest.TestRunner, p *process) {
+	for _, v := range p.Service {
+		runner.RegisterFixtures(v)
+	}
+
+	for _, v := range p.ConfigMaps {
+		runner.RegisterFixtures(v)
+	}
+
+	runner.RegisterFixtures(p.Deployment, p.PodDisruptionBudget)
+}
+
+func registerFixtures(
+	runner *controllertest.TestRunner,
+	secret *corev1.Secret,
+	backends []*proxyv1alpha2.Backend,
+	roles []*proxyv1alpha2.Role,
+	rpcPermissions []*proxyv1alpha2.RpcPermission,
+	roleBindings []*proxyv1alpha2.RoleBinding,
+	services []*corev1.Service,
+) {
+	runner.RegisterFixtures(secret)
+	for _, v := range backends {
+		runner.RegisterFixtures(v)
+	}
+	for _, v := range roles {
+		runner.RegisterFixtures(v)
+	}
+	for _, v := range rpcPermissions {
+		runner.RegisterFixtures(v)
+	}
+	for _, v := range roleBindings {
+		runner.RegisterFixtures(v)
+	}
+	for _, v := range services {
+		runner.RegisterFixtures(v)
+	}
+}
 
 func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alpha2.Backend, []*proxyv1alpha2.Role, []*proxyv1alpha2.RpcPermission, []*proxyv1alpha2.RoleBinding, []*corev1.Service) {
 	p := proxy.Factory(nil,
@@ -46,7 +387,6 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 		proxy.CookieSession,
 		proxy.IdentityProvider("google", "client-id", "client-secret", "client-secret"),
 	)
-
 	clientSecret := k8sfactory.SecretFactory(nil,
 		k8sfactory.Name("client-secret"),
 		k8sfactory.Namespace(metav1.NamespaceDefault),
@@ -108,288 +448,15 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 	return p, clientSecret, backends, roles, rpcPermissions, roleBindings, services
 }
 
-func registerFixtureFromProcess(f *proxyControllerTestRunner, p *process) {
-	if p.Deployment != nil {
-		f.RegisterDeploymentFixture(p.Deployment)
+func setProxyStatus(object interface{}) {
+	p, ok := object.(*proxyv1alpha2.Proxy)
+	if !ok {
+		return
 	}
 
-	if p.Service != nil {
-		for _, v := range p.Service {
-			f.RegisterServiceFixture(v)
-		}
-	}
-
-	if p.ConfigMaps != nil {
-		f.RegisterConfigMapFixture(p.ConfigMaps...)
-	}
-
-	if p.PodDisruptionBudget != nil {
-		f.RegisterPodDisruptionBudgetFixture(p.PodDisruptionBudget)
-	}
-}
-
-func TestProxyController(t *testing.T) {
-	t.Run("NewProxyController", func(t *testing.T) {
-		t.Parallel()
-
-		f := newProxyControllerTestRunner(t)
-
-		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterFixtures(p, clientSecret)
-
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      f.client,
-			ServiceLister:  f.c.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
-
-		for _, v := range hp.Secrets() {
-			_, err := v.Create()
-			if err != nil {
-				t.Fatal(err)
-			}
-			f.ExpectCreateSecret()
-		}
-		f.ExpectUpdateProxyStatus()
-		f.ExpectCreateCertificate()
-
-		f.Run(t, p)
-	})
-
-	t.Run("Remove ownerReference in Secret", func(t *testing.T) {
-		t.Parallel()
-
-		f := newProxyControllerTestRunner(t)
-
-		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		p.Status.CASecretName = p.Name + "-ca"
-		f.RegisterFixtures(p, clientSecret)
-		f.RegisterBackendFixture(backends...)
-
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      f.client,
-			ServiceLister:  f.c.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
-		ec, _ := hp.EtcdCluster()
-		ec = etcd.Factory(ec, etcd.Ready)
-		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range hp.Secrets() {
-			s, err := v.Create()
-			hp.ControlObject(s)
-
-			require.NoError(t, err)
-			f.RegisterSecretFixture(s)
-		}
-
-		f.ExpectUpdateProxyStatus()
-		f.ExpectUpdateSecret()
-		f.ExpectCreateCertificate()
-		f.Run(t, p)
-
-		caSecret, err := f.coreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
-		require.NoError(t, err)
-		assert.Len(t, caSecret.OwnerReferences, 0)
-	})
-
-	t.Run("Preparing phase when EtcdCluster is not ready", func(t *testing.T) {
-		t.Parallel()
-
-		f := newProxyControllerTestRunner(t)
-
-		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterFixtures(p, clientSecret)
-
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      f.client,
-			ServiceLister:  f.c.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
-		ec, _ := hp.EtcdCluster()
-		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range hp.Secrets() {
-			s, err := v.Create()
-			require.NoError(t, err)
-			f.RegisterSecretFixture(s)
-		}
-
-		f.ExpectUpdateProxyStatus()
-		f.ExpectCreateCertificate()
-		f.Run(t, p)
-
-		etcdC, err := f.client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
-		require.NotNil(t, etcdC.Spec.Backup)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)
-		require.NotNil(t, etcdC.Spec.Backup.Storage.MinIO)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket, etcdC.Spec.Backup.Storage.MinIO.Bucket)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Path, etcdC.Spec.Backup.Storage.MinIO.Path)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure, etcdC.Spec.Backup.Storage.MinIO.Secure)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Name)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.Namespace)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey, etcdC.Spec.Backup.Storage.MinIO.CredentialSelector.SecretAccessKeyKey)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Name)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace, etcdC.Spec.Backup.Storage.MinIO.ServiceSelector.Namespace)
-	})
-
-	t.Run("Finish preparing phase", func(t *testing.T) {
-		t.Parallel()
-
-		f := newProxyControllerTestRunner(t)
-
-		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
-		f.RegisterFixtures(p, clientSecret)
-		f.RegisterBackendFixture(backends...)
-		f.RegisterProxyRoleFixture(roles...)
-		f.RegisterProxyRoleBindingFixture(roleBindings...)
-
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      f.client,
-			ServiceLister:  f.c.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
-		ec, _ := hp.EtcdCluster()
-		ec = etcd.Factory(ec, etcd.Ready)
-		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range hp.Secrets() {
-			s, err := v.Create()
-			if err != nil {
-				t.Fatal(err)
-			}
-			f.RegisterSecretFixture(s)
-		}
-		f.RegisterFixtures(hp.PrepareCompleted(ec)...)
-
-		f.ExpectUpdateProxyStatus()
-		f.ExpectCreateDeployment()
-		f.ExpectCreatePodDisruptionBudget()
-		f.ExpectCreateService()
-		f.ExpectCreateConfigMap()
-		f.ExpectCreateConfigMap()
-		f.ExpectUpdateProxyStatus()
-		f.Run(t, p)
-
-		updatedP, err := f.client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		proxyConfigMap, err := f.coreClient.CoreV1().ConfigMaps(hp.Namespace).Get(context.TODO(), hp.ReverseProxyConfigName(), metav1.GetOptions{})
-		require.NoError(t, err)
-
-		assert.NotEmpty(t, updatedP.Status.CASecretName)
-		assert.NotEmpty(t, updatedP.Status.SigningPrivateKeySecretName)
-		assert.NotEmpty(t, updatedP.Status.GithubWebhookSecretName)
-		assert.NotEmpty(t, updatedP.Status.InternalTokenSecretName)
-		assert.NotEmpty(t, updatedP.Status.CookieSecretName)
-
-		assert.NotEmpty(t, proxyConfigMap.Data[proxyFilename])
-		assert.NotEmpty(t, proxyConfigMap.Data[roleFilename])
-		assert.NotEmpty(t, proxyConfigMap.Data[rpcPermissionFilename])
-
-		roleConfig := make([]*config.Role, 0)
-		if err := yaml.Unmarshal([]byte(proxyConfigMap.Data[roleFilename]), &roleConfig); err != nil {
-			t.Fatal(err)
-		}
-		roleMap := make(map[string]*config.Role)
-		for _, v := range roleConfig {
-			roleMap[v.Name] = v
-		}
-		assert.Len(t, roleConfig, 2)
-		assert.Contains(t, roleMap, "test")
-		assert.Contains(t, roleMap, "admin")
-		assert.Len(t, roleMap["test"].Bindings, 1)
-		assert.Len(t, roleMap["admin"].Bindings, 1)
-	})
-
-	t.Run("RPC server is ready", func(t *testing.T) {
-		t.Parallel()
-
-		f := newProxyControllerTestRunner(t)
-
-		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
-		f.RegisterFixtures(p, clientSecret)
-		f.RegisterBackendFixture(backends...)
-		f.RegisterProxyRoleFixture(roles...)
-		f.RegisterProxyRoleBindingFixture(roleBindings...)
-		f.RegisterServiceFixture(services...)
-
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      f.client,
-			ServiceLister:  f.c.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
-		ec, _ := hp.EtcdCluster()
-		ec = etcd.Factory(ec, etcd.Ready)
-		f.RegisterFixtures(hp.PrepareCompleted(ec)...)
-		hp.Datastore = ec
-		f.RegisterEtcdClusterFixture(ec)
-		for _, v := range hp.Secrets() {
-			s, err := v.Create()
-			require.NoError(t, err)
-			f.RegisterSecretFixture(s)
-		}
-		f.RegisterProxyFixture(p)
-		err := hp.Init(f.coreSharedInformerFactory.Core().V1().Secrets().Lister())
-		require.NoError(t, err)
-		pcs, err := hp.IdealRPCServer()
-		require.NoError(t, err)
-		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
-		registerFixtureFromProcess(f, pcs)
-
-		f.ExpectUpdateProxyStatus()
-		// Expect to create the proxy
-		f.ExpectCreateDeployment()
-		f.ExpectCreatePodDisruptionBudget()
-		f.ExpectCreateService()
-		f.ExpectCreateService()
-		f.ExpectCreateConfigMap()
-		f.ExpectUpdateProxyStatus()
-		f.ExpectUpdateBackendStatus()
-		// Expect to create the dashboard
-		f.ExpectCreateDeployment()
-		f.ExpectCreatePodDisruptionBudget()
-		f.ExpectCreateService()
-		f.ExpectCreateConfigMap()
-		// Finally, update the status of proxy
-		f.ExpectUpdateProxyStatus()
-		f.Run(t, p)
-
-		updatedP, err := f.client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		assert.False(t, updatedP.Status.Ready)
-		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha2.ProxyPhaseRunning)
-
-		for _, backend := range backends {
-			updatedB, err := f.client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.NotEmpty(t, updatedB.Status.DeployedBy)
-			assert.Equal(t, updatedB.Status.DeployedBy[0].Name, p.Name)
-			assert.Equal(t, updatedB.Status.DeployedBy[0].Namespace, p.Namespace)
-			assert.Equal(t, updatedB.Status.DeployedBy[0].Url, fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, p.Spec.Domain))
-		}
-	})
+	p.Status.CASecretName = fmt.Sprintf("%s-ca", p.Name)
+	p.Status.SigningPrivateKeySecretName = fmt.Sprintf("%s-privkey", p.Name)
+	p.Status.GithubWebhookSecretName = fmt.Sprintf("%s-github-secret", p.Name)
+	p.Status.CookieSecretName = fmt.Sprintf("%s-cookie-secret", p.Name)
+	p.Status.InternalTokenSecretName = fmt.Sprintf("%s-internal-token", p.Name)
 }

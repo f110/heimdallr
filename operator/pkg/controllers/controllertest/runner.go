@@ -85,6 +85,16 @@ type TestRunner struct {
 func NewTestRunner() *TestRunner {
 	client := fake.NewSimpleClientset()
 	coreClient := k8sfake.NewSimpleClientset()
+	coreClient.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "cert-manager.io/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Kind: "Certificate",
+				},
+			},
+		},
+	}
 
 	sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
@@ -123,12 +133,20 @@ func (r *TestRunner) Finalize(c controllerbase.ControllerBase, target runtime.Ob
 
 func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 	for _, v := range objs {
+		if v == nil {
+			continue
+		}
+
 		copied := v.DeepCopyObject()
 		switch obj := copied.(type) {
 		case *proxyv1alpha2.Proxy:
 			r.registerProxyFixture(obj)
 		case *proxyv1alpha2.Backend:
 			r.registerBackendFixture(obj)
+		case *proxyv1alpha2.Role:
+			r.registerProxyRoleFixture(obj)
+		case *proxyv1alpha2.RoleBinding:
+			r.registerProxyRoleBindingFixture(obj)
 		case *etcdv1alpha2.EtcdCluster:
 			r.registerEtcdClusterFixture(obj)
 		case *corev1.Pod:
@@ -327,7 +345,7 @@ Match:
 			}
 
 			obj = got.Object
-			if reflect.DeepEqual(got.Object, expect.Object) {
+			if fuzzyEqual(got.Object, expect.Object) {
 				matchObj = true
 				got.Visited = true
 				break Match
@@ -387,7 +405,11 @@ func (r *TestRunner) AssertNoUnexpectedAction(t *testing.T) {
 			if v.Object != nil {
 				kind = reflect.TypeOf(v.Object).Elem().Name()
 			}
-			line = append(line, fmt.Sprintf("%s %s %s", v.Verb, kind, key))
+			subresource := ""
+			if v.Subresource != "" {
+				subresource = "(" + v.Subresource + ")"
+			}
+			line = append(line, fmt.Sprintf("%s %s%s %s", v.Verb, kind, subresource, key))
 		}
 		msg = strings.Join(line, " ")
 	}
@@ -452,4 +474,19 @@ func (r *TestRunner) editActions() []*Action {
 	r.Actions = actions
 
 	return actions
+}
+
+func fuzzyEqual(left, right runtime.Object) bool {
+	return reflect.DeepEqual(excludeTimeFields(left), excludeTimeFields(right))
+}
+
+func excludeTimeFields(v runtime.Object) runtime.Object {
+	obj := v.DeepCopyObject()
+	m, ok := obj.(metav1.Object)
+	if !ok {
+		return v
+	}
+
+	m.SetCreationTimestamp(metav1.Time{})
+	return obj
 }

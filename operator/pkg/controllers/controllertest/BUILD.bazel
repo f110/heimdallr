@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "controllertest",
-    srcs = ["runner.go"],
+    srcs = [
+        "assert.go",
+        "runner.go",
+    ],
     importpath = "go.f110.dev/heimdallr/operator/pkg/controllers/controllertest",
     visibility = ["//visibility:public"],
     deps = [

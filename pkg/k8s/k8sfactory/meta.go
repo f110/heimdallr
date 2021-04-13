@@ -55,6 +55,7 @@ func Created(object interface{}) {
 	m, ok := object.(metav1.Object)
 	if ok {
 		m.SetCreationTimestamp(metav1.Now())
+		m.SetUID(uuid.NewUUID())
 	}
 }
 
@@ -137,6 +138,14 @@ func ControlledBy(v runtime.Object, s *runtime.Scheme) Trait {
 			m.SetOwnerReferences(ref)
 		}
 	}
+}
+
+func ClearOwnerReference(object interface{}) {
+	objMeta, ok := object.(metav1.Object)
+	if !ok {
+		return
+	}
+	objMeta.SetOwnerReferences(make([]metav1.OwnerReference, 0))
 }
 
 func MatchLabel(v map[string]string) *metav1.LabelSelector {

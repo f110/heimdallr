@@ -1,5 +1,7 @@
 package controllerbase
 
+import "errors"
+
 func WrapRetryError(err error) error {
 	return &RetryError{err: err}
 }
@@ -19,4 +21,8 @@ func (e *RetryError) Unwrap() error {
 func (e *RetryError) Is(err error) bool {
 	_, ok := err.(*RetryError)
 	return ok
+}
+
+func ShouldRetry(err error) bool {
+	return errors.Is(err, &RetryError{})
 }
