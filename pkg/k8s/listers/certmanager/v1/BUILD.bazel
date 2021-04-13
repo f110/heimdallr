@@ -9,7 +9,7 @@ go_library(
         "expansion_generated.go",
         "issuer.go",
     ],
-    importpath = "go.f110.dev/heimdallr/operator/pkg/listers/certmanager/v1",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/listers/certmanager/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
