@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "notification",
+    srcs = [
+        "info.go",
+        "notification.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v7/pkg/notification",
+    importpath = "github.com/minio/minio-go/v7/pkg/notification",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/minio/minio-go/v7/pkg/set"],
+)

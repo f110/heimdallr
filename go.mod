@@ -32,7 +32,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/miekg/dns v1.1.29
-	github.com/minio/minio-go/v6 v6.0.44
+	github.com/minio/minio-go/v7 v7.0.10
 	github.com/peterh/liner v1.2.1
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.46.0

@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "md5-simd",
+    srcs = [
+        "block-generic.go",
+        "block16_amd64.s",
+        "block8_amd64.s",
+        "block_amd64.go",
+        "md5.go",
+        "md5-digest_amd64.go",
+        "md5-server_amd64.go",
+        "md5-server_fallback.go",
+        "md5-util_amd64.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/md5-simd",
+    importpath = "github.com/minio/md5-simd",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:amd64": [
+            "//vendor/github.com/klauspost/cpuid",
+        ],
+        "//conditions:default": [],
+    }),
+)

@@ -15,7 +15,8 @@ import (
 	"os/exec"
 	"time"
 
-	minioclient "github.com/minio/minio-go/v6"
+	minioclient "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/xerrors"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -443,17 +444,18 @@ func createMinIOBucket(cfg *rest.Config) error {
 			return false, nil
 		}
 		instanceEndpoint := fmt.Sprintf("127.0.0.1:%d", ports[0].Local)
-		mc, err := minioclient.New(instanceEndpoint, minioAccessKey, minioSecretKey, false)
+		creds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
+		mc, err := minioclient.New(instanceEndpoint, &minioclient.Options{Creds: creds})
 		if err != nil {
 			return false, nil
 		}
-		if exists, err := mc.BucketExists(MinIOBucketName); err != nil {
+		if exists, err := mc.BucketExists(context.TODO(), MinIOBucketName); err != nil {
 			return false, nil
 		} else if exists {
 			return true, nil
 		}
 
-		if err := mc.MakeBucket(MinIOBucketName, ""); err != nil {
+		if err := mc.MakeBucket(context.TODO(), MinIOBucketName, minioclient.MakeBucketOptions{}); err != nil {
 			return false, nil
 		}
 

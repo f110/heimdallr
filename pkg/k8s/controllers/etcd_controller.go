@@ -16,7 +16,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.etcd.io/etcd/v3/clientv3/snapshot"
 	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
@@ -368,7 +369,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 		}
 	}
 	if readyReceiver {
-		if err := ec.sendBackupToContainer(cluster, members[0].Pod, cluster.Status.Restored.Path); err != nil {
+		if err := ec.sendBackupToContainer(ctx, cluster, members[0].Pod, cluster.Status.Restored.Path); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 
@@ -590,9 +591,9 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 	return nil
 }
 
-func (ec *EtcdController) sendBackupToContainer(cluster *EtcdCluster, pod *corev1.Pod, backupPath string) error {
+func (ec *EtcdController) sendBackupToContainer(ctx context.Context, cluster *EtcdCluster, pod *corev1.Pod, backupPath string) error {
 	ec.Log().Debug("Send to a backup file", zap.String("pod.name", pod.Name), zap.String("path", backupPath))
-	backupFile, forwarder, err := ec.getBackupFile(cluster, backupPath)
+	backupFile, forwarder, err := ec.getBackupFile(ctx, cluster, backupPath)
 	if forwarder != nil {
 		defer forwarder.Close()
 	}
@@ -1172,7 +1173,7 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 			path = path[1:]
 		}
 		backupStatus.Path = filepath.Join(path, filename)
-		_, err = mc.PutObjectWithContext(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
+		_, err = mc.PutObject(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1232,7 +1233,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		listCh := mc.ListObjectsV2(spec.Bucket, spec.Path+"/", false, ctx.Done())
+		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: spec.Path + "/", Recursive: false})
 		backupFiles := make([]string, 0)
 		for obj := range listCh {
 			if obj.Err != nil {
@@ -1250,7 +1251,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		for _, v := range purgeTargets {
-			if err := mc.RemoveObject(spec.Bucket, v); err != nil {
+			if err := mc.RemoveObject(ctx, spec.Bucket, v, minio.RemoveObjectOptions{}); err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
@@ -1308,7 +1309,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 	}
 }
 
-func (ec *EtcdController) getBackupFile(cluster *EtcdCluster, path string) (io.ReadCloser, *portforward.PortForwarder, error) {
+func (ec *EtcdController) getBackupFile(ctx context.Context, cluster *EtcdCluster, path string) (io.ReadCloser, *portforward.PortForwarder, error) {
 	switch {
 	case cluster.Spec.Backup.Storage.MinIO != nil:
 		spec := cluster.Spec.Backup.Storage.MinIO
@@ -1318,7 +1319,7 @@ func (ec *EtcdController) getBackupFile(cluster *EtcdCluster, path string) (io.R
 			return nil, forwarder, xerrors.Errorf(": %w", err)
 		}
 
-		obj, err := mc.GetObject(spec.Bucket, path, minio.GetObjectOptions{})
+		obj, err := mc.GetObject(ctx, spec.Bucket, path, minio.GetObjectOptions{})
 		if err != nil {
 			return nil, forwarder, xerrors.Errorf(": %w", err)
 		}
@@ -1368,13 +1369,11 @@ func (ec *EtcdController) minioClient(spec *etcdv1alpha2.BackupStorageMinIOSpec)
 		return nil, forwarder, xerrors.Errorf(": %w", err)
 	}
 
-	accessKey := credential.Data[spec.CredentialSelector.AccessKeyIDKey]
-	secretAccessKey := credential.Data[spec.CredentialSelector.SecretAccessKeyKey]
-	mc, err := minio.New(instanceEndpoint, string(accessKey), string(secretAccessKey), spec.Secure)
+	creds := credentials.NewStaticV4(string(credential.Data[spec.CredentialSelector.AccessKeyIDKey]), string(credential.Data[spec.CredentialSelector.SecretAccessKeyKey]), "")
+	mc, err := minio.New(instanceEndpoint, &minio.Options{Creds: creds, Secure: spec.Secure, Transport: ec.transport})
 	if err != nil {
 		return nil, forwarder, xerrors.Errorf(": %w", err)
 	}
-	mc.SetCustomTransport(ec.transport)
 
 	return mc, forwarder, nil
 }

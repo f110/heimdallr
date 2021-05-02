@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "xid",
+    srcs = [
+        "hostid_darwin.go",
+        "hostid_fallback.go",
+        "hostid_freebsd.go",
+        "hostid_linux.go",
+        "hostid_windows.go",
+        "id.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/rs/xid",
+    importpath = "github.com/rs/xid",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "s3utils",
+    srcs = ["utils.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v7/pkg/s3utils",
+    importpath = "github.com/minio/minio-go/v7/pkg/s3utils",
+    visibility = ["//visibility:public"],
+)
