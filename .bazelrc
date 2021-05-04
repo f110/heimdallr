@@ -1,6 +1,4 @@
-build --host_force_python=PY2
-test --host_force_python=PY2 --test_output=errors --test_tag_filters=-e2e
-run --host_force_python=PY2
+test --test_output=errors --test_tag_filters=-e2e
 
 test:ci --test_output=errors
 test:ci --test_tag_filters=-e2e
