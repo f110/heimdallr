@@ -47,20 +47,20 @@ git_repository(
     remote = "https://github.com/f110/protoc-ddl",
 )
 
-http_archive(
-    name = "dev_f110_rules_k8s_controller",
-    sha256 = "ec185cf615f01d69ce25ad0ca60c7dbb22b5f570af6f6ce199ca6c1812a86ae6",
-    strip_prefix = "rules_k8s_controller-0.10.0",
-    urls = [
-        "https://github.com/f110/rules_k8s_controller/archive/v0.10.0.tar.gz",
-    ],
-)
-
-#git_repository(
+#http_archive(
 #    name = "dev_f110_rules_k8s_controller",
-#    commit = "e1fc637572e9c6f5b0d3d397fc8d91cb6583e1c4",
-#    remote = "https://github.com/f110/rules_k8s_controller",
+#    sha256 = "ec185cf615f01d69ce25ad0ca60c7dbb22b5f570af6f6ce199ca6c1812a86ae6",
+#    strip_prefix = "rules_k8s_controller-0.10.0",
+#    urls = [
+#        "https://github.com/f110/rules_k8s_controller/archive/v0.10.0.tar.gz",
+#    ],
 #)
+
+git_repository(
+    name = "dev_f110_rules_k8s_controller",
+    commit = "5954f0cce59b05b66d83bce9669f240aab5fe3a3",
+    remote = "https://github.com/f110/rules_k8s_controller",
+)
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
