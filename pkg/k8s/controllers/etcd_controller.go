@@ -491,6 +491,9 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 			if targetMember.Pod.UID == v.Pod.UID {
 				continue
 			}
+			if v.Pod.CreationTimestamp.IsZero() {
+				continue
+			}
 
 			if v.Pod.Status.Phase != corev1.PodRunning {
 				canDeleteMember = false

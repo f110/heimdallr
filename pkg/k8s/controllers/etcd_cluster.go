@@ -622,13 +622,7 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 }
 
 func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
-	onceRunning := false
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			onceRunning = true
-			break
-		}
-	}
+	onceRunning := metav1.HasAnnotation(pod.ObjectMeta, etcd.PodAnnotationKeyRunningAt)
 	// If the Pod has never been running once, There is no need to repair it.
 	if !onceRunning && pod.Status.Phase != corev1.PodFailed {
 		return false
@@ -637,6 +631,14 @@ func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 	switch pod.Status.Phase {
 	case corev1.PodFailed, corev1.PodSucceeded:
 		return true
+	case corev1.PodRunning:
+		needRepair := false
+		for _, cont := range pod.Status.ContainerStatuses {
+			if !cont.Ready {
+				needRepair = true
+			}
+		}
+		return needRepair
 	default:
 		return false
 	}
@@ -727,7 +729,7 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 	}
 
 	needRepair := false
-	canRepair := true
+	canRepair := false
 	if len(c.ownedPods) == 0 {
 		needRepair = true
 		canRepair = false
@@ -737,9 +739,18 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 				needRepair = true
 				continue
 			}
+		}
 
-			if p.Status.Phase != corev1.PodRunning {
-				canRepair = false
+		if needRepair {
+			if len(c.ownedPods) > c.Spec.Members/2+1 {
+				numOfRunningPods := 0
+				for _, p := range c.ownedPods {
+					if p.Status.Phase != corev1.PodRunning {
+						continue
+					}
+					numOfRunningPods++
+				}
+				canRepair = numOfRunningPods >= c.Spec.Members/2+1
 			}
 		}
 	}

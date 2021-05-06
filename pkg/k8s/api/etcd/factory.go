@@ -122,6 +122,15 @@ func Phase(p etcdv1alpha2.EtcdClusterPhase) k8sfactory.Trait {
 	}
 }
 
+func CreatedStatus(object interface{}) {
+	e, ok := object.(*etcdv1alpha2.EtcdCluster)
+	if !ok {
+		return
+	}
+	e.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
+	e.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+}
+
 func Backup(interval, maxBackups int) k8sfactory.Trait {
 	return func(object interface{}) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)

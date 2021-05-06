@@ -57,17 +57,30 @@ func Ready(v interface{}) {
 	})
 }
 
+// NotReady is the trait function for k8sfactory.
+// The object is created but not ready.
 func NotReady(v interface{}) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
 	}
 
+	p.Status.Phase = corev1.PodRunning
 	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
 		Type:               corev1.PodReady,
 		Status:             corev1.ConditionFalse,
 		LastTransitionTime: metav1.Now(),
 	})
+	containerStatus := make([]corev1.ContainerStatus, 0)
+	for _, v := range p.Spec.Containers {
+		containerStatus = append(containerStatus, corev1.ContainerStatus{
+			Name:    v.Name,
+			Image:   v.Image,
+			Ready:   false,
+			Started: pointer.BoolPtr(true),
+		})
+	}
+	p.Status.ContainerStatuses = containerStatus
 }
 
 func PodFailed(v interface{}) {
