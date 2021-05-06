@@ -28,5 +28,6 @@ go_library(
         "//vendor/k8s.io/apimachinery/pkg/util/intstr",
         "//vendor/k8s.io/apimachinery/pkg/util/uuid",
         "//vendor/k8s.io/client-go/kubernetes/scheme",
+        "//vendor/k8s.io/utils/pointer",
     ],
 )

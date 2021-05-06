@@ -74,6 +74,7 @@ func resourceName(v runtime.Object) string {
 }
 
 type TestRunner struct {
+	Now     time.Time
 	Actions []*Action
 
 	Client                    *fake.Clientset
@@ -103,6 +104,7 @@ func NewTestRunner() *TestRunner {
 	coreSharedInformerFactory.Start(context.Background().Done())
 
 	return &TestRunner{
+		Now:                       time.Now(),
 		Client:                    client,
 		CoreClient:                coreClient,
 		SharedInformerFactory:     sharedInformerFactory,
@@ -118,6 +120,7 @@ func (r *TestRunner) Reconcile(c controllerbase.ControllerBase, target runtime.O
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, controllerbase.TimeKey{}, r.Now)
 
 	return c.Reconcile(ctx, target)
 }
@@ -127,6 +130,7 @@ func (r *TestRunner) Finalize(c controllerbase.ControllerBase, target runtime.Ob
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, controllerbase.TimeKey{}, r.Now)
 
 	return c.Finalize(ctx, target)
 }

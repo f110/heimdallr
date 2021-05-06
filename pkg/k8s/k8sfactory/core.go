@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 )
 
 func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {
@@ -42,12 +43,31 @@ func Ready(v interface{}) {
 	containerStatus := make([]corev1.ContainerStatus, 0)
 	for _, v := range p.Spec.Containers {
 		containerStatus = append(containerStatus, corev1.ContainerStatus{
-			Name:  v.Name,
-			Ready: true,
+			Name:    v.Name,
+			Ready:   true,
+			Image:   v.Image,
+			Started: pointer.BoolPtr(true),
 		})
 	}
 	p.Status.ContainerStatuses = containerStatus
-	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue})
+	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
+		Type:               corev1.PodReady,
+		Status:             corev1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func NotReady(v interface{}) {
+	p, ok := v.(*corev1.Pod)
+	if !ok {
+		return
+	}
+
+	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
+		Type:               corev1.PodReady,
+		Status:             corev1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+	})
 }
 
 func PodFailed(v interface{}) {

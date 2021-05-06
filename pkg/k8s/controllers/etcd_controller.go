@@ -269,6 +269,65 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		}
 	}
 
+	for _, v := range cluster.AllExistMembers() {
+		if metav1.HasAnnotation(v.ObjectMeta, etcd.PodAnnotationKeyRunningAt) {
+			continue
+		}
+
+		if v.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		initFinished := true
+		for _, cont := range v.Status.InitContainerStatuses {
+			if cont.State.Terminated == nil {
+				initFinished = false
+				break
+			}
+			if cont.State.Terminated.Reason != "Completed" {
+				initFinished = false
+				break
+			}
+			if cont.State.Terminated.FinishedAt.IsZero() {
+				initFinished = false
+				break
+			}
+		}
+		if !initFinished {
+			continue
+		}
+
+		if len(v.Status.ContainerStatuses) != len(v.Spec.Containers) {
+			continue
+		}
+		running := true
+		for _, cont := range v.Status.ContainerStatuses {
+			if cont.Started == nil {
+				running = false
+				break
+			}
+			if *cont.Started != true || cont.Ready != true {
+				running = false
+				break
+			}
+		}
+		if !running {
+			continue
+		}
+
+		now := ctx.Value(controllerbase.TimeKey{}).(time.Time)
+		metav1.SetMetaDataAnnotation(&v.ObjectMeta, etcd.PodAnnotationKeyRunningAt, now.Format(time.RFC3339))
+		ec.Log().Debug("Add annotation",
+			zap.String("pod.name", v.Name),
+			zap.String("key", etcd.PodAnnotationKeyRunningAt),
+			zap.String("value", v.Annotations[etcd.PodAnnotationKeyRunningAt]),
+		)
+		p, err := ec.coreClient.CoreV1().Pods(v.Namespace).Update(ctx, v, metav1.UpdateOptions{})
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		p.ObjectMeta.DeepCopyInto(&v.ObjectMeta)
+	}
+
 	if err := ec.ensureService(ctx, cluster); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

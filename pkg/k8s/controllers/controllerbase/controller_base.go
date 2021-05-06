@@ -20,6 +20,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
+type TimeKey struct{}
+
 type ObjectToKeyConverter func(obj interface{}) (keys []string, err error)
 
 type ControllerBase interface {
@@ -127,6 +129,7 @@ func (c *Controller) ProcessKey(key string) error {
 	if obj == nil {
 		return nil
 	}
+	ctx = context.WithValue(ctx, TimeKey{}, time.Now())
 
 	objMeta, err := meta.Accessor(obj)
 	if err != nil {
