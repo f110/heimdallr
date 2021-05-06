@@ -17,7 +17,6 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -25,6 +24,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/database/mysql"
 	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
 	"go.f110.dev/heimdallr/pkg/database/mysql/entity"
+	"go.f110.dev/heimdallr/pkg/fsm"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcserver"
 )
@@ -35,14 +35,14 @@ const (
 )
 
 const (
-	stateInit cmd.State = iota
+	stateInit fsm.State = iota
 	stateSetup
 	stateStart
 	stateShutdown
 )
 
 type mainProcess struct {
-	*cmd.FSM
+	*fsm.FSM
 
 	ConfFile       string
 	Config         *configv2.Config
@@ -67,8 +67,8 @@ type mainProcess struct {
 
 func New() *mainProcess {
 	m := &mainProcess{}
-	m.FSM = cmd.NewFSM(
-		map[cmd.State]cmd.StateFunc{
+	m.FSM = fsm.NewFSM(
+		map[fsm.State]fsm.StateFunc{
 			stateInit:     m.init,
 			stateSetup:    m.setup,
 			stateStart:    m.start,
@@ -81,15 +81,15 @@ func New() *mainProcess {
 	return m
 }
 
-func (m *mainProcess) init() (cmd.State, error) {
+func (m *mainProcess) init() (fsm.State, error) {
 	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.Config = conf
 	m.configReloader, err = configutil.NewReloader(conf)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	switch {
@@ -102,15 +102,15 @@ func (m *mainProcess) init() (cmd.State, error) {
 	return stateSetup, nil
 }
 
-func (m *mainProcess) setup() (cmd.State, error) {
+func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.Config.Logger); err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, xerrors.Errorf(": %v", err)
 	}
 
 	if m.Config.CertificateAuthority.Vault != nil {
 		vault, err := api.NewClient(&api.Config{Address: m.Config.CertificateAuthority.Vault.Addr})
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		vault.SetToken(m.Config.CertificateAuthority.Vault.Token)
 		m.vault = vault
@@ -123,33 +123,33 @@ func (m *mainProcess) setup() (cmd.State, error) {
 
 		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		go m.watchGRPCConnState(client.ActiveConnection())
 		m.etcdClient = client
 
 		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, xerrors.Errorf(": %v", err)
 		}
 		m.caDatabase = etcd.NewCA(client)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(ctx, client)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, xerrors.Errorf(": %v", err)
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
-				return cmd.UnknownState, xerrors.Errorf(": %v", err)
+				return fsm.UnknownState, xerrors.Errorf(": %v", err)
 			}
 		}
 	case datastoreTypeMySQL:
 		m.datastoreType = datastoreTypeMySQL
 		conn, err := sql.Open("mysql", m.Config.Datastore.DSN.FormatDSN())
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		m.conn = conn
 
@@ -158,7 +158,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 		m.caDatabase = mysql.NewCA(repository)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
@@ -166,13 +166,13 @@ func (m *mainProcess) setup() (cmd.State, error) {
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
 	default:
-		return cmd.UnknownState, xerrors.New("cmd/rpcserver: required external datastore")
+		return fsm.UnknownState, xerrors.New("cmd/rpcserver: required external datastore")
 	}
 
 	if m.Config.CertificateAuthority != nil {
 		ca, err := cert.NewCertificateAuthority(m.caDatabase, m.Config.CertificateAuthority)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		m.ca = ca
 	}
@@ -191,7 +191,7 @@ func (m *mainProcess) setup() (cmd.State, error) {
 	return stateStart, nil
 }
 
-func (m *mainProcess) start() (cmd.State, error) {
+func (m *mainProcess) start() (fsm.State, error) {
 	go func() {
 		if err := m.server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -201,7 +201,7 @@ func (m *mainProcess) start() (cmd.State, error) {
 	if m.datastoreType == datastoreTypeEtcd {
 		c, err := etcd.NewCompactor(m.etcdClient)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, xerrors.Errorf(": %v", err)
 		}
 
 		go func() {
@@ -209,10 +209,10 @@ func (m *mainProcess) start() (cmd.State, error) {
 		}()
 	}
 
-	return cmd.WaitState, nil
+	return fsm.WaitState, nil
 }
 
-func (m *mainProcess) shutdown() (cmd.State, error) {
+func (m *mainProcess) shutdown() (fsm.State, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
 
@@ -228,7 +228,7 @@ func (m *mainProcess) shutdown() (cmd.State, error) {
 		}
 	}
 
-	return cmd.CloseState, nil
+	return fsm.CloseState, nil
 }
 
 func (m *mainProcess) IsReady() bool {

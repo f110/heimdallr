@@ -17,19 +17,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"go.f110.dev/heimdallr/pkg/cmd"
+	"go.f110.dev/heimdallr/pkg/fsm"
 	"go.f110.dev/heimdallr/pkg/k8s/dns"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (
-	stateInit cmd.State = iota
+	stateInit fsm.State = iota
 	stateStart
 	stateShutdown
 )
 
 type mainProcess struct {
-	*cmd.FSM
+	*fsm.FSM
 
 	port          int
 	namespace     string
@@ -44,8 +44,8 @@ type mainProcess struct {
 
 func New() *mainProcess {
 	m := &mainProcess{}
-	m.FSM = cmd.NewFSM(
-		map[cmd.State]cmd.StateFunc{
+	m.FSM = fsm.NewFSM(
+		map[fsm.State]fsm.StateFunc{
 			stateInit:     m.init,
 			stateStart:    m.start,
 			stateShutdown: m.shutdown,
@@ -65,34 +65,34 @@ func (m *mainProcess) Flags(fs *pflag.FlagSet) {
 	fs.BoolVar(&m.dev, "dev", false, "Development mode")
 }
 
-func (m *mainProcess) init() (cmd.State, error) {
+func (m *mainProcess) init() (fsm.State, error) {
 	// At this time, already parsed command line arguments.
 	if err := logger.InitByFlags(); err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	kubeconfigPath := ""
 	if m.dev {
 		h, err := os.UserHomeDir()
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 		kubeconfigPath = filepath.Join(h, ".kube", "config")
 	}
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	coreClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.sharedInformerFactory = informers.NewSharedInformerFactoryWithOptions(coreClient, 0, informers.WithNamespace(m.namespace))
 
 	s, err := dns.NewSidecar(fmt.Sprintf(":%d", m.port), m.sharedInformerFactory, m.namespace, m.clusterDomain, m.ttl)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.dnsServer = s
 
@@ -110,12 +110,12 @@ func (m *mainProcess) init() (cmd.State, error) {
 	return stateStart, nil
 }
 
-func (m *mainProcess) start() (cmd.State, error) {
+func (m *mainProcess) start() (fsm.State, error) {
 	m.sharedInformerFactory.Start(context.Background().Done())
 	if _, err := os.Stat(m.readyFile); !os.IsNotExist(err) {
 		logger.Log.Info("Delete readiness file before start DNS server", zap.String("path", m.readyFile))
 		if err := os.Remove(m.readyFile); err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 	}
 
@@ -159,20 +159,20 @@ Wait:
 		logger.Log.Debug("Create file", zap.String("path", m.readyFile))
 		_, err := os.Create(m.readyFile)
 		if err != nil {
-			return cmd.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.Errorf(": %w", err)
 		}
 	}
 
-	return cmd.WaitState, nil
+	return fsm.WaitState, nil
 }
 
-func (m *mainProcess) shutdown() (cmd.State, error) {
+func (m *mainProcess) shutdown() (fsm.State, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := m.dnsServer.Shutdown(ctx); err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	cancel()
 
 	_ = os.Remove(m.readyFile)
-	return cmd.CloseState, nil
+	return fsm.CloseState, nil
 }

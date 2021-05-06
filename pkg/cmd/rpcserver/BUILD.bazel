@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//pkg/auth",
         "//pkg/cert",
-        "//pkg/cmd",
         "//pkg/config/configutil",
         "//pkg/config/configv2",
         "//pkg/database",
@@ -16,6 +15,7 @@ go_library(
         "//pkg/database/mysql",
         "//pkg/database/mysql/dao",
         "//pkg/database/mysql/entity",
+        "//pkg/fsm",
         "//pkg/logger",
         "//pkg/rpc/rpcserver",
         "//vendor/github.com/hashicorp/vault/api",

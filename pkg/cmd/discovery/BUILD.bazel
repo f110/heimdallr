@@ -6,7 +6,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cmd/discovery",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cmd",
+        "//pkg/fsm",
         "//pkg/k8s/dns",
         "//pkg/logger",
         "//vendor/github.com/spf13/pflag",

@@ -14,16 +14,16 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
-	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/dashboard"
+	"go.f110.dev/heimdallr/pkg/fsm"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (
-	stateInit cmd.State = iota
+	stateInit fsm.State = iota
 	stateSetup
 	stateOpenConnection
 	stateStart
@@ -31,7 +31,7 @@ const (
 )
 
 type mainProcess struct {
-	*cmd.FSM
+	*fsm.FSM
 	ConfFile string
 
 	config        *configv2.Config
@@ -41,8 +41,8 @@ type mainProcess struct {
 
 func New() *mainProcess {
 	m := &mainProcess{}
-	m.FSM = cmd.NewFSM(
-		map[cmd.State]cmd.StateFunc{
+	m.FSM = fsm.NewFSM(
+		map[fsm.State]fsm.StateFunc{
 			stateInit:           m.init,
 			stateSetup:          m.setup,
 			stateOpenConnection: m.openConnection,
@@ -56,25 +56,25 @@ func New() *mainProcess {
 	return m
 }
 
-func (m *mainProcess) init() (cmd.State, error) {
+func (m *mainProcess) init() (fsm.State, error) {
 	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	m.config = conf
 
 	return stateSetup, nil
 }
 
-func (m *mainProcess) setup() (cmd.State, error) {
+func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.config.Logger); err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	return stateOpenConnection, nil
 }
 
-func (m *mainProcess) openConnection() (cmd.State, error) {
+func (m *mainProcess) openConnection() (fsm.State, error) {
 	cred := credentials.NewTLS(&tls.Config{
 		ServerName: rpc.ServerHostname,
 		RootCAs:    m.config.CertificateAuthority.CertPool,
@@ -87,17 +87,17 @@ func (m *mainProcess) openConnection() (cmd.State, error) {
 		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, xerrors.Errorf(": %v", err)
 	}
 	m.rpcServerConn = conn
 
 	return stateStart, nil
 }
 
-func (m *mainProcess) start() (cmd.State, error) {
+func (m *mainProcess) start() (fsm.State, error) {
 	dashboardServer, err := dashboard.NewServer(m.config, m.rpcServerConn)
 	if err != nil {
-		return cmd.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 
 	m.dashboard = dashboardServer
@@ -105,10 +105,10 @@ func (m *mainProcess) start() (cmd.State, error) {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 
-	return cmd.WaitState, nil
+	return fsm.WaitState, nil
 }
 
-func (m *mainProcess) shutdown() (cmd.State, error) {
+func (m *mainProcess) shutdown() (fsm.State, error) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
 
@@ -118,5 +118,5 @@ func (m *mainProcess) shutdown() (cmd.State, error) {
 		}
 	}
 
-	return cmd.CloseState, nil
+	return fsm.CloseState, nil
 }

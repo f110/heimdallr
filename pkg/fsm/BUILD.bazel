@@ -1,8 +1,8 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "cmd",
+    name = "fsm",
     srcs = ["fsm.go"],
-    importpath = "go.f110.dev/heimdallr/pkg/cmd",
+    importpath = "go.f110.dev/heimdallr/pkg/fsm",
     visibility = ["//visibility:public"],
 )
