@@ -1,8 +1,18 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "fsm",
-    srcs = ["fsm.go"],
+    srcs = [
+        "debug.go",
+        "fsm.go",
+    ],
     importpath = "go.f110.dev/heimdallr/pkg/fsm",
     visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/xerrors"],
+)
+
+go_test(
+    name = "fsm_test",
+    srcs = ["debug_test.go"],
+    embed = [":fsm"],
 )

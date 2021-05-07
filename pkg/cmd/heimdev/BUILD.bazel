@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "cluster.go",
         "dns.go",
+        "graph.go",
         "testserver.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heimdev",
@@ -12,6 +13,7 @@ go_library(
     deps = [
         "//pkg/auth/authn",
         "//pkg/authproxy",
+        "//pkg/fsm",
         "//pkg/k8s",
         "//pkg/k8s/kind",
         "//vendor/github.com/dgrijalva/jwt-go",

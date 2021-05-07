@@ -17,6 +17,7 @@ func dev(args []string) error {
 	heimdev.TestServer(rootCmd)
 	heimdev.Cluster(rootCmd)
 	heimdev.DNS(rootCmd)
+	heimdev.Graph(rootCmd)
 
 	rootCmd.SetArgs(args)
 	return rootCmd.Execute()
