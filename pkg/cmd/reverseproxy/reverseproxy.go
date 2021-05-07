@@ -283,7 +283,8 @@ func (m *mainProcess) embedMiddlewareShutdown() (fsm.State, error) {
 	}
 	if m.vault != nil {
 		if err := m.vault.Process.Signal(syscall.SIGTERM); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			logger.Log.Warn("Failed send signal", zap.Error(err))
+			return stateWaitMiddlewareShutdown, nil
 		}
 	}
 
