@@ -10,9 +10,3 @@ go_library(
     visibility = ["//visibility:public"],
     deps = ["//vendor/golang.org/x/xerrors"],
 )
-
-go_test(
-    name = "fsm_test",
-    srcs = ["debug_test.go"],
-    embed = [":fsm"],
-)
