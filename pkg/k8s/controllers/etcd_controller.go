@@ -449,7 +449,7 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 
 	var targetMember *EtcdMember
 	for _, v := range members {
-		logger.Log.Debug(
+		ec.Log().Debug(
 			"candidate pod",
 			zap.String("name", v.Pod.Name),
 			zap.String("phase", string(v.Pod.Status.Phase)),
@@ -644,6 +644,7 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 	members := cluster.AllExistMembers()
 
 	for _, v := range members {
+		ec.Log().Debug("Delete pod", zap.String("name", v.Name))
 		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(ctx, v.Name, metav1.DeleteOptions{}); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

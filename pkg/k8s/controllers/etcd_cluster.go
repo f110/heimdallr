@@ -205,6 +205,9 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 		if len(v.OwnerReferences) == 0 {
 			continue
 		}
+		if !v.DeletionTimestamp.IsZero() {
+			continue
+		}
 		for _, ref := range v.OwnerReferences {
 			if ref.UID == c.UID {
 				owned = append(owned, v)
