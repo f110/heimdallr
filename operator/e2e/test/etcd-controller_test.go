@@ -108,11 +108,11 @@ func TestEtcdController(t *testing.T) {
 				s.Subject(func(m *btesting.Matcher) {
 					f.EtcdClusters.Setup(m,
 						k8sfactory.Name("restore"),
-						etcd.Backup(600, 5),
+						etcd.Backup(60, 5),
 						etcd.BackupToMinIO(
 							kind.MinIOBucketName,
 							"restore-test",
-							true,
+							false,
 							"minio",
 							metav1.NamespaceDefault,
 							etcdv1alpha2.AWSCredentialSelector{

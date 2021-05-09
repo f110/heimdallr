@@ -64,7 +64,7 @@ func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha2.Proxy, tim
 }
 
 func WaitForBackup(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
-	return poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
+	return poll.PollImmediate(context.TODO(), 10*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
