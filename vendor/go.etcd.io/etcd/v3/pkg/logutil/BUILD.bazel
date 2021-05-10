@@ -57,10 +57,6 @@ go_library(
             "//vendor/github.com/coreos/go-systemd/v22/journal",
             "//vendor/go.etcd.io/etcd/v3/pkg/systemd",
         ],
-        "@io_bazel_rules_go//go/platform:nacl": [
-            "//vendor/github.com/coreos/go-systemd/v22/journal",
-            "//vendor/go.etcd.io/etcd/v3/pkg/systemd",
-        ],
         "@io_bazel_rules_go//go/platform:netbsd": [
             "//vendor/github.com/coreos/go-systemd/v22/journal",
             "//vendor/go.etcd.io/etcd/v3/pkg/systemd",

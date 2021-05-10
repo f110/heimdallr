@@ -96,10 +96,6 @@ go_library(
             "//vendor/golang.org/x/net/ipv6",
             "//vendor/golang.org/x/sys/unix",
         ],
-        "@io_bazel_rules_go//go/platform:nacl": [
-            "//vendor/golang.org/x/net/ipv4",
-            "//vendor/golang.org/x/net/ipv6",
-        ],
         "@io_bazel_rules_go//go/platform:netbsd": [
             "//vendor/golang.org/x/net/ipv4",
             "//vendor/golang.org/x/net/ipv6",
