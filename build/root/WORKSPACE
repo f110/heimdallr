@@ -120,11 +120,11 @@ kustomize_binary(
     version = "3.8.1",
 )
 
-load("//build/rules/kind:def.bzl", "kind_binary")
+load("@dev_f110_rules_k8s_controller//k8s/kind:def.bzl", "kind_binary")
 
 kind_binary(
     name = "kind",
-    version = "0.10.0",
+    version = "0.11.1",
 )
 
 load("//build/rules/vault:def.bzl", "vault_binary")
