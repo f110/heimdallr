@@ -47,20 +47,20 @@ git_repository(
     remote = "https://github.com/f110/protoc-ddl",
 )
 
-#http_archive(
-#    name = "dev_f110_rules_k8s_controller",
-#    sha256 = "ec185cf615f01d69ce25ad0ca60c7dbb22b5f570af6f6ce199ca6c1812a86ae6",
-#    strip_prefix = "rules_k8s_controller-0.10.0",
-#    urls = [
-#        "https://github.com/f110/rules_k8s_controller/archive/v0.10.0.tar.gz",
-#    ],
-#)
-
-git_repository(
+http_archive(
     name = "dev_f110_rules_k8s_controller",
-    commit = "5954f0cce59b05b66d83bce9669f240aab5fe3a3",
-    remote = "https://github.com/f110/rules_k8s_controller",
+    sha256 = "19739cce179bf6fc7962d81da8da7d776901fca544a9859e73bf51921437d319",
+    strip_prefix = "rules_k8s_controller-0.11.0",
+    urls = [
+        "https://github.com/f110/rules_k8s_controller/archive/v0.11.0.tar.gz",
+    ],
 )
+
+#git_repository(
+#    name = "dev_f110_rules_k8s_controller",
+#    commit = "5954f0cce59b05b66d83bce9669f240aab5fe3a3",
+#    remote = "https://github.com/f110/rules_k8s_controller",
+#)
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
@@ -108,6 +108,10 @@ http_file(
     sha256 = "bfbe82e34645e91cdf3bacbb0d2dc7786f3c3cc4da6b64a446e5fdfb7bb0429f",
     urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.3.1/grpc_health_probe-linux-amd64"],
 )
+
+load("@dev_f110_rules_k8s_controller//:deps.bzl", "rules_k8s_controller_dependencies")
+
+rules_k8s_controller_dependencies()
 
 load("@dev_f110_rules_k8s_controller//k8s/kustomize:def.bzl", "kustomize_binary")
 
