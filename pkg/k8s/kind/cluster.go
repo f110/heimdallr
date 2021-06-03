@@ -318,7 +318,7 @@ func (c *Cluster) Apply(f, fieldManager string) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	if err := k8s.ApplyManifestFromString(cfg, string(buf), fieldManager); err != nil {
+	if err := k8s.ApplyManifestFromString(cfg, buf, fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -361,7 +361,11 @@ func readImageManifest(image *ContainerImageFile) error {
 }
 
 func InstallCertManager(cfg *rest.Config, fieldManager string) error {
-	objs, err := k8s.LoadUnstructuredFromString(certmanager.Data["manifest/certmanager/cert-manager.yaml"])
+	cm, err := certmanager.Data.ReadFile("cert-manager.yaml")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	objs, err := k8s.LoadUnstructuredFromString(cm)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -376,7 +380,11 @@ func InstallCertManager(cfg *rest.Config, fieldManager string) error {
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	if err := k8s.ApplyManifestFromString(cfg, certmanager.Data["manifest/certmanager/cluster-issuer.yaml"], fieldManager); err != nil {
+	ci, err := certmanager.Data.ReadFile("cluster-issuer.yaml")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := k8s.ApplyManifestFromString(cfg, ci, fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 
@@ -405,7 +413,11 @@ func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 		}
 	}
 
-	if err := k8s.ApplyManifestFromString(cfg, minio.Data["manifest/minio/minio.yaml"], fieldManager); err != nil {
+	m, err := minio.Data.ReadFile("minio.yaml")
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	if err := k8s.ApplyManifestFromString(cfg, m, fieldManager); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 

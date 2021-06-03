@@ -1,32 +1,12 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
-
-filegroup(
-    name = "crd",
-    srcs = glob(["*.yaml"]),
-    visibility = ["//visibility:public"],
-)
-
-go_embed_data(
-    name = "embed",
-    srcs = [
-        ":crd",
-    ],
-    string = True,
-    visibility = ["//visibility:private"],
-)
-
-go_library(
-    name = "embed_crd",
-    srcs = [":embed"],
-    importpath = "go.f110.dev/heimdallr/manifest/certmanager",
-    visibility = ["//visibility:private"],
-)
 
 go_library(
     name = "certmanager",
-    srcs = [],  # keep
-    embed = [":embed_crd"],  # keep
+    srcs = ["embed.go"],
+    embedsrcs = [
+        "cert-manager.yaml",
+        "cluster-issuer.yaml",
+    ],
     importpath = "go.f110.dev/heimdallr/manifest/certmanager",
     visibility = ["//visibility:public"],
 )

@@ -102,7 +102,7 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 	return nil
 }
 
-func ApplyManifestFromString(cfg *rest.Config, manifest, fieldManager string) error {
+func ApplyManifestFromString(cfg *rest.Config, manifest []byte, fieldManager string) error {
 	objs, err := LoadUnstructuredFromString(manifest)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -165,9 +165,9 @@ func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourc
 	}
 }
 
-func LoadUnstructuredFromString(manifest string) ([]*unstructured.Unstructured, error) {
+func LoadUnstructuredFromString(manifest []byte) ([]*unstructured.Unstructured, error) {
 	objs := make([]*unstructured.Unstructured, 0)
-	d := yaml.NewYAMLOrJSONDecoder(strings.NewReader(manifest), 4096)
+	d := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 4096)
 	for {
 		ext := runtime.RawExtension{}
 		if err := d.Decode(&ext); err != nil {
