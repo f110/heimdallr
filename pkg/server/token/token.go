@@ -61,10 +61,12 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 	sess.Challenge = req.URL.Query().Get("challenge")
 	sess.ChallengeMethod = req.URL.Query().Get("challenge_method")
 	if err := t.sessionStore.SetSession(w, sess); err != nil {
+		logger.Log.Debug("Failed set the session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if err := t.loader.Render(w, "authorization.tmpl", nil); err != nil {
+	if err := t.loader.Render(w, "token/authorization.tmpl", nil); err != nil {
+		logger.Log.Debug("Failed render the template", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -73,12 +75,14 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 func (t *Server) handleAuthorized(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	sess, err := t.sessionStore.GetSession(req)
 	if err != nil {
+		logger.Log.Debug("Can not get session from request", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	code, err := t.tokenDatabase.NewCode(req.Context(), sess.Id, sess.Challenge, sess.ChallengeMethod)
 	if err != nil {
+		logger.Log.Debug("Can not create code", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

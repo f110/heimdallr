@@ -8,11 +8,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.f110.dev/heimdallr/pkg/config/configv2"
+	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/tmpl/dashboard"
 )
+
+func TestMain(m *testing.M) {
+	logger.Init(&configv2.Logger{Level: "debug"})
+
+	m.Run()
+}
 
 func TestNew(t *testing.T) {
 	v := New(
-		map[string]string{"/data/test": ""},
+		dashboard.Data,
 		LoaderTypeEmbed,
 		"/data",
 		map[string]interface{}{
@@ -31,7 +41,7 @@ func TestLoader_Render(t *testing.T) {
 	require.NoError(t, err)
 
 	v := New(
-		nil,
+		dashboard.Data,
 		LoaderTypeShotgun,
 		dir,
 		map[string]interface{}{

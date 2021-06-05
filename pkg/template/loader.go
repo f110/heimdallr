@@ -1,8 +1,10 @@
 package template
 
 import (
+	"embed"
 	"html/template"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,24 +26,33 @@ type Loader struct {
 	funcMap template.FuncMap
 }
 
-func New(data map[string]string, typ, dir string, funcMap template.FuncMap) *Loader {
+func New(data embed.FS, typ, dir string, funcMap template.FuncMap) *Loader {
 	loader := &Loader{dir: dir, funcMap: funcMap}
 	if typ == LoaderTypeEmbed {
-		d := dir
-		if !strings.HasSuffix(dir, "/") {
-			d = dir + "/"
-		}
 		t := template.New("")
 		if funcMap != nil {
 			t = t.Funcs(funcMap)
 		}
-		for k, v := range data {
-			name := strings.TrimPrefix(k, d)
-			t = t.New(name)
-			if _, err := t.Parse(v); err != nil {
-				logger.Log.Info("Failure parse template", zap.Error(err))
+
+		err := fs.WalkDir(data, ".", func(path string, entry fs.DirEntry, err error) error {
+			if entry.IsDir() {
+				return nil
 			}
+
+			t = t.New(path)
+			buf, err := data.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if _, err := t.Parse(string(buf)); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Log.Info("Failed walk embed files", zap.Error(err))
 		}
+
 		loader.tmpl = t
 	}
 

@@ -1,39 +1,27 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
-
-filegroup(
-    name = "tmpl",
-    srcs = glob(["*.tmpl"]),
-    visibility = ["//visibility:public"],
-)
-
-go_embed_data(
-    name = "embed",
-    srcs = [
-        ":tmpl",
-        "//tmpl/dashboard/agent:tmpl",
-        "//tmpl/dashboard/cert:tmpl",
-        "//tmpl/dashboard/include:tmpl",
-        "//tmpl/dashboard/me:tmpl",
-        "//tmpl/dashboard/role:tmpl",
-        "//tmpl/dashboard/service_account:tmpl",
-        "//tmpl/dashboard/user:tmpl",
-    ],
-    string = True,
-    visibility = ["//visibility:private"],
-)
-
-go_library(
-    name = "embed_tmpl",
-    srcs = [":embed"],
-    importpath = "go.f110.dev/heimdallr/tmpl/dashboard",
-    visibility = ["//visibility:private"],
-)
 
 go_library(
     name = "dashboard",
-    srcs = [],  # keep
-    embed = [":embed_tmpl"],  # keep
+    srcs = ["embed.go"],
+    embedsrcs = [
+        "index.tmpl",
+        "agent/index.tmpl",
+        "agent/new.tmpl",
+        "cert/index.tmpl",
+        "cert/new.tmpl",
+        "include/footer.tmpl",
+        "include/header.tmpl",
+        "me/index.tmpl",
+        "me/new.tmpl",
+        "role/index.tmpl",
+        "service_account/index.tmpl",
+        "service_account/new.tmpl",
+        "service_account/token.tmpl",
+        "service_account/token_new.tmpl",
+        "user/edit.tmpl",
+        "user/list.tmpl",
+        "user/show.tmpl",
+    ],
     importpath = "go.f110.dev/heimdallr/tmpl/dashboard",
     visibility = ["//visibility:public"],
 )

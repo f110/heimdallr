@@ -17,6 +17,9 @@ go_test(
     srcs = ["loader_test.go"],
     embed = [":template"],
     deps = [
+        "//pkg/config/configv2",
+        "//pkg/logger",
+        "//tmpl/dashboard",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/stretchr/testify/require",
     ],

@@ -1,26 +1,9 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
-
-go_embed_data(
-    name = "embed",
-    srcs = [
-        "//tmpl/ui/token:tmpl",
-    ],
-    string = True,
-    visibility = ["//visibility:private"],
-)
-
-go_library(
-    name = "embed_tmpl",
-    srcs = [":embed"],
-    importpath = "go.f110.dev/heimdallr/tmpl/ui",
-    visibility = ["//visibility:private"],
-)
 
 go_library(
     name = "ui",
-    srcs = [],  # keep
-    embed = [":embed_tmpl"],  # keep
+    srcs = ["embed.go"],
+    embedsrcs = ["token/authorization.tmpl"],
     importpath = "go.f110.dev/heimdallr/tmpl/ui",
     visibility = ["//visibility:public"],
 )
