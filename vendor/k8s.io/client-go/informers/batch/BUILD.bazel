@@ -9,7 +9,6 @@ go_library(
     deps = [
         "//vendor/k8s.io/client-go/informers/batch/v1:batch",
         "//vendor/k8s.io/client-go/informers/batch/v1beta1",
-        "//vendor/k8s.io/client-go/informers/batch/v2alpha1",
         "//vendor/k8s.io/client-go/informers/internalinterfaces",
     ],
 )

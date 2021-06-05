@@ -47,20 +47,20 @@ require (
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.opencensus.io v0.22.4 // indirect
 	go.uber.org/zap v1.14.1
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/square/go-jose.v2 v2.3.1
-	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.20.4
+	gopkg.in/yaml.v2 v2.4.0
+	k8s.io/api v0.21.0
 	k8s.io/apiextensions-apiserver v0.20.4
-	k8s.io/apimachinery v0.20.4
-	k8s.io/client-go v0.20.4
+	k8s.io/apimachinery v0.21.0
+	k8s.io/client-go v0.21.0
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
-	k8s.io/klog/v2 v2.4.0
+	k8s.io/klog/v2 v2.8.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0
