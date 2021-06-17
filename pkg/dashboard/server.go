@@ -937,11 +937,6 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 		return
 	}
 
-	keys, err := client.GetSSHKey("")
-	if err != nil {
-		logger.Log.Info("Failed get ssh key", zap.Error(err))
-	}
-
 	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
 	if err != nil {
 		logger.Log.Info("Failed get my certs")
@@ -965,24 +960,14 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 	}
 
 	s.RenderTemplate(w, "me/index.tmpl", struct {
-		SSHKeys string
 		Devices []*certificate
 	}{
-		SSHKeys: keys,
 		Devices: signedCertificates,
 	})
 }
 
 func (s *Server) handleUpdateProfile(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	client := s.client.WithRequest(req)
-
 	if err := req.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if err := client.SetSSHKey(req.FormValue("sshkeys")); err != nil {
-		logger.Log.Info("Failed update ssh keys", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
