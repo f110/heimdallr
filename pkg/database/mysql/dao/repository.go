@@ -15,7 +15,6 @@ type Repository struct {
 	Code               *Code
 	User               *User
 	UserState          *UserState
-	SSHKey             *SSHKey
 	RoleBinding        *RoleBinding
 	AccessToken        *AccessToken
 }
@@ -34,6 +33,5 @@ func NewRepository(conn *sql.DB) *Repository {
 		RoleBinding:        NewRoleBinding(conn),
 		AccessToken:        NewAccessToken(conn),
 		UserState:          NewUserState(conn),
-		SSHKey:             NewSSHKey(conn),
 	}
 }

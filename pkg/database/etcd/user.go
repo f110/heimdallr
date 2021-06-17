@@ -306,37 +306,6 @@ func (d *UserDatabase) DeleteState(ctx context.Context, state string) error {
 	return nil
 }
 
-func (d *UserDatabase) SetSSHKeys(ctx context.Context, keys *database.SSHKeys) error {
-	b, err := yaml.Marshal(keys)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	_, err = d.client.Put(ctx, fmt.Sprintf("ssh_keys/%s", keys.UserId), string(b))
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	return nil
-}
-
-func (d *UserDatabase) GetSSHKeys(ctx context.Context, id string) (*database.SSHKeys, error) {
-	res, err := d.client.Get(ctx, fmt.Sprintf("ssh_keys/%s", id))
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	if res.Count == 0 {
-		return nil, xerrors.New("database: ssh keys not found")
-	}
-
-	keys := &database.SSHKeys{}
-	if err := yaml.Unmarshal(res.Kvs[0].Value, keys); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	return keys, nil
-}
-
 func (d *UserDatabase) key(id string) string {
 	return fmt.Sprintf("user/%s", id)
 }

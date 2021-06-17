@@ -49,8 +49,6 @@ type UserDatabase interface {
 	SetState(ctx context.Context, unique string) (string, error)
 	GetState(ctx context.Context, state string) (string, error)
 	DeleteState(ctx context.Context, state string) error
-	SetSSHKeys(ctx context.Context, keys *SSHKeys) error
-	GetSSHKeys(ctx context.Context, id string) (*SSHKeys, error)
 }
 
 type AccessToken struct {
