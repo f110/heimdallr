@@ -224,32 +224,3 @@ func (c *CertificateAuthorityClient) WatchRevokedCert(ctx context.Context, in *r
 
 	return nil, nil
 }
-
-type UserClient struct {
-	sync.Mutex
-
-	GetSSHKeyCall int
-	SetSSHKeyCall int
-}
-
-func NewUserClient() *UserClient {
-	return &UserClient{}
-}
-
-var _ rpc.UserClient = &UserClient{}
-
-func (u *UserClient) GetSSHKey(ctx context.Context, in *rpc.RequestGetSSHKey, opts ...grpc.CallOption) (*rpc.ResponseGetSSHKey, error) {
-	u.Lock()
-	defer u.Unlock()
-	u.GetSSHKeyCall++
-
-	return &rpc.ResponseGetSSHKey{}, nil
-}
-
-func (u *UserClient) SetSSHKey(ctx context.Context, in *rpc.RequestSetSSHKey, opts ...grpc.CallOption) (*rpc.ResponseSetSSHKey, error) {
-	u.Lock()
-	defer u.Unlock()
-	u.SetSSHKeyCall++
-
-	return &rpc.ResponseSetSSHKey{}, nil
-}

@@ -8,7 +8,6 @@ go_library(
         "cluster.go",
         "doc.go",
         "health.go",
-        "user.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/rpc/rpcservice",
     visibility = ["//visibility:public"],

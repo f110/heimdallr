@@ -37,7 +37,7 @@ func TestNewHttpProxy(t *testing.T) {
 	conf := &configv2.Config{
 		Logger: &configv2.Logger{},
 	}
-	c := rpcclient.NewWithClient(nil, nil, nil, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	assert.NotNil(t, p, "NewHttpProxy should return a value")
@@ -113,7 +113,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 
-	c := rpcclient.NewWithClient(nil, nil, nil, nil)
+	c := rpcclient.NewWithClient(nil, nil, nil)
 	p := NewHttpProxy(conf, nil, c)
 
 	t.Run("Session not found", func(t *testing.T) {
