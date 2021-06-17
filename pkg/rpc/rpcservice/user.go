@@ -52,37 +52,3 @@ func (s *UserService) SetSSHKey(ctx context.Context, req *rpc.RequestSetSSHKey) 
 
 	return &rpc.ResponseSetSSHKey{Ok: true}, nil
 }
-
-func (s *UserService) GetGPGKey(ctx context.Context, req *rpc.RequestGetGPGKey) (*rpc.ResponseGetGPGKey, error) {
-	user := req.GetUserId()
-	if user == "" {
-		u, err := extractUser(ctx)
-		if err != nil {
-			return nil, err
-		}
-		user = u.Id
-	}
-
-	key, err := s.userDatabase.GetGPGKey(ctx, user)
-	if err != nil {
-		return nil, xerrors.New("rpcservice: gpg key not found")
-	}
-
-	return &rpc.ResponseGetGPGKey{
-		UserId: key.UserId,
-		Key:    key.Key,
-	}, nil
-}
-
-func (s *UserService) SetGPGKey(ctx context.Context, req *rpc.RequestSetGPGKey) (*rpc.ResponseSetGPGKey, error) {
-	user, err := extractUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.userDatabase.SetGPGKey(ctx, &database.GPGKey{UserId: user.Id, Key: req.Key}); err != nil {
-		return nil, err
-	}
-
-	return &rpc.ResponseSetGPGKey{Ok: true}, nil
-}

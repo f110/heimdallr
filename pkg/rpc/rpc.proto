@@ -40,8 +40,6 @@ service CertificateAuthority {
 service User {
     rpc GetSSHKey (RequestGetSSHKey) returns (ResponseGetSSHKey);
     rpc SetSSHKey (RequestSetSSHKey) returns (ResponseSetSSHKey);
-    rpc GetGPGKey (RequestGetGPGKey) returns (ResponseGetGPGKey);
-    rpc SetGPGKey (RequestSetGPGKey) returns (ResponseSetGPGKey);
 }
 
 message RequestPing {}
@@ -319,24 +317,6 @@ message RequestSetSSHKey {
 }
 
 message ResponseSetSSHKey {
-    bool ok = 1;
-}
-
-message RequestGetGPGKey {
-    string user_id = 1;
-}
-
-message ResponseGetGPGKey {
-    string user_id = 1;
-    string key     = 2;
-}
-
-message RequestSetGPGKey {
-    string user_id = 1;
-    string key     = 2;
-}
-
-message ResponseSetGPGKey {
     bool ok = 1;
 }
 

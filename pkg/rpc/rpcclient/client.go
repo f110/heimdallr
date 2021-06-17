@@ -375,28 +375,6 @@ func (c *Client) SetSSHKey(key string) error {
 	return nil
 }
 
-func (c *Client) GetGPGKey(userId string) (string, error) {
-	key, err := c.userClient.GetGPGKey(c.md, &rpc.RequestGetGPGKey{UserId: userId})
-	if err != nil {
-		return "", err
-	}
-
-	return key.Key, nil
-}
-
-func (c *Client) SetGPGKey(key string) error {
-	res, err := c.userClient.SetGPGKey(c.md, &rpc.RequestSetGPGKey{Key: key})
-	if err != nil {
-		return err
-	}
-
-	if !res.Ok {
-		return xerrors.New("rpcclient: Failed update gpg key")
-	}
-
-	return nil
-}
-
 func extractEndpointFromError(err error) (string, error) {
 	e, ok := status.FromError(err)
 	if !ok {
