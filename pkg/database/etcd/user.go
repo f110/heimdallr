@@ -337,37 +337,6 @@ func (d *UserDatabase) GetSSHKeys(ctx context.Context, id string) (*database.SSH
 	return keys, nil
 }
 
-func (d *UserDatabase) SetGPGKey(ctx context.Context, key *database.GPGKey) error {
-	b, err := yaml.Marshal(key)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	_, err = d.client.Put(ctx, fmt.Sprintf("gpg_key/%s", key.UserId), string(b))
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-
-	return nil
-}
-
-func (d *UserDatabase) GetGPGKey(ctx context.Context, id string) (*database.GPGKey, error) {
-	res, err := d.client.Get(ctx, fmt.Sprintf("gpg_key/%s", id))
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-	if res.Count == 0 {
-		return nil, xerrors.New("database: ssh keys not found")
-	}
-
-	keys := &database.GPGKey{}
-	if err := yaml.Unmarshal(res.Kvs[0].Value, keys); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
-	return keys, nil
-}
-
 func (d *UserDatabase) key(id string) string {
 	return fmt.Sprintf("user/%s", id)
 }

@@ -18,7 +18,6 @@ type UserDatabase struct {
 	tokenData map[string]*database.AccessToken
 	state     map[string]string
 	sshKeys   map[string]*database.SSHKeys
-	gpgKey    map[string]*database.GPGKey
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -188,26 +187,6 @@ func (u *UserDatabase) SetSSHKeys(_ context.Context, keys *database.SSHKeys) err
 	defer u.mu.Unlock()
 
 	u.sshKeys[keys.UserId] = keys
-
-	return nil
-}
-func (u *UserDatabase) GetGPGKey(_ context.Context, id string) (*database.GPGKey, error) {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-
-	v, ok := u.gpgKey[id]
-	if !ok {
-		return nil, xerrors.New("database: ssh keys not found")
-	}
-
-	return v, nil
-}
-
-func (u *UserDatabase) SetGPGKey(_ context.Context, key *database.GPGKey) error {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-
-	u.gpgKey[key.UserId] = key
 
 	return nil
 }

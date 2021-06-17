@@ -16,7 +16,6 @@ type Repository struct {
 	User               *User
 	UserState          *UserState
 	SSHKey             *SSHKey
-	GPGKey             *GPGKey
 	RoleBinding        *RoleBinding
 	AccessToken        *AccessToken
 }
@@ -36,6 +35,5 @@ func NewRepository(conn *sql.DB) *Repository {
 		AccessToken:        NewAccessToken(conn),
 		UserState:          NewUserState(conn),
 		SSHKey:             NewSSHKey(conn),
-		GPGKey:             NewGPGKey(conn),
 	}
 }
