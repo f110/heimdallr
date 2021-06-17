@@ -941,10 +941,6 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 	if err != nil {
 		logger.Log.Info("Failed get ssh key", zap.Error(err))
 	}
-	gpgKey, err := client.GetGPGKey("")
-	if err != nil {
-		logger.Log.Info("Failed get gpg key", zap.Error(err))
-	}
 
 	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
 	if err != nil {
@@ -970,11 +966,9 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 
 	s.RenderTemplate(w, "me/index.tmpl", struct {
 		SSHKeys string
-		GPGKey  string
 		Devices []*certificate
 	}{
 		SSHKeys: keys,
-		GPGKey:  gpgKey,
 		Devices: signedCertificates,
 	})
 }
@@ -989,12 +983,6 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, req *http.Request, _
 
 	if err := client.SetSSHKey(req.FormValue("sshkeys")); err != nil {
 		logger.Log.Info("Failed update ssh keys", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if err := client.SetGPGKey(req.FormValue("gpgkey")); err != nil {
-		logger.Log.Info("Failed update gpg key", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
