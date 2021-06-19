@@ -37,6 +37,10 @@ service CertificateAuthority {
     rpc WatchRevokedCert (RequestWatchRevokedCert) returns (stream ResponseWatchRevokedCert);
 }
 
+service User {
+    rpc GetBackends (RequestGetBackends) returns (ResponseGetBackends);
+}
+
 message RequestPing {}
 
 message ResponsePong {}
@@ -104,6 +108,7 @@ message BackendItem {
     repeated HTTPBackend   http_backends  = 3;
              SocketBackend socket_backend = 4;
              string        host           = 5;
+             string        description    = 6;
 }
 
 message HTTPBackend {
@@ -301,4 +306,10 @@ message ResponseGetPublicKey {
 
 message ErrorUnauthorized {
     string endpoint = 1;
+}
+
+message RequestGetBackends {}
+
+message ResponseGetBackends {
+    repeated BackendItem items = 1;
 }

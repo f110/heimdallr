@@ -344,6 +344,7 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 
 		res = append(res, &rpc.BackendItem{
 			Name:          v.Name,
+			Description:   v.Description,
 			Fqdn:          v.FQDN,
 			HttpBackends:  httpBackends,
 			SocketBackend: socketBackend,

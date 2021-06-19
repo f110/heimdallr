@@ -224,3 +224,13 @@ func (c *CertificateAuthorityClient) WatchRevokedCert(ctx context.Context, in *r
 
 	return nil, nil
 }
+
+type UserClient struct{}
+
+func NewUserClient() *UserClient {
+	return &UserClient{}
+}
+
+func (u *UserClient) GetBackends(ctx context.Context, in *rpc.RequestGetBackends, opts ...grpc.CallOption) (*rpc.ResponseGetBackends, error) {
+	return nil, nil
+}
