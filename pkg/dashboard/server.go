@@ -939,7 +939,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 
 	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
 	if err != nil {
-		logger.Log.Info("Failed get my certs")
+		logger.Log.Info("Failed get my certs", zap.Error(err))
 	}
 
 	signedCertificates := make([]*certificate, 0, len(signed))
@@ -959,10 +959,17 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 		})
 	}
 
+	backends, err := client.GetBackends()
+	if err != nil {
+		logger.Log.Info("Failed get backends", zap.Error(err))
+	}
+
 	s.RenderTemplate(w, "me/index.tmpl", struct {
-		Devices []*certificate
+		Devices  []*certificate
+		Backends []*rpc.BackendItem
 	}{
-		Devices: signedCertificates,
+		Devices:  signedCertificates,
+		Backends: backends,
 	})
 }
 

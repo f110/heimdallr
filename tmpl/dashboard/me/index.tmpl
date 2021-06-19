@@ -3,33 +3,52 @@
 <div class="ui container">
     <h2 class="ui header">Me</h2>
     <div class="ui divider"></div>
-    <form class="ui form" action="/me" method="POST">
-        <h3 class="ui header">Devices
-            <a class="ui basic button mini primary" href="/me/device/new"><i class="desktop icon"></i>Add</a>
-        </h3>
-        <table class="ui table celled striped">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Registered at</th>
-                <th></th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            {{- range .Devices }}
-            <tr>
-                <td>{{ .Comment }}</td>
-                <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
-                <td><a href="/cert/download?serial={{ .SerialNumber }}&format=cert"><i class="icon download"></i>Cert</a></td>
-                <td>
-                    <button class="ui button red mini basic">Delete</button>
-                </td>
-            </tr>
-            {{- end }}
-            </tbody>
-        </table>
-    </form>
+    <h3 class="ui header">Devices
+        <a class="ui basic button mini primary" href="/me/device/new"><i class="desktop icon"></i>Add</a>
+    </h3>
+    <table class="ui table celled striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Registered at</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {{- range .Devices }}
+        <tr>
+            <td>{{ .Comment }}</td>
+            <td>{{ .IssuedAt.Format "2006/01/02 15:04:05 -0700" }}</td>
+            <td><a href="/cert/download?serial={{ .SerialNumber }}&format=cert"><i class="icon download"></i>Cert</a></td>
+            <td>
+                <button class="ui button red mini basic">Delete</button>
+            </td>
+        </tr>
+        {{- end }}
+        </tbody>
+    </table>
+
+    <div class="ui divider"></div>
+    <h3 class="ui header">Services</h3>
+    <table class="ui table celled striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>URL</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{- range .Backends }}
+        <tr>
+            <td><a href="https://{{ .Host }}">{{ .Name }}</a></td>
+            <td>{{ .Description }}</td>
+            <td><a href="https://{{ .Host }}">https://{{ .Host }}</a></td>
+        </tr>
+        {{- end }}
+        </tbody>
+    </table>
 </div>
 
 {{ template "include/footer.tmpl" }}

@@ -24,32 +24,54 @@
 
 <div class="ui container">
     <h2 class="ui header">Me</h2>
-    <form class="ui form" action="/me" method="POST">
-        <div class="ui divider"></div>
-        <h3 class="ui header">Devices
-            <a class="ui basic button mini primary" href="./me_new_device.html"><i class="desktop icon"></i>Add</a>
-        </h3>
-        <table class="ui table celled striped">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Registered at</th>
-                <th></th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td>MacBook Pro 16</td>
-                <td>2019/09/12 00:00:00</td>
-                <td><a href="/"><i class="icon download"></i>Cert</a></td>
-                <td>
-                    <button class="ui button red mini basic">Delete</button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </form>
+    <div class="ui divider"></div>
+    <h3 class="ui header">Devices
+        <a class="ui basic button mini primary" href="./me_new_device.html"><i class="desktop icon"></i>Add</a>
+    </h3>
+    <table class="ui table celled striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Registered at</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>MacBook Pro 16</td>
+            <td>2019/09/12 00:00:00</td>
+            <td><a href="/"><i class="icon download"></i>Cert</a></td>
+            <td>
+                <button class="ui button red mini basic">Delete</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="ui divider"></div>
+    <h3 class="ui header">Services</h3>
+    <table class="ui table celled striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>URL</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><a href="/">Sample 1</a></td>
+            <td>This service is ....</td>
+            <td><a href="/">https://sample1.example.com</a></td>
+        </tr>
+        <tr>
+            <td><a href="/">Sample 2</a></td>
+            <td>This service is admin only</td>
+            <td><a href="/">https://sample2.example.com</a></td>
+        </tr>
+        </tbody>
+    </table>
 </div>
 
 </body>
