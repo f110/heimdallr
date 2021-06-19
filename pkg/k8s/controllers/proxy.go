@@ -895,6 +895,9 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ProxyFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			HTTP: &configv2.AuthProxyHTTP{
+				ServerName: r.Spec.Domain,
+			},
 			Credential: &configv2.Credential{
 				SigningPrivateKeyFile: fmt.Sprintf("%s/%s", signPrivateKeyPath, privateKeyFilename),
 				InternalTokenFile:     fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
