@@ -347,6 +347,7 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 			Fqdn:          v.FQDN,
 			HttpBackends:  httpBackends,
 			SocketBackend: socketBackend,
+			Host:          v.Host,
 		})
 	}
 

@@ -242,6 +242,7 @@ type Backend struct {
 	Socket    *SocketBackend `json:"socket,omitempty"`
 
 	BackendSelector *HTTPBackendSelector `json:"-"`
+	Host            string               `json:"-"`
 }
 
 type HTTPBackend struct {
@@ -587,6 +588,16 @@ func (g *AccessProxy) Load(dir string) error {
 }
 
 func (g *AccessProxy) Setup(backends []*Backend) error {
+	proxyHostName := ""
+	notWellKnownPort := ""
+	if g.HTTP != nil {
+		proxyHostName = g.HTTP.ServerName
+		if strings.Contains(proxyHostName, ":") {
+			s := strings.Split(proxyHostName, ":")
+			notWellKnownPort = s[1]
+		}
+	}
+
 	hostnameToBackend := make(map[string]*Backend)
 	nameToBackend := make(map[string]*Backend)
 	for _, v := range backends {
@@ -595,6 +606,11 @@ func (g *AccessProxy) Setup(backends []*Backend) error {
 		}
 		if v.FQDN == "" {
 			v.FQDN = v.Name + "." + g.ServerNameHost
+			v.Host = v.Name + "." + proxyHostName
+		} else {
+			if notWellKnownPort != "" {
+				v.Host = v.FQDN + ":" + notWellKnownPort
+			}
 		}
 		hostnameToBackend[v.FQDN] = v
 		nameToBackend[v.Name] = v

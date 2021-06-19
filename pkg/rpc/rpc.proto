@@ -99,10 +99,11 @@ message RoleItem {
 }
 
 message BackendItem {
-    string name = 1;
-    string fqdn = 2;
-    repeated HTTPBackend http_backends = 3;
-    SocketBackend socket_backend = 4;
+             string        name           = 1;
+             string        fqdn           = 2;
+    repeated HTTPBackend   http_backends  = 3;
+             SocketBackend socket_backend = 4;
+             string        host           = 5;
 }
 
 message HTTPBackend {
