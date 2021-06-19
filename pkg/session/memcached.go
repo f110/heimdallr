@@ -13,13 +13,14 @@ import (
 )
 
 type MemcachedStore struct {
+	Domain string
 	client *memcache.Client
 }
 
 var _ Store = &MemcachedStore{}
 
-func NewMemcachedStore(conf *configv2.Session) *MemcachedStore {
-	return &MemcachedStore{client: memcache.New(conf.Servers...)}
+func NewMemcachedStore(conf *configv2.Session, domain string) *MemcachedStore {
+	return &MemcachedStore{Domain: domain, client: memcache.New(conf.Servers...)}
 }
 
 func (m *MemcachedStore) GetSession(req *http.Request) (*Session, error) {
@@ -41,7 +42,7 @@ func (m *MemcachedStore) SetSession(w http.ResponseWriter, sess *Session) error 
 		Name:     CookieName,
 		Value:    sess.Unique,
 		Path:     "/",
-		Domain:   "local-proxy.f110.dev",
+		Domain:   m.Domain,
 		HttpOnly: true,
 		Expires:  time.Now().Add(24 * time.Hour),
 		Secure:   true,

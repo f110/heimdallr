@@ -602,7 +602,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 				m.config.AccessProxy.ServerNameHost,
 			)
 		case config.SessionTypeMemcached:
-			m.sessionStore = session.NewMemcachedStore(m.config.AccessProxy.HTTP.Session)
+			m.sessionStore = session.NewMemcachedStore(m.config.AccessProxy.HTTP.Session, m.config.AccessProxy.ServerNameHost)
 		}
 	}
 
