@@ -1,4 +1,5 @@
 - name: test
+  description: testing
   http:
     - path: /test1
       default: true
@@ -14,6 +15,7 @@
       locations:
         - post: /webhook
 - name: topsecret
+  description: Secret backend
   max_session_duration: 1m
   http:
     - path: /

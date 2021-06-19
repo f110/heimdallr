@@ -225,9 +225,10 @@ type Binding struct {
 }
 
 type Backend struct {
-	Name string         `json:"name"` // Name is an identifier
-	FQDN string         `json:"fqdn,omitempty"`
-	HTTP []*HTTPBackend `json:"http,omitempty"`
+	Name        string         `json:"name"` // Name is an identifier
+	Description string         `json:"description,omitempty"`
+	FQDN        string         `json:"fqdn,omitempty"`
+	HTTP        []*HTTPBackend `json:"http,omitempty"`
 	// Deprecated
 	Agent bool `json:"agent,omitempty"`
 
