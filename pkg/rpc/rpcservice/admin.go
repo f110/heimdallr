@@ -327,7 +327,7 @@ func (s *AdminService) BackendList(_ context.Context, req *rpc.RequestBackendLis
 
 	res := make([]*rpc.BackendItem, 0, len(backends))
 	for _, v := range backends {
-		if req.GetAgent() && !v.Agent {
+		if req.GetAgent() && !v.Agent() {
 			continue
 		}
 

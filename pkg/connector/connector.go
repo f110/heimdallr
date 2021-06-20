@@ -326,7 +326,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 		logger.Log.Info("Unknown host", zap.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
 		return
 	}
-	if !b.Agent {
+	if !b.Agent() {
 		logger.Log.Info("Not agent host", zap.String("name", b.Name))
 		return
 	}

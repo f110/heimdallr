@@ -229,8 +229,6 @@ type Backend struct {
 	Description string         `json:"description,omitempty"`
 	FQDN        string         `json:"fqdn,omitempty"`
 	HTTP        []*HTTPBackend `json:"http,omitempty"`
-	// Deprecated
-	Agent bool `json:"agent,omitempty"`
 
 	Permissions   []*Permission `json:"permissions"`
 	AllowRootUser bool          `json:"allow_root_user,omitempty"`
@@ -244,6 +242,8 @@ type Backend struct {
 
 	BackendSelector *HTTPBackendSelector `json:"-"`
 	Host            string               `json:"-"`
+
+	agent bool `json:"-"`
 }
 
 type HTTPBackend struct {
@@ -1039,7 +1039,7 @@ func (b *Backend) inflate() error {
 				TLSClientConfig:       tlsConfig,
 			}
 		}
-		b.Agent = agent
+		b.agent = agent
 	}
 	b.BackendSelector = selector
 
@@ -1050,7 +1050,7 @@ func (b *Backend) inflate() error {
 		}
 		b.Socket.Url = u
 		if b.Socket.Agent {
-			b.Agent = true
+			b.agent = true
 		}
 	}
 
@@ -1067,6 +1067,10 @@ func (b *Backend) MatchList(req *http.Request) map[string]struct{} {
 	}
 
 	return allMatched
+}
+
+func (b *Backend) Agent() bool {
+	return b.agent
 }
 
 func (l *Location) AddRouter(r *mux.Router) {

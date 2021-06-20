@@ -128,7 +128,7 @@ func TestServicesViaServer(t *testing.T) {
 				SigningPublicKey:  signReqPubKey,
 			},
 			Backends: []*configv2.Backend{
-				{Name: "test", Agent: true},
+				{Name: "test", HTTP: []*configv2.HTTPBackend{{Path: "/", Agent: true}}},
 			},
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{
