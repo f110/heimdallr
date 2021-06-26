@@ -1,15 +1,15 @@
 package k8sfactory
 
 import (
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func PodDisruptionBudgetFactory(base *policyv1beta1.PodDisruptionBudget, traits ...Trait) *policyv1beta1.PodDisruptionBudget {
-	var p *policyv1beta1.PodDisruptionBudget
+func PodDisruptionBudgetFactory(base *policyv1.PodDisruptionBudget, traits ...Trait) *policyv1.PodDisruptionBudget {
+	var p *policyv1.PodDisruptionBudget
 	if base == nil {
-		p = &policyv1beta1.PodDisruptionBudget{}
+		p = &policyv1.PodDisruptionBudget{}
 	} else {
 		p = base.DeepCopy()
 	}
@@ -31,7 +31,7 @@ func PodDisruptionBudgetFactory(base *policyv1beta1.PodDisruptionBudget, traits 
 func MinAvailable(v int) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
-		case *policyv1beta1.PodDisruptionBudget:
+		case *policyv1.PodDisruptionBudget:
 			m := intstr.FromInt(v)
 			obj.Spec.MinAvailable = &m
 		}

@@ -14,7 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -173,7 +173,7 @@ func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 			r.registerIngressFixture(obj)
 		case *networkingv1.IngressClass:
 			r.registerIngressClassFixture(obj)
-		case *policyv1beta1.PodDisruptionBudget:
+		case *policyv1.PodDisruptionBudget:
 			r.registerPodDisruptionBudgetFixture(obj)
 		case *certmanagerv1.Certificate:
 			r.registerCertificateFixture(obj)
@@ -224,9 +224,9 @@ func (r *TestRunner) registerDeploymentFixture(d *appsv1.Deployment) {
 	r.CoreSharedInformerFactory.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
 }
 
-func (r *TestRunner) registerPodDisruptionBudgetFixture(pdb *policyv1beta1.PodDisruptionBudget) {
+func (r *TestRunner) registerPodDisruptionBudgetFixture(pdb *policyv1.PodDisruptionBudget) {
 	r.CoreClient.Tracker().Add(pdb)
-	r.CoreSharedInformerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
+	r.CoreSharedInformerFactory.Policy().V1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
 }
 
 func (r *TestRunner) registerServiceFixture(s *corev1.Service) {

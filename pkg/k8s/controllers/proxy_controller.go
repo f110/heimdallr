@@ -17,7 +17,7 @@ import (
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -874,12 +874,12 @@ func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *Heim
 	return nil
 }
 
-func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1beta1.PodDisruptionBudget) error {
-	p, err := c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
+func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1.PodDisruptionBudget) error {
+	p, err := c.client.PolicyV1().PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(pdb)
 
-		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
+		_, err = c.client.PolicyV1().PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -892,7 +892,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context,
 	newPDB := p.DeepCopy()
 	newPDB.Spec = pdb.Spec
 	if !reflect.DeepEqual(newPDB.Spec, pdb.Spec) {
-		_, err = c.client.PolicyV1beta1().PodDisruptionBudgets(newPDB.Namespace).Update(ctx, newPDB, metav1.UpdateOptions{})
+		_, err = c.client.PolicyV1().PodDisruptionBudgets(newPDB.Namespace).Update(ctx, newPDB, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

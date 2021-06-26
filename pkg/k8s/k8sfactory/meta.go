@@ -5,7 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -167,7 +167,7 @@ func MatchLabelSelector(label map[string]string) Trait {
 			obj.Spec.Selector = label
 		case *appsv1.Deployment:
 			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
-		case *policyv1beta1.PodDisruptionBudget:
+		case *policyv1.PodDisruptionBudget:
 			obj.Spec.Selector = &metav1.LabelSelector{MatchLabels: label}
 		}
 	}

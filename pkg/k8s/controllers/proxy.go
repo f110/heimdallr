@@ -24,7 +24,7 @@ import (
 	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -98,7 +98,7 @@ const (
 
 type process struct {
 	Deployment          *appsv1.Deployment
-	PodDisruptionBudget *policyv1beta1.PodDisruptionBudget
+	PodDisruptionBudget *policyv1.PodDisruptionBudget
 	Service             []*corev1.Service
 	ConfigMaps          []*corev1.ConfigMap
 	Certificate         runtime.Object

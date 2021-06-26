@@ -23,7 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -141,7 +141,7 @@ func (f *commonTestRunner) RegisterFixtures(objs ...kruntime.Object) {
 			f.RegisterConfigMapFixture(obj)
 		case *appsv1.Deployment:
 			f.RegisterDeploymentFixture(obj)
-		case *policyv1beta1.PodDisruptionBudget:
+		case *policyv1.PodDisruptionBudget:
 			f.RegisterPodDisruptionBudgetFixture(obj)
 		case *certmanagerv1.Certificate:
 			f.RegisterCertificateFixture(obj)
@@ -200,9 +200,9 @@ func (f *commonTestRunner) RegisterDeploymentFixture(d *appsv1.Deployment) {
 	f.coreSharedInformerFactory.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
 }
 
-func (f *commonTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1beta1.PodDisruptionBudget) {
+func (f *commonTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1.PodDisruptionBudget) {
 	f.coreClient.Tracker().Add(pdb)
-	f.coreSharedInformerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
+	f.coreSharedInformerFactory.Policy().V1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
 }
 
 func (f *commonTestRunner) RegisterServiceFixture(s ...*corev1.Service) {
@@ -312,7 +312,7 @@ func (f *commonTestRunner) ExpectCreateConfigMap() {
 }
 
 func (f *commonTestRunner) ExpectCreatePodDisruptionBudget() {
-	action := core.NewCreateAction(policyv1beta1.SchemeGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1beta1.PodDisruptionBudget{})
+	action := core.NewCreateAction(policyv1.SchemeGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1.PodDisruptionBudget{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
