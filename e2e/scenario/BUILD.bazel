@@ -27,4 +27,5 @@ go_test(
         "//pkg/session",
         "//pkg/testing/btesting",
     ],
+    flaky = True,
 )
