@@ -52,7 +52,9 @@ job(
     config_name = "ci",
     cpu_limit = "2000m",
     github_status = True,
-    targets = "//...",
+    targets = [
+        "//..."
+    ],
 )
 
 sh_binary(
