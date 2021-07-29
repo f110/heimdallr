@@ -18,6 +18,7 @@ go_test(
         "//cmd/heimdallr-proxy",
         "@vault//:bin",
     ],
+    flaky = True,
     visibility = ["//visibility:public"],
     deps = [
         "//e2e/framework",
@@ -27,5 +28,4 @@ go_test(
         "//pkg/session",
         "//pkg/testing/btesting",
     ],
-    flaky = True,
 )

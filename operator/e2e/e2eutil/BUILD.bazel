@@ -18,7 +18,7 @@ go_library(
         "//pkg/poll",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
-        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
         "//vendor/go.etcd.io/etcd/v3/clientv3",
         "//vendor/go.uber.org/zap",

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/go-github/v32/github"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

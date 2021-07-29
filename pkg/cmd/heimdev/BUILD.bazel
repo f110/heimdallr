@@ -16,7 +16,7 @@ go_library(
         "//pkg/fsm",
         "//pkg/k8s",
         "//pkg/k8s/kind",
-        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/gorilla/websocket",
         "//vendor/github.com/miekg/dns",
         "//vendor/github.com/spf13/cobra",

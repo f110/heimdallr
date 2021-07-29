@@ -20,7 +20,7 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//pkg/stat",
-        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/google/go-github/v32/github",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",

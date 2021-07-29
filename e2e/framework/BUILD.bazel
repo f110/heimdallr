@@ -23,7 +23,7 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//pkg/testing/btesting",
-        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/gorilla/securecookie",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",

@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/securecookie"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"

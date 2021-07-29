@@ -40,7 +40,7 @@ go_test(
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
-        "//vendor/github.com/dgrijalva/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/stretchr/testify/require",
         "//vendor/google.golang.org/grpc",
