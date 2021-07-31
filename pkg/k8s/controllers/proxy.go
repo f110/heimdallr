@@ -37,6 +37,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
 	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
@@ -159,83 +160,6 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 		rpcPermissions:     opt.RpcPermissions,
 		roleBindings:       opt.RoleBindings,
 		certManagerVersion: opt.CertManagerVersion,
-	}
-
-	found := false
-	for _, v := range opt.Backends {
-		if v.Name == "dashboard" && v.Namespace == opt.Spec.Namespace && v.Spec.Layer == "" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		r.backends = append(r.backends, &proxyv1alpha2.Backend{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dashboard",
-				Namespace: opt.Spec.Namespace,
-				Labels: map[string]string{
-					labelKeyVirtualDashboard: "yes",
-				},
-			},
-			Spec: proxyv1alpha2.BackendSpec{
-				AllowRootUser: true,
-				HTTP: []*proxyv1alpha2.BackendHTTPSpec{
-					{
-						Path:     "/",
-						Upstream: fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort),
-					},
-				},
-				Permissions: []proxyv1alpha2.Permission{
-					{
-						Name: "all",
-						Locations: []proxyv1alpha2.Location{
-							{Any: "/"},
-						},
-					},
-				},
-			},
-		})
-	}
-
-	found = false
-	for _, v := range opt.Roles {
-		if v.Name == "admin" && v.Namespace == r.Namespace {
-			found = true
-			break
-		}
-	}
-	if !found {
-		r.roles = append(r.roles, &proxyv1alpha2.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin",
-				Namespace: r.Namespace,
-			},
-			Spec: proxyv1alpha2.RoleSpec{
-				Title:          "administrator",
-				Description:    fmt.Sprintf("%s administrators", r.Name),
-				AllowDashboard: true,
-			},
-		})
-	}
-
-	found = false
-	for _, v := range opt.RpcPermissions {
-		if v.Name == "admin" && v.Namespace == r.Namespace {
-			found = true
-			break
-		}
-	}
-	if !found {
-		r.rpcPermissions = append(r.rpcPermissions, &proxyv1alpha2.RpcPermission{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin",
-				Namespace: r.Namespace,
-			},
-			Spec: proxyv1alpha2.RpcPermissionSpec{
-				Allow: []string{"proxy.rpc.admin.*", "proxy.rpc.certificateauthority.*"},
-			},
-		})
 	}
 
 	return r
@@ -401,6 +325,67 @@ func (r *HeimdallrProxy) RoleBindings() []*proxyv1alpha2.RoleBinding {
 
 func (r *HeimdallrProxy) RpcPermissions() []*proxyv1alpha2.RpcPermission {
 	return r.rpcPermissions
+}
+
+func (r *HeimdallrProxy) DefaultBackends() []*proxyv1alpha2.Backend {
+	backend := proxy.BackendFactory(nil,
+		k8sfactory.Namef("%s-dashboard", r.Name),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Label("app.kubernetes.io/managed-by", "heimdallr-operator"),
+		k8sfactory.Label("app.kubernetes.io/instance", r.Name),
+		proxy.AllowRootUser,
+		proxy.HTTP([]*proxyv1alpha2.BackendHTTPSpec{
+			{Path: "/", Upstream: fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort)},
+		}),
+		proxy.Permission(
+			proxy.PermissionFactory(nil,
+				proxy.Name("all"),
+				proxy.Location("Any", "/"),
+			),
+		),
+	)
+
+	return []*proxyv1alpha2.Backend{backend}
+}
+
+func (r *HeimdallrProxy) DefaultRoles() []*proxyv1alpha2.Role {
+	role := proxy.RoleFactory(nil,
+		k8sfactory.Namef("%s-admin", r.Name),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Label("app.kubernetes.io/managed-by", "heimdallr-operator"),
+		k8sfactory.Label("app.kubernetes.io/instance", r.Name),
+		proxy.Title("administrator"),
+		proxy.Description(fmt.Sprintf("%s administrators", r.Name)),
+		proxy.AllowDashboard,
+	)
+
+	return []*proxyv1alpha2.Role{role}
+}
+
+func (r *HeimdallrProxy) DefaultRoleBindings() []*proxyv1alpha2.RoleBinding {
+	rb := proxy.RoleBindingFactory(nil,
+		k8sfactory.Namef("%s-admin-dashboard", r.Name),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Label("app.kubernetes.io/managed-by", "heimdallr-operator"),
+		k8sfactory.Label("app.kubernetes.io/instance", r.Name),
+		proxy.Role(r.DefaultRoles()[0]),
+		proxy.Subject(r.DefaultBackends()[0], "all"),
+	)
+
+	return []*proxyv1alpha2.RoleBinding{rb}
+}
+
+func (r *HeimdallrProxy) DefaultRpcPermissions() []*proxyv1alpha2.RpcPermission {
+	rp := proxy.RpcPermissionFactory(nil,
+		k8sfactory.Namef("%s-admin", r.Name),
+		k8sfactory.Namespace(r.Namespace),
+		k8sfactory.Label("app.kubernetes.io/managed-by", "heimdallr-operator"),
+		k8sfactory.Label("app.kubernetes.io/instance", r.Name),
+		proxy.Allow("proxy.rpc.admin.*"),
+		proxy.Allow("proxy.rpc.certificateauthority.*"),
+	)
+
+	return []*proxyv1alpha2.RpcPermission{rp}
 }
 
 func (r *HeimdallrProxy) Certificate() runtime.Object {

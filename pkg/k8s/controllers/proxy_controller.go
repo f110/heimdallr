@@ -345,32 +345,65 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		proxy = updateProxy
 	}
 
-	selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.BackendSelector.LabelSelector)
+	defaultResourceSelector := labels.Set(map[string]string{"app.kubernetes.io/managed-by": "heimdallr-operator", "app.kubernetes.io/instance": proxy.Name}).AsSelector()
+
+	var backends []*proxyv1alpha2.Backend
+	if proxy.Spec.BackendSelector.LabelSelector.Size() != 0 {
+		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.BackendSelector.LabelSelector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		b, err := c.backendLister.List(selector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		backends = append(backends, b...)
+	}
+	defaultBackends, err := c.backendLister.List(defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	backends, err := c.backendLister.List(selector)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
+	if len(defaultBackends) > 0 {
+		backends = append(backends, defaultBackends...)
 	}
 
-	selector, err = metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
+	var roles []*proxyv1alpha2.Role
+	if proxy.Spec.RoleSelector.LabelSelector.Size() != 0 {
+		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		r, err := c.roleLister.List(selector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		roles = append(roles, r...)
+	}
+	defaultRoles, err := c.roleLister.List(defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	roles, err := c.roleLister.List(selector)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
+	if len(defaultRoles) > 0 {
+		roles = append(roles, defaultRoles...)
 	}
 
-	selector, err = metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
+	var rpcPermissions []*proxyv1alpha2.RpcPermission
+	if proxy.Spec.RpcPermissionSelector.LabelSelector.Size() != 0 {
+		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		list, err := c.rpcPermissionLister.List(selector)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		rpcPermissions = append(rpcPermissions, list...)
+	}
+	defaultRpcPermissions, err := c.rpcPermissionLister.List(defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rpcPermissions, err := c.rpcPermissionLister.List(selector)
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
+	rpcPermissions = append(rpcPermissions, defaultRpcPermissions...)
 
 	rolesMap := make(map[string]*proxyv1alpha2.Role)
 	for _, v := range roles {
@@ -515,6 +548,10 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 		return controllerbase.WrapRetryError(xerrors.Errorf(": %w", err))
 	}
 
+	if err := c.reconcileFundamentalResources(ctx, lp); err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
 	if err := c.reconcileEtcdCluster(ctx, lp); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -548,6 +585,58 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(ctx, s, metav1.UpdateOptions{})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
+	}
+
+	return nil
+}
+
+func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp *HeimdallrProxy) error {
+	backends := lp.DefaultBackends()
+	for _, backend := range backends {
+		_, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+		if apierrors.IsNotFound(err) {
+			lp.ControlObject(backend)
+			_, err = c.clientset.ProxyV1alpha2().Backends(backend.Namespace).Create(ctx, backend, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	}
+
+	roles := lp.DefaultRoles()
+	for _, role := range roles {
+		_, err := c.roleLister.Roles(role.Namespace).Get(role.Name)
+		if apierrors.IsNotFound(err) {
+			lp.ControlObject(role)
+			_, err = c.clientset.ProxyV1alpha2().Roles(role.Namespace).Create(ctx, role, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	}
+
+	roleBindings := lp.DefaultRoleBindings()
+	for _, rb := range roleBindings {
+		_, err := c.roleBindingLister.RoleBindings(rb.Namespace).Get(rb.Name)
+		if apierrors.IsNotFound(err) {
+			lp.ControlObject(rb)
+			_, err = c.clientset.ProxyV1alpha2().RoleBindings(rb.Namespace).Create(ctx, rb, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	}
+
+	rpcPermissions := lp.DefaultRpcPermissions()
+	for _, rpcPermission := range rpcPermissions {
+		_, err := c.rpcPermissionLister.RpcPermissions(rpcPermission.Namespace).Get(rpcPermission.Name)
+		if apierrors.IsNotFound(err) {
+			lp.ControlObject(rpcPermission)
+			_, err = c.clientset.ProxyV1alpha2().RpcPermissions(rpcPermission.Namespace).Create(ctx, rpcPermission, metav1.CreateOptions{})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
 	}
 
 	return nil

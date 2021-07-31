@@ -151,6 +151,8 @@ func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 			r.registerProxyRoleFixture(obj)
 		case *proxyv1alpha2.RoleBinding:
 			r.registerProxyRoleBindingFixture(obj)
+		case *proxyv1alpha2.RpcPermission:
+			r.registerRpcPermission(obj)
 		case *etcdv1alpha2.EtcdCluster:
 			r.registerEtcdClusterFixture(obj)
 		case *corev1.Pod:
@@ -201,6 +203,11 @@ func (r *TestRunner) registerProxyRoleFixture(v *proxyv1alpha2.Role) {
 func (r *TestRunner) registerProxyRoleBindingFixture(v *proxyv1alpha2.RoleBinding) {
 	r.Client.Tracker().Add(v)
 	r.SharedInformerFactory.Proxy().V1alpha2().RoleBindings().Informer().GetIndexer().Add(v)
+}
+
+func (r *TestRunner) registerRpcPermission(v *proxyv1alpha2.RpcPermission) {
+	r.Client.Tracker().Add(v)
+	r.SharedInformerFactory.Proxy().V1alpha2().RpcPermissions().Informer().GetIndexer().Add(v)
 }
 
 func (r *TestRunner) registerEtcdClusterFixture(ec *etcdv1alpha2.EtcdCluster) {
@@ -330,10 +337,12 @@ Match:
 
 			actualActionObjMeta, ok := got.Object.(metav1.Object)
 			if !ok {
+				t.Logf("HERE? %T", got.Object)
 				continue
 			}
 			objMeta, ok := expect.Object.(metav1.Object)
 			if !ok {
+				t.Logf("HERE? %T", got.Object)
 				continue
 			}
 

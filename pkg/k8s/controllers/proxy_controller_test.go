@@ -11,11 +11,13 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	listers "k8s.io/client-go/listers/core/v1"
 
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/fake"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
@@ -140,6 +142,30 @@ func TestProxyController(t *testing.T) {
 				Namespace: p.Namespace,
 			},
 		})
+		runner.AssertCreateAction(t, &proxyv1alpha2.Backend{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-dashboard",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertCreateAction(t, &proxyv1alpha2.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-admin",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertCreateAction(t, &proxyv1alpha2.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-admin-dashboard",
+				Namespace: p.Namespace,
+			},
+		})
+		runner.AssertCreateAction(t, &proxyv1alpha2.RpcPermission{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-admin",
+				Namespace: p.Namespace,
+			},
+		})
 		runner.AssertNoUnexpectedAction(t)
 
 		etcdC, err := runner.Client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
@@ -226,9 +252,9 @@ func TestProxyController(t *testing.T) {
 		}
 		assert.Len(t, roleConfig, 2)
 		assert.Contains(t, roleMap, "test")
-		assert.Contains(t, roleMap, "admin")
+		assert.Contains(t, roleMap, "test-admin")
 		assert.Len(t, roleMap["test"].Bindings, 1)
-		assert.Len(t, roleMap["admin"].Bindings, 1)
+		assert.Len(t, roleMap["test-admin"].Bindings, 1)
 	})
 
 	t.Run("RPC server is ready", func(t *testing.T) {
@@ -239,15 +265,7 @@ func TestProxyController(t *testing.T) {
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
 		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, services)
 
-		hp := NewHeimdallrProxy(HeimdallrProxyParams{
-			Spec:           p,
-			Clientset:      runner.Client,
-			ServiceLister:  controller.serviceLister,
-			Backends:       backends,
-			Roles:          roles,
-			RpcPermissions: rpcPermissions,
-			RoleBindings:   roleBindings,
-		})
+		hp := newHeimdallrProxy(runner.Client, controller.serviceLister, p, backends, roles, roleBindings, rpcPermissions)
 		ec, _ := hp.EtcdCluster()
 		ec = etcd.Factory(ec, etcd.Ready)
 		runner.RegisterFixtures(hp.PrepareCompleted(ec)...)
@@ -270,7 +288,7 @@ func TestProxyController(t *testing.T) {
 
 		namespace := k8sfactory.Namespace(p.Namespace)
 		runner.AssertUpdateAction(t, "status", p)
-		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseRunning), setProxyStatus))
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseRunning), setProxyStatus, setProxyStatusNumberOf))
 		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Name(p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Name(p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Name(p.Name), namespace))
@@ -285,7 +303,7 @@ func TestProxyController(t *testing.T) {
 			{Name: p.Name, Namespace: p.Namespace, Url: fmt.Sprintf("https://%s.%s.%s", updatedBackend.Name, updatedBackend.Spec.Layer, p.Spec.Domain)},
 		}
 		runner.AssertUpdateAction(t, "status", updatedBackend)
-		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus))
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus, setProxyStatusNumberOf))
 		runner.AssertNoUnexpectedAction(t)
 
 		updatedP, err := runner.Client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
@@ -459,4 +477,40 @@ func setProxyStatus(object interface{}) {
 	p.Status.GithubWebhookSecretName = fmt.Sprintf("%s-github-secret", p.Name)
 	p.Status.CookieSecretName = fmt.Sprintf("%s-cookie-secret", p.Name)
 	p.Status.InternalTokenSecretName = fmt.Sprintf("%s-internal-token", p.Name)
+}
+
+func setProxyStatusNumberOf(object interface{}) {
+	p, ok := object.(*proxyv1alpha2.Proxy)
+	if !ok {
+		return
+	}
+
+	p.Status.NumOfBackends = 2
+	p.Status.NumOfRoles = 2
+	p.Status.NumOfRpcPermissions = 1
+}
+
+func newHeimdallrProxy(
+	client *fake.Clientset,
+	serviceLister listers.ServiceLister,
+	p *proxyv1alpha2.Proxy,
+	backends []*proxyv1alpha2.Backend,
+	roles []*proxyv1alpha2.Role,
+	roleBindings []*proxyv1alpha2.RoleBinding,
+	rpcPermissions []*proxyv1alpha2.RpcPermission,
+) *HeimdallrProxy {
+	hp := NewHeimdallrProxy(HeimdallrProxyParams{
+		Spec:           p,
+		Clientset:      client,
+		ServiceLister:  serviceLister,
+		Backends:       backends,
+		Roles:          roles,
+		RpcPermissions: rpcPermissions,
+		RoleBindings:   roleBindings,
+	})
+	hp.backends = append(hp.backends, hp.DefaultBackends()...)
+	hp.roles = append(hp.roles, hp.DefaultRoles()...)
+	hp.roleBindings = append(hp.roleBindings, hp.DefaultRoleBindings()...)
+	hp.rpcPermissions = append(hp.rpcPermissions, hp.DefaultRpcPermissions()...)
+	return hp
 }

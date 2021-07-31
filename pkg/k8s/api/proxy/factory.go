@@ -311,6 +311,14 @@ func HTTP(v []*proxyv1alpha2.BackendHTTPSpec) k8sfactory.Trait {
 	}
 }
 
+func AllowRootUser(object interface{}) {
+	b, ok := object.(*proxyv1alpha2.Backend)
+	if !ok {
+		return
+	}
+	b.Spec.AllowRootUser = true
+}
+
 func PermissionFactory(base *proxyv1alpha2.Permission, traits ...k8sfactory.Trait) *proxyv1alpha2.Permission {
 	var p *proxyv1alpha2.Permission
 	if base == nil {
@@ -433,6 +441,14 @@ func Description(v string) k8sfactory.Trait {
 	}
 }
 
+func AllowDashboard(object interface{}) {
+	r, ok := object.(*proxyv1alpha2.Role)
+	if !ok {
+		return
+	}
+	r.Spec.AllowDashboard = true
+}
+
 func RoleBindingFactory(base *proxyv1alpha2.RoleBinding, traits ...k8sfactory.Trait) *proxyv1alpha2.RoleBinding {
 	var rb *proxyv1alpha2.RoleBinding
 	if base == nil {
@@ -484,5 +500,37 @@ func Subject(v runtime.Object, permission string) k8sfactory.Trait {
 				Permission: permission,
 			})
 		}
+	}
+}
+
+func RpcPermissionFactory(base *proxyv1alpha2.RpcPermission, traits ...k8sfactory.Trait) *proxyv1alpha2.RpcPermission {
+	var rp *proxyv1alpha2.RpcPermission
+	if base == nil {
+		rp = &proxyv1alpha2.RpcPermission{}
+	} else {
+		rp = base.DeepCopy()
+	}
+	if rp.GetObjectKind().GroupVersionKind().Kind == "" {
+		gvks, unversioned, err := scheme.Scheme.ObjectKinds(rp)
+		if err == nil && !unversioned && len(gvks) > 0 {
+			rp.GetObjectKind().SetGroupVersionKind(gvks[0])
+		}
+	}
+
+	for _, trait := range traits {
+		trait(rp)
+	}
+
+	return rp
+}
+
+func Allow(rule string) k8sfactory.Trait {
+	return func(object interface{}) {
+		rp, ok := object.(*proxyv1alpha2.RpcPermission)
+		if !ok {
+			return
+		}
+
+		rp.Spec.Allow = append(rp.Spec.Allow, rule)
 	}
 }

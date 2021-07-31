@@ -14,7 +14,7 @@ import (
 )
 
 func (r *HeimdallrProxy) PrepareCompleted(ec *etcdv1alpha2.EtcdCluster) []runtime.Object {
-	return []runtime.Object{
+	obj := []runtime.Object{
 		r.Certificate(),
 		k8sfactory.SecretFactory(nil,
 			k8sfactory.Name(ec.Status.ClientCertSecretName),
@@ -31,6 +31,20 @@ func (r *HeimdallrProxy) PrepareCompleted(ec *etcdv1alpha2.EtcdCluster) []runtim
 			k8sfactory.Data("client.key", []byte("")),
 		),
 	}
+	for _, v := range r.DefaultBackends() {
+		obj = append(obj, v)
+	}
+	for _, v := range r.DefaultRoles() {
+		obj = append(obj, v)
+	}
+	for _, v := range r.DefaultRoleBindings() {
+		obj = append(obj, v)
+	}
+	for _, v := range r.DefaultRpcPermissions() {
+		obj = append(obj, v)
+	}
+
+	return obj
 }
 
 func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
