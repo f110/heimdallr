@@ -995,6 +995,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 
 	etcdClient, err := cluster.Client(endpoints)
 	if err != nil {
+		cluster.Status.Ready = false
 		return nil
 	}
 	defer func() {
@@ -1006,6 +1007,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	mlCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	memberList, err := etcdClient.MemberList(mlCtx)
 	if err != nil {
+		cancel()
 		return nil
 	}
 	cancel()
@@ -1066,13 +1068,13 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 		return nil
 	}
 
-	if len(cluster.Status.Members) > cluster.Spec.Members/2 {
+	if cluster.Spec.Members > 1 && len(cluster.Status.Members) > cluster.Spec.Members/2 {
 		if !cluster.Status.Ready {
 			now := metav1.Now()
 			cluster.Status.LastReadyTransitionTime = &now
 		}
-		cluster.Status.Ready = true
 	}
+
 	if len(cluster.Status.Members) == cluster.Spec.Members &&
 		runningPods == cluster.Spec.Members && !cluster.Status.CreatingCompleted {
 		cluster.Status.CreatingCompleted = true
@@ -1094,6 +1096,21 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 		}
 	}
 	ec.Log().Debug("Current Phase", zap.String("phase", string(cluster.Status.Phase)), zap.String("cluster.name", cluster.Name))
+
+	if cluster.Spec.Members == 1 {
+		if len(cluster.Status.Members) == 1 && cluster.Status.Members[0].Leader {
+			cluster.Status.Ready = true
+		} else {
+			cluster.Status.Ready = false
+		}
+	}
+	if cluster.Spec.Members > 1 {
+		if len(cluster.Status.Members) > cluster.Spec.Members/2 {
+			cluster.Status.Ready = true
+		} else {
+			cluster.Status.Ready = false
+		}
+	}
 
 	cluster.Status.ClientCertSecretName = cluster.ClientCertSecretName()
 	cluster.Status.ClientEndpoint = fmt.Sprintf("https://%s.%s.svc.%s:%d", cluster.ClientServiceName(), cluster.Namespace, cluster.ClusterDomain, EtcdClientPort)

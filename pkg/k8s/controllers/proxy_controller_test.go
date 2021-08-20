@@ -47,6 +47,7 @@ func TestProxyController(t *testing.T) {
 				Namespace: p.Namespace,
 			},
 		})
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		runner.AssertUpdateAction(t, "status", p)
 		runner.AssertNoUnexpectedAction(t)
 	})
@@ -90,6 +91,7 @@ func TestProxyController(t *testing.T) {
 		require.Error(t, err)
 		controllertest.AssertRetry(t, err)
 
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		runner.AssertUpdateAction(t, "status", p)
 		runner.AssertUpdateAction(t, "", k8sfactory.SecretFactory(caSecret, k8sfactory.ClearOwnerReference))
 		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
@@ -135,6 +137,7 @@ func TestProxyController(t *testing.T) {
 		require.Error(t, err)
 		controllertest.AssertRetry(t, err)
 
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		runner.AssertUpdateAction(t, "status", p)
 		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{
@@ -218,8 +221,8 @@ func TestProxyController(t *testing.T) {
 		controllertest.AssertRetry(t, err)
 
 		namespace := k8sfactory.Namespace(p.Namespace)
-		runner.AssertUpdateAction(t, "status", p)
-		runner.AssertUpdateAction(t, "status", proxy.Factory(p, setProxyStatus))
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating)))
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus))
 		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
@@ -287,7 +290,7 @@ func TestProxyController(t *testing.T) {
 		require.NoError(t, err)
 
 		namespace := k8sfactory.Namespace(p.Namespace)
-		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating)))
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseRunning), setProxyStatus, setProxyStatusNumberOf))
 		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Name(p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Name(p.Name), namespace))

@@ -11,6 +11,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.etcd.io/etcd/v3/etcdserver/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -167,6 +168,8 @@ func TestEtcdController(t *testing.T) {
 		for _, v := range cluster.AllMembers() {
 			v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)))
 			runner.RegisterFixtures(v.Pod)
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 		}
 		e = etcd.Factory(e, etcd.Version("v3.3.0"))
 
@@ -225,7 +228,14 @@ func TestEtcdController(t *testing.T) {
 			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers() {
 				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+				runner.RegisterFixtures(
+					k8sfactory.PodFactory(v.Pod,
+						k8sfactory.Ready,
+						k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)),
+					),
+				)
+				etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+				e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
@@ -264,7 +274,14 @@ func TestEtcdController(t *testing.T) {
 			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers()[1:] {
 				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
-				runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+				runner.RegisterFixtures(
+					k8sfactory.PodFactory(v.Pod,
+						k8sfactory.Ready,
+						k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)),
+					),
+				)
+				etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+				e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
@@ -304,6 +321,8 @@ func TestEtcdController(t *testing.T) {
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
 			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 		runner.RegisterFixtures(tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
@@ -343,6 +362,8 @@ func TestEtcdController(t *testing.T) {
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for i, v := range cluster.AllMembers() {
 			v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)))
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 
 			if i == 0 {
 				v.Pod.Status.Phase = corev1.PodSucceeded
@@ -410,6 +431,10 @@ func TestEtcdController(t *testing.T) {
 		}
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
+		for _, v := range cluster.AllMembers() {
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
 		// If only exists a temporary member, always failed the readiness probe of the etcd controller.
 		// Hence, The status of the Pod is not ready.

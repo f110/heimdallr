@@ -122,7 +122,7 @@ func (r *TestRunner) Reconcile(c controllerbase.ControllerBase, target runtime.O
 	defer cancel()
 	ctx = context.WithValue(ctx, controllerbase.TimeKey{}, r.Now)
 
-	return c.Reconcile(ctx, target)
+	return c.Reconcile(ctx, target.DeepCopyObject())
 }
 
 func (r *TestRunner) Finalize(c controllerbase.ControllerBase, target runtime.Object) error {
@@ -132,7 +132,7 @@ func (r *TestRunner) Finalize(c controllerbase.ControllerBase, target runtime.Ob
 	defer cancel()
 	ctx = context.WithValue(ctx, controllerbase.TimeKey{}, r.Now)
 
-	return c.Finalize(ctx, target)
+	return c.Finalize(ctx, target.DeepCopyObject())
 }
 
 func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {

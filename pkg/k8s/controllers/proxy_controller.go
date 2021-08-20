@@ -338,6 +338,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
+		c.Log().Debug("Update Proxy.Status.Phase")
 		updateProxy, err := c.clientset.ProxyV1alpha2().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -464,6 +465,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
+		c.Log().Debug("Update Proxy")
 		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)

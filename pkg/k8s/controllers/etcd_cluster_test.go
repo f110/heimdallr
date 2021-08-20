@@ -50,7 +50,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 			},
-			Traits:      []k8sfactory.Trait{etcd.Ready},
+			Traits:      []k8sfactory.Trait{},
 			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
 		},
 		{
@@ -79,7 +79,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
+			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
 		},
 		{
 			Name: "There are two pods and creation completed",
@@ -127,12 +127,14 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		e := etcd.Factory(nil, k8sfactory.Name("test"), etcd.HighAvailability)
-		e = etcd.Factory(e, tt.Traits...)
-		ec := NewEtcdCluster(e, clusterDomain, logger.Log, nil)
-		if len(tt.Pods) > 0 {
-			ec.SetOwnedPods(tt.Pods)
-		}
-		assert.Equal(t, tt.ExpectPhase, ec.CurrentPhase(), tt.Name)
+		t.Run(tt.Name, func(t *testing.T) {
+			e := etcd.Factory(nil, k8sfactory.Name("test"), etcd.HighAvailability)
+			e = etcd.Factory(e, tt.Traits...)
+			ec := NewEtcdCluster(e, clusterDomain, logger.Log, nil)
+			if len(tt.Pods) > 0 {
+				ec.SetOwnedPods(tt.Pods)
+			}
+			assert.Equal(t, tt.ExpectPhase, ec.CurrentPhase(), tt.Name)
+		})
 	}
 }

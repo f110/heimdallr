@@ -44,6 +44,7 @@ func Ready(object interface{}) {
 	e.Status.LastReadyTransitionTime = &now
 	e.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
 	e.Status.ClientCertSecretName = fmt.Sprintf("%s-client-cert", e.Name)
+	e.Status.CreatingCompleted = true
 }
 
 func CreatingCompleted(object interface{}) {
