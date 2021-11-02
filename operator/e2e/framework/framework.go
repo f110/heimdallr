@@ -40,7 +40,14 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 			},
 		},
 		BackendSelector: proxyv1alpha2.LabelSelector{
-			LabelSelector: metav1.LabelSelector{},
+			LabelSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"instance": "e2e"},
+			},
+		},
+		RoleSelector: proxyv1alpha2.LabelSelector{
+			LabelSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{"instance": "e2e"},
+			},
 		},
 		IdentityProvider: proxyv1alpha2.IdentityProviderSpec{
 			Provider: "google",
@@ -51,7 +58,7 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 			Name: "self-signed",
 		},
 	},
-}, k8sfactory.Namespace(metav1.NamespaceDefault), proxy.EtcdDataStore, proxy.CookieSession)
+}, k8sfactory.Name("e2e"), k8sfactory.Namespace(metav1.NamespaceDefault), proxy.EtcdDataStore, proxy.CookieSession)
 
 var EtcdClusterBase = etcd.Factory(nil,
 	k8sfactory.Namespace(metav1.NamespaceDefault),
@@ -165,7 +172,6 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	m.NoError(err)
 
 	proxySpec := proxy.Factory(ProxyBase,
-		k8sfactory.Name("e2e"),
 		proxy.ClientSecret("e2e-client-secret", "client-secret"),
 		proxy.RootUsers([]string{testUserId}),
 		proxy.Version(Config.ProxyVersion),
@@ -199,7 +205,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 			Namespace: proxySpec.Namespace,
 		},
 		Subjects: []proxyv1alpha2.Subject{
-			{Kind: "Backend", Name: "dashboard", Namespace: proxySpec.Namespace, Permission: "all"},
+			{Kind: "Backend", Name: fmt.Sprintf("%s-dashboard", proxySpec.Name), Namespace: proxySpec.Namespace, Permission: "all"},
 			{Kind: "Backend", Name: testServiceBackend.Name, Namespace: proxySpec.Namespace, Permission: "all"},
 			{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxySpec.Namespace, Permission: "all"},
 		},
@@ -300,7 +306,7 @@ func (a *Agent) Get(m *btesting.Matcher, backend *proxyv1alpha2.Backend, body io
 func (a *Agent) GetDashboard(m *btesting.Matcher) bool {
 	dashboard := &proxyv1alpha2.Backend{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "dashboard",
+			Name: "e2e-dashboard",
 		},
 	}
 	return a.Get(m, dashboard, nil)

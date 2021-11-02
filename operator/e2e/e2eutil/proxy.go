@@ -78,6 +78,9 @@ func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deploymen
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: proxy.Namespace,
+			Labels: map[string]string{
+				"instance": proxy.Name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
