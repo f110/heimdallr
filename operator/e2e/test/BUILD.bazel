@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("//:RELEASE.bzl", "VERSION")
 
-K8S_CLUSTER_VERSION = "v1.20.2"
+K8S_CLUSTER_VERSION = "v1.21.1"
 
 go_test(
     name = "test_test",
