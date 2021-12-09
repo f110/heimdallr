@@ -8,10 +8,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func CronJobFactory(base *batchv1beta1.CronJob, traits ...Trait) *batchv1beta1.CronJob {
-	var cj *batchv1beta1.CronJob
+func CronJobFactory(base *batchv1.CronJob, traits ...Trait) *batchv1.CronJob {
+	var cj *batchv1.CronJob
 	if base == nil {
-		cj = &batchv1beta1.CronJob{}
+		cj = &batchv1.CronJob{}
 	} else {
 		cj = base.DeepCopy()
 	}
@@ -32,11 +32,12 @@ func CronJobFactory(base *batchv1beta1.CronJob, traits ...Trait) *batchv1beta1.C
 
 func Schedule(v string) Trait {
 	return func(object interface{}) {
-		cj, ok := object.(*batchv1beta1.CronJob)
-		if !ok {
-			return
+		switch obj := object.(type) {
+		case *batchv1beta1.CronJob:
+			obj.Spec.Schedule = v
+		case *batchv1.CronJob:
+			obj.Spec.Schedule = v
 		}
-		cj.Spec.Schedule = v
 	}
 }
 
@@ -45,6 +46,11 @@ func Job(j *batchv1.Job) Trait {
 		switch obj := object.(type) {
 		case *batchv1beta1.CronJob:
 			obj.Spec.JobTemplate = batchv1beta1.JobTemplateSpec{
+				ObjectMeta: j.ObjectMeta,
+				Spec:       j.Spec,
+			}
+		case *batchv1.CronJob:
+			obj.Spec.JobTemplate = batchv1.JobTemplateSpec{
 				ObjectMeta: j.ObjectMeta,
 				Spec:       j.Spec,
 			}

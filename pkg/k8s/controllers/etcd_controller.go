@@ -880,13 +880,13 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 
 	if found {
 		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
-			_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Update(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
+			_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Update(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
 		}
 	} else {
-		_, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Create(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
+		_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Create(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

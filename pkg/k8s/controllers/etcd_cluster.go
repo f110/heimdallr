@@ -24,7 +24,7 @@ import (
 	"go.etcd.io/etcd/v3/clientv3"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -407,7 +407,7 @@ func (c *EtcdCluster) EtcdRoleBinding() *rbacv1.RoleBinding {
 	)
 }
 
-func (c *EtcdCluster) DefragmentCronJob() *batchv1beta1.CronJob {
+func (c *EtcdCluster) DefragmentCronJob() *batchv1.CronJob {
 	caVolume := k8sfactory.NewSecretVolumeSource(
 		"ca",
 		"/etc/etcd-ca",
