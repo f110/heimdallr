@@ -13,8 +13,8 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/golang/protobuf v1.4.3
-	github.com/google/go-cmp v0.5.2
+	github.com/golang/protobuf v1.5.2
+	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.1.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
@@ -47,21 +47,21 @@ require (
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.opencensus.io v0.22.4 // indirect
 	go.uber.org/zap v1.14.1
-	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/square/go-jose.v2 v2.3.1
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.21.0
+	k8s.io/api v0.22.0
 	k8s.io/apiextensions-apiserver v0.20.4
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
-	k8s.io/klog/v2 v2.8.0
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/klog/v2 v2.9.0
+	k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc

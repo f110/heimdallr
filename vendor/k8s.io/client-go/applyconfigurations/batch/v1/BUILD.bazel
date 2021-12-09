@@ -11,6 +11,7 @@ go_library(
         "jobspec.go",
         "jobstatus.go",
         "jobtemplatespec.go",
+        "uncountedterminatedpods.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/k8s.io/client-go/applyconfigurations/batch/v1",
     importpath = "k8s.io/client-go/applyconfigurations/batch/v1",
