@@ -74,7 +74,7 @@ func TestEtcdController(t *testing.T) {
 						f.EtcdClusters.EtcdCluster("update").Reload()
 						ec := f.EtcdClusters.EtcdCluster("update").EtcdCluster
 						m.NotNil(ec)
-						ec.Spec.Version = "v3.4.4"
+						ec.Spec.Version = "v3.4.5"
 						_, err := f.Client().EtcdV1alpha2().EtcdClusters(ec.Namespace).Update(context.TODO(), ec, metav1.UpdateOptions{})
 						m.Must(err)
 						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseUpdating, 1*time.Minute))
@@ -93,7 +93,7 @@ func TestEtcdController(t *testing.T) {
 					})
 
 					s.It("all pods should have updated", func(m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update").EqualVersion(m, "v3.4.4")
+						f.EtcdClusters.EtcdCluster("update").EqualVersion(m, "v3.4.5")
 					})
 				})
 			})

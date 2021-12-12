@@ -419,7 +419,7 @@ func (c *EtcdCluster) DefragmentCronJob() *batchv1.CronJob {
 	cont := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("etcdctl"),
 		k8sfactory.Image(
-			fmt.Sprintf("quay.io/coreos/etcd:%s", c.Spec.Version),
+			fmt.Sprintf("gcr.io/etcd-development/etcd:%s", c.Spec.Version),
 			[]string{"/usr/local/bin/etcdctl",
 				fmt.Sprintf("--endpoints=https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
 				fmt.Sprintf("--cacert=/etc/etcd-ca/%s", caCertificateFilename),
@@ -1013,7 +1013,7 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 		addMemberContainer = k8sfactory.ContainerFactory(nil,
 			k8sfactory.Name("add-member"),
 			k8sfactory.Image(
-				fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
+				fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion),
 				[]string{"/bin/sh", "-c", buf.String()},
 			),
 			k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
@@ -1052,7 +1052,7 @@ echo '' > /etc/resolv.conf
 /usr/local/bin/etcd %s`, strings.Join(etcdArgs, " "))
 	etcdContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("etcd"),
-		k8sfactory.Image(fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion), []string{"/bin/sh"}),
+		k8sfactory.Image(fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion), []string{"/bin/sh"}),
 		k8sfactory.Args("-c", etcdScript),
 		k8sfactory.EnvFromField("MY_POD_NAME", "metadata.name"),
 		k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
@@ -1185,7 +1185,7 @@ func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
 
 	restoreContainer := corev1.Container{
 		Name:    "restore-data",
-		Image:   fmt.Sprintf("quay.io/coreos/etcd:%s", etcdVersion),
+		Image:   fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion),
 		Command: []string{"/bin/sh", "-c", buf.String()},
 		Env: []corev1.EnvVar{
 			{
