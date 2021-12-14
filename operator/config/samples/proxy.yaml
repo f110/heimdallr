@@ -4,7 +4,7 @@ metadata:
   name: proxy-sample
 spec:
   replicas: 3
-  version: v0.10.1
+  version: v0.13.0
   domain: local-proxy.f110.dev
   port: 443
   certificateAuthority:
@@ -38,7 +38,7 @@ spec:
     prometheusMonitoring: false
   dataStore:
     etcd:
-      version: v3.4.9
+      version: v3.5.1
       defragment:
         schedule: "18 13 * * *"
   development: true

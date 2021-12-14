@@ -366,6 +366,7 @@ func (c *EtcdCluster) Reload() {
 		return
 	}
 	c.clusters.Reload(c.EtcdCluster.Name)
+	c.EtcdCluster = c.clusters.EtcdCluster(c.Name).EtcdCluster
 }
 
 func (c *EtcdCluster) Client(m *btesting.Matcher) *e2eutil.EtcdClient {
@@ -384,6 +385,20 @@ func (c *EtcdCluster) Destroy(client *clientset.Clientset) {
 		return
 	}
 	_ = client.EtcdV1alpha2().EtcdClusters(c.Namespace).Delete(context.TODO(), c.Name, metav1.DeleteOptions{})
+}
+
+func (c *EtcdCluster) Update(m *btesting.Matcher, client *clientset.Clientset, traits ...k8sfactory.Trait) {
+	c.Reload()
+	newEC := etcd.Factory(c.EtcdCluster, traits...)
+	_, err := client.EtcdV1alpha2().EtcdClusters(c.Namespace).Update(context.TODO(), newEC, metav1.UpdateOptions{})
+	if err != nil {
+		m.Failf("Failed to update etcd cluster: %v", err)
+	}
+	c.Reload()
+}
+
+func (c *EtcdCluster) WaitBecome(m *btesting.Matcher, client *clientset.Clientset, status etcdv1alpha2.EtcdClusterPhase) {
+	m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(client, c.EtcdCluster, status, 10*time.Minute))
 }
 
 func (c *EtcdCluster) NumOfPods(m *btesting.Matcher, length int) {

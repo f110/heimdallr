@@ -56,7 +56,7 @@ func TestEtcdController(t *testing.T) {
 		})
 
 		s.Context("updates the cluster", func(s *btesting.Scenario) {
-			s.Context("recreates all pods", func(s *btesting.Scenario) {
+			s.Context("between patch versions", func(s *btesting.Scenario) {
 				s.Defer(func() { f.EtcdClusters.EtcdCluster("update").Destroy(f.Client()) })
 
 				s.Step("create new cluster", func(s *btesting.Scenario) {
@@ -71,13 +71,8 @@ func TestEtcdController(t *testing.T) {
 
 				s.Step("edit version", func(s *btesting.Scenario) {
 					s.Subject(func(m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update").Reload()
-						ec := f.EtcdClusters.EtcdCluster("update").EtcdCluster
-						m.NotNil(ec)
-						ec.Spec.Version = "v3.4.5"
-						_, err := f.Client().EtcdV1alpha2().EtcdClusters(ec.Namespace).Update(context.TODO(), ec, metav1.UpdateOptions{})
-						m.Must(err)
-						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseUpdating, 1*time.Minute))
+						f.EtcdClusters.EtcdCluster("update").Update(m, f.Client(), etcd.Version("v3.4.5"))
+						f.EtcdClusters.EtcdCluster("update").WaitBecome(m, f.Client(), etcdv1alpha2.ClusterPhaseUpdating)
 					})
 
 					s.It("should be ready", func(m *btesting.Matcher) {
@@ -94,6 +89,43 @@ func TestEtcdController(t *testing.T) {
 
 					s.It("all pods should have updated", func(m *btesting.Matcher) {
 						f.EtcdClusters.EtcdCluster("update").EqualVersion(m, "v3.4.5")
+					})
+				})
+			})
+
+			s.Context("between minor versions", func(s *btesting.Scenario) {
+				s.Defer(func() { f.EtcdClusters.EtcdCluster("update-mm").Destroy(f.Client()) })
+
+				s.Step("create the new cluster that is v3.4", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) {
+						f.EtcdClusters.Setup(m, k8sfactory.Name("update-mm"), etcd.Version("v3.4.18"))
+					})
+
+					s.It("should have 3 pods", func(m *btesting.Matcher) {
+						f.EtcdClusters.EtcdCluster("update-mm").NumOfPods(m, 3)
+					})
+				})
+
+				s.Step("edit version to v3.5", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) {
+						f.EtcdClusters.EtcdCluster("update-mm").Update(m, f.Client(), etcd.Version("v3.5.1"))
+						f.EtcdClusters.EtcdCluster("update-mm").WaitBecome(m, f.Client(), etcdv1alpha2.ClusterPhaseUpdating)
+					})
+
+					s.It("should be ready", func(m *btesting.Matcher) {
+						f.EtcdClusters.EtcdCluster("update-mm").Ready(m)
+					})
+				})
+
+				s.Step("wait for running", func(s *btesting.Scenario) {
+					s.Subject(func(m *btesting.Matcher) {
+						ec := f.EtcdClusters.EtcdCluster("update-mm").EtcdCluster
+						m.NotNil(ec)
+						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+					})
+
+					s.It("all pods should have updated", func(m *btesting.Matcher) {
+						f.EtcdClusters.EtcdCluster("update-mm").EqualVersion(m, "v3.5.1")
 					})
 				})
 			})
