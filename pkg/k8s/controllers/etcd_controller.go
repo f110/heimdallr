@@ -859,7 +859,7 @@ func (ec *EtcdController) ensureService(ctx context.Context, cluster *EtcdCluste
 
 func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdCluster) error {
 	found := true
-	cj, err := ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Get(ctx, cluster.DefragmentCronJobName(), metav1.GetOptions{})
+	cj, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Get(ctx, cluster.DefragmentCronJobName(), metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
@@ -868,7 +868,7 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 
 	if cluster.Spec.DefragmentSchedule == "" {
 		if found {
-			err = ec.coreClient.BatchV1beta1().CronJobs(cluster.Namespace).Delete(ctx, cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
+			err = ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Delete(ctx, cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
