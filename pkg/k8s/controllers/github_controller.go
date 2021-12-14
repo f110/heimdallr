@@ -110,7 +110,7 @@ func (c *GitHubController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 			}
 			return []string{key}, nil
 		default:
-			c.Log().Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			c.Log(nil).Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
 			return nil, nil
 		}
 	}
@@ -124,7 +124,7 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 
 	backend, err := c.backendLister.Backends(namespace).Get(name)
 	if err != nil && apierrors.IsNotFound(err) {
-		c.Log().Debug("Backend is not found", zap.String("key", key))
+		c.Log(nil).Debug("Backend is not found", zap.String("key", key))
 		return nil, nil
 	} else if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -138,7 +138,7 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 		}
 	}
 	if webhookConf == nil {
-		c.Log().Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
+		c.Log(nil).Debug("Not set webhook or webhook is not github", zap.String("backend.name", backend.Name))
 		return nil, nil
 	}
 
@@ -156,8 +156,8 @@ func (c *GitHubController) UpdateObject(ctx context.Context, obj interface{}) er
 }
 
 func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error {
-	c.Log().Debug("syncBackend")
 	backend := obj.(*proxyv1alpha2.Backend)
+	c.Log(ctx).Debug("syncBackend", zap.String("namespace", backend.Namespace), zap.String("name", backend.Name))
 
 	for _, s := range backend.Spec.Permissions {
 		if s.Webhook != "github" {
@@ -210,7 +210,7 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 				backend.Status = updatedB.Status
 				_, err = c.client.ProxyV1alpha2().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
 				if err != nil {
-					c.Log().Debug("Failed update backend", zap.Error(err))
+					c.Log(ctx).Debug("Failed update backend", zap.Error(err))
 					return err
 				}
 				return nil
@@ -274,12 +274,12 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			s := strings.SplitN(v, "/", 2)
 			owner, repo := s[0], s[1]
 
-			c.Log().Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", status.Id))
+			c.Log(ctx).Debug("Delete hook", zap.String("repo", owner+"/"+repo), zap.Int64("id", status.Id))
 			_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, status.Id)
 			if err != nil {
-				c.Log().Debug("Failed delete hook", zap.Error(err))
+				c.Log(ctx).Debug("Failed delete hook", zap.Error(err))
 			} else {
-				c.Log().Info("Delete webhook", zap.Int64("id", status.Id), zap.String("repo", v))
+				c.Log(ctx).Info("Delete webhook", zap.Int64("id", status.Id), zap.String("repo", v))
 				delete(webhookConfigurationStatus, v)
 			}
 		}
@@ -305,14 +305,14 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) {
-			c.Log().Debug("Update Backend Status", zap.String("name", updatedB.Name))
+			c.Log(ctx).Debug("Update Backend Status", zap.String("name", updatedB.Name))
 			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
 		}
 		if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-			c.Log().Debug("Update Backend", zap.String("name", updatedB.Name))
+			c.Log(ctx).Debug("Update Backend", zap.String("name", updatedB.Name))
 			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return err
@@ -336,7 +336,7 @@ func (c *GitHubController) checkConfigured(ctx context.Context, client *github.C
 	for _, h := range hooks {
 		u, err := url.Parse(h.GetURL())
 		if err != nil {
-			c.Log().Debug("Failed parse url", zap.Error(err), zap.String("url", h.GetURL()))
+			c.Log(ctx).Debug("Failed parse url", zap.Error(err), zap.String("url", h.GetURL()))
 			continue
 		}
 		if backend.Spec.FQDN != "" && u.Host == backend.Spec.FQDN {
@@ -353,7 +353,7 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 	for _, v := range backend.Status.DeployedBy {
 		u, err := url.Parse(v.Url)
 		if err != nil {
-			c.Log().Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
+			c.Log(ctx).Debug("Failed parse url", zap.Error(err), zap.String("url", v.Url))
 			continue
 		}
 
@@ -372,17 +372,17 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 					continue
 				}
 
-				c.Log().Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
+				c.Log(ctx).Info("Fetch error", zap.Error(err), zap.String("namespace", v.Namespace), zap.String("name", v.Name))
 				continue
 			}
 			if proxy.Status.GithubWebhookSecretName == "" {
-				c.Log().Debug("Is not ready", zap.String("name", proxy.Name))
+				c.Log(ctx).Debug("Is not ready", zap.String("name", proxy.Name))
 				continue
 			}
 			secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					c.Log().Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
+					c.Log(ctx).Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
 				}
 
 				continue
@@ -396,10 +396,10 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 					"secret":       string(secret.Data[githubWebhookSecretFilename]),
 				},
 			}
-			c.Log().Debug("Create new hook", zap.String("repo", owner+"/"+repo))
+			c.Log(ctx).Debug("Create new hook", zap.String("repo", owner+"/"+repo))
 			newHook, _, err = client.Repositories.CreateHook(ctx, owner, repo, newHook)
 			if err != nil {
-				c.Log().Info("Failed create hook", zap.Error(err))
+				c.Log(ctx).Info("Failed create hook", zap.Error(err))
 				continue
 			}
 

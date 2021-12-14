@@ -145,7 +145,7 @@ func NewProxyController(
 	if cmV, err := c.checkCertManagerVersion(groups); err != nil {
 		return nil, err
 	} else {
-		c.Log().Debug("Found cert-manager.io", zap.String("GroupVersion", cmV))
+		c.Log(nil).Debug("Found cert-manager.io", zap.String("GroupVersion", cmV))
 		c.certManagerVersion = cmV
 	}
 	c.discoverPrometheusOperator(apiList)
@@ -217,7 +217,7 @@ func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 
 			return c.dependentProxyKeys(role)
 		default:
-			c.Log().Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			c.Log(nil).Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
 			return nil, nil
 		}
 	}
@@ -333,12 +333,12 @@ func (c *ProxyController) UpdateObject(ctx context.Context, obj interface{}) err
 }
 
 func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error {
-	c.Log().Debug("Reconcile Proxy")
 	proxy := obj.(*proxyv1alpha2.Proxy)
+	c.Log(ctx).Debug("Reconcile Proxy", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Name))
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
-		c.Log().Debug("Update Proxy.Status.Phase")
+		c.Log(ctx).Debug("Update Proxy.Status.Phase")
 		updateProxy, err := c.clientset.ProxyV1alpha2().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -465,7 +465,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		c.Log().Debug("Update Proxy")
+		c.Log(ctx).Debug("Update Proxy")
 		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -806,12 +806,12 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		}
 		ns, name, err := cache.SplitMetaNamespaceKey(backend.Annotations[proxy.AnnotationKeyIngressName])
 		if err != nil {
-			c.Log().Warn("Could not parse annotation key which contains Ingress name", zap.Error(err))
+			c.Log(ctx).Warn("Could not parse annotation key which contains Ingress name", zap.Error(err))
 			continue
 		}
 		ingress, err := c.ingressLister.Ingresses(ns).Get(name)
 		if err != nil && apierrors.IsNotFound(err) {
-			c.Log().Info("Skip updating Ingress")
+			c.Log(ctx).Info("Skip updating Ingress")
 			continue
 		} else if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -1041,7 +1041,7 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 	newCM.Data = configMap.Data
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
-		c.Log().Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
+		c.Log(ctx).Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
 		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(ctx, newCM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)

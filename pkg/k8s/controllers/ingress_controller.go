@@ -111,7 +111,7 @@ func (ic *IngressController) ConvertToKeys() controllerbase.ObjectToKeyConverter
 			}
 			return []string{key}, nil
 		default:
-			ic.Log().Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			ic.Log(nil).Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
 			return nil, nil
 		}
 	}
@@ -133,11 +133,11 @@ func (ic *IngressController) GetObject(key string) (interface{}, error) {
 
 	ingClass, err := ic.ingressClassLister.Get(*ingress.Spec.IngressClassName)
 	if err != nil {
-		ic.Log().Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", *ingress.Spec.IngressClassName))
+		ic.Log(nil).Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", *ingress.Spec.IngressClassName))
 		return nil, nil
 	}
 	if ingClass.Spec.Controller != ingressClassControllerName {
-		ic.Log().Debug("Skip Ingress", zap.String("name", ingress.Name))
+		ic.Log(nil).Debug("Skip Ingress", zap.String("name", ingress.Name))
 		return nil, nil
 	}
 
@@ -155,8 +155,9 @@ func (ic *IngressController) UpdateObject(ctx context.Context, obj interface{}) 
 }
 
 func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) error {
-	ic.Log().Debug("syncIngress")
 	ingress := obj.(*networkingv1.Ingress)
+	ic.Log(ctx).Debug("syncIngress", zap.String("namespace", ingress.Namespace), zap.String("name", ingress.Name))
+
 	ingClass, err := ic.coreClient.NetworkingV1().IngressClasses().Get(ctx, *ingress.Spec.IngressClassName, metav1.GetOptions{})
 	if err != nil {
 		return err

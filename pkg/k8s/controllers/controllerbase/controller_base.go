@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ import (
 )
 
 type TimeKey struct{}
+type ReconciliationId struct{}
 
 type ObjectToKeyConverter func(obj interface{}) (keys []string, err error)
 
@@ -62,7 +64,7 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
-		c.Log().Info(fmt.Sprintf(format, args...))
+		c.Log(nil).Info(fmt.Sprintf(format, args...))
 	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events(metav1.NamespaceAll)})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: base.Name()})
@@ -92,8 +94,8 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (c *Controller) Log() *zap.Logger {
-	return c.log
+func (c *Controller) Log(ctx context.Context) *zap.Logger {
+	return c.log.With(WithReconciliationId(ctx))
 }
 
 func (c *Controller) EventRecorder() record.EventRecorder {
@@ -101,17 +103,17 @@ func (c *Controller) EventRecorder() record.EventRecorder {
 }
 
 func (c *Controller) processNextItem() bool {
-	defer c.Log().Debug("Finish processNextItem")
+	defer c.Log(nil).Debug("Finish processNextItem")
 
 	key, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
-	c.Log().Debug("Get next queue", zap.Any("key", key))
+	c.Log(nil).Debug("Get next queue", zap.Any("key", key))
 
 	err := c.ProcessKey(key.(string))
 	if err != nil {
-		c.Log().Info("Failed sync", zap.Error(err))
+		c.Log(nil).Info("Failed sync", zap.Error(err))
 	}
 
 	return true
@@ -122,6 +124,8 @@ func (c *Controller) ProcessKey(key string) error {
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
+	ctx = context.WithValue(ctx, ReconciliationId{}, randomString(8))
+
 	obj, err := c.Base.GetObject(key)
 	if err != nil {
 		return err
@@ -155,7 +159,7 @@ func (c *Controller) ProcessKey(key string) error {
 	}
 	if err != nil {
 		if errors.Is(err, &RetryError{}) {
-			c.Log().Debug("Retrying", zap.Error(err))
+			c.Log(ctx).Debug("Retrying", zap.Error(err))
 			c.queue.AddRateLimited(key)
 			return nil
 		}
@@ -168,7 +172,7 @@ func (c *Controller) ProcessKey(key string) error {
 }
 
 func (c *Controller) worker() {
-	c.Log().Debug("Start worker")
+	c.Log(nil).Debug("Start worker")
 	for c.processNextItem() {
 	}
 }
@@ -243,4 +247,15 @@ func removeString(v []string, s string) []string {
 	}
 
 	return result
+}
+
+var charset = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+
+func randomString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+
+	return string(b)
 }
