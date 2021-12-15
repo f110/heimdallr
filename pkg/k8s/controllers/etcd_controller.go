@@ -1406,6 +1406,13 @@ func (ec *EtcdController) getBackupFile(ctx context.Context, cluster *EtcdCluste
 		if err != nil {
 			return nil, forwarder, xerrors.Errorf(": %w", err)
 		}
+		if stat, err := obj.Stat(); err != nil {
+			return nil, forwarder, xerrors.Errorf(": %w", err)
+		} else {
+			if stat.Size == 0 {
+				return nil, forwarder, xerrors.Errorf("backup file is empty")
+			}
+		}
 
 		return obj, forwarder, nil
 	default:
