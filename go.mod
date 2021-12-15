@@ -11,6 +11,7 @@ require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/fatih/color v1.10.0
 	github.com/fsnotify/fsnotify v1.4.9
+	github.com/go-logr/zapr v1.2.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang/protobuf v1.5.2
@@ -46,7 +47,7 @@ require (
 	go.etcd.io/etcd/v3 v3.3.0-rc.0.0.20200518175753-732df43cf85b
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.opencensus.io v0.22.4 // indirect
-	go.uber.org/zap v1.14.1
+	go.uber.org/zap v1.19.0
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
@@ -60,7 +61,7 @@ require (
 	k8s.io/apimachinery v0.22.0
 	k8s.io/client-go v0.22.0
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
-	k8s.io/klog/v2 v2.9.0
+	k8s.io/klog/v2 v2.30.0
 	k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0
