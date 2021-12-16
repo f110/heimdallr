@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -72,10 +73,10 @@ func main() {
 		panic(err)
 	}
 	if !disableWebhook && certFile == "" {
-		panic("-cert is mandatory")
+		panic("--cert is mandatory")
 	}
 	if !disableWebhook && keyFile == "" {
-		panic("-private-key is mandatory")
+		panic("--private-key is mandatory")
 	}
 
 	if err := logger.OverrideKlog(&configv2.Logger{Level: logLevel, Encoding: logEncoding}); err != nil {
@@ -115,114 +116,146 @@ func main() {
 	go probe.Start()
 	probe.Ready()
 
-	lock := &resourcelock.LeaseLock{
-		LeaseMeta: metav1.ObjectMeta{
-			Name:      leaseLockName,
-			Namespace: leaseLockNamespace,
-		},
-		Client: coreClient.CoordinationV1(),
-		LockConfig: resourcelock.ResourceLockConfig{
-			Identity: id,
-		},
+	// In development mode, we don't attempt the leader election.
+	if dev {
+		startController(context.Background(), coreClient, client, cfg, clusterDomain, workers, disableWebhook, certFile, keyFile, dev)
+	} else {
+		lock := &resourcelock.LeaseLock{
+			LeaseMeta: metav1.ObjectMeta{
+				Name:      leaseLockName,
+				Namespace: leaseLockNamespace,
+			},
+			Client: coreClient.CoordinationV1(),
+			LockConfig: resourcelock.ResourceLockConfig{
+				Identity: id,
+			},
+		}
+
+		leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+			Lock:            lock,
+			ReleaseOnCancel: true,
+			LeaseDuration:   30 * time.Second,
+			RenewDeadline:   15 * time.Second,
+			RetryPeriod:     5 * time.Second,
+			Callbacks: leaderelection.LeaderCallbacks{
+				OnStartedLeading: func(ctx context.Context) {
+					startController(
+						ctx,
+						coreClient,
+						client,
+						cfg,
+						clusterDomain,
+						workers,
+						disableWebhook,
+						certFile,
+						keyFile,
+						dev,
+					)
+				},
+				OnStoppedLeading: func() {
+					logger.Log.Debug("Leader lost", zap.String("id", id))
+					os.Exit(0)
+				},
+				OnNewLeader: func(identity string) {
+					if identity == id {
+						return
+					}
+					logger.Log.Debug("New leader elected", zap.String("id", identity))
+				},
+			},
+		})
 	}
-	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
-		Lock:            lock,
-		ReleaseOnCancel: true,
-		LeaseDuration:   30 * time.Second,
-		RenewDeadline:   15 * time.Second,
-		RetryPeriod:     5 * time.Second,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
-				sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
+}
 
-				c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client)
-				if err != nil {
-					logger.Log.Error("Failed start proxy controller", zap.Error(err))
-					os.Exit(1)
-				}
+func startController(
+	ctx context.Context,
+	coreClient *kubernetes.Clientset,
+	client *clientset.Clientset,
+	cfg *rest.Config,
+	clusterDomain string,
+	workers int,
+	disableWebhook bool,
+	certFile string,
+	keyFile string,
+	dev bool,
+) {
+	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+	sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
 
-				e, err := controllers.NewEtcdController(
-					sharedInformerFactory,
-					coreSharedInformerFactory,
-					coreClient,
-					client,
-					cfg,
-					clusterDomain,
-					dev,
-					http.DefaultTransport,
-					nil,
-				)
-				if err != nil {
-					logger.Log.Error("Failed start etcd controller", zap.Error(err))
-					os.Exit(1)
-				}
+	c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client)
+	if err != nil {
+		logger.Log.Error("Failed start proxy controller", zap.Error(err))
+		os.Exit(1)
+	}
 
-				g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client, http.DefaultTransport)
-				if err != nil {
-					logger.Log.Error("Failed start github controller", zap.Error(err))
-					os.Exit(1)
-				}
+	e, err := controllers.NewEtcdController(
+		sharedInformerFactory,
+		coreSharedInformerFactory,
+		coreClient,
+		client,
+		cfg,
+		clusterDomain,
+		dev,
+		http.DefaultTransport,
+		nil,
+	)
+	if err != nil {
+		logger.Log.Error("Failed start etcd controller", zap.Error(err))
+		os.Exit(1)
+	}
 
-				ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, coreClient, client)
+	g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, coreClient, client, http.DefaultTransport)
+	if err != nil {
+		logger.Log.Error("Failed start github controller", zap.Error(err))
+		os.Exit(1)
+	}
 
-				coreSharedInformerFactory.Start(ctx.Done())
-				sharedInformerFactory.Start(ctx.Done())
+	ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, coreClient, client)
 
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+	coreSharedInformerFactory.Start(ctx.Done())
+	sharedInformerFactory.Start(ctx.Done())
 
-					e.Run(ctx, workers)
-				}()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+		e.Run(ctx, workers)
+	}()
 
-					c.Run(ctx, workers)
-				}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+		c.Run(ctx, workers)
+	}()
 
-					g.Run(ctx, workers)
-				}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+		g.Run(ctx, workers)
+	}()
 
-					ic.Run(ctx, workers)
-				}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-				if !disableWebhook {
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
+		ic.Run(ctx, workers)
+	}()
 
-						ws := webhook.NewServer(":8080", certFile, keyFile)
-						err := ws.Start()
-						if err != nil && err != http.ErrServerClosed {
-							logger.Log.Info("Failed start webhook server", zap.Error(err))
-						}
-					}()
-				}
+	if !disableWebhook {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-				wg.Wait()
-			},
-			OnStoppedLeading: func() {
-				logger.Log.Debug("Leader lost", zap.String("id", id))
-				os.Exit(0)
-			},
-			OnNewLeader: func(identity string) {
-				if identity == id {
-					return
-				}
-				logger.Log.Debug("New leader elected", zap.String("id", identity))
-			},
-		},
-	})
+			ws := webhook.NewServer(":8080", certFile, keyFile)
+			err := ws.Start()
+			if err != nil && err != http.ErrServerClosed {
+				logger.Log.Info("Failed start webhook server", zap.Error(err))
+			}
+		}()
+	}
+
+	wg.Wait()
 }
