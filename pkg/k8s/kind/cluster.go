@@ -36,7 +36,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 
-var KindNodeImageHash = map[string]string{
+var NodeImageHash = map[string]string{
+	"v1.22.0":  "b8bda84bb3a190e6e028b1760d277454a72267a5454b57db34437c34a588d047",
 	"v1.21.1":  "69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6",
 	"v1.20.7":  "cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9",
 	"v1.19.11": "07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729",
@@ -90,7 +91,7 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 	}
 	defer os.Remove(kindConfFile.Name())
 
-	imageHash, ok := KindNodeImageHash[clusterVersion]
+	imageHash, ok := NodeImageHash[clusterVersion]
 	if !ok {
 		return xerrors.Errorf("Not supported k8s version: %s", clusterVersion)
 	}
