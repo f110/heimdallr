@@ -1,22 +1,18 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "heimdallrcontroller_lib",
-    srcs = ["main.go"],
-    importpath = "go.f110.dev/heimdallr/cmd/heimdallrcontroller",
-    visibility = ["//visibility:private"],
+    name = "operator",
+    srcs = ["operator.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/operator",
+    visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cmd/operator",
-        "//pkg/k8s/api/etcd",
-        "//pkg/k8s/api/proxy",
+        "//pkg/fsm",
         "//pkg/k8s/client/versioned",
         "//pkg/k8s/controllers",
         "//pkg/k8s/informers/externalversions",
-        "//pkg/k8s/signals",
         "//pkg/k8s/webhook",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",
-        "//vendor/github.com/spf13/cobra",
         "//vendor/github.com/spf13/pflag",
         "//vendor/go.uber.org/zap",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
@@ -28,18 +24,4 @@ go_library(
         "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock",
         "//vendor/k8s.io/klog/v2:klog",
     ],
-)
-
-go_binary(
-    name = "heimdallrcontroller",
-    embed = [":heimdallrcontroller_lib"],
-    visibility = ["//visibility:public"],
-)
-
-go_binary(
-    name = "linux",
-    embed = [":heimdallrcontroller_lib"],
-    goarch = "amd64",
-    goos = "linux",
-    visibility = ["//visibility:public"],
 )

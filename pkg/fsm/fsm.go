@@ -76,11 +76,17 @@ func (f *FSM) Loop() error {
 				f.nextState(f.closeState)
 			} else if nxt == CloseState {
 				close(f.ch)
+			} else if nxt == UnknownState {
+				f.nextState(f.closeState)
 			} else if nxt > 0 {
 				f.nextState(nxt)
 			}
 		}()
 	}
+}
+
+func (f *FSM) Shutdown() {
+	f.nextState(f.closeState)
 }
 
 func (f *FSM) nextState(s State) {

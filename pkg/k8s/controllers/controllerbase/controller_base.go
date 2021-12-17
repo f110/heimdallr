@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -44,6 +45,7 @@ type Controller struct {
 	log     *zap.Logger
 	recoder record.EventRecorder
 	queue   workqueue.RateLimitingInterface
+	wg      sync.WaitGroup
 
 	useFinalizer bool
 }
@@ -74,8 +76,6 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 }
 
 func (c *Controller) Run(ctx context.Context, workers int) {
-	defer c.queue.ShutDown()
-
 	synced := make([]cache.InformerSynced, 0)
 	for _, v := range c.Base.ListerSynced() {
 		if v != nil {
@@ -90,8 +90,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		go c.worker()
 	}
+}
 
-	<-ctx.Done()
+func (c *Controller) Shutdown() {
+	c.log.Debug("Shutdown queue")
+	c.queue.ShutDown()
+
+	c.log.Debug("Wait for shutdown all workers")
+	c.wg.Wait()
 }
 
 func (c *Controller) Log(ctx context.Context) *zap.Logger {
@@ -103,17 +109,17 @@ func (c *Controller) EventRecorder() record.EventRecorder {
 }
 
 func (c *Controller) processNextItem() bool {
-	defer c.Log(nil).Debug("Finish processNextItem")
+	defer c.log.Debug("Finish processNextItem")
 
 	key, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
-	c.Log(nil).Debug("Get next queue", zap.Any("key", key))
+	c.log.Debug("Get next queue", zap.Any("key", key))
 
 	err := c.ProcessKey(key.(string))
 	if err != nil {
-		c.Log(nil).Info("Failed sync", zap.Error(err))
+		c.log.Info("Failed sync", zap.Error(err))
 	}
 
 	return true
@@ -172,9 +178,13 @@ func (c *Controller) ProcessKey(key string) error {
 }
 
 func (c *Controller) worker() {
-	c.Log(nil).Debug("Start worker")
+	c.wg.Add(1)
+	defer c.wg.Done()
+
+	c.log.Debug("Start worker")
 	for c.processNextItem() {
 	}
+	c.log.Debug("Stop worker")
 }
 
 func (c *Controller) OnAdd(obj interface{}) {
