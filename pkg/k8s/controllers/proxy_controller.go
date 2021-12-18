@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
@@ -838,6 +839,55 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		}
 	}
 
+	roles := make(map[string]*proxyv1alpha2.Role)
+	for _, v := range lp.Roles() {
+		role := v.DeepCopy()
+		role.Status.Backends = nil
+		roles[fmt.Sprintf("%s/%s", v.Namespace, v.Name)] = role
+	}
+	for _, rb := range lp.RoleBindings() {
+		role, ok := roles[fmt.Sprintf("%s/%s", rb.RoleRef.Namespace, rb.RoleRef.Name)]
+		if !ok {
+			continue
+		}
+
+		for _, s := range rb.Subjects {
+			namespace := s.Namespace
+			if namespace == "" {
+				namespace = rb.Namespace
+			}
+			role.Status.Backends = append(role.Status.Backends, fmt.Sprintf("%s/%s/%s", namespace, s.Name, s.Permission))
+		}
+	}
+	for _, r := range lp.Roles() {
+		newRole := roles[fmt.Sprintf("%s/%s", r.Namespace, r.Name)]
+		uniq := make(map[string]struct{})
+		for _, v := range newRole.Status.Backends {
+			uniq[v] = struct{}{}
+		}
+		backends := make([]string, 0, len(uniq))
+		for k := range uniq {
+			backends = append(backends, k)
+		}
+		sort.Strings(backends)
+
+		if !reflect.DeepEqual(newRole.Status, r.Status) {
+			err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				updatedR, err := c.roleLister.Roles(newRole.Namespace).Get(newRole.Name)
+				if err != nil {
+					return err
+				}
+
+				updatedR.Status.Backends = backends
+				_, err = c.clientset.ProxyV1alpha2().Roles(updatedR.Namespace).UpdateStatus(ctx, updatedR, metav1.UpdateOptions{})
+				return err
+			})
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -857,6 +907,7 @@ func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProx
 			return xerrors.Errorf(": %w", err)
 		}
 	}
+
 	return nil
 }
 

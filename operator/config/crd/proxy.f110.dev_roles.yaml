@@ -80,6 +80,12 @@ spec:
             type: object
           status:
             description: RoleStatus defines the observed state of Role
+            properties:
+              backends:
+                description: Backends is a list of the bound backend
+                items:
+                  type: string
+                type: array
             type: object
         type: object
     served: true

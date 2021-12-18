@@ -306,6 +306,12 @@ func TestProxyController(t *testing.T) {
 			{Name: p.Name, Namespace: p.Namespace, Url: fmt.Sprintf("https://%s.%s.%s", updatedBackend.Name, updatedBackend.Spec.Layer, p.Spec.Domain)},
 		}
 		runner.AssertUpdateAction(t, "status", updatedBackend)
+		updatedRole := roles[0].DeepCopy()
+		updatedRole.Status.Backends = []string{"default/test/all"}
+		runner.AssertUpdateAction(t, "status", updatedRole)
+		updatedRole = hp.DefaultRoles()[0]
+		updatedRole.Status.Backends = []string{"default/test-dashboard/all"}
+		runner.AssertUpdateAction(t, "status", updatedRole)
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus, setProxyStatusNumberOf))
 		runner.AssertNoUnexpectedAction(t)
 

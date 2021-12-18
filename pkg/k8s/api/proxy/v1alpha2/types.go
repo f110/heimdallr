@@ -342,6 +342,8 @@ type Binding struct {
 
 // RoleStatus defines the observed state of Role
 type RoleStatus struct {
+	// Backends is a list of the bound backend
+	Backends []string `json:"backends,omitempty"`
 }
 
 // +genclient
