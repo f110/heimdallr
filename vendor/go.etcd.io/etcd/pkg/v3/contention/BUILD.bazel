@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "contention",
+    srcs = [
+        "contention.go",
+        "doc.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/pkg/v3/contention",
+    importpath = "go.etcd.io/etcd/pkg/v3/contention",
+    visibility = ["//visibility:public"],
+)

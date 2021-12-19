@@ -3,15 +3,9 @@ package test
 import (
 	"context"
 	"flag"
-	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"testing"
-
-	"golang.org/x/xerrors"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
@@ -20,6 +14,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
+	"golang.org/x/xerrors"
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -120,16 +116,14 @@ func TestMain(m *testing.M) {
 	if framework.Config.Verbose {
 		logLevel = "debug"
 	}
-	if err := logger.OverrideKlog(&configv2.Logger{Level: logLevel}); err != nil {
+	if err := logger.Init(&configv2.Logger{Level: logLevel}); err != nil {
 		panic(err)
 		return
 	}
-	fs := flag.NewFlagSet("e2e", flag.ContinueOnError)
-	klog.InitFlags(fs)
-	if err := fs.Parse([]string{"-stderrthreshold=FATAL", fmt.Sprintf("-logtostderr=%v", framework.Config.Verbose)}); err != nil {
-		log.Fatal(err)
+	if err := logger.OverrideKlog(); err != nil {
+		panic(err)
+		return
 	}
-	klog.SetOutput(io.Discard)
 
 	log.Printf("%+v", framework.Config)
 

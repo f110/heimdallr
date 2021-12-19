@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "adt",
+    srcs = [
+        "adt.go",
+        "interval_tree.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/pkg/v3/adt",
+    importpath = "go.etcd.io/etcd/pkg/v3/adt",
+    visibility = ["//visibility:public"],
+)

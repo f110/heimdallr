@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"go.etcd.io/etcd/v3/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/protoc-ddl/probe"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"

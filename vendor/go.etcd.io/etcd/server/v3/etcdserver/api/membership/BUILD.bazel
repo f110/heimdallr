@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "membership",
+    srcs = [
+        "cluster.go",
+        "confstate.go",
+        "doc.go",
+        "downgrade.go",
+        "errors.go",
+        "member.go",
+        "metrics.go",
+        "store.go",
+        "storev2.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/etcdserver/api/membership",
+    importpath = "go.etcd.io/etcd/server/v3/etcdserver/api/membership",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/coreos/go-semver/semver",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/etcd/api/v3/version",
+        "//vendor/go.etcd.io/etcd/client/pkg/v3/types",
+        "//vendor/go.etcd.io/etcd/pkg/v3/netutil",
+        "//vendor/go.etcd.io/etcd/raft/v3:raft",
+        "//vendor/go.etcd.io/etcd/raft/v3/raftpb",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v2error",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v2store",
+        "//vendor/go.etcd.io/etcd/server/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/server/v3/mvcc/buckets",
+        "//vendor/go.uber.org/zap",
+    ],
+)

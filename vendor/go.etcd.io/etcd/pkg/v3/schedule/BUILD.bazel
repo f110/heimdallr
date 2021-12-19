@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "schedule",
+    srcs = [
+        "doc.go",
+        "schedule.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/pkg/v3/schedule",
+    importpath = "go.etcd.io/etcd/pkg/v3/schedule",
+    visibility = ["//visibility:public"],
+)

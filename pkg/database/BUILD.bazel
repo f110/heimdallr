@@ -12,7 +12,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/v3/mvcc/mvccpb",
+        "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
         "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],

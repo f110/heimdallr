@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.etcd.io/etcd/v3/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"

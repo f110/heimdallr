@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go.etcd.io/etcd/v3/mvcc/mvccpb"
+	"go.etcd.io/etcd/api/v3/mvccpb"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 )

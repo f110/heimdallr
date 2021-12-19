@@ -19,7 +19,7 @@ go_library(
         "//pkg/logger",
         "//pkg/rpc/rpcserver",
         "//vendor/github.com/hashicorp/vault/api",
-        "//vendor/go.etcd.io/etcd/v3/clientv3",
+        "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.f110.dev/protoc-ddl/probe",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",

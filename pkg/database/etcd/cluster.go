@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"go.etcd.io/etcd/v3/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 

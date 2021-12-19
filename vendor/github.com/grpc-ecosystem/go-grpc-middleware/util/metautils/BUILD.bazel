@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "doc.go",
         "nicemd.go",
-        "single_key.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",

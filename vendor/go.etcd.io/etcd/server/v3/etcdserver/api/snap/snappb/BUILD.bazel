@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "snappb",
+    srcs = ["snap.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/etcdserver/api/snap/snappb",
+    importpath = "go.etcd.io/etcd/server/v3/etcdserver/api/snap/snappb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gogo/protobuf/gogoproto",
+        "//vendor/github.com/golang/protobuf/proto",
+    ],
+)

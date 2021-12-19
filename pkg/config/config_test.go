@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.etcd.io/etcd/v3/embed"
+	"go.etcd.io/etcd/server/v3/embed"
 	"go.uber.org/zap/zapcore"
 
 	"go.f110.dev/heimdallr/pkg/netutil"

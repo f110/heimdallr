@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "gw",
+    srcs = ["v3election.pb.gw.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v3election/v3electionpb/gw",
+    importpath = "go.etcd.io/etcd/server/v3/etcdserver/api/v3election/v3electionpb/gw",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/golang/protobuf/descriptor",
+        "//vendor/github.com/golang/protobuf/proto",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/runtime",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/utilities",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v3election/v3electionpb",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/grpclog",
+        "//vendor/google.golang.org/grpc/status",
+    ],
+)

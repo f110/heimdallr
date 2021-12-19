@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "snapshot",
+    srcs = [
+        "doc.go",
+        "util.go",
+        "v3_snapshot.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/etcdutl/v3/snapshot",
+    importpath = "go.etcd.io/etcd/etcdutl/v3/snapshot",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.etcd.io/bbolt",
+        "//vendor/go.etcd.io/etcd/api/v3/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/client/pkg/v3/fileutil",
+        "//vendor/go.etcd.io/etcd/client/pkg/v3/types",
+        "//vendor/go.etcd.io/etcd/client/v3:client",
+        "//vendor/go.etcd.io/etcd/client/v3/snapshot",
+        "//vendor/go.etcd.io/etcd/raft/v3:raft",
+        "//vendor/go.etcd.io/etcd/raft/v3/raftpb",
+        "//vendor/go.etcd.io/etcd/server/v3/config",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/membership",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/snap",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v2store",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/cindex",
+        "//vendor/go.etcd.io/etcd/server/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/server/v3/verify",
+        "//vendor/go.etcd.io/etcd/server/v3/wal",
+        "//vendor/go.etcd.io/etcd/server/v3/wal/walpb",
+        "//vendor/go.uber.org/zap",
+    ],
+)

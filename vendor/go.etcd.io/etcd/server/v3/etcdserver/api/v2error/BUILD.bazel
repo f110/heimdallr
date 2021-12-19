@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "v2error",
+    srcs = ["error.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/etcdserver/api/v2error",
+    importpath = "go.etcd.io/etcd/server/v3/etcdserver/api/v2error",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "namespace",
+    srcs = [
+        "doc.go",
+        "kv.go",
+        "lease.go",
+        "util.go",
+        "watch.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/client/v3/namespace",
+    importpath = "go.etcd.io/etcd/client/v3/namespace",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.etcd.io/etcd/api/v3/etcdserverpb",
+        "//vendor/go.etcd.io/etcd/api/v3/v3rpc/rpctypes",
+        "//vendor/go.etcd.io/etcd/client/v3:client",
+    ],
+)

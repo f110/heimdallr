@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "verify",
+    srcs = [
+        "doc.go",
+        "verify.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/verify",
+    importpath = "go.etcd.io/etcd/server/v3/verify",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.etcd.io/etcd/raft/v3/raftpb",
+        "//vendor/go.etcd.io/etcd/server/v3/datadir",
+        "//vendor/go.etcd.io/etcd/server/v3/etcdserver/cindex",
+        "//vendor/go.etcd.io/etcd/server/v3/mvcc/backend",
+        "//vendor/go.etcd.io/etcd/server/v3/wal",
+        "//vendor/go.etcd.io/etcd/server/v3/wal/walpb",
+        "//vendor/go.uber.org/zap",
+    ],
+)

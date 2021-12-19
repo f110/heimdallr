@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"go.etcd.io/etcd/v3/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"

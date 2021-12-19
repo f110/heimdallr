@@ -10,7 +10,8 @@ go_library(
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware/logging",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/google.golang.org/grpc",
+        "//vendor/github.com/golang/protobuf/proto",
         "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/status",
     ],
 )

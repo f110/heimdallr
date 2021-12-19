@@ -4,6 +4,7 @@ go_library(
     name = "health",
     srcs = [
         "client.go",
+        "logging.go",
         "server.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/grpc/health",

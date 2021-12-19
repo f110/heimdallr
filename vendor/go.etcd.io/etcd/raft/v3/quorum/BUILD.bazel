@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "quorum",
+    srcs = [
+        "joint.go",
+        "majority.go",
+        "quorum.go",
+        "voteresult_string.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/raft/v3/quorum",
+    importpath = "go.etcd.io/etcd/raft/v3/quorum",
+    visibility = ["//visibility:public"],
+)

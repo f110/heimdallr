@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "backend",
+    srcs = [
+        "backend.go",
+        "batch_tx.go",
+        "config_default.go",
+        "config_linux.go",
+        "config_windows.go",
+        "doc.go",
+        "hooks.go",
+        "metrics.go",
+        "read_tx.go",
+        "tx_buffer.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/mvcc/backend",
+    importpath = "go.etcd.io/etcd/server/v3/mvcc/backend",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/dustin/go-humanize",
+        "//vendor/github.com/prometheus/client_golang/prometheus",
+        "//vendor/go.etcd.io/bbolt",
+        "//vendor/go.uber.org/zap",
+    ],
+)

@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "leasepb",
+    srcs = ["lease.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/lease/leasepb",
+    importpath = "go.etcd.io/etcd/server/v3/lease/leasepb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gogo/protobuf/gogoproto",
+        "//vendor/github.com/golang/protobuf/proto",
+        "//vendor/go.etcd.io/etcd/api/v3/etcdserverpb",
+    ],
+)

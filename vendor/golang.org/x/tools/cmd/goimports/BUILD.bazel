@@ -11,6 +11,7 @@ go_library(
     importpath = "golang.org/x/tools/cmd/goimports",
     visibility = ["//visibility:private"],
     deps = [
+        "//vendor/golang.org/x/sys/execabs",
         "//vendor/golang.org/x/tools/internal/gocommand",
         "//vendor/golang.org/x/tools/internal/imports",
     ],
