@@ -1,12 +1,12 @@
 package identityprovider
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/coreos/go-oidc"
+	"github.com/caos/oidc/pkg/client/rp"
+	"github.com/caos/oidc/pkg/oidc"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -19,18 +19,13 @@ import (
 	"go.f110.dev/heimdallr/pkg/session"
 )
 
-type claims struct {
-	Email    string `json:"email"`
-	Verified bool   `json:"email_verified"`
-}
-
 type Server struct {
 	Config *configv2.Config
 
-	database     database.UserDatabase
-	sessionStore session.Store
-	oauth2Config oauth2.Config
-	verifier     *oidc.IDTokenVerifier
+	database        database.UserDatabase
+	sessionStore    session.Store
+	oauth2Config    oauth2.Config
+	idTokenVerifier rp.IDTokenVerifier
 }
 
 var _ server.ChildServer = &Server{}
@@ -49,28 +44,29 @@ func NewServer(conf *configv2.Config, database database.UserDatabase, store sess
 	default:
 		return nil, xerrors.Errorf("unknown provider: %s", conf.IdentityProvider.Provider)
 	}
-	provider, err := oidc.NewProvider(context.Background(), issuer)
-	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
-	}
+
 	scopes := []string{oidc.ScopeOpenID}
 	if len(conf.IdentityProvider.ExtraScopes) > 0 {
 		scopes = append(scopes, conf.IdentityProvider.ExtraScopes...)
 	}
-	oauth2Config := oauth2.Config{
-		ClientID:     conf.IdentityProvider.ClientId,
-		ClientSecret: conf.IdentityProvider.ClientSecret,
-		Endpoint:     provider.Endpoint(),
-		RedirectURL:  conf.IdentityProvider.RedirectUrl,
-		Scopes:       scopes,
+
+	relyingParty, err := rp.NewRelyingPartyOIDC(
+		issuer,
+		conf.IdentityProvider.ClientId,
+		conf.IdentityProvider.ClientSecret,
+		conf.IdentityProvider.RedirectUrl,
+		scopes,
+	)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	s := &Server{
-		Config:       conf,
-		database:     database,
-		sessionStore: store,
-		oauth2Config: oauth2Config,
-		verifier:     provider.Verifier(&oidc.Config{ClientID: conf.IdentityProvider.ClientId}),
+		Config:          conf,
+		database:        database,
+		sessionStore:    store,
+		oauth2Config:    *relyingParty.OAuthConfig(),
+		idTokenVerifier: relyingParty.IDTokenVerifier(),
 	}
 
 	return s, nil
@@ -131,20 +127,15 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	idToken, err := s.verifier.Verify(req.Context(), rawIdToken)
+	logger.Log.Debug("raw_id_token", zap.String("token", rawIdToken))
+	idToken, err := rp.VerifyIDToken(req.Context(), rawIdToken, s.idTokenVerifier)
 	if err != nil {
 		logger.Log.Info("Not verified id token", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	c := &claims{}
-	if err := idToken.Claims(c); err != nil {
-		logger.Log.Info("Failed extract claims", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
-	if c.Email == "" {
+	if idToken.GetEmail() == "" {
 		logger.Log.Info("Could not get email address. Probably, you should set more scope.")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -152,13 +143,13 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 
 	rootUser := false
 	for _, v := range s.Config.AuthorizationEngine.RootUsers {
-		if v == c.Email {
+		if v == idToken.GetEmail() {
 			rootUser = true
 			break
 		}
 	}
 
-	user, err := s.database.Get(c.Email)
+	user, err := s.database.Get(idToken.GetEmail())
 	if err != nil && !rootUser {
 		logger.Log.Info("Could not get email", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
@@ -169,7 +160,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	if sess.From != "" {
 		redirectUrl = sess.From
 	}
-	sess.SetId(c.Email)
+	sess.SetId(idToken.GetEmail())
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)

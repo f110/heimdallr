@@ -11,6 +11,7 @@ go_test(
         "-e2e.connector-binary=../../$(location //cmd/heim-connector:heim-connector)",
         "-e2e.tunnel-binary=../../$(location //cmd/heim-tunnel:heim-tunnel)",
         "-e2e.vault-binary=../../$(location @vault//:bin)",
+        "-e2e.verbose",
     ],
     data = [
         "//cmd/heim-connector",

@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "http",
+    srcs = [
+        "cookie.go",
+        "http.go",
+        "marshal.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/caos/oidc/pkg/http",
+    importpath = "github.com/caos/oidc/pkg/http",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/gorilla/securecookie"],
+)

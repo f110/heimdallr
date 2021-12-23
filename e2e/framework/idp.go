@@ -155,7 +155,7 @@ func (i *IdentityProvider) handleToken(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	cs := &jws.ClaimSet{Iss: i.Issuer, Aud: "identityprovider", PrivateClaims: map[string]interface{}{"email": "test@f110.dev"}}
+	cs := &jws.ClaimSet{Iss: i.Issuer, Aud: "identityprovider", Sub: "e2eidentityprovider", PrivateClaims: map[string]interface{}{"email": "test@f110.dev"}}
 	idToken, err := jws.Encode(&jws.Header{Algorithm: "RS256", KeyID: "idp"}, cs, i.PrivateKey)
 	if err != nil {
 		log.Print(err)
@@ -176,10 +176,10 @@ func (i *IdentityProvider) handleToken(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (i *IdentityProvider) handleJWKS(w http.ResponseWriter, req *http.Request) {
+func (i *IdentityProvider) handleJWKS(w http.ResponseWriter, _ *http.Request) {
 	jwks := &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
-			{Key: i.PrivateKey.Public(), KeyID: "idp"},
+			{Key: i.PrivateKey.Public(), KeyID: "idp", Use: "sig"},
 		},
 	}
 	if err := json.NewEncoder(w).Encode(jwks); err != nil {

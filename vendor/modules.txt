@@ -1,5 +1,4 @@
-# cloud.google.com/go v0.60.0
-## explicit
+# cloud.google.com/go v0.65.0
 cloud.google.com/go
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
@@ -21,11 +20,17 @@ github.com/bradfitz/gomemcache/memcache
 # github.com/bradleyfalzon/ghinstallation v1.1.1
 ## explicit
 github.com/bradleyfalzon/ghinstallation
+# github.com/caos/oidc v1.0.0
+## explicit
+github.com/caos/oidc/pkg/client
+github.com/caos/oidc/pkg/client/rp
+github.com/caos/oidc/pkg/crypto
+github.com/caos/oidc/pkg/http
+github.com/caos/oidc/pkg/oidc
+github.com/caos/oidc/pkg/oidc/grants/tokenexchange
+github.com/caos/oidc/pkg/strings
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
-# github.com/coreos/go-oidc v2.1.0+incompatible
-## explicit
-github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.3.0
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd/v22 v22.3.2
@@ -126,7 +131,7 @@ github.com/google/go-github/v32/github
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
-# github.com/google/uuid v1.1.2
+# github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
@@ -138,9 +143,11 @@ github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
 # github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de
 ## explicit
-# github.com/gorilla/mux v1.7.3
+# github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
+# github.com/gorilla/schema v1.2.0
+github.com/gorilla/schema
 # github.com/gorilla/securecookie v1.1.1
 ## explicit
 github.com/gorilla/securecookie
@@ -296,10 +303,6 @@ github.com/pingcap/parser/types
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
-## explicit
-github.com/pquerna/cachecontrol
-github.com/pquerna/cachecontrol/cacheobject
 # github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.46.0
 ## explicit
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring
@@ -332,7 +335,7 @@ github.com/schemalex/schemalex/internal/errors
 github.com/schemalex/schemalex/internal/option
 github.com/schemalex/schemalex/internal/util
 github.com/schemalex/schemalex/model
-# github.com/sirupsen/logrus v1.7.0
+# github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
 # github.com/smartystreets/assertions v1.0.1
 ## explicit
@@ -458,7 +461,6 @@ go.f110.dev/protoc-ddl/internal/migrate
 go.f110.dev/protoc-ddl/internal/schema
 go.f110.dev/protoc-ddl/probe
 # go.opencensus.io v0.22.4
-## explicit
 go.opencensus.io
 go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
@@ -580,7 +582,7 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+# golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 ## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/google
@@ -598,7 +600,7 @@ golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 golang.org/x/term
-# golang.org/x/text v0.3.6
+# golang.org/x/text v0.3.7
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/internal
@@ -608,7 +610,11 @@ golang.org/x/text/encoding/korean
 golang.org/x/text/encoding/simplifiedchinese
 golang.org/x/text/encoding/traditionalchinese
 golang.org/x/text/encoding/unicode
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/tag
 golang.org/x/text/internal/utf8internal
+golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
@@ -633,7 +639,7 @@ golang.org/x/tools/internal/imports
 ## explicit
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.29.0
+# google.golang.org/api v0.30.0
 ## explicit
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -761,7 +767,7 @@ gopkg.in/inf.v0
 gopkg.in/ini.v1
 # gopkg.in/natefinch/lumberjack.v2 v2.0.0
 gopkg.in/natefinch/lumberjack.v2
-# gopkg.in/square/go-jose.v2 v2.3.1
+# gopkg.in/square/go-jose.v2 v2.6.0
 ## explicit
 gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
