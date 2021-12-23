@@ -21,7 +21,7 @@ go_library(
         "//pkg/session",
         "//pkg/stat",
         "//vendor/github.com/golang-jwt/jwt",
-        "//vendor/github.com/google/go-github/v32/github",
+        "//vendor/github.com/google/go-github/v41/github",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
         "//vendor/golang.org/x/xerrors",

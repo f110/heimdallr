@@ -39,7 +39,7 @@ go_library(
         "//vendor/cloud.google.com/go/storage",
         "//vendor/github.com/bradleyfalzon/ghinstallation",
         "//vendor/github.com/google/go-cmp/cmp",
-        "//vendor/github.com/google/go-github/v32/github",
+        "//vendor/github.com/google/go-github/v41/github",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",

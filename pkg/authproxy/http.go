@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v41/github"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"

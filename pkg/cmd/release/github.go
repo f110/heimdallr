@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v41/github"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
@@ -69,7 +69,7 @@ func githubRelease(opt *githubOpt) error {
 			attachedFiles[v.GetName()] = struct{}{}
 		}
 	} else {
-		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From)
+		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From, true)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
