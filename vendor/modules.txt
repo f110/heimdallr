@@ -119,9 +119,6 @@ github.com/google/go-containerregistry/pkg/v1/remote
 github.com/google/go-containerregistry/pkg/v1/remote/transport
 github.com/google/go-containerregistry/pkg/v1/types
 github.com/google/go-containerregistry/pkg/v1/v1util
-# github.com/google/go-github v17.0.0+incompatible
-## explicit
-github.com/google/go-github/github
 # github.com/google/go-github/v29 v29.0.2
 github.com/google/go-github/v29/github
 # github.com/google/go-github/v32 v32.1.0
@@ -141,8 +138,6 @@ github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
-# github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de
-## explicit
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
@@ -337,8 +332,6 @@ github.com/schemalex/schemalex/internal/util
 github.com/schemalex/schemalex/model
 # github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
-# github.com/smartystreets/assertions v1.0.1
-## explicit
 # github.com/soheilhy/cmux v0.1.5
 github.com/soheilhy/cmux
 # github.com/spf13/cobra v1.1.3

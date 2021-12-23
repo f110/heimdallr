@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/bradleyfalzon/ghinstallation"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
