@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/klog/v2"
 
 	"go.f110.dev/heimdallr/pkg/fsm"
 	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
@@ -117,8 +116,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if m.dev {
 		h, err := os.UserHomeDir()
 		if err != nil {
-			klog.Error(err)
-			os.Exit(1)
+			return fsm.UnknownState, err
 		}
 		kubeconfigPath = filepath.Join(h, ".kube", "config")
 	}
