@@ -7,6 +7,9 @@ import (
 	"math/rand"
 	"testing"
 
+	"golang.org/x/xerrors"
+	"k8s.io/client-go/rest"
+
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -14,8 +17,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/logger"
-	"golang.org/x/xerrors"
-	"k8s.io/client-go/rest"
 )
 
 var (

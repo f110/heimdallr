@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+
 	"go.f110.dev/heimdallr/pkg/cmd/operator"
 	_ "go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	_ "go.f110.dev/heimdallr/pkg/k8s/api/proxy"

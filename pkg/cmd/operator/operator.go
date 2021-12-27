@@ -10,12 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
-	"go.f110.dev/heimdallr/pkg/fsm"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
-	"go.f110.dev/heimdallr/pkg/k8s/controllers"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
-	"go.f110.dev/heimdallr/pkg/k8s/webhook"
-	"go.f110.dev/heimdallr/pkg/logger"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -25,6 +19,13 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
+
+	"go.f110.dev/heimdallr/pkg/fsm"
+	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/controllers"
+	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
+	"go.f110.dev/heimdallr/pkg/k8s/webhook"
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 const (
