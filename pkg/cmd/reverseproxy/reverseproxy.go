@@ -217,7 +217,7 @@ func (m *mainProcess) shuttingDown() (fsm.State, error) {
 
 	select {
 	case <-ctx.Done():
-		logger.Log.Info("Shutdown phase is timed out")
+		logger.Log.Info("Shutdown sub processes is timed out")
 	case <-done:
 	}
 
@@ -269,7 +269,7 @@ func (m *mainProcess) shuttingDownRPCServer() (fsm.State, error) {
 
 		select {
 		case <-ctx.Done():
-			logger.Log.Info("Shutdown phase is timed out")
+			logger.Log.Info("Shutdown the rpc server is timed out")
 		case <-done:
 		}
 	}
@@ -319,6 +319,7 @@ func (m *mainProcess) startServer() {
 
 	idp, err := identityprovider.NewServer(m.config, m.userDatabase, m.sessionStore)
 	if err != nil {
+		rpcClient.Close()
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
