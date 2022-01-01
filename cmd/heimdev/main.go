@@ -18,6 +18,7 @@ func dev(args []string) error {
 	heimdev.Cluster(rootCmd)
 	heimdev.DNS(rootCmd)
 	heimdev.Graph(rootCmd)
+	heimdev.OpenIDProvider(rootCmd)
 
 	rootCmd.SetArgs(args)
 	return rootCmd.Execute()

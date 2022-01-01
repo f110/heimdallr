@@ -20,6 +20,8 @@ github.com/bradfitz/gomemcache/memcache
 # github.com/bradleyfalzon/ghinstallation v1.1.1
 ## explicit
 github.com/bradleyfalzon/ghinstallation
+# github.com/caos/logging v0.0.2
+github.com/caos/logging
 # github.com/caos/oidc v1.0.0
 ## explicit
 github.com/caos/oidc/pkg/client
@@ -28,6 +30,7 @@ github.com/caos/oidc/pkg/crypto
 github.com/caos/oidc/pkg/http
 github.com/caos/oidc/pkg/oidc
 github.com/caos/oidc/pkg/oidc/grants/tokenexchange
+github.com/caos/oidc/pkg/op
 github.com/caos/oidc/pkg/strings
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
@@ -58,6 +61,8 @@ github.com/evanphx/json-patch
 # github.com/fatih/color v1.10.0
 ## explicit
 github.com/fatih/color
+# github.com/felixge/httpsnoop v1.0.1
+github.com/felixge/httpsnoop
 # github.com/form3tech-oss/jwt-go v3.2.3+incompatible
 github.com/form3tech-oss/jwt-go
 # github.com/fsnotify/fsnotify v1.4.9
@@ -138,6 +143,8 @@ github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
+# github.com/gorilla/handlers v1.5.1
+github.com/gorilla/handlers
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux

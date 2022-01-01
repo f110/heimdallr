@@ -115,6 +115,11 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
+	if req.URL.Query().Get("code") == "" {
+		logger.Log.Info("code is not found")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	token, err := s.oauth2Config.Exchange(req.Context(), req.URL.Query().Get("code"))
 	if err != nil {
 		logger.Log.Info("Failed exchange token", zap.Error(err))
@@ -151,7 +156,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 
 	user, err := s.database.Get(idToken.GetEmail())
 	if err != nil && !rootUser {
-		logger.Log.Info("Could not get email", zap.Error(err))
+		logger.Log.Info("Could not get email", zap.Error(err), zap.String("email", idToken.GetEmail()))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
