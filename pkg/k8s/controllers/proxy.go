@@ -1413,13 +1413,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
-	case certmanagerv1alpha2.ClusterIssuerKind:
+	case certmanagerv1.ClusterIssuerKind:
 		ci, err := r.clientset.CertmanagerV1().ClusterIssuers().Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
-	case certmanagerv1alpha2.IssuerKind:
+	case certmanagerv1.IssuerKind:
 		ci, err := r.clientset.CertmanagerV1().Issuers(r.Namespace).Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
@@ -1436,6 +1436,48 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 			return errors.New("controllers: ClusterIssuer.Spec.CA is not supported")
 		}
 	case *certmanagerv1alpha2.Issuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1alpha3.ClusterIssuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1alpha3.Issuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1beta1.ClusterIssuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1beta1.Issuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1.ClusterIssuer:
+		if v.Spec.SelfSigned != nil {
+			r.selfSignedIssuer = true
+		}
+		if v.Spec.CA != nil {
+			r.selfSignedIssuer = true
+		}
+	case *certmanagerv1.Issuer:
 		if v.Spec.SelfSigned != nil {
 			r.selfSignedIssuer = true
 		}
