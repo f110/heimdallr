@@ -1433,7 +1433,7 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 			r.selfSignedIssuer = true
 		}
 		if v.Spec.CA != nil {
-			return errors.New("controllers: ClusterIssuer.Spec.NewCA is not supported")
+			return errors.New("controllers: ClusterIssuer.Spec.CA is not supported")
 		}
 	case *certmanagerv1alpha2.Issuer:
 		if v.Spec.SelfSigned != nil {

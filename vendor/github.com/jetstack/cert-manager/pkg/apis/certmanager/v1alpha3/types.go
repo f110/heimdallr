@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Jetstack cert-manager contributors.
+Copyright 2020 The cert-manager Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -167,27 +167,27 @@ const (
 type KeyUsage string
 
 const (
-	UsageSigning            KeyUsage = "signing"
-	UsageDigitalSignature   KeyUsage = "digital signature"
-	UsageContentCommittment KeyUsage = "content commitment"
-	UsageKeyEncipherment    KeyUsage = "key encipherment"
-	UsageKeyAgreement       KeyUsage = "key agreement"
-	UsageDataEncipherment   KeyUsage = "data encipherment"
-	UsageCertSign           KeyUsage = "cert sign"
-	UsageCRLSign            KeyUsage = "crl sign"
-	UsageEncipherOnly       KeyUsage = "encipher only"
-	UsageDecipherOnly       KeyUsage = "decipher only"
-	UsageAny                KeyUsage = "any"
-	UsageServerAuth         KeyUsage = "server auth"
-	UsageClientAuth         KeyUsage = "client auth"
-	UsageCodeSigning        KeyUsage = "code signing"
-	UsageEmailProtection    KeyUsage = "email protection"
-	UsageSMIME              KeyUsage = "s/mime"
-	UsageIPsecEndSystem     KeyUsage = "ipsec end system"
-	UsageIPsecTunnel        KeyUsage = "ipsec tunnel"
-	UsageIPsecUser          KeyUsage = "ipsec user"
-	UsageTimestamping       KeyUsage = "timestamping"
-	UsageOCSPSigning        KeyUsage = "ocsp signing"
-	UsageMicrosoftSGC       KeyUsage = "microsoft sgc"
-	UsageNetscapeSGC        KeyUsage = "netscape sgc"
+	UsageSigning           KeyUsage = "signing"
+	UsageDigitalSignature  KeyUsage = "digital signature"
+	UsageContentCommitment KeyUsage = "content commitment"
+	UsageKeyEncipherment   KeyUsage = "key encipherment"
+	UsageKeyAgreement      KeyUsage = "key agreement"
+	UsageDataEncipherment  KeyUsage = "data encipherment"
+	UsageCertSign          KeyUsage = "cert sign"
+	UsageCRLSign           KeyUsage = "crl sign"
+	UsageEncipherOnly      KeyUsage = "encipher only"
+	UsageDecipherOnly      KeyUsage = "decipher only"
+	UsageAny               KeyUsage = "any"
+	UsageServerAuth        KeyUsage = "server auth"
+	UsageClientAuth        KeyUsage = "client auth"
+	UsageCodeSigning       KeyUsage = "code signing"
+	UsageEmailProtection   KeyUsage = "email protection"
+	UsageSMIME             KeyUsage = "s/mime"
+	UsageIPsecEndSystem    KeyUsage = "ipsec end system"
+	UsageIPsecTunnel       KeyUsage = "ipsec tunnel"
+	UsageIPsecUser         KeyUsage = "ipsec user"
+	UsageTimestamping      KeyUsage = "timestamping"
+	UsageOCSPSigning       KeyUsage = "ocsp signing"
+	UsageMicrosoftSGC      KeyUsage = "microsoft sgc"
+	UsageNetscapeSGC       KeyUsage = "netscape sgc"
 )

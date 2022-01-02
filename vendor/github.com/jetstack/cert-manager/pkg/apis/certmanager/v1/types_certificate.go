@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Jetstack cert-manager contributors.
+Copyright 2020 The cert-manager Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ type CertificateList struct {
 	Items []Certificate `json:"items"`
 }
 
-// +kubebuilder:validation:Enum=RSA;ECDSA
+// +kubebuilder:validation:Enum=RSA;ECDSA;Ed25519
 type PrivateKeyAlgorithm string
 
 const (
@@ -62,6 +62,9 @@ const (
 
 	// Denotes the ECDSA private key type.
 	ECDSAKeyAlgorithm PrivateKeyAlgorithm = "ECDSA"
+
+	// Denotes the Ed25519 private key type.
+	Ed25519KeyAlgorithm PrivateKeyAlgorithm = "Ed25519"
 )
 
 // +kubebuilder:validation:Enum=PKCS1;PKCS8
@@ -69,12 +72,12 @@ type PrivateKeyEncoding string
 
 const (
 	// PKCS1 key encoding will produce PEM files that include the type of
-	// private key as part of the PEM header, e.g. "BEGIN RSA PRIVATE KEY".
+	// private key as part of the PEM header, e.g. `BEGIN RSA PRIVATE KEY`.
 	// If the keyAlgorithm is set to 'ECDSA', this will produce private keys
-	// that use the "BEGIN EC PRIVATE KEY" header.
+	// that use the `BEGIN EC PRIVATE KEY` header.
 	PKCS1 PrivateKeyEncoding = "PKCS1"
 
-	// PKCS8 key encoding will produce PEM files with the "BEGIN PRIVATE KEY"
+	// PKCS8 key encoding will produce PEM files with the `BEGIN PRIVATE KEY`
 	// header. It encodes the keyAlgorithm of the private key as part of the
 	// DER encoded PEM block.
 	PKCS8 PrivateKeyEncoding = "PKCS8"
@@ -96,19 +99,20 @@ type CertificateSpec struct {
 	// +optional
 	CommonName string `json:"commonName,omitempty"`
 
-	// The requested 'duration' (i.e. lifetime) of the Certificate.
-	// This option may be ignored/overridden by some issuer types.
-	// If overridden and `renewBefore` is greater than the actual certificate
-	// duration, the certificate will be automatically renewed 2/3rds of the
-	// way through the certificate's duration.
+	// The requested 'duration' (i.e. lifetime) of the Certificate. This option
+	// may be ignored/overridden by some issuer types. If unset this defaults to
+	// 90 days. Certificate will be renewed either 2/3 through its duration or
+	// `renewBefore` period before its expiry, whichever is later. Minimum
+	// accepted duration is 1 hour. Value must be in units accepted by Go
+	// time.ParseDuration https://golang.org/pkg/time/#ParseDuration
 	// +optional
 	Duration *metav1.Duration `json:"duration,omitempty"`
 
-	// The amount of time before the currently issued certificate's `notAfter`
-	// time that cert-manager will begin to attempt to renew the certificate.
-	// If this value is greater than the total duration of the certificate
-	// (i.e. notAfter - notBefore), it will be automatically renewed 2/3rds of
-	// the way through the certificate's duration.
+	// How long before the currently issued certificate's expiry
+	// cert-manager should renew the certificate. The default is 2/3 of the
+	// issued certificate's duration. Minimum accepted value is 5 minutes.
+	// Value must be in units accepted by Go time.ParseDuration
+	// https://golang.org/pkg/time/#ParseDuration
 	// +optional
 	RenewBefore *metav1.Duration `json:"renewBefore,omitempty"`
 
@@ -134,17 +138,24 @@ type CertificateSpec struct {
 	// denoted issuer.
 	SecretName string `json:"secretName"`
 
+	// SecretTemplate defines annotations and labels to be propagated
+	// to the Kubernetes Secret when it is created or updated. Once created,
+	// labels and annotations are not yet removed from the Secret when they are
+	// removed from the template. See https://github.com/jetstack/cert-manager/issues/4292
+	// +optional
+	SecretTemplate *CertificateSecretTemplate `json:"secretTemplate,omitempty"`
+
 	// Keystores configures additional keystore output formats stored in the
 	// `secretName` Secret resource.
 	// +optional
 	Keystores *CertificateKeystores `json:"keystores,omitempty"`
 
 	// IssuerRef is a reference to the issuer for this certificate.
-	// If the 'kind' field is not set, or set to 'Issuer', an Issuer resource
+	// If the `kind` field is not set, or set to `Issuer`, an Issuer resource
 	// with the given name in the same namespace as the Certificate will be used.
-	// If the 'kind' field is set to 'ClusterIssuer', a ClusterIssuer with the
+	// If the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the
 	// provided name will be used.
-	// The 'name' field in this stanza is required at all times.
+	// The `name` field in this stanza is required at all times.
 	IssuerRef cmmeta.ObjectReference `json:"issuerRef"`
 
 	// IsCA will mark this Certificate as valid for certificate signing.
@@ -160,6 +171,22 @@ type CertificateSpec struct {
 	// Options to control private keys used for the Certificate.
 	// +optional
 	PrivateKey *CertificatePrivateKey `json:"privateKey,omitempty"`
+
+	// EncodeUsagesInRequest controls whether key usages should be present
+	// in the CertificateRequest
+	// +optional
+	EncodeUsagesInRequest *bool `json:"encodeUsagesInRequest,omitempty"`
+
+	// revisionHistoryLimit is the maximum number of CertificateRequest revisions
+	// that are maintained in the Certificate's history. Each revision represents
+	// a single `CertificateRequest` created by this Certificate, either when it
+	// was created, renewed, or Spec was changed. Revisions will be removed by
+	// oldest first if the number of revisions exceeds this number. If set,
+	// revisionHistoryLimit must be a value of `1` or greater. If unset (`nil`),
+	// revisions will not be garbage collected. Default value is `nil`.
+	// +kubebuilder:validation:ExclusiveMaximum=false
+	// +optional
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"` // Validated by the validating webhook.
 }
 
 // CertificatePrivateKey contains configuration options for private keys
@@ -180,17 +207,18 @@ type CertificatePrivateKey struct {
 
 	// The private key cryptography standards (PKCS) encoding for this
 	// certificate's private key to be encoded in.
-	// If provided, allowed values are "pkcs1" and "pkcs8" standing for PKCS#1
+	// If provided, allowed values are `PKCS1` and `PKCS8` standing for PKCS#1
 	// and PKCS#8, respectively.
-	// Defaults to PKCS#1 if not specified.
+	// Defaults to `PKCS1` if not specified.
 	// +optional
 	Encoding PrivateKeyEncoding `json:"encoding,omitempty"`
 
 	// Algorithm is the private key algorithm of the corresponding private key
-	// for this certificate. If provided, allowed values are either "rsa" or "ecdsa"
+	// for this certificate. If provided, allowed values are either `RSA`,`Ed25519` or `ECDSA`
 	// If `algorithm` is specified and `size` is not provided,
-	// key size of 256 will be used for "ecdsa" key algorithm and
-	// key size of 2048 will be used for "rsa" key algorithm.
+	// key size of 256 will be used for `ECDSA` key algorithm and
+	// key size of 2048 will be used for `RSA` key algorithm.
+	// key size is ignored when using the `Ed25519` key algorithm.
 	// +optional
 	Algorithm PrivateKeyAlgorithm `json:"algorithm,omitempty"`
 
@@ -199,13 +227,10 @@ type CertificatePrivateKey struct {
 	// and will default to `2048` if not specified.
 	// If `algorithm` is set to `ECDSA`, valid values are `256`, `384` or `521`,
 	// and will default to `256` if not specified.
+	// If `algorithm` is set to `Ed25519`, Size is ignored.
 	// No other values are allowed.
-	// +kubebuilder:validation:ExclusiveMaximum=false
-	// +kubebuilder:validation:Maximum=8192
-	// +kubebuilder:validation:ExclusiveMinimum=false
-	// +kubebuilder:validation:Minimum=0
 	// +optional
-	Size int `json:"size,omitempty"`
+	Size int `json:"size,omitempty"` // Validated by webhook. Be mindful of adding OpenAPI validation- see https://github.com/jetstack/cert-manager/issues/3644
 }
 
 // Denotes how private keys should be generated or sourced when a Certificate
@@ -274,6 +299,9 @@ type JKSKeystore struct {
 	// Secret resource, encrypted using the password stored in
 	// `passwordSecretRef`.
 	// The keystore file will only be updated upon re-issuance.
+	// A file named `truststore.jks` will also be created in the target
+	// Secret resource, encrypted using the password stored in
+	// `passwordSecretRef` containing the issuing Certificate Authority
 	Create bool `json:"create"`
 
 	// PasswordSecretRef is a reference to a key in a Secret resource
@@ -289,6 +317,9 @@ type PKCS12Keystore struct {
 	// Secret resource, encrypted using the password stored in
 	// `passwordSecretRef`.
 	// The keystore file will only be updated upon re-issuance.
+	// A file named `truststore.p12` will also be created in the target
+	// Secret resource, encrypted using the password stored in
+	// `passwordSecretRef` containing the issuing Certificate Authority
 	Create bool `json:"create"`
 
 	// PasswordSecretRef is a reference to a key in a Secret resource
@@ -356,10 +387,10 @@ type CertificateStatus struct {
 
 // CertificateCondition contains condition information for an Certificate.
 type CertificateCondition struct {
-	// Type of the condition, known values are ('Ready', `Issuing`).
+	// Type of the condition, known values are (`Ready`, `Issuing`).
 	Type CertificateConditionType `json:"type"`
 
-	// Status of the condition, one of ('True', 'False', 'Unknown').
+	// Status of the condition, one of (`True`, `False`, `Unknown`).
 	Status cmmeta.ConditionStatus `json:"status"`
 
 	// LastTransitionTime is the timestamp corresponding to the last status
@@ -376,6 +407,14 @@ type CertificateCondition struct {
 	// transition, complementing reason.
 	// +optional
 	Message string `json:"message,omitempty"`
+
+	// If set, this represents the .metadata.generation that the condition was
+	// set based upon.
+	// For instance, if .metadata.generation is currently 12, but the
+	// .status.condition[x].observedGeneration is 9, the condition is out of date
+	// with respect to the current state of the Certificate.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // CertificateConditionType represents an Certificate condition value.
@@ -408,3 +447,15 @@ const (
 	// It will be removed by the 'issuing' controller upon completing issuance.
 	CertificateConditionIssuing CertificateConditionType = "Issuing"
 )
+
+// CertificateSecretTemplate defines the default labels and annotations
+// to be copied to the Kubernetes Secret resource named in `CertificateSpec.secretName`.
+type CertificateSecretTemplate struct {
+	// Annotations is a key value map to be copied to the target Kubernetes Secret.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels is a key value map to be copied to the target Kubernetes Secret.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+}

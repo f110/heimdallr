@@ -8,7 +8,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/caos/oidc v1.0.0
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.12.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-logr/zapr v1.2.0
 	github.com/go-sql-driver/mysql v1.5.0
@@ -23,18 +23,19 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/api v1.1.1
 	github.com/jarcoal/httpmock v1.0.5
-	github.com/jetstack/cert-manager v1.0.1
+	github.com/jetstack/cert-manager v1.6.1
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/miekg/dns v1.1.29
+	github.com/miekg/dns v1.1.34
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/peterh/liner v1.2.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.46.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.26.0
-	github.com/spf13/cobra v1.1.3
+	github.com/smartystreets/assertions v1.0.0 // indirect
+	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/etcd/api/v3 v3.5.1
@@ -43,22 +44,22 @@ require (
 	go.etcd.io/etcd/server/v3 v3.5.1
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
 	go.uber.org/zap v1.19.0
-	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
-	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
+	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
+	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/api v0.30.0
-	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/api v0.53.0
+	google.golang.org/grpc v1.41.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.22.0
-	k8s.io/apiextensions-apiserver v0.20.4
-	k8s.io/apimachinery v0.22.0
-	k8s.io/client-go v0.22.0
-	k8s.io/gengo v0.0.0-20201113003025-83324d819ded
+	k8s.io/api v0.22.2
+	k8s.io/apiextensions-apiserver v0.22.2
+	k8s.io/apimachinery v0.22.2
+	k8s.io/client-go v0.22.2
+	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027
 	k8s.io/klog/v2 v2.30.0
-	k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9
+	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0
-	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc
+	software.sslmate.com/src/go-pkcs12 v0.0.0-20210415151418-c5206de65a78
 )

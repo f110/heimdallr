@@ -10,7 +10,7 @@
 // primitives, it SHOULD NOT be used for new applications.
 //
 // Note that only DER-encoded PKCS#12 files are supported, even though PKCS#12
-// allows BER encoding.  This is becuase encoding/asn1 only supports DER.
+// allows BER encoding.  This is because encoding/asn1 only supports DER.
 //
 // This package is forked from golang.org/x/crypto/pkcs12, which is frozen.
 // The implementation is distilled from https://tools.ietf.org/html/rfc7292
@@ -44,7 +44,8 @@ var (
 	oidLocalKeyID       = asn1.ObjectIdentifier([]int{1, 2, 840, 113549, 1, 9, 21})
 	oidMicrosoftCSPName = asn1.ObjectIdentifier([]int{1, 3, 6, 1, 4, 1, 311, 17, 1})
 
-	oidJavaTrustStore = asn1.ObjectIdentifier([]int{2, 16, 840, 1, 113894, 746875, 1, 1})
+	oidJavaTrustStore      = asn1.ObjectIdentifier([]int{2, 16, 840, 1, 113894, 746875, 1, 1})
+	oidAnyExtendedKeyUsage = asn1.ObjectIdentifier([]int{2, 5, 29, 37, 0})
 )
 
 type pfxPdu struct {
@@ -139,7 +140,7 @@ func unmarshal(in []byte, out interface{}) error {
 // labeled "PRIVATE KEY".  To decode a PKCS#12 file, use DecodeChain instead,
 // and use the encoding/pem package to convert to PEM if necessary.
 func ToPEM(pfxData []byte, password string) ([]*pem.Block, error) {
-	encodedPassword, err := bmpString(password)
+	encodedPassword, err := bmpStringZeroTerminated(password)
 	if err != nil {
 		return nil, ErrIncorrectPassword
 	}
@@ -262,7 +263,7 @@ func Decode(pfxData []byte, password string) (privateKey interface{}, certificat
 // be the leaf certificate, and subsequent certificates, if any, are assumed to
 // comprise the CA certificate chain.
 func DecodeChain(pfxData []byte, password string) (privateKey interface{}, certificate *x509.Certificate, caCerts []*x509.Certificate, err error) {
-	encodedPassword, err := bmpString(password)
+	encodedPassword, err := bmpStringZeroTerminated(password)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -319,7 +320,7 @@ func DecodeChain(pfxData []byte, password string) (privateKey interface{}, certi
 // PKCS#12 file containing exclusively certificates with attribute 2.16.840.1.113894.746875.1.1,
 // which is used by Java to designate a trust anchor.
 func DecodeTrustStore(pfxData []byte, password string) (certs []*x509.Certificate, err error) {
-	encodedPassword, err := bmpString(password)
+	encodedPassword, err := bmpStringZeroTerminated(password)
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +457,7 @@ func getSafeContents(p12Data, password []byte, expectedItems int) (bags []safeBa
 // LocalKeyId attribute set to the SHA-1 fingerprint of the end-entity
 // certificate.
 func Encode(rand io.Reader, privateKey interface{}, certificate *x509.Certificate, caCerts []*x509.Certificate, password string) (pfxData []byte, err error) {
-	encodedPassword, err := bmpString(password)
+	encodedPassword, err := bmpStringZeroTerminated(password)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +554,7 @@ func Encode(rand io.Reader, privateKey interface{}, certificate *x509.Certificat
 // EncodeTrustStore creates a single SafeContents that's encrypted with RC2
 // and contains the certificates.
 func EncodeTrustStore(rand io.Reader, certs []*x509.Certificate, password string) (pfxData []byte, err error) {
-	encodedPassword, err := bmpString(password)
+	encodedPassword, err := bmpStringZeroTerminated(password)
 	if err != nil {
 		return nil, err
 	}
@@ -561,16 +562,54 @@ func EncodeTrustStore(rand io.Reader, certs []*x509.Certificate, password string
 	var pfx pfxPdu
 	pfx.Version = 3
 
-	// Setting this attribute will make the certificates trusted in Java >= 1.8
-	var javaTrustStoreAttr pkcs12Attribute
-	javaTrustStoreAttr.Id = oidJavaTrustStore
-	javaTrustStoreAttr.Value.Class = 0
-	javaTrustStoreAttr.Value.Tag = 17
-	javaTrustStoreAttr.Value.IsCompound = true
+	var certAttributes []pkcs12Attribute
+
+	extKeyUsageOidBytes, err := asn1.Marshal(oidAnyExtendedKeyUsage)
+	if err != nil {
+		return nil, err
+	}
+
+	// the oidJavaTrustStore attribute contains the EKUs for which
+	// this trust anchor will be valid
+	certAttributes = append(certAttributes, pkcs12Attribute{
+		Id: oidJavaTrustStore,
+		Value: asn1.RawValue{
+			Class:      0,
+			Tag:        17,
+			IsCompound: true,
+			Bytes:      extKeyUsageOidBytes,
+		},
+	})
 
 	var certBags []safeBag
 	for _, cert := range certs {
-		certBag, err := makeCertBag(cert.Raw, []pkcs12Attribute{javaTrustStoreAttr})
+
+		bmpFriendlyName, err := bmpString(cert.Subject.String())
+		if err != nil {
+			return nil, err
+		}
+
+		encodedFriendlyName, err := asn1.Marshal(asn1.RawValue{
+			Class:      0,
+			Tag:        30,
+			IsCompound: false,
+			Bytes:      bmpFriendlyName,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		friendlyName := pkcs12Attribute{
+			Id: oidFriendlyName,
+			Value: asn1.RawValue{
+				Class:      0,
+				Tag:        17,
+				IsCompound: true,
+				Bytes:      encodedFriendlyName,
+			},
+		}
+
+		certBag, err := makeCertBag(cert.Raw, append(certAttributes, friendlyName))
 		if err != nil {
 			return nil, err
 		}
