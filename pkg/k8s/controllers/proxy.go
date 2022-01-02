@@ -1136,6 +1136,9 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 			k8sfactory.Port("http", corev1.ProtocolTCP, r.Spec.HttpPort),
 		)
 	}
+	if r.Spec.LoadBalancerIP != "" {
+		svc = k8sfactory.ServiceFactory(svc, k8sfactory.LoadBalancerIP(r.Spec.LoadBalancerIP))
+	}
 
 	internalApiSvc := k8sfactory.ServiceFactory(nil,
 		k8sfactory.Name(r.ServiceNameForInternalApi()),

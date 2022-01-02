@@ -360,6 +360,15 @@ func LoadBalancer(object interface{}) {
 	}
 }
 
+func LoadBalancerIP(ip string) Trait {
+	return func(object interface{}) {
+		switch obj := object.(type) {
+		case *corev1.Service:
+			obj.Spec.LoadBalancerIP = ip
+		}
+	}
+}
+
 func TrafficPolicyLocal(object interface{}) {
 	switch obj := object.(type) {
 	case *corev1.Service:
