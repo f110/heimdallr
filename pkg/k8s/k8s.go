@@ -160,7 +160,10 @@ func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourc
 				return nil
 			}
 		case <-after:
-			return errors.New("kind: timed out")
+			for _, v := range target {
+				log.Printf("%s's webhook is not ready", v.Name)
+			}
+			return errors.New("kind: the webhook not become ready within 3 minutes")
 		}
 	}
 }

@@ -183,7 +183,7 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 	if err != nil {
 		return stateShutdown, err
 	}
-	go e.Run(nil)
+	go e.Run(m.ctx)
 
 	select {
 	case <-elected:
