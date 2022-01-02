@@ -117,6 +117,53 @@ func TestGitHubController(t *testing.T) {
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 	})
+
+	t.Run("DeleteNotFoundHook", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		transport := httpmock.NewMockTransport()
+		controller, err := NewGitHubController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			runner.CoreClient,
+			runner.Client,
+			transport,
+		)
+		require.NoError(t, err)
+
+		p, backend, secrets := githubControllerFixtures(t, "test")
+		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1alpha2.WebhookConfigurationStatus{
+			Id:         1234,
+			Repository: "f110/heimdallr",
+			UpdateTime: metav1.Now(),
+		})
+		runner.RegisterFixtures(p)
+		for _, v := range secrets {
+			runner.RegisterFixtures(v)
+		}
+
+		transport.RegisterResponder(
+			http.MethodPost,
+			"https://api.github.com/app/installations/2/access_tokens",
+			httpmock.NewStringResponder(http.StatusOK, `{"token":"mocktoken"}`),
+		)
+		transport.RegisterRegexpResponder(
+			http.MethodDelete,
+			regexp.MustCompile(`/repos/f110/heimdallr/hooks/1234$`),
+			httpmock.NewStringResponder(http.StatusNotFound, ""),
+		)
+
+		err = runner.Finalize(controller, backend)
+		require.NoError(t, err)
+
+		backend.ObjectMeta.Finalizers = []string{}
+		backend.Status.WebhookConfigurations = []*proxyv1alpha2.WebhookConfigurationStatus{}
+		runner.AssertUpdateAction(t, "", backend)
+		runner.AssertUpdateAction(t, "status", backend)
+		runner.AssertNoUnexpectedAction(t)
+	})
 }
 
 func ExpectCall(t *testing.T, callInfo map[string]int, method, url string) {

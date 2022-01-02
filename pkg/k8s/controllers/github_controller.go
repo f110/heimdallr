@@ -278,6 +278,10 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			_, err := ghClient.Repositories.DeleteHook(ctx, owner, repo, status.Id)
 			if err != nil {
 				c.Log(ctx).Debug("Failed delete hook", zap.Error(err))
+				ghErr := err.(*github.ErrorResponse)
+				if ghErr.Response != nil && ghErr.Response.StatusCode == http.StatusNotFound {
+					delete(webhookConfigurationStatus, v)
+				}
 			} else {
 				c.Log(ctx).Info("Delete webhook", zap.Int64("id", status.Id), zap.String("repo", v))
 				delete(webhookConfigurationStatus, v)
