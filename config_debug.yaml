@@ -37,13 +37,13 @@ rpc_server:
   bind: :4002
   metrics_bind: :4005
 identity_provider:
-  #provider: google
-  #client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
-  #client_secret_file: ./client_secret
-  provider: custom
-  issuer: http://127.0.0.1:5001/
-  client_id: heim-test
+  provider: google
+  client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com
   client_secret_file: ./client_secret
+#  provider: custom
+#  issuer: http://127.0.0.1:5001/
+#  client_id: heim-test
+#  client_secret_file: ./client_secret
   extra_scopes: ["email"]
   redirect_url: https://local-proxy.f110.dev:4000/auth/callback
 datastore:
