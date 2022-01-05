@@ -129,7 +129,7 @@ func (c *Client) Close() {
 
 func (c *Client) Alive() bool {
 	switch c.conn.GetState() {
-	case connectivity.Ready:
+	case connectivity.Idle, connectivity.Ready:
 		return true
 	default:
 		return false
