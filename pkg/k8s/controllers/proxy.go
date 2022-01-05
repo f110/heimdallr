@@ -825,7 +825,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 	conf := &configv2.Config{
 		Logger: &configv2.Logger{
 			Level:    logLevel,
-			Encoding: "json",
+			Encoding: "console",
 		},
 		CertificateAuthority: &configv2.CertificateAuthority{},
 		Dashboard: &configv2.Dashboard{
