@@ -290,11 +290,6 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	idp, err := NewIdentityProvider()
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
-	}
-
 	proxyPort, err := netutil.FindUnusedPort()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -318,6 +313,11 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	vaultRootToken := make([]byte, 32)
 	for i := range vaultRootToken {
 		vaultRootToken[i] = letters[mrand.Intn(len(letters))]
+	}
+
+	idp, err := NewIdentityProvider(fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", proxyPort))
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	p := &Proxy{
@@ -894,9 +894,10 @@ func (p *Proxy) buildConfig() error {
 		IdentityProvider: &configv2.IdentityProvider{
 			Provider:         "custom",
 			Issuer:           p.identityProvider.Issuer,
-			ClientId:         "identityprovider",
+			ClientId:         "e2e",
 			ClientSecretFile: "./identityprovider",
 			RedirectUrl:      fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", p.proxyPort),
+			ExtraScopes:      []string{"email"},
 		},
 		Datastore: &configv2.Datastore{
 			DatastoreEtcd: &configv2.DatastoreEtcd{

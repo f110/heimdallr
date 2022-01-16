@@ -35,6 +35,7 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 
 			s.Step("request backend url", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
+					// Request https://test.e2e.f110.dev
 					f.Agents.User("test@f110.dev").Get(m, f.Proxy.URL("test"))
 				})
 
@@ -48,6 +49,7 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 
 			s.Step("enter authorization flow", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
+					// Request http://e2e.f110.dev/auth
 					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
 					f.Agents.User("test@f110.dev").SaveCookie()
 				})
@@ -56,7 +58,7 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					m.StatusCode(http.StatusFound)
 					u, err := m.LastResponse().Location()
 					m.NoError(err)
-					m.Contains(u.String(), "custom-idp/auth")
+					m.Contains(u.String(), "/authorize") // This endpoint is OpenID Provider
 				})
 
 				s.It("receive the cookie", func(m *btesting.Matcher) {
@@ -69,6 +71,16 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					m.NoError(err)
 					m.Empty(sess.Id)
 					m.NotEmpty(sess.Unique)
+				})
+			})
+
+			s.Step("redirect to login view", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) {
+					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
+				})
+
+				s.It("should get the status code for redirect", func(m *btesting.Matcher) {
+					m.StatusCode(http.StatusFound)
 				})
 			})
 
@@ -87,10 +99,23 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					agent := f.Agents.User("test@f110.dev")
 					authResponse := &framework.AuthResponse{}
 					m.Must(agent.ParseLastResponseBody(authResponse))
-					agent.Post(m, authResponse.LoginURL, fmt.Sprintf(`{"id":"test@f110.dev","query":"%s"}`, authResponse.Query))
+					agent.Post(m, authResponse.LoginURL, fmt.Sprintf(`{"email":"test@f110.dev","query":"%s"}`, authResponse.Query))
 				})
 
-				s.It("should redirect to callback", func(m *btesting.Matcher) {
+				s.It("should redirect to callback of the auth proxy", func(m *btesting.Matcher) {
+					m.StatusCode(http.StatusFound)
+					u, err := m.LastResponse().Location()
+					m.NoError(err)
+					m.Contains(u.String(), "authorize/callback") // This endpoint belongs to OpenID Provider, not auth proxy
+				})
+			})
+
+			s.Step("follow redirect to the auth proxy", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) {
+					m.Must(f.Agents.User("test@f110.dev").FollowRedirect(m))
+				})
+
+				s.It("should get the status code for redirect", func(m *btesting.Matcher) {
 					m.StatusCode(http.StatusFound)
 					u, err := m.LastResponse().Location()
 					m.NoError(err)

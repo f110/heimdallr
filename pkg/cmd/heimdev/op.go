@@ -186,7 +186,7 @@ func (a *providerStorage) AuthRequestByCode(ctx context.Context, code string) (o
 
 func (a *providerStorage) SaveAuthCode(ctx context.Context, id, code string) error {
 	if v := a.authRequests[id]; v == nil {
-		return xerrors.Errorf("auth request id not found")
+		return xerrors.Errorf("auth request id is not found")
 	} else {
 		v.Code = code
 	}
