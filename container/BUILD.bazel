@@ -16,6 +16,9 @@ container_image(
     name = "image",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heimdallr-proxy"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin"],
     visibility = ["//visibility:public"],
 )
@@ -26,7 +29,6 @@ container_push(
     image = ":image",
     registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
-    tag = "dev-{BUILD_USER}",
 )
 
 pkg_tar(
@@ -43,6 +45,9 @@ container_image(
     name = "image_rpcserver",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heim-rpcserver"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin_rpcserver"],
     visibility = ["//visibility:public"],
 )
@@ -69,6 +74,9 @@ container_image(
     name = "image_dashboard",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heim-dashboard"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin_dashboard"],
     visibility = ["//visibility:public"],
 )
@@ -93,6 +101,9 @@ container_image(
     name = "image_ctl",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heimctl"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin_ctl"],
 )
 
@@ -117,6 +128,9 @@ container_image(
     name = "image_operator",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/heimdallrcontroller"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin_operator"],
     visibility = ["//visibility:public"],
 )
@@ -143,6 +157,9 @@ container_image(
     name = "image_sidecar",
     base = "@com_google_distroless_base//image",
     entrypoint = ["/usr/local/bin/discovery-sidecar"],
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
+    },
     tars = [":bin_sidecar"],
     visibility = ["//visibility:public"],
 )

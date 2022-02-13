@@ -50,10 +50,10 @@ import (
 const (
 	EtcdVersion = "v3.4.8"
 
-	ProxyImageRepository       = "quay.io/f110/heimdallr-proxy"
+	ProxyImageRepository       = "ghcr.io/f110/heimdallr/proxy"
 	defaultImageTag            = "latest"
-	RPCServerImageRepository   = "quay.io/f110/heimdallr-rpcserver"
-	DashboardImageRepository   = "quay.io/f110/heimdallr-dashboard"
+	RPCServerImageRepository   = "ghcr.io/f110/heimdallr/rpcserver"
+	DashboardImageRepository   = "ghcr.io/f110/heimdallr/dashboard"
 	defaultCommand             = "/usr/local/bin/heimdallr-proxy"
 	rpcServerCommand           = "/usr/local/bin/heim-rpcserver"
 	dashboardCommand           = "/usr/local/bin/heim-dashboard"

@@ -70,12 +70,12 @@ func setupSuite(id string) (*kind.Cluster, error) {
 			},
 			{
 				File:       framework.Config.OperatorImageFile,
-				Repository: "quay.io/f110/heimdallr-operator",
+				Repository: "ghcr.io/f110/heimdallr/operator",
 				Tag:        "e2e",
 			},
 			{
 				File:       framework.Config.SidecarImageFile,
-				Repository: "quay.io/f110/heimdallr-discovery-sidecar",
+				Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
 				Tag:        framework.Config.BuildVersion,
 			},
 		}

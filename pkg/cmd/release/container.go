@@ -56,7 +56,7 @@ func containerReleaseCmd(repository, sha256File, tag string, override bool) erro
 }
 
 func Container(rootCmd *cobra.Command) {
-	repository := "quay.io/f110"
+	repository := "ghcr.io/f110"
 	sha256File := ""
 	tag := ""
 	override := false

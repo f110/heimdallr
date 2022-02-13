@@ -26,7 +26,7 @@ sh_binary(
         "cluster",
         "load",
         "--kind=$(location @kind//:file)",
-        "--images=quay.io/f110/heimdallr-discovery-sidecar:" + VERSION + "=$(location //container:image_sidecar.tar)",
+        "--images=ghcr.io/f110/heimdallr/discovery-sidecar:" + VERSION + "=$(location //container:image_sidecar.tar)",
     ],
     data = [
         "//container:image_sidecar.tar",

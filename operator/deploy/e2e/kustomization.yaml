@@ -4,5 +4,5 @@ resources:
   - ../base
 
 images:
-  - name: quay.io/f110/heimdallr-operator
+  - name: ghcr.io/f110/heimdallr/operator
     newTag: e2e

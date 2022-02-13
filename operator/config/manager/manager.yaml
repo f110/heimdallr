@@ -17,7 +17,7 @@ spec:
       serviceAccountName: heimdallr
       containers:
         - name: operator
-          image: quay.io/f110/heimdallr-operator:v0.6.2
+          image: ghcr.io/f110/heimdallr/operator:v0.6.2
           imagePullPolicy: IfNotPresent
           args:
             - --lease-lock-name=operator

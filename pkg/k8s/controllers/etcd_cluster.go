@@ -1079,7 +1079,7 @@ echo '' > /etc/resolv.conf
 	}
 	sidecarContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("sidecar"),
-		k8sfactory.Image(fmt.Sprintf("quay.io/f110/heimdallr-discovery-sidecar:%s", version.Version), nil),
+		k8sfactory.Image(fmt.Sprintf("ghcr.io/f110/heimdallr/discovery-sidecar:%s", version.Version), nil),
 		k8sfactory.PullPolicy(corev1.PullIfNotPresent),
 		k8sfactory.Args(sidecarArgs...),
 		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(8080, "/liveness")),

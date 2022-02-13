@@ -121,12 +121,12 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 	containerImages := []*kind.ContainerImageFile{
 		{
 			File:       controllerImage,
-			Repository: "quay.io/f110/heimdallr-operator",
+			Repository: "ghcr.io/f110/heimdallr/operator",
 			Tag:        "latest",
 		},
 		{
 			File:       sidecarImage,
-			Repository: "quay.io/f110/heimdallr-discovery-sidecar",
+			Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
 			Tag:        "latest",
 		},
 	}
@@ -353,7 +353,7 @@ func Cluster(rootCmd *cobra.Command) {
 		[]string{},
 		`Loading images. each arguments will required name and path.
 A separator between name and path is equal mark.
-(e,g, --images quay.io/f110/heimdallr:latest=./image.tar)`,
+(e,g, --images ghcr.io/f110/heimdallr:latest=./image.tar)`,
 	)
 	clusterCmd.AddCommand(load)
 
