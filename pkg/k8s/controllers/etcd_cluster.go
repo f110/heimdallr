@@ -631,6 +631,7 @@ func (c *EtcdCluster) EqualAnnotation(a, b map[string]string) bool {
 func (c *EtcdCluster) normalizeAnnotation(a map[string]string) {
 	delete(a, etcd.AnnotationKeyServerCertificate)
 	delete(a, etcd.AnnotationKeyTemporaryMember)
+	delete(a, etcd.PodAnnotationKeyRunningAt)
 }
 
 // EqualLabels reports whether a and b are "semantic equal".

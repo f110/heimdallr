@@ -10,7 +10,10 @@ import (
 )
 
 func cli(args []string) error {
-	rootCmd := &cobra.Command{Use: "heimctl"}
+	rootCmd := &cobra.Command{
+		Use:   "heimctl",
+		Short: "heimctl is the manager command for heimdallr proxy",
+	}
 
 	heimctl.Version(rootCmd)
 	heimctl.Bootstrap(rootCmd)
@@ -18,6 +21,7 @@ func cli(args []string) error {
 	heimctl.Cluster(rootCmd)
 	heimctl.Util(rootCmd)
 	heimctl.Generate(rootCmd)
+	heimctl.EtcdCluster(rootCmd)
 
 	rootCmd.SetArgs(args)
 	return rootCmd.Execute()
