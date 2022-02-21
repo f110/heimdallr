@@ -1073,7 +1073,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 		k8sfactory.Volume(datastoreClientCertVolume),
 	)
 	pod := k8sfactory.PodFactory(nil,
-		k8sfactory.LabelMap(r.LabelsForMain()),
+		k8sfactory.Labels(r.LabelsForMain()),
 		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
 		k8sfactory.Container(proxyContainer),
 		k8sfactory.Volume(caVolume),
@@ -1208,7 +1208,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 		k8sfactory.Volume(privateKeyVolume),
 	)
 	pod := k8sfactory.PodFactory(nil,
-		k8sfactory.LabelMap(r.LabelsForDashboard()),
+		k8sfactory.Labels(r.LabelsForDashboard()),
 		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
 		k8sfactory.Container(dashboardContainer),
 		k8sfactory.Volume(caVolume),
@@ -1322,7 +1322,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		k8sfactory.Volume(datastoreClientCertVolume),
 	)
 	pod := k8sfactory.PodFactory(nil,
-		k8sfactory.LabelMap(r.LabelsForRPCServer()),
+		k8sfactory.Labels(r.LabelsForRPCServer()),
 		k8sfactory.Annotation(fmt.Sprintf("checksum/%s", configFilename), hex.EncodeToString(confHash[:])),
 		k8sfactory.Container(rpcServerContainer),
 		k8sfactory.Volume(caVolume),
@@ -1358,7 +1358,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		k8sfactory.Name(r.ServiceNameForRPCServer()),
 		k8sfactory.Namespace(r.Namespace),
 		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
-		k8sfactory.LabelMap(r.LabelsForRPCServer()),
+		k8sfactory.Labels(r.LabelsForRPCServer()),
 		k8sfactory.MatchLabelSelector(r.LabelsForRPCServer()),
 		k8sfactory.ClusterIP,
 		k8sfactory.Port("h2", corev1.ProtocolTCP, rpcServerPort),

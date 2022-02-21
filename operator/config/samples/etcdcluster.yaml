@@ -8,6 +8,12 @@ spec:
   defragmentSchedule: "*/10 * * * *"
   antiAffinity: true
   development: true
+  template:
+    metadata:
+      annotations:
+        foo: bar
+      labels:
+        baz: foo
 #  volumeClaimTemplate:
 #    spec:
 #      accessModes: ["ReadWriteOnce"]

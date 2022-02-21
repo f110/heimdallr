@@ -484,6 +484,20 @@ spec:
                 type: boolean
               members:
                 type: integer
+              template:
+                properties:
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
               version:
                 type: string
               volumeClaimTemplate:

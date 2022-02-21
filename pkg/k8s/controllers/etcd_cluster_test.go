@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -135,6 +136,100 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				ec.SetOwnedPods(tt.Pods)
 			}
 			assert.Equal(t, tt.ExpectPhase, ec.CurrentPhase(), tt.Name)
+		})
+	}
+}
+
+func TestEtcdCluster_EqualAnnotation(t *testing.T) {
+	cases := []struct {
+		Name  string
+		Left  map[string]string
+		Right map[string]string
+		Equal bool
+	}{
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{"foo": "bar"},
+			Equal: false,
+		},
+		{
+			Left:  map[string]string{"foo": "bar"},
+			Right: map[string]string{},
+			Equal: false,
+		},
+		{
+			Left:  map[string]string{etcd.AnnotationKeyTemporaryMember: "true"},
+			Right: map[string]string{},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{etcd.AnnotationKeyTemporaryMember: "true"},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{etcd.AnnotationKeyServerCertificate: "foo", "foo": "bar"},
+			Right: map[string]string{"foo": "bar"},
+			Equal: true,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			e := &EtcdCluster{}
+			assert.Equal(t, tc.Equal, e.EqualAnnotation(tc.Left, tc.Right))
+		})
+	}
+}
+
+func TestEtcdCluster_EqualLabels(t *testing.T) {
+	cases := []struct {
+		Name  string
+		Left  map[string]string
+		Right map[string]string
+		Equal bool
+	}{
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{"foo": "bar"},
+			Equal: false,
+		},
+		{
+			Left:  map[string]string{"foo": "bar"},
+			Right: map[string]string{},
+			Equal: false,
+		},
+		{
+			Left:  map[string]string{etcd.LabelNameRole: "etcd"},
+			Right: map[string]string{},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{},
+			Right: map[string]string{etcd.LabelNameEtcdVersion: "foo"},
+			Equal: true,
+		},
+		{
+			Left:  map[string]string{etcd.LabelNameEtcdVersion: "foo", "foo": "bar"},
+			Right: map[string]string{"foo": "bar"},
+			Equal: true,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			e := &EtcdCluster{}
+			assert.Equal(t, tc.Equal, e.EqualLabels(tc.Left, tc.Right))
 		})
 	}
 }

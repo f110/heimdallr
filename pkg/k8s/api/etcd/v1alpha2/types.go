@@ -63,10 +63,20 @@ type EtcdClusterSpec struct {
 	Version             string                                `json:"version"`
 	AntiAffinity        bool                                  `json:"antiAffinity,omitempty"`
 	DefragmentSchedule  string                                `json:"defragmentSchedule"`
+	Template            PodTemplateSpec                       `json:"template,omitempty"`
 	Backup              *BackupSpec                           `json:"backup,omitempty"`
 	VolumeClaimTemplate *corev1.PersistentVolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
 	// Development indicates the development mode.
 	Development bool `json:"development,omitempty"`
+}
+
+type PodTemplateSpec struct {
+	Metadata *ObjectMeta `json:"metadata,omitempty"`
+}
+
+type ObjectMeta struct {
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type BackupSpec struct {

@@ -82,6 +82,24 @@ func Annotation(k, v string) Trait {
 	}
 }
 
+func Annotations(annotations map[string]string) Trait {
+	return func(object interface{}) {
+		m, ok := object.(metav1.Object)
+		if ok {
+			a := m.GetAnnotations()
+			if a != nil {
+				for k, v := range annotations {
+					a[k] = v
+				}
+			} else {
+				a = annotations
+			}
+			m.SetAnnotations(a)
+			return
+		}
+	}
+}
+
 func Label(v ...string) Trait {
 	return func(object interface{}) {
 		m, ok := object.(metav1.Object)
@@ -99,11 +117,19 @@ func Label(v ...string) Trait {
 	}
 }
 
-func LabelMap(label map[string]string) Trait {
+func Labels(label map[string]string) Trait {
 	return func(object interface{}) {
 		m, ok := object.(metav1.Object)
 		if ok {
-			m.SetLabels(label)
+			a := m.GetLabels()
+			if a != nil {
+				for k, v := range label {
+					a[k] = v
+				}
+			} else {
+				a = label
+			}
+			m.SetLabels(a)
 			return
 		}
 	}

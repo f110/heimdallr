@@ -182,7 +182,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 				k8sfactory.Name(ingress.Name),
 				k8sfactory.Namespace(ingress.Namespace),
 				k8sfactory.Annotation(proxy.AnnotationKeyIngressName, fmt.Sprintf("%s/%s", ingress.Namespace, ingress.Name)),
-				k8sfactory.LabelMap(ingClass.Labels),
+				k8sfactory.Labels(ingClass.Labels),
 				proxy.FQDN(rule.Host),
 				proxy.DisableAuthn,
 				proxy.HTTP(httpRouting),

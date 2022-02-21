@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -210,7 +211,7 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 		}
 		for _, ref := range v.OwnerReferences {
 			if ref.UID == c.UID {
-				owned = append(owned, v)
+				owned = append(owned, v.DeepCopy())
 			}
 		}
 	}
@@ -227,7 +228,7 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 		}
 		for _, ref := range v.OwnerReferences {
 			if ref.UID == c.UID {
-				myPVC[v.Name] = v
+				myPVC[v.Name] = v.DeepCopy()
 			}
 		}
 	}
@@ -596,8 +597,60 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 		c.log.Debug("Don't have AnnotationKeyServerCertificate", zap.String("pod.name", pod.Name))
 		return true
 	}
+	if !c.EqualAnnotation(pod.Annotations, c.Spec.Template.Metadata.Annotations) {
+		return true
+	}
+	if !c.EqualLabels(pod.Labels, c.Spec.Template.Metadata.Labels) {
+		return true
+	}
 
 	return false
+}
+
+func copyMap(a map[string]string) map[string]string {
+	n := make(map[string]string)
+	for k, v := range a {
+		n[k] = v
+	}
+	return n
+}
+
+func (c *EtcdCluster) EqualAnnotation(a, b map[string]string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	newA := copyMap(a)
+	c.normalizeAnnotation(newA)
+	newB := copyMap(b)
+	c.normalizeAnnotation(newB)
+
+	return reflect.DeepEqual(newA, newB)
+}
+
+func (c *EtcdCluster) normalizeAnnotation(a map[string]string) {
+	delete(a, etcd.AnnotationKeyServerCertificate)
+	delete(a, etcd.AnnotationKeyTemporaryMember)
+}
+
+// EqualLabels reports whether a and b are "semantic equal".
+func (c *EtcdCluster) EqualLabels(a, b map[string]string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	newA := copyMap(a)
+	c.normalizeLabel(newA)
+	newB := copyMap(b)
+	c.normalizeLabel(newB)
+
+	return reflect.DeepEqual(newA, newB)
+}
+
+func (c *EtcdCluster) normalizeLabel(a map[string]string) {
+	delete(a, etcd.LabelNameRole)
+	delete(a, etcd.LabelNameClusterName)
+	delete(a, etcd.LabelNameEtcdVersion)
 }
 
 func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
@@ -938,9 +991,23 @@ func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClust
 		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
 		true,
 	)
-	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyTemporaryMember, "true")
+	pod = k8sfactory.PodFactory(pod,
+		k8sfactory.Annotation(etcd.AnnotationKeyTemporaryMember, "true"),
+	)
 
 	return pod
+}
+
+func (c *EtcdCluster) DefaultLabels(etcdVersion string) map[string]string {
+	return map[string]string{
+		etcd.LabelNameClusterName: c.Name,
+		etcd.LabelNameEtcdVersion: etcdVersion,
+		etcd.LabelNameRole:        "etcd",
+	}
+}
+
+func (c *EtcdCluster) DefaultAnnotations() map[string]string {
+	return map[string]string{etcd.AnnotationKeyServerCertificate: string(c.serverCertSecret.MarshalCertificate())}
 }
 
 func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState string, initialCluster []string, temporaryMember bool) *corev1.Pod {
@@ -952,14 +1019,13 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 	pod := k8sfactory.PodFactory(nil,
 		k8sfactory.Name(podName),
 		k8sfactory.Namespace(c.Namespace),
-		k8sfactory.Label(
-			etcd.LabelNameClusterName, c.Name,
-			etcd.LabelNameEtcdVersion, etcdVersion,
-			etcd.LabelNameRole, "etcd",
-		),
-		k8sfactory.Annotation(etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate())),
+		k8sfactory.Labels(c.DefaultLabels(etcdVersion)),
+		k8sfactory.Labels(c.Spec.Template.Metadata.Labels),
+		k8sfactory.Annotations(c.DefaultAnnotations()),
+		k8sfactory.Annotations(c.Spec.Template.Metadata.Annotations),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
 	)
+
 	return c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
 }
 
