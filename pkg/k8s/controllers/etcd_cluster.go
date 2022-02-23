@@ -597,11 +597,13 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 		c.log.Debug("Don't have AnnotationKeyServerCertificate", zap.String("pod.name", pod.Name))
 		return true
 	}
-	if !c.EqualAnnotation(pod.Annotations, c.Spec.Template.Metadata.Annotations) {
-		return true
-	}
-	if !c.EqualLabels(pod.Labels, c.Spec.Template.Metadata.Labels) {
-		return true
+	if c.Spec.Template.Metadata != nil {
+		if !c.EqualAnnotation(pod.Annotations, c.Spec.Template.Metadata.Annotations) {
+			return true
+		}
+		if !c.EqualLabels(pod.Labels, c.Spec.Template.Metadata.Labels) {
+			return true
+		}
 	}
 
 	return false
@@ -1021,11 +1023,15 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 		k8sfactory.Name(podName),
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.Labels(c.DefaultLabels(etcdVersion)),
-		k8sfactory.Labels(c.Spec.Template.Metadata.Labels),
 		k8sfactory.Annotations(c.DefaultAnnotations()),
-		k8sfactory.Annotations(c.Spec.Template.Metadata.Annotations),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
 	)
+	if c.Spec.Template.Metadata != nil {
+		pod = k8sfactory.PodFactory(pod,
+			k8sfactory.Labels(c.Spec.Template.Metadata.Labels),
+			k8sfactory.Annotations(c.Spec.Template.Metadata.Annotations),
+		)
+	}
 
 	return c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
 }
