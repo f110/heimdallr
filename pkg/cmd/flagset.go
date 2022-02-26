@@ -536,5 +536,5 @@ func (f *float32Value) Set(val string) error {
 }
 
 func (f *float32Value) Type() string {
-	return "flaot32"
+	return "float32"
 }
