@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cmd",
+    srcs = ["flagset.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/spf13/pflag"],
+)
+
+go_test(
+    name = "cmd_test",
+    srcs = ["flagset_test.go"],
+    embed = [":cmd"],
+    deps = [
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
+    ],
+)
