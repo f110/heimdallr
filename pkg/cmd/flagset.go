@@ -53,38 +53,38 @@ func (fs *FlagSet) Parse(args []string) error {
 	return nil
 }
 
-func (fs *FlagSet) String(name, value, usage string) *StringFlag {
-	f := NewStringFlag(name, value, usage)
+func (fs *FlagSet) String(name, usage string) *StringFlag {
+	f := NewStringFlag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Int(name string, value int, usage string) *IntFlag {
-	f := NewIntFlag(name, value, usage)
+func (fs *FlagSet) Int(name, usage string) *IntFlag {
+	f := NewIntFlag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Uint(name string, value uint, usage string) *UintFlag {
-	f := NewUintFlag(name, value, usage)
+func (fs *FlagSet) Uint(name, usage string) *UintFlag {
+	f := NewUintFlag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Bool(name string, value bool, usage string) *BoolFlag {
-	f := NewBoolFlag(name, value, usage)
+func (fs *FlagSet) Bool(name, usage string) *BoolFlag {
+	f := NewBoolFlag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Duration(name string, value time.Duration, usage string) *DurationFlag {
-	f := NewDurationFlag(name, value, usage)
+func (fs *FlagSet) Duration(name, usage string) *DurationFlag {
+	f := NewDurationFlag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Float32(name string, value float32, usage string) *Float32Flag {
-	f := NewFloat32Flag(name, value, usage)
+func (fs *FlagSet) Float32(name, usage string) *Float32Flag {
+	f := NewFloat32Flag(name, usage)
 	fs.flags = append(fs.flags, f)
 	return f
 }
@@ -97,13 +97,12 @@ type StringFlag struct {
 	flag *pflag.Flag
 }
 
-func NewStringFlag(name, defaultValue, usage string) *StringFlag {
+func NewStringFlag(name, usage string) *StringFlag {
 	return &StringFlag{
 		flag: &pflag.Flag{
-			Name:     name,
-			DefValue: defaultValue,
-			Usage:    usage,
-			Value:    (*stringValue)(new(string)),
+			Name:  name,
+			Usage: usage,
+			Value: (*stringValue)(new(string)),
 		},
 	}
 }
@@ -139,6 +138,12 @@ func (f *StringFlag) Hidden() *StringFlag {
 	return f
 }
 
+func (f *StringFlag) Default(defaultValue string) *StringFlag {
+	f.flag.DefValue = defaultValue
+	_ = f.flag.Value.Set(defaultValue)
+	return f
+}
+
 func (f *StringFlag) Value() string {
 	return f.flag.Value.String()
 }
@@ -151,13 +156,12 @@ type IntFlag struct {
 	flag *pflag.Flag
 }
 
-func NewIntFlag(name string, defaultValue int, usage string) *IntFlag {
+func NewIntFlag(name, usage string) *IntFlag {
 	return &IntFlag{
 		flag: &pflag.Flag{
-			Name:     name,
-			DefValue: fmt.Sprintf("%d", defaultValue),
-			Usage:    usage,
-			Value:    (*intValue)(new(int)),
+			Name:  name,
+			Usage: usage,
+			Value: (*intValue)(new(int)),
 		},
 	}
 }
@@ -193,6 +197,12 @@ func (f *IntFlag) Hidden() *IntFlag {
 	return f
 }
 
+func (f *IntFlag) Default(defaultValue int) *IntFlag {
+	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
+	_ = f.flag.Value.Set(f.flag.DefValue)
+	return f
+}
+
 func (f *IntFlag) Value() string {
 	return f.flag.Value.String()
 }
@@ -205,13 +215,12 @@ type UintFlag struct {
 	flag *pflag.Flag
 }
 
-func NewUintFlag(name string, defaultValue uint, usage string) *UintFlag {
+func NewUintFlag(name string, usage string) *UintFlag {
 	return &UintFlag{
 		flag: &pflag.Flag{
-			Name:     name,
-			DefValue: fmt.Sprintf("%d", defaultValue),
-			Usage:    usage,
-			Value:    (*uintValue)(new(uint)),
+			Name:  name,
+			Usage: usage,
+			Value: (*uintValue)(new(uint)),
 		},
 	}
 }
@@ -247,6 +256,12 @@ func (f *UintFlag) Hidden() *UintFlag {
 	return f
 }
 
+func (f *UintFlag) Default(defaultValue uint) *UintFlag {
+	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
+	_ = f.flag.Value.Set(f.flag.DefValue)
+	return f
+}
+
 func (f *UintFlag) Value() string {
 	return f.flag.Value.String()
 }
@@ -259,11 +274,10 @@ type BoolFlag struct {
 	flag *pflag.Flag
 }
 
-func NewBoolFlag(name string, defaultValue bool, usage string) *BoolFlag {
+func NewBoolFlag(name string, usage string) *BoolFlag {
 	return &BoolFlag{
 		flag: &pflag.Flag{
 			Name:        name,
-			DefValue:    fmt.Sprintf("%t", defaultValue),
 			Usage:       usage,
 			NoOptDefVal: "true",
 			Value:       (*boolValue)(new(bool)),
@@ -302,6 +316,12 @@ func (f *BoolFlag) Hidden() *BoolFlag {
 	return f
 }
 
+func (f *BoolFlag) Default(defaultValue bool) *BoolFlag {
+	f.flag.DefValue = fmt.Sprintf("%t", defaultValue)
+	_ = f.flag.Value.Set(f.flag.DefValue)
+	return f
+}
+
 func (f *BoolFlag) Value() string {
 	return f.flag.Value.String()
 }
@@ -314,13 +334,12 @@ type DurationFlag struct {
 	flag *pflag.Flag
 }
 
-func NewDurationFlag(name string, defaultValue time.Duration, usage string) *DurationFlag {
+func NewDurationFlag(name string, usage string) *DurationFlag {
 	return &DurationFlag{
 		flag: &pflag.Flag{
-			Name:     name,
-			DefValue: defaultValue.String(),
-			Usage:    usage,
-			Value:    (*durationValue)(new(time.Duration)),
+			Name:  name,
+			Usage: usage,
+			Value: (*durationValue)(new(time.Duration)),
 		},
 	}
 }
@@ -356,6 +375,12 @@ func (f *DurationFlag) Hidden() *DurationFlag {
 	return f
 }
 
+func (f *DurationFlag) Default(defaultValue time.Duration) *DurationFlag {
+	f.flag.DefValue = defaultValue.String()
+	_ = f.flag.Value.Set(f.flag.DefValue)
+	return f
+}
+
 func (f *DurationFlag) Value() string {
 	return f.flag.Value.String()
 }
@@ -368,13 +393,12 @@ type Float32Flag struct {
 	flag *pflag.Flag
 }
 
-func NewFloat32Flag(name string, defaultValue float32, usage string) *Float32Flag {
+func NewFloat32Flag(name string, usage string) *Float32Flag {
 	return &Float32Flag{
 		flag: &pflag.Flag{
-			Name:     name,
-			DefValue: strconv.FormatFloat(float64(defaultValue), 'g', -1, 32),
-			Usage:    usage,
-			Value:    (*float32Value)(new(float32)),
+			Name:  name,
+			Usage: usage,
+			Value: (*float32Value)(new(float32)),
 		},
 	}
 }
@@ -407,6 +431,12 @@ func (f *Float32Flag) ShorthandDeprecated(msg string) *Float32Flag {
 
 func (f *Float32Flag) Hidden() *Float32Flag {
 	f.flag.Hidden = true
+	return f
+}
+
+func (f *Float32Flag) Default(defaultValue float32) *Float32Flag {
+	f.flag.DefValue = strconv.FormatFloat(float64(defaultValue), 'g', -1, 32)
+	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
 
