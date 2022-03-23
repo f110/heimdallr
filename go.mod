@@ -27,6 +27,7 @@ require (
 	github.com/jarcoal/httpmock v1.0.5
 	github.com/jetstack/cert-manager v1.6.1
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/mattn/go-shellwords v1.0.12
 	github.com/miekg/dns v1.1.34
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/peterh/liner v1.2.1

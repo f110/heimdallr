@@ -2,15 +2,25 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "cmd",
-    srcs = ["flagset.go"],
+    srcs = [
+        "command.go",
+        "flagset.go",
+    ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/spf13/pflag"],
+    deps = [
+        "//vendor/github.com/mattn/go-shellwords",
+        "//vendor/github.com/spf13/pflag",
+        "//vendor/golang.org/x/xerrors",
+    ],
 )
 
 go_test(
     name = "cmd_test",
-    srcs = ["flagset_test.go"],
+    srcs = [
+        "command_test.go",
+        "flagset_test.go",
+    ],
     embed = [":cmd"],
     deps = [
         "//vendor/github.com/spf13/pflag",

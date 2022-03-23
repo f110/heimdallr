@@ -38,7 +38,7 @@ func (fs *FlagSet) Parse(args []string) error {
 
 	var missingFlags []string
 	for _, flag := range fs.flags {
-		if _, ok := flag.Flag().Annotations[flagAnnotationKeyRequired]; !ok {
+		if !isRequiredFlag(flag.Flag()) {
 			continue
 		}
 
@@ -51,6 +51,74 @@ func (fs *FlagSet) Parse(args []string) error {
 	}
 
 	return nil
+}
+
+func (fs *FlagSet) AddFlagSet(v *FlagSet) {
+	for _, f := range v.flags {
+		fs.flags = append(fs.flags, f)
+	}
+}
+
+func (fs *FlagSet) Usage() string {
+	fs.addFlags()
+
+	return strings.TrimRight(fs.flagSet.FlagUsagesWrapped(80), "\n")
+}
+
+func (fs *FlagSet) OnelineUsage(leftPadding, wrap int) string {
+	fs.addFlags()
+
+	var flags []string
+	for _, v := range fs.flags {
+		flag := v.Flag()
+		if flag.Hidden {
+			continue
+		}
+
+		u := fmt.Sprintf("--%s", flag.Name)
+		if flag.Shorthand != "" {
+			u = "-" + flag.Shorthand + " | " + u
+		}
+		if !isRequiredFlag(flag) {
+			u = fmt.Sprintf("[%s]", u)
+		}
+		flags = append(flags, u)
+	}
+
+	lines := []string{""}
+	for _, v := range flags {
+		lineLen := len(lines[len(lines)-1])
+		if lineLen+len(v) > wrap {
+			lines = append(lines, "")
+		}
+		if len(lines[len(lines)-1]) > 0 {
+			lines[len(lines)-1] += " "
+		}
+		lines[len(lines)-1] += v
+	}
+	// Add padding
+	for i := range lines {
+		if i == 0 {
+			continue
+		}
+		lines[i] = strings.Repeat(" ", leftPadding) + lines[i]
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func (fs *FlagSet) HasFlags() bool {
+	fs.addFlags()
+	return fs.flagSet.HasFlags()
+}
+
+func (fs *FlagSet) addFlags() {
+	if !fs.added {
+		for _, v := range fs.flags {
+			fs.flagSet.AddFlag(v.Flag())
+		}
+		fs.added = true
+	}
 }
 
 func (fs *FlagSet) String(name, usage string) *StringFlag {
@@ -456,6 +524,14 @@ func setAnnotationRequired(flag *pflag.Flag) {
 		return
 	}
 	flag.Annotations[flagAnnotationKeyRequired] = []string{"true"}
+}
+
+func isRequiredFlag(flag *pflag.Flag) bool {
+	if _, ok := flag.Annotations[flagAnnotationKeyRequired]; ok {
+		return true
+	}
+
+	return false
 }
 
 type stringValue string

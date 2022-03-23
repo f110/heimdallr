@@ -165,6 +165,7 @@ func TestServer(rootCmd *cobra.Command) {
 	}
 	testServerCmd.Flags().IntVar(&port, "port", 4501, "Listen port")
 	testServerCmd.Flags().StringVar(&publicKeyFile, "public-key", publicKeyFile, "public key file")
+	testServerCmd.Usage()
 
 	rootCmd.AddCommand(testServerCmd)
 }
