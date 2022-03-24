@@ -9,9 +9,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v41/github"
-	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 type githubOpt struct {
@@ -120,21 +121,21 @@ func githubRelease(opt *githubOpt) error {
 	return nil
 }
 
-func GitHub(rootCmd *cobra.Command) {
+func GitHub(rootCmd *cmd.Command) {
 	opt := githubOpt{}
 
-	ghRelease := &cobra.Command{
+	ghRelease := &cmd.Command{
 		Use:   "github",
 		Short: "Create GitHub Release",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return githubRelease(&opt)
 		},
 	}
-	ghRelease.Flags().StringVar(&opt.Version, "version", "", "")
-	ghRelease.Flags().StringVar(&opt.From, "from", "", "")
-	ghRelease.Flags().StringArrayVar(&opt.Attach, "attach", []string{}, "")
-	ghRelease.Flags().StringVar(&opt.GithubRepo, "repo", "", "")
-	ghRelease.Flags().StringVar(&opt.BodyFile, "body", "", "Release body")
+	ghRelease.Flags().String("version", "").Var(&opt.Version)
+	ghRelease.Flags().String("from", "").Var(&opt.From)
+	ghRelease.Flags().StringArray("attach", "").Var(&opt.Attach)
+	ghRelease.Flags().String("repo", "").Var(&opt.GithubRepo)
+	ghRelease.Flags().String("body", "Release body").Var(&opt.BodyFile)
 
 	rootCmd.AddCommand(ghRelease)
 }

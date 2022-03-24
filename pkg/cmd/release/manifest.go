@@ -1,14 +1,16 @@
 package release
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 type basic struct {
@@ -103,19 +105,19 @@ func manifestCleaner(input, output, version string) error {
 	return finalizer(reader, writer, version)
 }
 
-func ManifestCleaner(rootCmd *cobra.Command) {
+func ManifestCleaner(rootCmd *cmd.Command) {
 	input := ""
 	output := ""
 	version := ""
-	cleaner := &cobra.Command{
+	cleaner := &cmd.Command{
 		Use: "manifest-cleaner",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return manifestCleaner(input, output, version)
 		},
 	}
-	cleaner.Flags().StringVar(&input, "input", "", "Input file")
-	cleaner.Flags().StringVar(&output, "output", "", "Output path")
-	cleaner.Flags().StringVar(&version, "version", "", "Version string")
+	cleaner.Flags().String("input", "Input file").Var(&input)
+	cleaner.Flags().String("output", "Output path").Var(&output)
+	cleaner.Flags().String("version", "Version string").Var(&version)
 
 	rootCmd.AddCommand(cleaner)
 }

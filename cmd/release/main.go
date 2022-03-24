@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/cmd/release"
 )
 
 func releaseCmd(args []string) error {
-	rootCmd := &cobra.Command{
+	rootCmd := &cmd.Command{
 		Use: "release",
 	}
 
@@ -18,8 +17,7 @@ func releaseCmd(args []string) error {
 	release.Container(rootCmd)
 	release.ManifestCleaner(rootCmd)
 
-	rootCmd.SetArgs(args)
-	return rootCmd.Execute()
+	return rootCmd.Execute(args)
 }
 
 func main() {

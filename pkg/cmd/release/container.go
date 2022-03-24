@@ -1,14 +1,16 @@
 package release
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 func containerReleaseCmd(repository, sha256File, tag string, override bool) error {
@@ -55,21 +57,21 @@ func containerReleaseCmd(repository, sha256File, tag string, override bool) erro
 	return nil
 }
 
-func Container(rootCmd *cobra.Command) {
+func Container(rootCmd *cmd.Command) {
 	repository := "ghcr.io/f110"
 	sha256File := ""
 	tag := ""
 	override := false
-	containerRelease := &cobra.Command{
+	containerRelease := &cmd.Command{
 		Use: "container",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return containerReleaseCmd(repository, sha256File, tag, override)
 		},
 	}
-	containerRelease.Flags().StringVar(&repository, "repository", repository, "Container repository name")
-	containerRelease.Flags().StringVar(&sha256File, "sha256", sha256File, "A file that contains a hash of container (e,g, sha256:4041a17506561283c28f168a0a84608bfcfe4847f7ac71cbb0c2fd354d7d4a5b)")
-	containerRelease.Flags().StringVar(&tag, "tag", tag, "Tag name")
-	containerRelease.Flags().BoolVar(&override, "override", false, "Override a tag if exists")
+	containerRelease.Flags().String("repository", "Container repository name").Var(&repository).Default("ghcr.io/f110")
+	containerRelease.Flags().String("sha256", "A file that contains a hash of container (e,g, sha256:4041a17506561283c28f168a0a84608bfcfe4847f7ac71cbb0c2fd354d7d4a5b)").Var(&sha256File)
+	containerRelease.Flags().String("tag", "Tag name").Var(&tag)
+	containerRelease.Flags().Bool("override", "Override a tag if exists").Var(&override)
 
 	rootCmd.AddCommand(containerRelease)
 }
