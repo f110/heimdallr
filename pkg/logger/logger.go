@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
@@ -63,9 +64,19 @@ func InitByFlags() error {
 	return nil
 }
 
-func Flags(fs *pflag.FlagSet) {
-	fs.StringVar(&flagConf.Level, "log-level", "info", "Log level")
-	fs.StringVar(&flagConf.Encoding, "log-encoding", "json", "Log encoding (json or console)")
+type flagSet interface {
+	*pflag.FlagSet | *cmd.FlagSet
+}
+
+func Flags[FS flagSet](v FS) {
+	switch fs := any(v).(type) {
+	case *pflag.FlagSet:
+		fs.StringVar(&flagConf.Level, "log-level", "info", "Log level")
+		fs.StringVar(&flagConf.Encoding, "log-encoding", "json", "Log encoding (json or console)")
+	case *cmd.FlagSet:
+		fs.String("log-level", "Log level").Var(&flagConf.Level).Default("info")
+		fs.String("log-encoding", "Log encoding (json or console)").Var(&flagConf.Encoding).Default("json")
+	}
 }
 
 func WithRequestId(ctx context.Context) zap.Field {

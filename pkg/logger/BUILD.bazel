@@ -10,6 +10,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/logger",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cmd",
         "//pkg/config/configv2",
         "//vendor/github.com/go-logr/zapr",
         "//vendor/github.com/spf13/pflag",

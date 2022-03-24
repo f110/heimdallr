@@ -6,6 +6,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/cmd/operator",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cmd",
         "//pkg/fsm",
         "//pkg/k8s/client/versioned",
         "//pkg/k8s/controllers",
@@ -13,7 +14,6 @@ go_library(
         "//pkg/k8s/webhook",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",
-        "//vendor/github.com/spf13/pflag",
         "//vendor/go.uber.org/zap",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/informers",

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -19,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/fsm"
 	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
@@ -269,18 +269,18 @@ func (m *mainProcess) shutdown() (fsm.State, error) {
 	return fsm.CloseState, nil
 }
 
-func (m *mainProcess) Flags(fs *pflag.FlagSet) {
-	fs.StringVar(&m.id, "id", m.id, "the holder identity name")
-	fs.StringVar(&m.metricsAddr, "metrics-addr", m.metricsAddr, "The address the metric endpoint binds to.")
-	fs.StringVar(&m.leaseLockName, "lease-lock-name", m.leaseLockName, "the lease lock resource name")
-	fs.StringVar(&m.leaseLockNamespace, "lease-lock-namespace", m.leaseLockNamespace, "the lease lock resource namespace")
-	fs.StringVar(&m.clusterDomain, "cluster-domain", m.clusterDomain, "Cluster domain")
-	fs.StringVar(&m.probeAddr, "probe-addr", m.probeAddr, "Listen addr that provides readiness probe")
-	fs.IntVar(&m.workers, "workers", m.workers, "The number of workers on each controller")
-	fs.BoolVar(&m.dev, "dev", m.dev, "development mode")
-	fs.BoolVar(&m.disableWebhook, "disable-webhook", m.disableWebhook, "Disable webhook server")
-	fs.StringVar(&m.certFile, "cert", m.certFile, "Server certificate file for webhook")
-	fs.StringVar(&m.keyFile, "key", m.keyFile, "Private key for server certificate")
+func (m *mainProcess) Flags(fs *cmd.FlagSet) {
+	fs.String("id", "the holder identity name").Var(&m.id).Default(m.id)
+	fs.String("metrics-addr", "The address the metric endpoint binds to.").Var(&m.metricsAddr).Default(m.metricsAddr)
+	fs.String("lease-lock-name", "the lease lock resource name").Var(&m.leaseLockName).Default(m.leaseLockName)
+	fs.String("lease-lock-namespace", "the lease lock resource namespace").Var(&m.leaseLockNamespace).Default(m.leaseLockNamespace)
+	fs.String("cluster-domain", "Cluster domain").Var(&m.clusterDomain).Default(m.clusterDomain)
+	fs.String("probe-addr", "Listen addr that provides readiness probe").Var(&m.probeAddr).Default(m.probeAddr)
+	fs.Int("workers", "The number of workers on each controller").Var(&m.workers).Default(m.workers)
+	fs.Bool("dev", "development mode").Var(&m.dev).Default(m.dev)
+	fs.Bool("disable-webhook", "Disable webhook server").Var(&m.disableWebhook).Default(m.disableWebhook)
+	fs.String("cert", "Server certificate file for webhook").Var(&m.certFile).Default(m.certFile)
+	fs.String("key", "Private key for server certificate").Var(&m.keyFile).Default(m.keyFile)
 
 	logger.Flags(fs)
 }
