@@ -127,6 +127,12 @@ func (fs *FlagSet) String(name, usage string) *StringFlag {
 	return f
 }
 
+func (fs *FlagSet) StringArray(name, usage string) *StringArrayFlag {
+	f := NewStringArrayFlag(name, usage)
+	fs.flags = append(fs.flags, f)
+	return f
+}
+
 func (fs *FlagSet) Int(name, usage string) *IntFlag {
 	f := NewIntFlag(name, usage)
 	fs.flags = append(fs.flags, f)
@@ -516,6 +522,63 @@ func (f *Float32Flag) Flag() *pflag.Flag {
 	return f.flag
 }
 
+type StringArrayFlag struct {
+	flag *pflag.Flag
+}
+
+func NewStringArrayFlag(name, usage string) *StringArrayFlag {
+	return &StringArrayFlag{
+		flag: &pflag.Flag{
+			Name:  name,
+			Usage: usage,
+			Value: (*stringArrayValue)(new([]string)),
+		},
+	}
+}
+
+func (f *StringArrayFlag) Var(p *[]string) *StringArrayFlag {
+	f.flag.Value = (*stringArrayValue)(p)
+	return f
+}
+
+func (f *StringArrayFlag) Shorthand(p string) *StringArrayFlag {
+	f.flag.Shorthand = p
+	return f
+}
+
+func (f *StringArrayFlag) Required() *StringArrayFlag {
+	setAnnotationRequired(f.flag)
+	return f
+}
+
+func (f *StringArrayFlag) Deprecated(msg string) *StringArrayFlag {
+	f.flag.Deprecated = msg
+	f.flag.Hidden = true
+	return f
+}
+
+func (f *StringArrayFlag) ShorthandDeprecated(msg string) *StringArrayFlag {
+	f.flag.ShorthandDeprecated = msg
+	return f
+}
+
+func (f *StringArrayFlag) Hidden() *StringArrayFlag {
+	f.flag.Hidden = true
+	return f
+}
+
+func (f *StringArrayFlag) Default(defaultValue []string) *StringArrayFlag {
+	f.flag.DefValue = fmt.Sprintf("[%s]", strings.Join(defaultValue, ", "))
+	for _, v := range defaultValue {
+		_ = f.flag.Value.Set(v)
+	}
+	return f
+}
+
+func (f *StringArrayFlag) Flag() *pflag.Flag {
+	return f.flag
+}
+
 func setAnnotationRequired(flag *pflag.Flag) {
 	if flag.Annotations == nil {
 		flag.Annotations = make(map[string][]string)
@@ -643,4 +706,19 @@ func (f *float32Value) Set(val string) error {
 
 func (f *float32Value) Type() string {
 	return "float32"
+}
+
+type stringArrayValue []string
+
+func (f *stringArrayValue) String() string {
+	return fmt.Sprintf("[%s]", strings.Join(*f, ", "))
+}
+
+func (f *stringArrayValue) Set(val string) error {
+	*f = append(*f, val)
+	return nil
+}
+
+func (f *stringArrayValue) Type() string {
+	return "stringArray"
 }

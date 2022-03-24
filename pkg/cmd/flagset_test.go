@@ -101,4 +101,16 @@ func TestFlagSet(t *testing.T) {
 		require.Error(t, err)
 		assert.EqualError(t, err, "required flags \"foo, bar\" not set")
 	})
+
+	t.Run("StringArray", func(t *testing.T) {
+		fs := NewFlagSet("cmd", pflag.ContinueOnError)
+		var foo, bar []string
+		fs.StringArray("foo", "Usage foo").Var(&foo)
+		fs.StringArray("bar", "Usage bar").Var(&bar).Default([]string{"foo", "good"})
+		err := fs.Parse([]string{"cmd", "--foo", "bar", "--foo", "baz"})
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"bar", "baz"}, foo)
+		assert.Equal(t, []string{"foo", "good"}, bar)
+	})
 }
