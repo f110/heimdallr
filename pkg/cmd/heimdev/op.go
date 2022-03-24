@@ -20,9 +20,10 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/gorilla/mux"
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 	"gopkg.in/square/go-jose.v2"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 func openIDProvider(port int, signingPrivateKey string) error {
@@ -107,24 +108,20 @@ func openIDProvider(port int, signingPrivateKey string) error {
 	return s.ListenAndServe()
 }
 
-func OpenIDProvider(rootCmd *cobra.Command) {
+func OpenIDProvider(rootCmd *cmd.Command) {
 	port := 5001
 	signingPrivateKey := ""
 
-	opCommand := &cobra.Command{
+	opCommand := &cmd.Command{
 		Use:   "op",
 		Short: "Start the OpenID Provider",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			mrand.Seed(time.Now().UnixNano())
 			return openIDProvider(port, signingPrivateKey)
 		},
 	}
-	opCommand.Flags().IntVar(&port, "port", port, "Listen port")
-	opCommand.Flags().StringVar(&signingPrivateKey, "private-key", signingPrivateKey, "Private key file for signing")
-
-	if err := opCommand.MarkFlagRequired("private-key"); err != nil {
-		panic(err)
-	}
+	opCommand.Flags().Int("port", "Listen port").Var(&port).Default(5001)
+	opCommand.Flags().String("private-key", "Private key file for signing").Var(&signingPrivateKey).Required()
 
 	rootCmd.AddCommand(opCommand)
 }

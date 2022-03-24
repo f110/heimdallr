@@ -1,6 +1,7 @@
 package heimdev
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -14,11 +15,11 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/websocket"
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 func testServer(port int, publicKeyFile string) error {
@@ -152,19 +153,19 @@ window.onload = function () {
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
-func TestServer(rootCmd *cobra.Command) {
+func TestServer(rootCmd *cmd.Command) {
 	port := 4501
 	publicKeyFile := ""
 
-	testServerCmd := &cobra.Command{
+	testServerCmd := &cmd.Command{
 		Use:   "testserver",
 		Short: "Start a http server for testing",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return testServer(port, publicKeyFile)
 		},
 	}
-	testServerCmd.Flags().IntVar(&port, "port", 4501, "Listen port")
-	testServerCmd.Flags().StringVar(&publicKeyFile, "public-key", publicKeyFile, "public key file")
+	testServerCmd.Flags().Int("port", "Listen port").Var(&port).Default(4501)
+	testServerCmd.Flags().String("public-key", "public key file").Var(&publicKeyFile).Default(publicKeyFile)
 	testServerCmd.Usage()
 
 	rootCmd.AddCommand(testServerCmd)

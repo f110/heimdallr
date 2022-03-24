@@ -9,13 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 )
@@ -273,65 +272,65 @@ type commandOptions struct {
 	ClusterName string
 }
 
-func Cluster(rootCmd *cobra.Command) {
+func Cluster(rootCmd *cmd.Command) {
 	k8sVersion := ""
 	kubeConfig := ""
 	crdFile := ""
 	workerNum := 3
 	opts := &commandOptions{}
 
-	clusterCmd := &cobra.Command{
+	clusterCmd := &cmd.Command{
 		Use:   "cluster",
 		Short: "Manage the cluster for development",
 	}
 
-	create := &cobra.Command{
+	create := &cmd.Command{
 		Use:   "create",
 		Short: "Create the cluster for develop the operator",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return setupCluster(opts.KindPath, opts.ClusterName, k8sVersion, workerNum, kubeConfig, crdFile)
 		},
 	}
 	commonFlags(create.Flags(), opts)
-	create.Flags().StringVar(&k8sVersion, "k8s-version", "", "Kubernetes version")
-	create.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
-	create.Flags().StringVar(&crdFile, "crd", "", "Applying manifest file after create the cluster")
-	create.Flags().IntVar(&workerNum, "worker-num", 3, "The number of k8s workers")
+	create.Flags().String("k8s-version", "Kubernetes version").Var(&k8sVersion)
+	create.Flags().String("kubeconfig", "Path to the kubeconfig file. If not specified, will be used default file of kubectl").Var(&kubeConfig)
+	create.Flags().String("crd", "Applying manifest file after create the cluster").Var(&crdFile)
+	create.Flags().Int("worker-num", "The number of k8s workers").Var(&workerNum).Default(3)
 	clusterCmd.AddCommand(create)
 
-	del := &cobra.Command{
+	del := &cmd.Command{
 		Use:   "delete",
 		Short: "Delete the cluster",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return deleteCluster(opts.KindPath, opts.ClusterName, kubeConfig)
 		},
 	}
 	commonFlags(del.Flags(), opts)
-	del.Flags().StringVar(&kubeConfig, "kubeconfig", "", "Path to the kubeconfig file. If not specified, will be used default file of kubectl")
+	del.Flags().String("kubeconfig", "Path to the kubeconfig file. If not specified, will be used default file of kubectl").Var(&kubeConfig)
 	clusterCmd.AddCommand(del)
 
 	manifestFile := ""
 	controllerImage := ""
 	sidecarImage := ""
 	namespace := ""
-	runOperator := &cobra.Command{
+	runOperator := &cmd.Command{
 		Use:   "run-operator",
 		Short: "Run the operator",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
 		},
 	}
 	commonFlags(runOperator.Flags(), opts)
-	runOperator.Flags().StringVar(&manifestFile, "manifest", "", "A manifest file for the controller")
-	runOperator.Flags().StringVar(&controllerImage, "controller-image", "", "A path of file of controller")
-	runOperator.Flags().StringVar(&sidecarImage, "sidecar-image", "", "A path of file of sidecar")
-	runOperator.Flags().StringVarP(&namespace, "namespace", "n", "heimdallr", "The namespace of operator")
+	runOperator.Flags().String("manifest", "A manifest file for the controller").Var(&manifestFile)
+	runOperator.Flags().String("controller-image", "A path of file of controller").Var(&controllerImage)
+	runOperator.Flags().String("sidecar-image", "A path of file of sidecar").Var(&sidecarImage)
+	runOperator.Flags().String("namespace", "The namespace of operator").Var(&namespace).Shorthand("n").Default("heimdallr")
 	clusterCmd.AddCommand(runOperator)
 
-	logs := &cobra.Command{
+	logs := &cmd.Command{
 		Use:   "log-operator",
 		Short: "Print the log of operator",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return logOperator(opts.KindPath, opts.ClusterName, "heimdallr")
 		},
 	}
@@ -339,28 +338,26 @@ func Cluster(rootCmd *cobra.Command) {
 	clusterCmd.AddCommand(logs)
 
 	images := make([]string, 0)
-	load := &cobra.Command{
+	load := &cmd.Command{
 		Use:   "load",
 		Short: "Load container images",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return loadImages(opts.KindPath, opts.ClusterName, images)
 		},
 	}
 	commonFlags(load.Flags(), opts)
-	load.Flags().StringSliceVar(
-		&images,
+	load.Flags().StringArray(
 		"images",
-		[]string{},
 		`Loading images. each arguments will required name and path.
-A separator between name and path is equal mark.
-(e,g, --images ghcr.io/f110/heimdallr:latest=./image.tar)`,
-	)
+	A separator between name and path is equal mark.
+	(e,g, --images ghcr.io/f110/heimdallr:latest=./image.tar)`,
+	).Var(&images)
 	clusterCmd.AddCommand(load)
 
 	rootCmd.AddCommand(clusterCmd)
 }
 
-func commonFlags(fs *pflag.FlagSet, opts *commandOptions) {
-	fs.StringVar(&opts.ClusterName, "name", defaultClusterName, "Cluster name")
-	fs.StringVar(&opts.KindPath, "kind", "", "kind command path")
+func commonFlags(fs *cmd.FlagSet, opts *commandOptions) {
+	fs.String("name", "Cluster name").Var(&opts.ClusterName).Default(defaultClusterName)
+	fs.String("kind", "kind command path").Var(&opts.KindPath)
 }

@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/cmd/heimdev"
 )
 
 func dev(args []string) error {
-	rootCmd := &cobra.Command{
+	rootCmd := &cmd.Command{
 		Use: "heimdev",
 	}
 
@@ -20,8 +19,7 @@ func dev(args []string) error {
 	heimdev.Graph(rootCmd)
 	heimdev.OpenIDProvider(rootCmd)
 
-	rootCmd.SetArgs(args)
-	return rootCmd.Execute()
+	return rootCmd.Execute(args)
 }
 
 func main() {

@@ -1,12 +1,14 @@
 package heimdev
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 
 	"github.com/miekg/dns"
-	"github.com/spf13/cobra"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 func dnsServer(port int) error {
@@ -45,15 +47,15 @@ func dnsServer(port int) error {
 	return nil
 }
 
-func DNS(rootCmd *cobra.Command) {
+func DNS(rootCmd *cmd.Command) {
 	port := 5000
-	dnsCmd := &cobra.Command{
+	dnsCmd := &cmd.Command{
 		Use: "dns",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return dnsServer(port)
 		},
 	}
-	dnsCmd.Flags().IntVar(&port, "port", port, "Listen port")
+	dnsCmd.Flags().Int("port", "Listen port").Var(&port).Default(5000)
 
 	rootCmd.AddCommand(dnsCmd)
 }
