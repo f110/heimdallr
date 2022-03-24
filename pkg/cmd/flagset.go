@@ -168,7 +168,8 @@ const (
 )
 
 type StringFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue string
 }
 
 func NewStringFlag(name, usage string) *StringFlag {
@@ -188,6 +189,9 @@ func (f *StringFlag) Shorthand(p string) *StringFlag {
 
 func (f *StringFlag) Var(p *string) *StringFlag {
 	f.flag.Value = (*stringValue)(p)
+	if f.defaultValue != "" {
+		_ = f.flag.Value.Set(f.defaultValue)
+	}
 	return f
 }
 
@@ -214,6 +218,7 @@ func (f *StringFlag) Hidden() *StringFlag {
 
 func (f *StringFlag) Default(defaultValue string) *StringFlag {
 	f.flag.DefValue = defaultValue
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(defaultValue)
 	return f
 }
@@ -227,7 +232,8 @@ func (f *StringFlag) Flag() *pflag.Flag {
 }
 
 type IntFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue int
 }
 
 func NewIntFlag(name, usage string) *IntFlag {
@@ -247,6 +253,9 @@ func (f *IntFlag) Shorthand(p string) *IntFlag {
 
 func (f *IntFlag) Var(p *int) *IntFlag {
 	f.flag.Value = (*intValue)(p)
+	if f.defaultValue != 0 {
+		_ = f.flag.Value.Set(f.flag.DefValue)
+	}
 	return f
 }
 
@@ -273,6 +282,7 @@ func (f *IntFlag) Hidden() *IntFlag {
 
 func (f *IntFlag) Default(defaultValue int) *IntFlag {
 	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
@@ -286,7 +296,8 @@ func (f *IntFlag) Flag() *pflag.Flag {
 }
 
 type UintFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue uint
 }
 
 func NewUintFlag(name string, usage string) *UintFlag {
@@ -306,6 +317,9 @@ func (f *UintFlag) Shorthand(p string) *UintFlag {
 
 func (f *UintFlag) Var(p *uint) *UintFlag {
 	f.flag.Value = (*uintValue)(p)
+	if f.defaultValue != 0 {
+		_ = f.flag.Value.Set(f.flag.DefValue)
+	}
 	return f
 }
 
@@ -332,6 +346,7 @@ func (f *UintFlag) Hidden() *UintFlag {
 
 func (f *UintFlag) Default(defaultValue uint) *UintFlag {
 	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
@@ -345,7 +360,8 @@ func (f *UintFlag) Flag() *pflag.Flag {
 }
 
 type BoolFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue bool
 }
 
 func NewBoolFlag(name string, usage string) *BoolFlag {
@@ -366,6 +382,9 @@ func (f *BoolFlag) Shorthand(p string) *BoolFlag {
 
 func (f *BoolFlag) Var(p *bool) *BoolFlag {
 	f.flag.Value = (*boolValue)(p)
+	if f.defaultValue {
+		_ = f.flag.Value.Set(f.flag.DefValue)
+	}
 	return f
 }
 
@@ -392,6 +411,7 @@ func (f *BoolFlag) Hidden() *BoolFlag {
 
 func (f *BoolFlag) Default(defaultValue bool) *BoolFlag {
 	f.flag.DefValue = fmt.Sprintf("%t", defaultValue)
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
@@ -405,7 +425,8 @@ func (f *BoolFlag) Flag() *pflag.Flag {
 }
 
 type DurationFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue time.Duration
 }
 
 func NewDurationFlag(name string, usage string) *DurationFlag {
@@ -425,6 +446,9 @@ func (f *DurationFlag) Shorthand(p string) *DurationFlag {
 
 func (f *DurationFlag) Var(p *time.Duration) *DurationFlag {
 	f.flag.Value = (*durationValue)(p)
+	if f.defaultValue != 0 {
+		_ = f.flag.Value.Set(f.flag.DefValue)
+	}
 	return f
 }
 
@@ -451,6 +475,7 @@ func (f *DurationFlag) Hidden() *DurationFlag {
 
 func (f *DurationFlag) Default(defaultValue time.Duration) *DurationFlag {
 	f.flag.DefValue = defaultValue.String()
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
@@ -464,7 +489,8 @@ func (f *DurationFlag) Flag() *pflag.Flag {
 }
 
 type Float32Flag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue float32
 }
 
 func NewFloat32Flag(name string, usage string) *Float32Flag {
@@ -484,6 +510,9 @@ func (f *Float32Flag) Shorthand(p string) *Float32Flag {
 
 func (f *Float32Flag) Var(p *float32) *Float32Flag {
 	f.flag.Value = (*float32Value)(p)
+	if f.defaultValue != 0 {
+		_ = f.flag.Value.Set(f.flag.DefValue)
+	}
 	return f
 }
 
@@ -510,6 +539,7 @@ func (f *Float32Flag) Hidden() *Float32Flag {
 
 func (f *Float32Flag) Default(defaultValue float32) *Float32Flag {
 	f.flag.DefValue = strconv.FormatFloat(float64(defaultValue), 'g', -1, 32)
+	f.defaultValue = defaultValue
 	_ = f.flag.Value.Set(f.flag.DefValue)
 	return f
 }
@@ -523,7 +553,8 @@ func (f *Float32Flag) Flag() *pflag.Flag {
 }
 
 type StringArrayFlag struct {
-	flag *pflag.Flag
+	flag         *pflag.Flag
+	defaultValue []string
 }
 
 func NewStringArrayFlag(name, usage string) *StringArrayFlag {
@@ -538,6 +569,11 @@ func NewStringArrayFlag(name, usage string) *StringArrayFlag {
 
 func (f *StringArrayFlag) Var(p *[]string) *StringArrayFlag {
 	f.flag.Value = (*stringArrayValue)(p)
+	if len(f.defaultValue) > 0 {
+		for _, v := range f.defaultValue {
+			_ = f.flag.Value.Set(v)
+		}
+	}
 	return f
 }
 
@@ -569,6 +605,7 @@ func (f *StringArrayFlag) Hidden() *StringArrayFlag {
 
 func (f *StringArrayFlag) Default(defaultValue []string) *StringArrayFlag {
 	f.flag.DefValue = fmt.Sprintf("[%s]", strings.Join(defaultValue, ", "))
+	f.defaultValue = defaultValue
 	for _, v := range defaultValue {
 		_ = f.flag.Value.Set(v)
 	}
