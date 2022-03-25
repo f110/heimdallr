@@ -10,7 +10,9 @@ import (
 )
 
 type FlagSet struct {
-	flagSet *pflag.FlagSet
+	flagSet       *pflag.FlagSet
+	name          string
+	errorHandling pflag.ErrorHandling
 
 	added bool
 	flags []flag
@@ -21,7 +23,20 @@ type flag interface {
 }
 
 func NewFlagSet(name string, errorHandling pflag.ErrorHandling) *FlagSet {
-	return &FlagSet{flagSet: pflag.NewFlagSet(name, errorHandling)}
+	return &FlagSet{flagSet: pflag.NewFlagSet(name, errorHandling), name: name, errorHandling: errorHandling}
+}
+
+func (fs *FlagSet) Len() int {
+	return len(fs.flags)
+}
+
+func (fs *FlagSet) Copy() *FlagSet {
+	newFs := pflag.NewFlagSet(fs.name, fs.errorHandling)
+	var flags []flag
+	for _, v := range fs.flags {
+		flags = append(flags, v)
+	}
+	return &FlagSet{flagSet: newFs, name: fs.name, errorHandling: fs.errorHandling, flags: flags}
 }
 
 func (fs *FlagSet) Parse(args []string) error {

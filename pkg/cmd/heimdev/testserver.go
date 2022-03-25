@@ -166,7 +166,6 @@ func TestServer(rootCmd *cmd.Command) {
 	}
 	testServerCmd.Flags().Int("port", "Listen port").Var(&port).Default(4501)
 	testServerCmd.Flags().String("public-key", "public key file").Var(&publicKeyFile).Default(publicKeyFile)
-	testServerCmd.Usage()
 
 	rootCmd.AddCommand(testServerCmd)
 }
