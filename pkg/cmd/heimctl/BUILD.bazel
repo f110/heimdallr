@@ -15,6 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert",
+        "//pkg/cmd",
         "//pkg/config",
         "//pkg/config/configutil",
         "//pkg/config/configv2",
@@ -25,7 +26,6 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/version",
         "//vendor/github.com/gorilla/securecookie",
-        "//vendor/github.com/spf13/cobra",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",

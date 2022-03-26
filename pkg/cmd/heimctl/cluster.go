@@ -1,11 +1,12 @@
 package heimctl
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
@@ -20,17 +21,17 @@ func memberList(c *rpcclient.Client) error {
 	return nil
 }
 
-func Cluster(rootCmd *cobra.Command) {
+func Cluster(rootCmd *cmd.Command) {
 	confFile := ""
-	clusterCmd := &cobra.Command{
+	clusterCmd := &cmd.Command{
 		Use:   "cluster",
 		Short: "Administrate the proxy cluster itself",
 	}
-	clusterCmd.Flags().StringVarP(&confFile, "config", "c", confFile, "Config file")
+	clusterCmd.Flags().String("config", "Config file").Var(&confFile).Shorthand("c")
 
-	memberList := &cobra.Command{
+	memberList := &cmd.Command{
 		Use: "member-list",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			c, err := getClient(confFile)
 			if err != nil {
 				return err

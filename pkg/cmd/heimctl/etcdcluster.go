@@ -5,27 +5,29 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
-	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 	"golang.org/x/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"go.f110.dev/heimdallr/pkg/cmd"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
+	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
 )
 
-func EtcdCluster(rootCmd *cobra.Command) {
-	etcdClusterCmd := &cobra.Command{
+func EtcdCluster(rootCmd *cmd.Command) {
+	etcdClusterCmd := &cmd.Command{
 		Use:   "etcdcluster",
 		Short: "Manage the EtcdCluster",
 	}
 
 	namespaceFlag := ""
-	forceUpdateCmd := &cobra.Command{
+	forceUpdateCmd := &cmd.Command{
 		Use:   "force-update cluster-name",
 		Short: "Rolling update forcibly",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(_ context.Context, c *cmd.Command, args []string) error {
 			if len(args) == 0 {
-				return cmd.Usage()
+				_, _ = os.Stderr.WriteString(c.Usage())
+				return nil
 			}
 			name := args[0]
 
@@ -61,7 +63,7 @@ func EtcdCluster(rootCmd *cobra.Command) {
 			return nil
 		},
 	}
-	forceUpdateCmd.Flags().StringVarP(&namespaceFlag, "namespace", "n", "", "Namespace")
+	forceUpdateCmd.Flags().String("namespace", "Namespace").Var(&namespaceFlag).Shorthand("n")
 	etcdClusterCmd.AddCommand(forceUpdateCmd)
 
 	rootCmd.AddCommand(etcdClusterCmd)

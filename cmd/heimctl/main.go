@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/cmd/heimctl"
 )
 
 func cli(args []string) error {
-	rootCmd := &cobra.Command{
+	rootCmd := &cmd.Command{
 		Use:   "heimctl",
 		Short: "heimctl is the manager command for heimdallr proxy",
 	}
@@ -23,8 +22,7 @@ func cli(args []string) error {
 	heimctl.Generate(rootCmd)
 	heimctl.EtcdCluster(rootCmd)
 
-	rootCmd.SetArgs(args)
-	return rootCmd.Execute()
+	return rootCmd.Execute(args)
 }
 
 func main() {

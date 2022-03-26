@@ -1,19 +1,19 @@
 package heimctl
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 
-	"github.com/spf13/cobra"
-
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/version"
 )
 
-func Version(rootCmd *cobra.Command) {
-	versionCmd := &cobra.Command{
+func Version(rootCmd *cmd.Command) {
+	versionCmd := &cmd.Command{
 		Use:   "version",
 		Short: "Print version",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			fmt.Printf("Version: %s\n", version.Version)
 			fmt.Printf("Go version: %s\n", runtime.Version())
 			return nil

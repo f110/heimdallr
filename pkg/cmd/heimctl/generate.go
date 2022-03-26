@@ -1,21 +1,22 @@
 package heimctl
 
 import (
+	"context"
 	"errors"
 	"os"
 
-	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	proxyv1alpha1 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha1"
 )
 
-func Generate(rootCmd *cobra.Command) {
-	generate := &cobra.Command{
+func Generate(rootCmd *cmd.Command) {
+	generate := &cmd.Command{
 		Use:   "generate",
 		Short: "Generate something",
 	}
@@ -24,13 +25,13 @@ func Generate(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(generate)
 }
 
-func generateBackendCommand() *cobra.Command {
+func generateBackendCommand() *cmd.Command {
 	input := ""
 	output := ""
-	backend := &cobra.Command{
+	backend := &cmd.Command{
 		Use:   "backend",
 		Short: "Generate Backend from Service",
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			sch := runtime.NewScheme()
 			if err := corev1.AddToScheme(sch); err != nil {
 				return err
@@ -92,8 +93,8 @@ func generateBackendCommand() *cobra.Command {
 			return s.Encode(backend, outWriter)
 		},
 	}
-	backend.Flags().StringVarP(&input, "input", "i", input, "Input")
-	backend.Flags().StringVarP(&output, "output", "o", output, "Output")
+	backend.Flags().String("input", "Input").Var(&input).Shorthand("i")
+	backend.Flags().String("output", "Output").Var(&output).Shorthand("o")
 
 	return backend
 }

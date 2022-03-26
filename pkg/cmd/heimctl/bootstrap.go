@@ -1,6 +1,7 @@
 package heimctl
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -16,11 +17,11 @@ import (
 	"strings"
 
 	"github.com/gorilla/securecookie"
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
@@ -195,16 +196,16 @@ func createNewServerCertificate(conf *configv2.Config, dir string, ca *x509.Cert
 	return nil
 }
 
-func Bootstrap(rootCmd *cobra.Command) {
+func Bootstrap(rootCmd *cmd.Command) {
 	confFile := ""
-	bs := &cobra.Command{
+	bs := &cmd.Command{
 		Use:   "bootstrap",
 		Short: "Create some config files and secrets for development",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return bootstrap(confFile)
 		},
 	}
-	bs.Flags().StringVarP(&confFile, "config", "c", confFile, "Config file")
+	bs.Flags().String("config", "Config file").Var(&confFile).Shorthand("c")
 
 	rootCmd.AddCommand(bs)
 }

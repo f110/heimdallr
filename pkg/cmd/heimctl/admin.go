@@ -1,16 +1,17 @@
 package heimctl
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
@@ -58,18 +59,18 @@ func userList(c *rpcclient.Client, role string) error {
 	return nil
 }
 
-func Admin(rootCmd *cobra.Command) {
+func Admin(rootCmd *cmd.Command) {
 	confFile := ""
 	role := ""
 
-	adminCmd := &cobra.Command{
+	adminCmd := &cmd.Command{
 		Use:   "admin",
 		Short: "Administrate the proxy",
 	}
 
-	userListCmd := &cobra.Command{
+	userListCmd := &cmd.Command{
 		Use: "user-list",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			c, err := getClient(confFile)
 			if err != nil {
 				return err
@@ -78,8 +79,8 @@ func Admin(rootCmd *cobra.Command) {
 			return userList(c, role)
 		},
 	}
-	userListCmd.Flags().StringVar(&role, "role", role, "Role")
-	userListCmd.Flags().StringVarP(&confFile, "config", "c", confFile, "Config file")
+	userListCmd.Flags().String("role", "Role").Var(&role)
+	userListCmd.Flags().String("config", "Config file").Var(&confFile).Shorthand("c")
 	adminCmd.AddCommand(userListCmd)
 
 	rootCmd.AddCommand(adminCmd)

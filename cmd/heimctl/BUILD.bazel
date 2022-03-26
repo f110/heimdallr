@@ -6,8 +6,8 @@ go_library(
     importpath = "go.f110.dev/heimdallr/cmd/heimctl",
     visibility = ["//visibility:private"],
     deps = [
+        "//pkg/cmd",
         "//pkg/cmd/heimctl",
-        "//vendor/github.com/spf13/cobra",
     ],
 )
 

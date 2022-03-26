@@ -2,6 +2,7 @@ package heimctl
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/hmac"
@@ -18,16 +19,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 )
 
-func Util(rootCmd *cobra.Command) {
-	util := &cobra.Command{
+func Util(rootCmd *cmd.Command) {
+	util := &cmd.Command{
 		Use:   "util",
 		Short: "Utilities",
 	}
@@ -38,14 +39,14 @@ func Util(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(util)
 }
 
-func githubSignature() *cobra.Command {
+func githubSignature() *cmd.Command {
 	confFile := ""
 	body := ""
 
-	ghSignature := &cobra.Command{
+	ghSignature := &cmd.Command{
 		Use:   "github-signature",
 		Short: "Generate a signature of webhook of github",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			conf, err := configutil.ReadConfig(confFile)
 			if err != nil {
 				return err
@@ -58,21 +59,21 @@ func githubSignature() *cobra.Command {
 			return nil
 		},
 	}
-	ghSignature.Flags().StringVarP(&confFile, "config", "c", confFile, "Config file")
-	ghSignature.Flags().StringVarP(&body, "body", "d", body, "Request body")
+	ghSignature.Flags().String("config", "Config file").Var(&confFile).Shorthand("c")
+	ghSignature.Flags().String("body", "Request body").Var(&body).Shorthand("d")
 
 	return ghSignature
 }
 
-func webhookCert() *cobra.Command {
+func webhookCert() *cmd.Command {
 	commonName := ""
 	certificateFile := ""
 	privateKeyFile := ""
 
-	wc := &cobra.Command{
+	wc := &cmd.Command{
 		Use:   "webhook-cert",
 		Short: "Generating the server certificate for Admission webhook server",
-		RunE: func(_ *cobra.Command, args []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			if _, err := os.Stat(certificateFile); err == nil {
 				return xerrors.Errorf("%s is exist", certificateFile)
 			}
@@ -128,24 +129,21 @@ func webhookCert() *cobra.Command {
 			return nil
 		},
 	}
-	wc.Flags().StringVar(&commonName, "common-name", "", "Common Name. This value will used at SAN")
-	wc.Flags().StringVar(&privateKeyFile, "private-key", "", "File path of private key")
-	wc.Flags().StringVar(&certificateFile, "certificate", "", "File path of certificate")
-	_ = wc.MarkFlagRequired("common-name")
-	_ = wc.MarkFlagRequired("private-key")
-	_ = wc.MarkFlagRequired("certificate")
+	wc.Flags().String("common-name", "Common Name. This value will used at SAN").Var(&commonName).Required()
+	wc.Flags().String("private-key", "File path of private key").Var(&privateKeyFile).Required()
+	wc.Flags().String("certificate", "File path of certificate").Var(&certificateFile).Required()
 
 	return wc
 }
 
-func convertV2Config() *cobra.Command {
+func convertV2Config() *cmd.Command {
 	v1Config := ""
 	output := ""
 
-	cc := &cobra.Command{
+	cc := &cmd.Command{
 		Use:   "convert-v2-config",
 		Short: "Covert to v2 config from v1",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			var outWriter io.Writer
 			if output == "" {
 				outWriter = os.Stdout
@@ -182,9 +180,8 @@ func convertV2Config() *cobra.Command {
 			return nil
 		},
 	}
-	cc.Flags().StringVarP(&v1Config, "config", "c", "", "Config file which is v1 format")
-	cc.Flags().StringVar(&output, "output", "", "Output file")
-	_ = cc.MarkFlagRequired("config")
+	cc.Flags().String("config", "Config file which is v1 format").Var(&v1Config).Shorthand("c").Required()
+	cc.Flags().String("output", "Output file").Var(&output)
 
 	return cc
 }
