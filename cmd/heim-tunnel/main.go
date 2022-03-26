@@ -4,20 +4,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/cmd/tunnel"
 )
 
 func tunnelCli(args []string) error {
-	rootCmd := &cobra.Command{Use: "heim-tunnel"}
+	rootCmd := &cmd.Command{Use: "heim-tunnel"}
 
 	tunnel.Init(rootCmd)
 	tunnel.Info(rootCmd)
 	tunnel.Proxy(rootCmd)
 
-	rootCmd.SetArgs(args)
-	return rootCmd.Execute()
+	return rootCmd.Execute(args)
 }
 
 func main() {

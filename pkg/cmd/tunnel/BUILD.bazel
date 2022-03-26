@@ -12,8 +12,8 @@ go_library(
     deps = [
         "//pkg/auth/token",
         "//pkg/authproxy",
+        "//pkg/cmd",
         "//pkg/config/userconfig",
-        "//vendor/github.com/spf13/cobra",
         "//vendor/golang.org/x/xerrors",
     ],
 )

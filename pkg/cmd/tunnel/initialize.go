@@ -1,14 +1,15 @@
 package tunnel
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
@@ -65,13 +66,13 @@ func loadCertificate(p string) error {
 	return nil
 }
 
-func Init(rootCmd *cobra.Command) {
+func Init(rootCmd *cmd.Command) {
 	force := false
 	certificate := ""
-	initCmd := &cobra.Command{
+	initCmd := &cmd.Command{
 		Use:   "init",
 		Short: "Initialize the command",
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, cmd *cmd.Command, _ []string) error {
 			if certificate != "" {
 				return loadCertificate(certificate)
 			} else {
@@ -79,8 +80,8 @@ func Init(rootCmd *cobra.Command) {
 			}
 		},
 	}
-	initCmd.Flags().BoolVar(&force, "force", false, "Set up forcibly")
-	initCmd.Flags().StringVar(&certificate, "certificate", "", "The file path of certificate")
+	initCmd.Flags().Bool("force", "Set up forcibly").Var(&force)
+	initCmd.Flags().String("certificate", "The file path of certificate").Var(&certificate)
 
 	rootCmd.AddCommand(initCmd)
 }

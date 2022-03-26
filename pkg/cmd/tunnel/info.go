@@ -1,13 +1,14 @@
 package tunnel
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
@@ -29,11 +30,11 @@ func info() error {
 	return nil
 }
 
-func Info(rootCmd *cobra.Command) {
-	infoCmd := &cobra.Command{
+func Info(rootCmd *cmd.Command) {
+	infoCmd := &cmd.Command{
 		Use:   "info",
 		Short: "Show the information of the certificate",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			return info()
 		},
 	}

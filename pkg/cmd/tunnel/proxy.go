@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/authproxy"
+	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
@@ -79,21 +79,20 @@ Retry:
 	return err
 }
 
-func Proxy(rootCmd *cobra.Command) {
+func Proxy(rootCmd *cmd.Command) {
 	resolverAddr := ""
 	overrideOpenURLCommand := ""
 	insecure := false
-	proxyCmd := &cobra.Command{
-		Use:   "proxy [host]",
+	proxyCmd := &cmd.Command{
+		Use:   "proxy",
 		Short: "Proxy to backend",
-		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		Run: func(_ context.Context, _ *cmd.Command, args []string) error {
 			return proxy(args, resolverAddr, overrideOpenURLCommand, insecure)
 		},
 	}
-	proxyCmd.Flags().StringVar(&overrideOpenURLCommand, "override-open-url-command", "", "Override command for opening URL")
-	proxyCmd.Flags().StringVar(&resolverAddr, "resolver", "", "Resolver address")
-	proxyCmd.Flags().BoolVar(&insecure, "insecure", false, "Skip verification")
+	proxyCmd.Flags().String("override-open-url-command", "Override command for opening URL").Var(&overrideOpenURLCommand)
+	proxyCmd.Flags().String("resolver", "Resolver address").Var(&resolverAddr)
+	proxyCmd.Flags().Bool("insecure", "Skip verification").Var(&insecure)
 
 	rootCmd.AddCommand(proxyCmd)
 }
