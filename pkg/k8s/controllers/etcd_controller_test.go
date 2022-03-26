@@ -105,7 +105,7 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		member := cluster.AllMembers()[0]
-		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Ready)
+		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Created, k8sfactory.Ready)
 		runner.RegisterFixtures(e, member.Pod)
 
 		err = runner.Reconcile(controller, e)
@@ -230,6 +230,7 @@ func TestEtcdController(t *testing.T) {
 				v.Pod.Labels[etcd.LabelNameEtcdVersion] = "v3.3.0"
 				runner.RegisterFixtures(
 					k8sfactory.PodFactory(v.Pod,
+						k8sfactory.Created,
 						k8sfactory.Ready,
 						k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)),
 					),
@@ -238,7 +239,7 @@ func TestEtcdController(t *testing.T) {
 				e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 			}
 			tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 
 			err = runner.Reconcile(controller, e)
 			require.NoError(t, err)
@@ -320,12 +321,12 @@ func TestEtcdController(t *testing.T) {
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
 			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-		runner.RegisterFixtures(tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+		runner.RegisterFixtures(tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
@@ -339,47 +340,106 @@ func TestEtcdController(t *testing.T) {
 	t.Run("Repair", func(t *testing.T) {
 		t.Parallel()
 
-		runner := controllertest.NewTestRunner()
-		etcdMockCluster := NewMockCluster()
-		etcdMockMaintenance := NewMockMaintenance()
-		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
-		controller, err := NewEtcdController(
-			runner.SharedInformerFactory,
-			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
-			runner.Client,
-			nil,
-			"cluster.local",
-			false,
-			nil,
-			mockOpt,
-		)
-		require.NoError(t, err)
-
-		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
-		runner.RegisterFixtures(e)
-		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
-		cluster.registerBasicObjectOfEtcdCluster(runner)
-		for i, v := range cluster.AllMembers() {
-			v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)))
-			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
-			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
-
-			if i == 0 {
-				v.Pod.Status.Phase = corev1.PodSucceeded
+		etcdContainerExited := func(object interface{}) {
+			pod := object.(*corev1.Pod)
+			statuses := make([]corev1.ContainerStatus, 0)
+			for _, cs := range pod.Status.ContainerStatuses {
+				if cs.Name == "etcd" {
+					cs.Ready = false
+					cs.State = corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							ExitCode: 1,
+							Reason:   "Error",
+						},
+					}
+				}
+				statuses = append(statuses, cs)
 			}
-		}
-		for _, v := range cluster.AllMembers() {
-			runner.RegisterFixtures(v.Pod)
+			pod.Status.ContainerStatuses = statuses
 		}
 
-		err = runner.Reconcile(controller, e)
-		require.NoError(t, err)
+		cases := []struct {
+			Name        string
+			PodMutation []k8sfactory.Trait
+		}{
+			{
+				Name:        "PodSucceeded",
+				PodMutation: []k8sfactory.Trait{k8sfactory.PodSucceeded},
+			},
+			{
+				Name:        "PodFailed",
+				PodMutation: []k8sfactory.Trait{k8sfactory.PodFailed},
+			},
+			{
+				Name:        "EtcdPodError",
+				PodMutation: []k8sfactory.Trait{etcdContainerExited},
+			},
+			{
+				Name: "PodNotRunning",
+				PodMutation: []k8sfactory.Trait{
+					k8sfactory.NotReady,
+					k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, ""),
+					etcdContainerExited,
+				},
+			},
+		}
 
-		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseDegrading), etcd.CreatedStatus)
-		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
-		runner.AssertUpdateAction(t, "status", updated)
-		runner.AssertNoUnexpectedAction(t)
+		for _, tc := range cases {
+			if tc.PodMutation == nil {
+				t.Fatalf("PodMutation of %s is nil", tc.Name)
+			}
+
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+
+				runner := controllertest.NewTestRunner()
+				etcdMockCluster := NewMockCluster()
+				etcdMockMaintenance := NewMockMaintenance()
+				mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+				controller, err := NewEtcdController(
+					runner.SharedInformerFactory,
+					runner.CoreSharedInformerFactory,
+					runner.CoreClient,
+					runner.Client,
+					nil,
+					"cluster.local",
+					false,
+					nil,
+					mockOpt,
+				)
+				require.NoError(t, err)
+
+				e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
+				runner.RegisterFixtures(e)
+				cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+				cluster.registerBasicObjectOfEtcdCluster(runner)
+				for i, v := range cluster.AllMembers() {
+					v.Pod = k8sfactory.PodFactory(v.Pod,
+						k8sfactory.CreatedAt(time.Now().Add(-6*time.Minute)),
+						k8sfactory.Ready,
+						k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)),
+					)
+					etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+					e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+
+					if i == 0 {
+						v.Pod = k8sfactory.PodFactory(v.Pod, tc.PodMutation...)
+					}
+				}
+				for _, v := range cluster.AllMembers() {
+					runner.RegisterFixtures(v.Pod)
+				}
+
+				err = runner.Reconcile(controller, e)
+				require.NoError(t, err)
+
+				updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseDegrading), etcd.CreatedStatus)
+				runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+				runner.AssertUpdateAction(t, "status", updated)
+				runner.AssertNoUnexpectedAction(t)
+			})
+		}
 	})
 
 	t.Run("TemporaryMemberOnly", func(t *testing.T) {
@@ -514,7 +574,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 		}
 
 		// Get bucket location
@@ -591,7 +651,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
-			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 		}
 
 		// Get bucket location

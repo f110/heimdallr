@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -683,7 +684,8 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 	onceRunning := metav1.HasAnnotation(pod.ObjectMeta, etcd.PodAnnotationKeyRunningAt)
 	// If the Pod has never been running once, There is no need to repair it.
-	if !onceRunning && pod.Status.Phase != corev1.PodFailed {
+	// But there is need to repair if the age of Pod exceeds 5 minutes
+	if !onceRunning && pod.CreationTimestamp.After(time.Now().Add(-5*time.Minute)) && pod.Status.Phase != corev1.PodFailed {
 		return false
 	}
 

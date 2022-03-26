@@ -35,10 +35,6 @@ func Ready(v interface{}) {
 	if !ok {
 		return
 	}
-	if p.GenerateName != "" && p.Name == "" {
-		p.Name = p.GenerateName + randomString(5)
-	}
-	p.CreationTimestamp = metav1.Now()
 	p.Status.Phase = corev1.PodRunning
 	containerStatus := make([]corev1.ContainerStatus, 0)
 	for _, v := range p.Spec.Containers {
@@ -81,6 +77,14 @@ func NotReady(v interface{}) {
 		})
 	}
 	p.Status.ContainerStatuses = containerStatus
+}
+
+func PodSucceeded(v interface{}) {
+	p, ok := v.(*corev1.Pod)
+	if !ok {
+		return
+	}
+	p.Status.Phase = corev1.PodSucceeded
 }
 
 func PodFailed(v interface{}) {

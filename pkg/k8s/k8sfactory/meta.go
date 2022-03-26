@@ -2,6 +2,7 @@ package k8sfactory
 
 import (
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,6 +57,19 @@ func Created(object interface{}) {
 	if ok {
 		m.SetCreationTimestamp(metav1.Now())
 		m.SetUID(uuid.NewUUID())
+		if m.GetGenerateName() != "" && m.GetName() == "" {
+			m.SetName(m.GetGenerateName() + randomString(5))
+		}
+	}
+}
+
+func CreatedAt(now time.Time) Trait {
+	return func(object interface{}) {
+		Created(object)
+		m, ok := object.(metav1.Object)
+		if ok {
+			m.SetCreationTimestamp(metav1.Time{Time: now})
+		}
 	}
 }
 
@@ -75,7 +89,11 @@ func Annotation(k, v string) Trait {
 			if a == nil {
 				a = make(map[string]string)
 			}
-			a[k] = v
+			if v == "" {
+				delete(a, k)
+			} else {
+				a[k] = v
+			}
 			m.SetAnnotations(a)
 			return
 		}
