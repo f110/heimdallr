@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "backoffutils",
+    srcs = ["backoff.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/util/backoffutils",
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware/v2/util/backoffutils",
+    visibility = ["//visibility:public"],
+)

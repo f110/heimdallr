@@ -29,7 +29,7 @@ go_library(
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/gorilla/mux",
         "//vendor/github.com/gorilla/securecookie",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
         "//vendor/github.com/miekg/dns",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/golang.org/x/xerrors",

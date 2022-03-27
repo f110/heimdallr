@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// NiceMD is a convenience wrapper definiting extra functions on the metadata.
+// NiceMD is a convenience wrapper defining extra functions on the metadata.
 type NiceMD metadata.MD
 
 // ExtractIncoming extracts an inbound metadata from the server-side context.
@@ -83,7 +83,7 @@ func (m NiceMD) ToIncoming(ctx context.Context) context.Context {
 //
 // The function is binary-key safe.
 func (m NiceMD) Get(key string) string {
-	k := strings.ToLower(key)
+	k, _ := encodeKeyValue(key, "")
 	vv, ok := m[k]
 	if !ok {
 		return ""
@@ -98,7 +98,7 @@ func (m NiceMD) Get(key string) string {
 // The function is binary-key safe.
 
 func (m NiceMD) Del(key string) NiceMD {
-	k := strings.ToLower(key)
+	k, _ := encodeKeyValue(key, "")
 	delete(m, k)
 	return m
 }
@@ -109,8 +109,8 @@ func (m NiceMD) Del(key string) NiceMD {
 //
 // The function is binary-key safe.
 func (m NiceMD) Set(key string, value string) NiceMD {
-	k := strings.ToLower(key)
-	m[k] = []string{value}
+	k, v := encodeKeyValue(key, value)
+	m[k] = []string{v}
 	return m
 }
 
@@ -120,7 +120,7 @@ func (m NiceMD) Set(key string, value string) NiceMD {
 //
 // The function is binary-key safe.
 func (m NiceMD) Add(key string, value string) NiceMD {
-	k := strings.ToLower(key)
-	m[k] = append(m[k], value)
+	k, v := encodeKeyValue(key, value)
+	m[k] = append(m[k], v)
 	return m
 }

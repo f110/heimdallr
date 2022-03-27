@@ -2,7 +2,7 @@
 // See LICENSE for licensing terms.
 
 /*
-`grpc_retry` provides client-side request retry logic for gRPC.
+`retry` provides client-side request retry logic for gRPC.
 
 Client-Side Request Retry Interceptor
 
@@ -22,4 +22,4 @@ whenever when a retry happens.
 
 Please see examples for more advanced use.
 */
-package grpc_retry
+package retry

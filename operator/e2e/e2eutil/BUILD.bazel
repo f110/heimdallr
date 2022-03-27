@@ -19,7 +19,7 @@ go_library(
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//vendor/github.com/golang-jwt/jwt",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/retry",
+        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
         "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",

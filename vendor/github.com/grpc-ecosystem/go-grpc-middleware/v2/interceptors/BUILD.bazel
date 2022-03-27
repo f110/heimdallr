@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "interceptors",
+    srcs = [
+        "client.go",
+        "doc.go",
+        "reporter.go",
+        "server.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors",
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+    ],
+)
