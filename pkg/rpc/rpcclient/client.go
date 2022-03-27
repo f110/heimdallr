@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"sync"
 
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -17,7 +16,6 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
-	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
@@ -432,10 +430,4 @@ func Comment(c string) RequestOpt {
 
 		v.SetComment(c)
 	}
-}
-
-func OverrideGrpcLogger() {
-	loggerOnce.Do(func() {
-		grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
-	})
 }

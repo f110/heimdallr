@@ -9,8 +9,9 @@ import (
 	"net/http/pprof"
 	"sync"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2"
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -62,17 +63,18 @@ func NewServer(
 	isReady func() bool,
 ) *Server {
 	r := grpc_prometheus.NewServerMetrics()
-	grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			unaryAccessLogInterceptor,
 			auth.UnaryInterceptor,
 			r.UnaryServerInterceptor(),
+			logging.UnaryServerInterceptor(grpczap.InterceptorLogger(logger.Log)),
 		)),
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			streamAccessLogInterceptor,
 			auth.StreamInterceptor,
 			r.StreamServerInterceptor(),
+			logging.StreamServerInterceptor(grpczap.InterceptorLogger(logger.Log)),
 		)),
 	)
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))

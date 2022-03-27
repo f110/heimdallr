@@ -8,7 +8,8 @@ import (
 	"os"
 	"time"
 
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -83,8 +84,8 @@ func (m *mainProcess) openConnection() (fsm.State, error) {
 		m.config.Dashboard.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(middleware.ChainStreamClient(retry.StreamClientInterceptor())),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(retry.UnaryClientInterceptor())),
 	)
 	if err != nil {
 		return fsm.UnknownState, xerrors.Errorf(": %v", err)

@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -236,8 +236,8 @@ func (a *Agents) RPCClient(id string) *rpcclient.ClientWithUserToken {
 		fmt.Sprintf("127.0.0.1:%d", a.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(retry.StreamClientInterceptor()),
+		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		return nil

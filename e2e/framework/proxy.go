@@ -29,7 +29,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/securecookie"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -581,8 +581,8 @@ func (p *Proxy) setupRPCClient() error {
 		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(retry.StreamClientInterceptor()),
+		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
@@ -616,8 +616,8 @@ func (p *Proxy) syncUsers() error {
 		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(retry.StreamClientInterceptor()),
+		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)

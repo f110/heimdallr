@@ -13,7 +13,6 @@ go_library(
         "//pkg/config/userconfig",
         "//pkg/logger",
         "//pkg/rpc",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/logging/zap",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",

@@ -20,7 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2"
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/server/v3/embed"
@@ -612,15 +615,19 @@ func (m *mainProcess) setup() (fsm.State, error) {
 }
 
 func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
-	rpcclient.OverrideGrpcLogger()
-
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.CertPool})
 	conn, err := grpc.Dial(
 		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+			retry.StreamClientInterceptor(),
+			logging.StreamClientInterceptor(grpczap.InterceptorLogger(logger.Log)),
+		)),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+			retry.UnaryClientInterceptor(),
+			logging.UnaryClientInterceptor(grpczap.InterceptorLogger(logger.Log)),
+		)),
 	)
 	if err != nil {
 		return fsm.UnknownState, xerrors.Errorf(": %v", err)
