@@ -96,28 +96,35 @@ func TestCommand_Execute(t *testing.T) {
 	})
 
 	t.Run("Args", func(t *testing.T) {
-		var override string
-		var insecure bool
-		var args []string
-		c1 := &Command{
-			Use: "ctl",
+		cases := [][]string{
+			{"ctl", "--override", "foo", "proxy", "--insecure", "localhost"},
+			{"ctl", "--override=foo", "proxy", "--insecure", "localhost"},
 		}
-		c1.Flags().String("override", "").Var(&override)
-		c2 := &Command{
-			Use: "proxy",
-			Run: func(_ context.Context, _ *Command, a []string) error {
-				args = a
-				return nil
-			},
-		}
-		c2.Flags().Bool("insecure", "").Var(&insecure)
-		c1.AddCommand(c2)
 
-		err := c1.Execute([]string{"ctl", "--override", "foo", "proxy", "--insecure", "localhost"})
-		require.NoError(t, err)
-		assert.Equal(t, "foo", override)
-		assert.True(t, insecure)
-		assert.Equal(t, []string{"localhost"}, args)
+		for _, v := range cases {
+			var override string
+			var insecure bool
+			var args []string
+			c1 := &Command{
+				Use: "ctl",
+			}
+			c1.Flags().String("override", "").Var(&override)
+			c2 := &Command{
+				Use: "proxy",
+				Run: func(_ context.Context, _ *Command, a []string) error {
+					args = a
+					return nil
+				},
+			}
+			c2.Flags().Bool("insecure", "").Var(&insecure)
+			c1.AddCommand(c2)
+
+			err := c1.Execute(v)
+			require.NoError(t, err)
+			assert.Equal(t, "foo", override)
+			assert.True(t, insecure)
+			assert.Equal(t, []string{"localhost"}, args)
+		}
 	})
 
 	t.Run("Arg", func(t *testing.T) {

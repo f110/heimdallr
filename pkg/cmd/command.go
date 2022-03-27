@@ -157,8 +157,10 @@ func (c *Command) findCommand(args []string) (*Command, []string) {
 
 		switch state {
 		case stateInit:
-			if v[0] == '-' && !strings.Contains(v, "=") {
-				state = stateValue
+			if v[0] == '-' {
+				if !strings.Contains(v, "=") {
+					state = stateValue
+				}
 				nArgs = append(nArgs, v)
 				continue
 			}
