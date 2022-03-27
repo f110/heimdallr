@@ -82,9 +82,9 @@ func (c *Command) Execute(args []string) error {
 	c.executed = true
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	cmd := c.findCommand(args)
+	cmd, nArgs := c.findCommand(args)
 	if cmd != nil {
-		return cmd.runCommand(ctx, args)
+		return cmd.runCommand(ctx, nArgs)
 	}
 	return c.runCommand(ctx, args)
 }
@@ -110,7 +110,7 @@ func (c *Command) runCommand(ctx context.Context, args []string) error {
 		c.printUsage()
 		return xerrors.New("command not found")
 	}
-	return c.Run(ctx, c, args)
+	return c.Run(ctx, c, fs.Args())
 }
 
 func (c *Command) printUsage() {
@@ -142,12 +142,13 @@ func (c *Command) Name() string {
 	return c.Use
 }
 
-func (c *Command) findCommand(args []string) *Command {
+func (c *Command) findCommand(args []string) (*Command, []string) {
 	const (
 		stateInit = iota
 		stateValue
 	)
 
+	var nArgs []string
 	state := stateInit
 	for i, v := range args {
 		if len(v) == 0 {
@@ -158,21 +159,23 @@ func (c *Command) findCommand(args []string) *Command {
 		case stateInit:
 			if v[0] == '-' && !strings.Contains(v, "=") {
 				state = stateValue
+				nArgs = append(nArgs, v)
 				continue
 			}
 		case stateValue:
 			state = stateInit
+			nArgs = append(nArgs, v)
 			continue
 		}
 
 		for _, cmd := range c.commands {
 			if cmd.Name() == v {
-				return cmd.findCommand(args[i+1:])
+				return cmd.findCommand(append(nArgs, args[i+1:]...))
 			}
 		}
 	}
 
-	return c
+	return c, nArgs
 }
 
 var usageTmpl = template.Must(

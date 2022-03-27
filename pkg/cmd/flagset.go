@@ -68,6 +68,10 @@ func (fs *FlagSet) Parse(args []string) error {
 	return nil
 }
 
+func (fs *FlagSet) Args() []string {
+	return fs.flagSet.Args()
+}
+
 func (fs *FlagSet) AddFlagSet(v *FlagSet) {
 	for _, f := range v.flags {
 		fs.flags = append(fs.flags, f)
