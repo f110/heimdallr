@@ -49,10 +49,10 @@ git_repository(
 
 http_archive(
     name = "dev_f110_rules_k8s_controller",
-    sha256 = "19739cce179bf6fc7962d81da8da7d776901fca544a9859e73bf51921437d319",
-    strip_prefix = "rules_k8s_controller-0.11.0",
+    sha256 = "ddc05d5941371c08ee9145b2984c77b6b28c3ca7ed2d80ef1be1f61986405a3e",
+    strip_prefix = "rules_k8s_controller-0.14.0",
     urls = [
-        "https://github.com/f110/rules_k8s_controller/archive/v0.11.0.tar.gz",
+        "https://github.com/f110/rules_k8s_controller/archive/v0.14.0.tar.gz",
     ],
 )
 
@@ -119,14 +119,14 @@ load("@dev_f110_rules_k8s_controller//k8s/kustomize:def.bzl", "kustomize_binary"
 
 kustomize_binary(
     name = "kustomize",
-    version = "3.8.1",
+    version = "v3.8.1",
 )
 
 load("@dev_f110_rules_k8s_controller//k8s/kind:def.bzl", "kind_binary")
 
 kind_binary(
     name = "kind",
-    version = "0.11.1",
+    version = "0.12.0",
 )
 
 load("//build/rules/vault:def.bzl", "vault_binary")
