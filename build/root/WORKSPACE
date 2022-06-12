@@ -69,6 +69,15 @@ go_repository(
     version = "v0.6.0-dev.0.20220106191415-9b9b3d81d5e3",
 )
 
+go_repository(
+    name = "org_golang_google_grpc",
+    build_external = "external",
+    build_file_proto_mode = "disable",
+    importpath = "google.golang.org/grpc",
+    sum = "h1:oCjezcn6g6A75TGoKYBPgKmVBLexhYLM6MebdrPApP8=",
+    version = "v1.46.0",
+)
+
 # End of workaround
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
