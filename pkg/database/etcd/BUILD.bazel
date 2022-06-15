@@ -39,6 +39,7 @@ go_test(
         "util_test.go",
     ],
     embed = [":etcd"],
+    flaky = True,
     deps = [
         "//pkg/cert",
         "//pkg/config/configv2",
