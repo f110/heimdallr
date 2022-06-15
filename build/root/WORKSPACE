@@ -122,7 +122,7 @@ container_deps()
 
 container_pull(
     name = "com_google_distroless_base",
-    digest = "sha256:8d58596f5181f95d908d7f8318f8e27bc394164491bd0aa53c2f284480fd8f8b",
+    digest = "sha256:6010a285f9a871e8f1f33142d53e2ad6d9d102d647704ac191c191f5becc2516",
     registry = "gcr.io",
     repository = "distroless/base",
 )
