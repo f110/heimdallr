@@ -5,6 +5,7 @@ go 1.19
 require (
 	cloud.google.com/go/storage v1.10.0
 	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/bazelbuild/buildtools v0.0.0-20220907133145-b9bfff5d7f91
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/caos/oidc v1.0.0
@@ -16,6 +17,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.1.4
+	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-github/v41 v41.0.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
@@ -37,13 +39,14 @@ require (
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.26.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.2
 	go.etcd.io/etcd/api/v3 v3.5.1
 	go.etcd.io/etcd/client/v3 v3.5.1
 	go.etcd.io/etcd/etcdutl/v3 v3.5.1
 	go.etcd.io/etcd/server/v3 v3.5.1
 	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
-	go.uber.org/zap v1.19.0
+	go.f110.dev/xerrors v0.0.0-20220906140306-802337d743ab
+	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
 	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
@@ -172,7 +175,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20210527164424-3c818078ee3d // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )
