@@ -1,0 +1,13 @@
+load("@heimdallr//build/rules/kustomize:def.bzl", "kustomize_toolchain")
+
+sh_binary(
+    name = "bin",
+    srcs = ["kustomize"]
+)
+
+kustomize_toolchain(
+    name = "toolchain",
+    bin = ":bin",
+    version = "{version}",
+    visibility = ["//visibility:public"],
+)

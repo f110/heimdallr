@@ -1,4 +1,4 @@
-load("@dev_f110_rules_k8s_controller//k8s/kustomize:def.bzl", "kustomization")
+load("//build/rules/kustomize:def.bzl", "kustomization")
 
 kustomization(
     name = "rbac",
