@@ -164,3 +164,7 @@ vault_binary(
     name = "vault",
     version = "1.6.3",
 )
+
+load("@bazel_skylib//lib:unittest.bzl", "register_unittest_toolchains")
+
+register_unittest_toolchains()
