@@ -306,6 +306,17 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
+
+	idp, err := NewIdentityProvider(fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", proxyPort))
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	// The vault server will use two ports.
+	// One of the port is configurable via the command line argument.
+	// The other port is not configurable.
+	// The vault server listens to neighboring port on its own.
+	// So, we can't use the neighboring port of the vault.
 	vaultPort, err := netutil.FindUnusedPort()
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -313,11 +324,6 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	vaultRootToken := make([]byte, 32)
 	for i := range vaultRootToken {
 		vaultRootToken[i] = letters[mrand.Intn(len(letters))]
-	}
-
-	idp, err := NewIdentityProvider(fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", proxyPort))
-	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
 	}
 
 	p := &Proxy{
