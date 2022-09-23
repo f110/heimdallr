@@ -8,6 +8,7 @@ exports_files(
     [
         "release.bash",
         "e2e.bash",
+        "copy.bash",
     ],
     visibility = ["//visibility:public"],
 )

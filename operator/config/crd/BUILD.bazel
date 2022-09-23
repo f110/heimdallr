@@ -13,3 +13,21 @@ kustomization(
     ],
     visibility = ["//visibility:public"],
 )
+
+load("@dev_f110_kubeproto//bazel:def.bzl", "crd_proto_manifest")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+crd_proto_manifest(
+    name = "proto",
+    srcs = [
+        "//pkg/k8s/api/etcdv1alpha1:etcd_proto",
+        "//pkg/k8s/api/etcdv1alpha2:etcd_proto",
+        "//pkg/k8s/api/proxyv1alpha1:proxy_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+vendor_kubeproto(
+    name = "vendor_proto",
+    src = ":proto",
+)

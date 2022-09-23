@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@dev_f110_kubeproto//bazel:def.bzl", "go_testing_client")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+go_testing_client(
+    name = "kubeproto_testingclient",
+    srcs = [
+        "//pkg/k8s/api/etcdv1alpha1:etcd_proto",
+        "//pkg/k8s/api/etcdv1alpha2:etcd_proto",
+        "//pkg/k8s/api/proxyv1alpha1:proxy_proto",
+    ],
+    client = "//pkg/k8s/client:go_client",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/client/testingclient",
+    visibility = ["//visibility:public"],
+)
+
+vendor_kubeproto(
+    name = "vendor_testingclient",
+    src = ":kubeproto_testingclient",
+)

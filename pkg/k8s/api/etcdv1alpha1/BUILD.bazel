@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@dev_f110_kubeproto//bazel:def.bzl", "kubeproto_go_api")
+
+proto_library(
+    name = "etcd_proto",
+    srcs = ["etcd.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@dev_f110_kubeproto//:k8s_proto",
+        "@dev_f110_kubeproto//:kubeproto",
+    ],
+)
+
+kubeproto_go_api(
+    name = "go_api",
+    srcs = [":etcd_proto"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha1",
+)
+
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+vendor_kubeproto(
+    name = "vendor_go_api",
+    src = ":go_api",
+)

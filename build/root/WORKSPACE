@@ -44,7 +44,7 @@ git_repository(
 
 git_repository(
     name = "dev_f110_protoc_ddl",
-    commit = "eee28d3afbddb0fb035b13e530122a3997dc9630",
+    commit = "b3b084d3175e253980400536b4804e681913d387",
     remote = "https://github.com/f110/protoc-ddl",
 )
 
@@ -55,6 +55,12 @@ http_archive(
     urls = [
         "https://github.com/f110/rules_k8s_controller/archive/v0.14.0.tar.gz",
     ],
+)
+
+git_repository(
+    name = "dev_f110_kubeproto",
+    commit = "84b88c77de603dfb267fd778a5833f9a673b731a",
+    remote = "https://github.com/f110/kubeproto",
 )
 
 # This is workaround for dependency problem.

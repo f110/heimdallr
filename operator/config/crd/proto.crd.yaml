@@ -1,0 +1,2006 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: backends.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: Backend
+    listKind: BackendList
+    plural: backends
+    singular: backend
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              agent:
+                type: boolean
+              allowHttp:
+                type: boolean
+              allowRootUser:
+                type: boolean
+              disableAuthn:
+                type: boolean
+              fqdn:
+                type: string
+              insecure:
+                type: boolean
+              layer:
+                type: string
+              maxSessionDuration:
+                properties:
+                  duration:
+                    format: int64
+                    type: integer
+                required:
+                - duration
+                type: object
+              permissions:
+                items:
+                  properties:
+                    locations:
+                      items:
+                        properties:
+                          any:
+                            type: string
+                          connect:
+                            type: string
+                          delete:
+                            type: string
+                          get:
+                            type: string
+                          head:
+                            type: string
+                          options:
+                            type: string
+                          patch:
+                            type: string
+                          post:
+                            type: string
+                          put:
+                            type: string
+                          trace:
+                            type: string
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                  type: object
+                type: array
+              serviceSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                             Valid operators are In, NotIn, Exists and DoesNotExist.
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                             the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                             the values array must be empty. This array is replaced during a strategic
+                             merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                       map is equivalent to an element of matchExpressions, whose key field is "key", the
+                       operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                  port:
+                    type: string
+                  scheme:
+                    type: string
+                type: object
+              socket:
+                type: boolean
+              socketTimeout:
+                properties:
+                  duration:
+                    format: int64
+                    type: integer
+                required:
+                - duration
+                type: object
+              upstream:
+                type: string
+              webhook:
+                type: string
+              webhookConfiguration:
+                properties:
+                  appIdKey:
+                    type: string
+                  contentType:
+                    type: string
+                  credentialSecretName:
+                    type: string
+                  credentialSecretNamespace:
+                    type: string
+                  events:
+                    items:
+                      type: string
+                    type: array
+                  installationIdKey:
+                    type: string
+                  path:
+                    type: string
+                  privateKeyKey:
+                    type: string
+                  repositories:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - repositories
+                - events
+                type: object
+              webhookPath:
+                items:
+                  type: string
+                type: array
+            required:
+            - webhookPath
+            type: object
+          status:
+            properties:
+              deployedBy:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    url:
+                      type: string
+                  type: object
+                type: array
+              webhookConfigurations:
+                items:
+                  properties:
+                    id:
+                      format: int64
+                      type: integer
+                    repository:
+                      type: string
+                    updateTime:
+                      format: date-time
+                      type: string
+                  required:
+                  - id
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: etcdclusters.etcd.f110.dev
+spec:
+  group: etcd.f110.dev
+  names:
+    kind: EtcdCluster
+    listKind: EtcdClusterList
+    plural: etcdclusters
+    singular: etcdcluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Ready
+      format: byte
+      jsonPath: .status.ready
+      name: ready
+      type: string
+    - description: Phase
+      format: byte
+      jsonPath: .status.phase
+      name: phase
+      type: string
+    - description: Members
+      format: byte
+      jsonPath: .spec.members
+      name: members
+      type: string
+    - description: Age
+      format: date
+      jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              antiAffinity:
+                type: boolean
+              backup:
+                properties:
+                  intervalInSecond:
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  storage:
+                    properties:
+                      gcs:
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              serviceAccountJsonKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                        type: object
+                      minio:
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              accessKeyIdKey:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              secretAccessKeyKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                          secure:
+                            type: boolean
+                          serviceSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
+                type: object
+              defragmentSchedule:
+                type: string
+              members:
+                type: integer
+              version:
+                type: string
+              volumeClaimTemplate:
+                properties:
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations is an unstructured key value map stored with a resource that may be
+                           set by external tools to store and retrieve arbitrary metadata. They are not
+                           queryable and should be preserved when modifying objects.
+                           More info: http://kubernetes.io/docs/user-guide/annotations
+                        type: object
+                      clusterName:
+                        description: |-
+                          The name of the cluster which the object belongs to.
+                           This is used to distinguish resources with same name and namespace in different clusters.
+                           This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.
+                        type: string
+                      creationTimestamp:
+                        description: |-
+                          CreationTimestamp is a timestamp representing the server time when this object was
+                           created. It is not guaranteed to be set in happens-before order across separate operations.
+                           Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+                           Populated by the system.
+                           Read-only.
+                           Null for lists.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                        format: date-time
+                        type: string
+                      deletionGracePeriodSeconds:
+                        description: |-
+                          Number of seconds allowed for this object to gracefully terminate before
+                           it will be removed from the system. Only set when deletionTimestamp is also set.
+                           May only be shortened.
+                           Read-only.
+                        format: int64
+                        type: integer
+                      deletionTimestamp:
+                        description: |-
+                          DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This
+                           field is set by the server when a graceful deletion is requested by the user, and is not
+                           directly settable by a client. The resource is expected to be deleted (no longer visible
+                           from resource lists, and not reachable by name) after the time in this field, once the
+                           finalizers list is empty. As long as the finalizers list contains items, deletion is blocked.
+                           Once the deletionTimestamp is set, this value may not be unset or be set further into the
+                           future, although it may be shortened or the resource may be deleted prior to this time.
+                           For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react
+                           by sending a graceful termination signal to the containers in the pod. After that 30 seconds,
+                           the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup,
+                           remove the pod from the API. In the presence of network partitions, this object may still
+                           exist after this timestamp, until an administrator or automated process can determine the
+                           resource is fully terminated.
+                           If not set, graceful deletion of the object has not been requested.
+                           Populated by the system when a graceful deletion is requested.
+                           Read-only.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                        format: date-time
+                        type: string
+                      finalizers:
+                        description: |-
+                          Must be empty before the object is deleted from the registry. Each entry
+                           is an identifier for the responsible component that will remove the entry
+                           from the list. If the deletionTimestamp of the object is non-nil, entries
+                           in this list can only be removed.
+                           Finalizers may be processed and removed in any order.  Order is NOT enforced
+                           because it introduces significant risk of stuck finalizers.
+                           finalizers is a shared field, any actor with permission can reorder it.
+                           If the finalizer list is processed in order, then this can lead to a situation
+                           in which the component responsible for the first finalizer in the list is
+                           waiting for a signal (field value, external system, or other) produced by a
+                           component responsible for a finalizer later in the list, resulting in a deadlock.
+                           Without enforced ordering finalizers are free to order amongst themselves and
+                           are not vulnerable to ordering changes in the list.
+                        items:
+                          type: string
+                        type: array
+                      generateName:
+                        description: |-
+                          GenerateName is an optional prefix, used by the server, to generate a unique
+                           name ONLY IF the Name field has not been provided.
+                           If this field is used, the name returned to the client will be different
+                           than the name passed. This value will also be combined with a unique suffix.
+                           The provided value has the same validation rules as the Name field,
+                           and may be truncated by the length of the suffix required to make the value
+                           unique on the server.
+                           If this field is specified and the generated name exists, the server will
+                           NOT return a 409 - instead, it will either return 201 Created or 500 with Reason
+                           ServerTimeout indicating a unique name could not be found in the time allotted, and the client
+                           should retry (optionally after the time indicated in the Retry-After header).
+                           Applied only if Name is not specified.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency
+                        type: string
+                      generation:
+                        description: |-
+                          A sequence number representing a specific generation of the desired state.
+                           Populated by the system. Read-only.
+                        format: int64
+                        type: integer
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Map of string keys and values that can be used to organize and categorize
+                           (scope and select) objects. May match selectors of replication controllers
+                           and services.
+                           More info: http://kubernetes.io/docs/user-guide/labels
+                        type: object
+                      managedFields:
+                        description: |-
+                          ManagedFields maps workflow-id and version to the set of fields
+                           that are managed by that workflow. This is mostly for internal
+                           housekeeping, and users typically shouldn't need to set or
+                           understand this field. A workflow can be the user's name, a
+                           controller's name, or the name of a specific apply path like
+                           "ci-cd". The set of fields is always in the version that the
+                           workflow used when modifying the object.
+                        items:
+                          properties:
+                            apiVersion:
+                              description: |-
+                                APIVersion defines the version of this resource that this field set
+                                 applies to. The format is "group/version" just like the top-level
+                                 APIVersion field. It is necessary to track the version of a field
+                                 set because it cannot be automatically converted.
+                              type: string
+                            fieldsType:
+                              description: |-
+                                FieldsType is the discriminator for the different fields format and version.
+                                 There is currently only one possible value: "FieldsV1"
+                              type: string
+                            fieldsV1:
+                              type: object
+                            manager:
+                              description: Manager is an identifier of the workflow
+                                managing these fields.
+                              type: string
+                            operation:
+                              description: |-
+                                Operation is the type of operation which lead to this ManagedFieldsEntry being created.
+                                 The only valid values for this field are 'Apply' and 'Update'.
+                              enum:
+                              - Apply
+                              - Update
+                              type: string
+                            subresource:
+                              description: |-
+                                Subresource is the name of the subresource used to update that object, or
+                                 empty string if the object was updated through the main resource. The
+                                 value of this field is used to distinguish between managers, even if they
+                                 share the same name. For example, a status update will be distinct from a
+                                 regular update using the same manager name.
+                                 Note that the APIVersion field is not related to the Subresource field and
+                                 it always corresponds to the version of the main resource.
+                              type: string
+                            time:
+                              description: Time is timestamp of when these fields
+                                were set. It should always be empty if Operation is
+                                'Apply'
+                              format: date-time
+                              type: string
+                          type: object
+                        type: array
+                      name:
+                        description: |-
+                          Name must be unique within a namespace. Is required when creating resources, although
+                           some resources may allow a client to request the generation of an appropriate name
+                           automatically. Name is primarily intended for creation idempotence and configuration
+                           definition.
+                           Cannot be updated.
+                           More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace defines the space within which each name must be unique. An empty namespace is
+                           equivalent to the "default" namespace, but "default" is the canonical representation.
+                           Not all objects are required to be scoped to a namespace - the value of this field for
+                           those objects will be empty.
+                           Must be a DNS_LABEL.
+                           Cannot be updated.
+                           More info: http://kubernetes.io/docs/user-guide/namespaces
+                        type: string
+                      ownerReferences:
+                        description: |-
+                          List of objects depended by this object. If ALL objects in the list have
+                           been deleted, this object will be garbage collected. If this object is managed by a controller,
+                           then an entry in this list will point to this controller, with the controller field set to true.
+                           There cannot be more than one managing controller.
+                        items:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            blockOwnerDeletion:
+                              description: |-
+                                If true, AND if the owner has the "foregroundDeletion" finalizer, then
+                                 the owner cannot be deleted from the key-value store until this
+                                 reference is removed.
+                                 Defaults to false.
+                                 To set this field, a user needs "delete" permission of the owner,
+                                 otherwise 422 (Unprocessable Entity) will be returned.
+                              type: boolean
+                            controller:
+                              description: If true, this reference points to the managing
+                                controller.
+                              type: boolean
+                            kind:
+                              description: |-
+                                Kind of the referent.
+                                 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                              type: string
+                            name:
+                              description: |-
+                                Name of the referent.
+                                 More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                              type: string
+                            uid:
+                              description: |-
+                                UID of the referent.
+                                 More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          - uid
+                          type: object
+                        type: array
+                      resourceVersion:
+                        description: |-
+                          An opaque value that represents the internal version of this object that can
+                           be used by clients to determine when objects have changed. May be used for optimistic
+                           concurrency, change detection, and the watch operation on a resource or set of resources.
+                           Clients must treat these values as opaque and passed unmodified back to the server.
+                           They may only be valid for a particular resource or set of resources.
+                           Populated by the system.
+                           Read-only.
+                           Value must be treated as opaque by clients and .
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                        type: string
+                      selfLink:
+                        description: |-
+                          SelfLink is a URL representing this object.
+                           Populated by the system.
+                           Read-only.
+                           DEPRECATED
+                           Kubernetes will stop propagating this field in 1.20 release and the field is planned
+                           to be removed in 1.21 release.
+                        type: string
+                      uid:
+                        description: |-
+                          UID is the unique in time and space value for this object. It is typically generated by
+                           the server on successful creation of a resource and is not allowed to change on PUT
+                           operations.
+                           Populated by the system.
+                           Read-only.
+                           More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                        type: string
+                    required:
+                    - finalizers
+                    type: object
+                  spec:
+                    properties:
+                      accessModes:
+                        description: |-
+                          AccessModes contains the desired access modes the volume should have.
+                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+                        enum:
+                        - ReadWriteOnce
+                        - ReadOnlyMany
+                        - ReadWriteMany
+                        - ReadWriteOncePod
+                        type: string
+                      dataSource:
+                        properties:
+                          apiGroup:
+                            description: |-
+                              APIGroup is the group for the resource being referenced.
+                               If APIGroup is not specified, the specified Kind must be in the core API group.
+                               For any other third-party types, APIGroup is required.
+                            type: string
+                          kind:
+                            description: Kind is the type of resource being referenced
+                            type: string
+                          name:
+                            description: Name is the name of resource being referenced
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      dataSourceRef:
+                        properties:
+                          apiGroup:
+                            description: |-
+                              APIGroup is the group for the resource being referenced.
+                               If APIGroup is not specified, the specified Kind must be in the core API group.
+                               For any other third-party types, APIGroup is required.
+                            type: string
+                          kind:
+                            description: Kind is the type of resource being referenced
+                            type: string
+                          name:
+                            description: Name is the name of resource being referenced
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                               otherwise to an implementation-defined value.
+                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                      selector:
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                     Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                     the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                     the values array must be empty. This array is replaced during a strategic
+                                     merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              - values
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                               map is equivalent to an element of matchExpressions, whose key field is "key", the
+                               operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                      storageClassName:
+                        description: |-
+                          Name of the StorageClass required by the claim.
+                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+                        type: string
+                      volumeMode:
+                        description: |-
+                          volumeMode defines what type of volume is required by the claim.
+                           Value of Filesystem is implied when not included in claim spec.
+                        enum:
+                        - Block
+                        - Filesystem
+                        type: string
+                      volumeName:
+                        description: VolumeName is the binding reference to the PersistentVolume
+                          backing this claim.
+                        type: string
+                    required:
+                    - accessModes
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - members
+            - version
+            - defragmentSchedule
+            type: object
+          status:
+            properties:
+              backup:
+                properties:
+                  history:
+                    items:
+                      properties:
+                        etcdRevision:
+                          format: int64
+                          type: integer
+                        etcdVersion:
+                          type: string
+                        executeTime:
+                          format: date-time
+                          type: string
+                        message:
+                          type: string
+                        path:
+                          type: string
+                        succeeded:
+                          type: boolean
+                      type: object
+                    type: array
+                  lastSucceededTime:
+                    format: date-time
+                    type: string
+                  succeeded:
+                    type: boolean
+                type: object
+              clientCertSecretName:
+                type: string
+              clientEndpoint:
+                type: string
+              lastDefragmentTime:
+                format: date-time
+                type: string
+              lastReadyTransitionTime:
+                format: date-time
+                type: string
+              members:
+                items:
+                  properties:
+                    id:
+                      format: int64
+                      type: integer
+                    leader:
+                      type: boolean
+                    learner:
+                      type: boolean
+                    name:
+                      type: string
+                    podName:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
+              phase:
+                enum:
+                - Pending
+                - Initializing
+                - Creating
+                - Running
+                - Updating
+                - Degrading
+                type: string
+              ready:
+                type: boolean
+              restoreFrom:
+                type: string
+              restored:
+                properties:
+                  backupTime:
+                    format: date-time
+                    type: string
+                  completed:
+                    type: boolean
+                  path:
+                    type: string
+                  restoredTime:
+                    format: date-time
+                    type: string
+                type: object
+            required:
+            - ready
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Ready
+      format: byte
+      jsonPath: .status.ready
+      name: ready
+      type: string
+    - description: Phase
+      format: byte
+      jsonPath: .status.phase
+      name: phase
+      type: string
+    - description: Members
+      format: byte
+      jsonPath: .spec.members
+      name: members
+      type: string
+    - description: Age
+      format: date
+      jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              antiAffinity:
+                type: boolean
+              backup:
+                properties:
+                  intervalInSecond:
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  storage:
+                    properties:
+                      gcs:
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              serviceAccountJsonKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                        type: object
+                      minio:
+                        properties:
+                          bucket:
+                            type: string
+                          credentialSelector:
+                            properties:
+                              accessKeyIdKey:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              secretAccessKeyKey:
+                                type: string
+                            type: object
+                          path:
+                            type: string
+                          secure:
+                            type: boolean
+                          serviceSelector:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
+                type: object
+              defragmentSchedule:
+                type: string
+              development:
+                type: boolean
+              members:
+                type: integer
+              template:
+                properties:
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
+              version:
+                type: string
+              volumeClaimTemplate:
+                properties:
+                  metadata:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations is an unstructured key value map stored with a resource that may be
+                           set by external tools to store and retrieve arbitrary metadata. They are not
+                           queryable and should be preserved when modifying objects.
+                           More info: http://kubernetes.io/docs/user-guide/annotations
+                        type: object
+                      clusterName:
+                        description: |-
+                          The name of the cluster which the object belongs to.
+                           This is used to distinguish resources with same name and namespace in different clusters.
+                           This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.
+                        type: string
+                      creationTimestamp:
+                        description: |-
+                          CreationTimestamp is a timestamp representing the server time when this object was
+                           created. It is not guaranteed to be set in happens-before order across separate operations.
+                           Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+                           Populated by the system.
+                           Read-only.
+                           Null for lists.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                        format: date-time
+                        type: string
+                      deletionGracePeriodSeconds:
+                        description: |-
+                          Number of seconds allowed for this object to gracefully terminate before
+                           it will be removed from the system. Only set when deletionTimestamp is also set.
+                           May only be shortened.
+                           Read-only.
+                        format: int64
+                        type: integer
+                      deletionTimestamp:
+                        description: |-
+                          DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This
+                           field is set by the server when a graceful deletion is requested by the user, and is not
+                           directly settable by a client. The resource is expected to be deleted (no longer visible
+                           from resource lists, and not reachable by name) after the time in this field, once the
+                           finalizers list is empty. As long as the finalizers list contains items, deletion is blocked.
+                           Once the deletionTimestamp is set, this value may not be unset or be set further into the
+                           future, although it may be shortened or the resource may be deleted prior to this time.
+                           For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react
+                           by sending a graceful termination signal to the containers in the pod. After that 30 seconds,
+                           the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup,
+                           remove the pod from the API. In the presence of network partitions, this object may still
+                           exist after this timestamp, until an administrator or automated process can determine the
+                           resource is fully terminated.
+                           If not set, graceful deletion of the object has not been requested.
+                           Populated by the system when a graceful deletion is requested.
+                           Read-only.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                        format: date-time
+                        type: string
+                      finalizers:
+                        description: |-
+                          Must be empty before the object is deleted from the registry. Each entry
+                           is an identifier for the responsible component that will remove the entry
+                           from the list. If the deletionTimestamp of the object is non-nil, entries
+                           in this list can only be removed.
+                           Finalizers may be processed and removed in any order.  Order is NOT enforced
+                           because it introduces significant risk of stuck finalizers.
+                           finalizers is a shared field, any actor with permission can reorder it.
+                           If the finalizer list is processed in order, then this can lead to a situation
+                           in which the component responsible for the first finalizer in the list is
+                           waiting for a signal (field value, external system, or other) produced by a
+                           component responsible for a finalizer later in the list, resulting in a deadlock.
+                           Without enforced ordering finalizers are free to order amongst themselves and
+                           are not vulnerable to ordering changes in the list.
+                        items:
+                          type: string
+                        type: array
+                      generateName:
+                        description: |-
+                          GenerateName is an optional prefix, used by the server, to generate a unique
+                           name ONLY IF the Name field has not been provided.
+                           If this field is used, the name returned to the client will be different
+                           than the name passed. This value will also be combined with a unique suffix.
+                           The provided value has the same validation rules as the Name field,
+                           and may be truncated by the length of the suffix required to make the value
+                           unique on the server.
+                           If this field is specified and the generated name exists, the server will
+                           NOT return a 409 - instead, it will either return 201 Created or 500 with Reason
+                           ServerTimeout indicating a unique name could not be found in the time allotted, and the client
+                           should retry (optionally after the time indicated in the Retry-After header).
+                           Applied only if Name is not specified.
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency
+                        type: string
+                      generation:
+                        description: |-
+                          A sequence number representing a specific generation of the desired state.
+                           Populated by the system. Read-only.
+                        format: int64
+                        type: integer
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Map of string keys and values that can be used to organize and categorize
+                           (scope and select) objects. May match selectors of replication controllers
+                           and services.
+                           More info: http://kubernetes.io/docs/user-guide/labels
+                        type: object
+                      managedFields:
+                        description: |-
+                          ManagedFields maps workflow-id and version to the set of fields
+                           that are managed by that workflow. This is mostly for internal
+                           housekeeping, and users typically shouldn't need to set or
+                           understand this field. A workflow can be the user's name, a
+                           controller's name, or the name of a specific apply path like
+                           "ci-cd". The set of fields is always in the version that the
+                           workflow used when modifying the object.
+                        items:
+                          properties:
+                            apiVersion:
+                              description: |-
+                                APIVersion defines the version of this resource that this field set
+                                 applies to. The format is "group/version" just like the top-level
+                                 APIVersion field. It is necessary to track the version of a field
+                                 set because it cannot be automatically converted.
+                              type: string
+                            fieldsType:
+                              description: |-
+                                FieldsType is the discriminator for the different fields format and version.
+                                 There is currently only one possible value: "FieldsV1"
+                              type: string
+                            fieldsV1:
+                              type: object
+                            manager:
+                              description: Manager is an identifier of the workflow
+                                managing these fields.
+                              type: string
+                            operation:
+                              description: |-
+                                Operation is the type of operation which lead to this ManagedFieldsEntry being created.
+                                 The only valid values for this field are 'Apply' and 'Update'.
+                              enum:
+                              - Apply
+                              - Update
+                              type: string
+                            subresource:
+                              description: |-
+                                Subresource is the name of the subresource used to update that object, or
+                                 empty string if the object was updated through the main resource. The
+                                 value of this field is used to distinguish between managers, even if they
+                                 share the same name. For example, a status update will be distinct from a
+                                 regular update using the same manager name.
+                                 Note that the APIVersion field is not related to the Subresource field and
+                                 it always corresponds to the version of the main resource.
+                              type: string
+                            time:
+                              description: Time is timestamp of when these fields
+                                were set. It should always be empty if Operation is
+                                'Apply'
+                              format: date-time
+                              type: string
+                          type: object
+                        type: array
+                      name:
+                        description: |-
+                          Name must be unique within a namespace. Is required when creating resources, although
+                           some resources may allow a client to request the generation of an appropriate name
+                           automatically. Name is primarily intended for creation idempotence and configuration
+                           definition.
+                           Cannot be updated.
+                           More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace defines the space within which each name must be unique. An empty namespace is
+                           equivalent to the "default" namespace, but "default" is the canonical representation.
+                           Not all objects are required to be scoped to a namespace - the value of this field for
+                           those objects will be empty.
+                           Must be a DNS_LABEL.
+                           Cannot be updated.
+                           More info: http://kubernetes.io/docs/user-guide/namespaces
+                        type: string
+                      ownerReferences:
+                        description: |-
+                          List of objects depended by this object. If ALL objects in the list have
+                           been deleted, this object will be garbage collected. If this object is managed by a controller,
+                           then an entry in this list will point to this controller, with the controller field set to true.
+                           There cannot be more than one managing controller.
+                        items:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            blockOwnerDeletion:
+                              description: |-
+                                If true, AND if the owner has the "foregroundDeletion" finalizer, then
+                                 the owner cannot be deleted from the key-value store until this
+                                 reference is removed.
+                                 Defaults to false.
+                                 To set this field, a user needs "delete" permission of the owner,
+                                 otherwise 422 (Unprocessable Entity) will be returned.
+                              type: boolean
+                            controller:
+                              description: If true, this reference points to the managing
+                                controller.
+                              type: boolean
+                            kind:
+                              description: |-
+                                Kind of the referent.
+                                 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                              type: string
+                            name:
+                              description: |-
+                                Name of the referent.
+                                 More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                              type: string
+                            uid:
+                              description: |-
+                                UID of the referent.
+                                 More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          - uid
+                          type: object
+                        type: array
+                      resourceVersion:
+                        description: |-
+                          An opaque value that represents the internal version of this object that can
+                           be used by clients to determine when objects have changed. May be used for optimistic
+                           concurrency, change detection, and the watch operation on a resource or set of resources.
+                           Clients must treat these values as opaque and passed unmodified back to the server.
+                           They may only be valid for a particular resource or set of resources.
+                           Populated by the system.
+                           Read-only.
+                           Value must be treated as opaque by clients and .
+                           More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                        type: string
+                      selfLink:
+                        description: |-
+                          SelfLink is a URL representing this object.
+                           Populated by the system.
+                           Read-only.
+                           DEPRECATED
+                           Kubernetes will stop propagating this field in 1.20 release and the field is planned
+                           to be removed in 1.21 release.
+                        type: string
+                      uid:
+                        description: |-
+                          UID is the unique in time and space value for this object. It is typically generated by
+                           the server on successful creation of a resource and is not allowed to change on PUT
+                           operations.
+                           Populated by the system.
+                           Read-only.
+                           More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                        type: string
+                    required:
+                    - finalizers
+                    type: object
+                  spec:
+                    properties:
+                      accessModes:
+                        description: |-
+                          AccessModes contains the desired access modes the volume should have.
+                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+                        enum:
+                        - ReadWriteOnce
+                        - ReadOnlyMany
+                        - ReadWriteMany
+                        - ReadWriteOncePod
+                        type: string
+                      dataSource:
+                        properties:
+                          apiGroup:
+                            description: |-
+                              APIGroup is the group for the resource being referenced.
+                               If APIGroup is not specified, the specified Kind must be in the core API group.
+                               For any other third-party types, APIGroup is required.
+                            type: string
+                          kind:
+                            description: Kind is the type of resource being referenced
+                            type: string
+                          name:
+                            description: Name is the name of resource being referenced
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      dataSourceRef:
+                        properties:
+                          apiGroup:
+                            description: |-
+                              APIGroup is the group for the resource being referenced.
+                               If APIGroup is not specified, the specified Kind must be in the core API group.
+                               For any other third-party types, APIGroup is required.
+                            type: string
+                          kind:
+                            description: Kind is the type of resource being referenced
+                            type: string
+                          name:
+                            description: Name is the name of resource being referenced
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                               otherwise to an implementation-defined value.
+                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                      selector:
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                     Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                     the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                     the values array must be empty. This array is replaced during a strategic
+                                     merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              - values
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                               map is equivalent to an element of matchExpressions, whose key field is "key", the
+                               operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                      storageClassName:
+                        description: |-
+                          Name of the StorageClass required by the claim.
+                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+                        type: string
+                      volumeMode:
+                        description: |-
+                          volumeMode defines what type of volume is required by the claim.
+                           Value of Filesystem is implied when not included in claim spec.
+                        enum:
+                        - Block
+                        - Filesystem
+                        type: string
+                      volumeName:
+                        description: VolumeName is the binding reference to the PersistentVolume
+                          backing this claim.
+                        type: string
+                    required:
+                    - accessModes
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - members
+            - version
+            - defragmentSchedule
+            type: object
+          status:
+            properties:
+              backup:
+                properties:
+                  bakcupStatusHistory:
+                    items:
+                      properties:
+                        etcdRevision:
+                          format: int64
+                          type: integer
+                        etcdVersion:
+                          type: string
+                        executeTime:
+                          format: date-time
+                          type: string
+                        message:
+                          type: string
+                        path:
+                          type: string
+                        succeeded:
+                          type: boolean
+                      type: object
+                    type: array
+                  lastSucceededTime:
+                    format: date-time
+                    type: string
+                  succeeded:
+                    type: boolean
+                type: object
+              clientCertSecretName:
+                type: string
+              clientEndpoint:
+                type: string
+              creatingCompleted:
+                type: boolean
+              lastDefragmentTime:
+                format: date-time
+                type: string
+              lastReadyTransitionTime:
+                format: date-time
+                type: string
+              members:
+                items:
+                  properties:
+                    dbSize:
+                      format: int64
+                      type: integer
+                    id:
+                      format: int64
+                      type: integer
+                    inUseSize:
+                      format: int64
+                      type: integer
+                    leader:
+                      type: boolean
+                    learner:
+                      type: boolean
+                    name:
+                      type: string
+                    podName:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
+              phase:
+                enum:
+                - Pending
+                - Initializing
+                - Creating
+                - Running
+                - Updating
+                - Degrading
+                type: string
+              ready:
+                type: boolean
+              restored:
+                properties:
+                  backupTime:
+                    format: date-time
+                    type: string
+                  completed:
+                    type: boolean
+                  path:
+                    type: string
+                  restoredTime:
+                    format: date-time
+                    type: string
+                type: object
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: proxies.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: Proxy
+    listKind: ProxyList
+    plural: proxies
+    singular: proxy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Ready
+      format: byte
+      jsonPath: .status.ready
+      name: ready
+      type: string
+    - description: Phase
+      format: byte
+      jsonPath: .status.phase
+      name: phase
+      type: string
+    - description: Members
+      format: byte
+      jsonPath: .status.numberOfBackends
+      name: backends
+      type: string
+    - description: Age
+      format: date
+      jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              administratorUnit:
+                type: string
+              backendSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                             Valid operators are In, NotIn, Exists and DoesNotExist.
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                             the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                             the values array must be empty. This array is replaced during a strategic
+                             merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                       map is equivalent to an element of matchExpressions, whose key field is "key", the
+                       operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              backup:
+                properties:
+                  bucket:
+                    type: string
+                  credentialRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  endpoint:
+                    type: string
+                  intervalInSecond:
+                    format: int64
+                    type: integer
+                  maxBackups:
+                    type: integer
+                  path:
+                    type: string
+                required:
+                - intervalInSecond
+                - bucket
+                - path
+                - credentialRef
+                type: object
+              country:
+                type: string
+              dashboardReplicas:
+                type: integer
+              dataStore:
+                properties:
+                  etcd:
+                    properties:
+                      antiAffinity:
+                        type: boolean
+                      defragment:
+                        properties:
+                          schedule:
+                            type: string
+                        type: object
+                      version:
+                        type: string
+                    type: object
+                type: object
+              defragment:
+                properties:
+                  schedule:
+                    type: string
+                type: object
+              development:
+                type: boolean
+              domain:
+                type: string
+              etcdVersion:
+                type: string
+              httpPort:
+                type: integer
+              identityProvider:
+                properties:
+                  clientId:
+                    type: string
+                  clientSecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  provider:
+                    type: string
+                  redirectUrl:
+                    type: string
+                required:
+                - provider
+                type: object
+              issuerRef:
+                properties:
+                  group:
+                    description: Group of the resource being referred to.
+                    type: string
+                  kind:
+                    description: Kind of the resource being referred to.
+                    type: string
+                  name:
+                    description: Name of the resource being referred to.
+                    type: string
+                required:
+                - name
+                type: object
+              loadBalancerIp:
+                type: string
+              monitor:
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  prometheusMonitoring:
+                    type: boolean
+                type: object
+              name:
+                type: string
+              organization:
+                type: string
+              port:
+                type: integer
+              proxyResources:
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Limits describes the maximum amount of compute resources allowed.
+                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Requests describes the minimum amount of compute resources required.
+                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                       otherwise to an implementation-defined value.
+                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                type: object
+              replicas:
+                type: integer
+              roleSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                             Valid operators are In, NotIn, Exists and DoesNotExist.
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                             the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                             the values array must be empty. This array is replaced during a strategic
+                             merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                       map is equivalent to an element of matchExpressions, whose key field is "key", the
+                       operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              rootUsers:
+                items:
+                  type: string
+                type: array
+              rpcPermissionSelector:
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                             Valid operators are In, NotIn, Exists and DoesNotExist.
+                          enum:
+                          - In
+                          - NotIn
+                          - Exists
+                          - DoesNotExist
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                             the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                             the values array must be empty. This array is replaced during a strategic
+                             merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                       map is equivalent to an element of matchExpressions, whose key field is "key", the
+                       operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                  namespace:
+                    type: string
+                type: object
+              rpcServerResources:
+                properties:
+                  limits:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Limits describes the maximum amount of compute resources allowed.
+                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                  requests:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Requests describes the minimum amount of compute resources required.
+                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                       otherwise to an implementation-defined value.
+                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                type: object
+              session:
+                properties:
+                  keySecretRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    type: string
+                required:
+                - type
+                type: object
+              version:
+                type: string
+            required:
+            - domain
+            - issuerRef
+            - identityProvider
+            - rootUsers
+            - session
+            - replicas
+            type: object
+          status:
+            properties:
+              caSecretName:
+                type: string
+              cookieSecretName:
+                type: string
+              githubWebhookSecretName:
+                type: string
+              internalTokenSecretName:
+                type: string
+              numberOfBackends:
+                type: integer
+              numberOfRoles:
+                type: integer
+              numberOfRpcPermissions:
+                type: integer
+              phase:
+                enum:
+                - Creating
+                - Error
+                - Running
+                - Updating
+                type: string
+              ready:
+                type: boolean
+              signingPrivateKeySecretName:
+                type: string
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: roles.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: Role
+    listKind: RoleList
+    plural: roles
+    singular: role
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              allowDashboard:
+                type: boolean
+              description:
+                type: string
+              title:
+                type: string
+            type: object
+          status:
+            properties:
+              spec:
+                properties:
+                  allow:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - allow
+                type: object
+              status:
+                type: object
+            required:
+            - spec
+            - status
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: rolebindings.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: RoleBinding
+    listKind: RoleBindingList
+    plural: rolebindings
+    singular: rolebinding
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+          roleRef:
+            properties:
+              name:
+                type: string
+              namespace:
+                type: string
+            required:
+            - name
+            - namespace
+            type: object
+          subjects:
+            items:
+              properties:
+                kind:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+                permission:
+                  type: string
+              required:
+              - kind
+              - name
+              type: object
+            type: array
+        type: object
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: rpcpermissions.proxy.f110.dev
+spec:
+  group: proxy.f110.dev
+  names:
+    kind: RpcPermission
+    listKind: RpcPermissionList
+    plural: rpcpermissions
+    singular: rpcpermission
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values.
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated.
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: true

@@ -1,0 +1,260 @@
+syntax = "proto3";
+package heimdallr.api.proxyv1alpha1;
+option  go_package              = "go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha1";
+option (dev.f110.kubeproto.k8s) = {
+  domain: "f110.dev"
+  sub_group: "proxy"
+  version: "v1alpha1"
+};
+
+import "kube.proto";
+import "k8s.io/api/core/v1/generated.proto";
+import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
+import "operator/proto/certmanager.proto";
+
+enum ProxyPhase {
+  PROXY_PHASE_CREATING = 0 [(dev.f110.kubeproto.value) = { value: "Creating" }];
+  PROXY_PHASE_ERROR    = 1 [(dev.f110.kubeproto.value) = { value: "Error" }];
+  PROXY_PHASE_RUNNING  = 2 [(dev.f110.kubeproto.value) = { value: "Running" }];
+  PROXY_PHASE_UPDATING = 3 [(dev.f110.kubeproto.value) = { value: "Updating" }];
+}
+
+message Proxy {
+  ProxySpec            spec   = 1;
+  optional ProxyStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+
+  option (dev.f110.kubeproto.kind) = {
+    additional_printer_columns: { name: "ready", type: "string", json_path: ".status.ready", description: "Ready", format: "byte", priority: 0 }
+    additional_printer_columns: { name: "phase", type: "string", json_path: ".status.phase", description: "Phase", format: "byte", priority: 0 }
+    additional_printer_columns: { name: "backends", type: "string", json_path: ".status.numberOfBackends", description: "Members", format: "byte", priority: 0 }
+    additional_printer_columns: { name: "age", type: "date", json_path: ".metadata.creationTimestamp", description: "Age", format: "date", priority: 0 }
+  };
+}
+
+message ProxySpec {
+  string                                                            domain                  = 1;
+  optional int32                                                    port                    = 2;
+  optional int32                                                    http_port               = 3;
+  optional string                                                   version                 = 4;
+  optional string                                                   etcd_version            = 5 [deprecated = true];
+  optional ProxyDataStoreSpec                                       data_store              = 6;
+  optional string                                                   load_balancer_ip        = 7 [(dev.f110.kubeproto.field) = { go_name: "LoadBalancerIP" }];
+  optional string                                                   name                    = 8;
+  optional string                                                   organization            = 9;
+  optional string                                                   administrator_unit      = 10;
+  optional string                                                   country                 = 11;
+  github.com.jetstack.cert_manager.pkg.apis.meta.v1.ObjectReference issuer_ref              = 12;
+  IdentityProviderSpec                                              identity_provider       = 13;
+  repeated string                                                   root_users              = 14;
+  SessionSpec                                                       session                 = 15;
+  int32                                                             replicas                = 16;
+  optional int32                                                    dashboard_replicas      = 17;
+  optional LabelSelector                                            backend_selector        = 18;
+  optional LabelSelector                                            role_selector           = 19;
+  optional LabelSelector                                            rpc_permission_selector = 20;
+  optional DefragmentSpec                                           defragment              = 21;
+  optional MonitorSpec                                              monitor                 = 22;
+  optional BackupSpec                                               backup                  = 23;
+  optional k8s.io.api.core.v1.ResourceRequirements proxy_resources                          = 24;
+  optional k8s.io.api.core.v1.ResourceRequirements rpc_server_resources                     = 25 [(dev.f110.kubeproto.field) = { go_name: "RPCServerResources" }];
+  optional bool                                    development                              = 26;
+}
+
+message ProxyDataStoreSpec {
+  optional ProxyDataStoreEtcdSpec etcd = 1;
+}
+
+message ProxyDataStoreEtcdSpec {
+  optional string         version       = 1;
+  optional DefragmentSpec defragment    = 2;
+  optional bool           anti_affinity = 3;
+}
+
+message IdentityProviderSpec {
+  string                  provider          = 1;
+  optional string         client_id         = 2;
+  optional SecretSelector client_secret_ref = 3;
+  optional string         redirect_url      = 4;
+}
+
+message SessionSpec {
+  string                  type           = 1;
+  optional SecretSelector key_secret_ref = 2;
+}
+
+message LabelSelector {
+  k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector label_selector   = 1 [(dev.f110.kubeproto.field) = { inline: true }];
+  optional                                           string namespace = 2;
+}
+
+message SecretSelector {
+  string          name = 1;
+  optional string key  = 2;
+}
+
+message DefragmentSpec {
+  optional string schedule = 1;
+}
+
+message MonitorSpec {
+  optional bool       prometheus_monitoring = 1;
+  map<string, string> labels                = 2;
+}
+
+message BackupSpec {
+  int64           interval_in_second = 1;
+  optional int32  max_backups        = 2;
+  string          bucket             = 3;
+  string          path               = 4;
+  SecretSelector  credential_ref     = 5;
+  optional string endpoint           = 6;
+}
+
+message ProxyStatus {
+  bool                ready                           = 1;
+  optional ProxyPhase phase                           = 2;
+  optional int32      number_of_backends              = 3 [(dev.f110.kubeproto.field) = { go_name: "NumOfBackends" }];
+  optional int32      number_of_roles                 = 4 [(dev.f110.kubeproto.field) = { go_name: "NumOfRoles" }];
+  optional int32      number_of_rpc_permissions       = 5 [(dev.f110.kubeproto.field) = { go_name: "NumOfRpcPermissions" }];
+  optional string     ca_secret_name                  = 6 [(dev.f110.kubeproto.field) = { go_name: "CASecretName" }];
+  optional string     signing_private_key_secret_name = 7;
+  optional string     github_webhook_secret_name      = 8;
+  optional string     cookie_secret_name              = 9;
+  optional string     internal_token_secret_name      = 10;
+}
+
+message Backend {
+  BackendSpec            spec   = 1;
+  optional BackendStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+
+  option (dev.f110.kubeproto.kind) = {
+  };
+}
+
+message BackendSpec {
+  optional string fqdn                                                         = 1 [(dev.f110.kubeproto.field) = { go_name: "FQDN" }];
+  optional string layer                                                        = 2;
+  optional string upstream                                                     = 3;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration socket_timeout        = 4;
+  optional ServiceSelector                               service_selector      = 5;
+  optional string                                        webhook               = 6;
+  repeated string                                        webhook_path          = 7;
+  optional bool                                          allow_root_user       = 8;
+  optional bool                                          agent                 = 9;
+  optional bool                                          socket                = 10;
+  optional bool                                          disable_authn         = 11;
+  optional bool                                          insecure              = 12;
+  optional bool                                          allow_http            = 13;
+  repeated Permission                                    permissions           = 14;
+  optional WebhookConfiguration                          webhook_configuration = 15;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration max_session_duration  = 16;
+}
+
+message ServiceSelector {
+  k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector label_selector   = 1 [(dev.f110.kubeproto.field) = { inline: true }];
+  optional                                           string namespace = 2;
+  optional string                                    name             = 3;
+  optional string                                    port             = 4;
+  optional string                                    scheme           = 5;
+}
+
+message Permission {
+  optional string   name      = 1;
+  repeated Location locations = 2;
+}
+
+message Location {
+  optional string any           = 1;
+  optional string get           = 2;
+  optional string post          = 3;
+  optional string put           = 4;
+  optional        string delete = 5;
+  optional string head          = 6;
+  optional string connect       = 7;
+  optional string options       = 8;
+  optional string trace         = 9;
+  optional string patch         = 10;
+}
+
+message WebhookConfiguration {
+  GitHubHookConfiguration github = 1 [(dev.f110.kubeproto.field) = { inline: true }];
+}
+
+message GitHubHookConfiguration {
+  repeated string repositories                = 1;
+  optional string path                        = 2;
+  repeated string events                      = 3;
+  optional string content_type                = 4;
+  optional string credential_secret_name      = 5;
+  optional string credential_secret_namespace = 6;
+  optional string app_id_key                  = 7;
+  optional string installation_id_key         = 8;
+  optional string private_key_key             = 9;
+}
+
+message BackendStatus {
+  repeated ProxyReference             deployed_by            = 1;
+  repeated WebhookConfigurationStatus webhook_configurations = 2;
+}
+
+message ProxyReference {
+  optional string name             = 1;
+  optional        string namespace = 2;
+  optional string url              = 3;
+}
+
+message WebhookConfigurationStatus {
+  int64           id                                             = 1;
+  optional string repository                                     = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time update_time = 3;
+}
+
+message Role {
+  RoleSpec   spec   = 1;
+  RoleStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+
+  option (dev.f110.kubeproto.kind) = {
+  };
+}
+
+message RoleSpec {
+  optional string title           = 1;
+  optional string description     = 2;
+  optional bool   allow_dashboard = 3;
+}
+
+message RoleStatus {
+  RpcPermissionSpec   spec   = 1;
+  RpcPermissionStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+}
+
+message RpcPermission {
+  option (dev.f110.kubeproto.kind) = {
+  };
+}
+
+message RpcPermissionSpec {
+  repeated string allow = 1;
+}
+
+message RpcPermissionStatus {}
+
+message RoleBinding {
+  repeated Subject subjects = 1;
+  RoleRef          role_ref = 2;
+
+  option (dev.f110.kubeproto.kind) = {
+  };
+}
+
+message Subject {
+  string          kind             = 1;
+  string          name             = 2;
+  optional        string namespace = 3;
+  optional string permission       = 4;
+}
+
+message RoleRef {
+  string name      = 1;
+  string namespace = 2;
+}

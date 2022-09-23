@@ -30,9 +30,13 @@ gen:
 	bazel run //pkg/database/mysql/entity:vendor_entity
 	bazel run //pkg/database/mysql/dao:vendor_dao
 
-gen-operator:
+gen-operator: operator/proto/certmanager.proto
 	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
+	bazel query 'kind(vendor_kubeproto, //...)' | xargs -n1 bazel run
 	bazel run //pkg/k8s/controllers:rbac
+
+operator/proto/certmanager.proto:
+	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ --proto-package github.com.jetstack.cert_manager.pkg.apis.meta.v1 --go-package github.com/jetstack/cert-manager/pkg/apis/meta/v1 --all $(CURDIR)/vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1
 
 create-cluster:
 	bazel run //:create_cluster

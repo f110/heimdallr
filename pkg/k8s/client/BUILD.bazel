@@ -1,0 +1,18 @@
+load("@dev_f110_kubeproto//bazel:def.bzl", "go_client")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+go_client(
+    name = "go_client",
+    srcs = [
+        "//pkg/k8s/api/etcdv1alpha1:etcd_proto",
+        "//pkg/k8s/api/etcdv1alpha2:etcd_proto",
+        "//pkg/k8s/api/proxyv1alpha1:proxy_proto",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/client",
+    visibility = ["//visibility:public"],
+)
+
+vendor_kubeproto(
+    name = "vendor_client",
+    src = ":go_client",
+)
