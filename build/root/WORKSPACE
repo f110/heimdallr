@@ -48,15 +48,6 @@ git_repository(
     remote = "https://github.com/f110/protoc-ddl",
 )
 
-http_archive(
-    name = "dev_f110_rules_k8s_controller",
-    sha256 = "ddc05d5941371c08ee9145b2984c77b6b28c3ca7ed2d80ef1be1f61986405a3e",
-    strip_prefix = "rules_k8s_controller-0.14.0",
-    urls = [
-        "https://github.com/f110/rules_k8s_controller/archive/v0.14.0.tar.gz",
-    ],
-)
-
 git_repository(
     name = "dev_f110_kubeproto",
     commit = "a37398dabdb2fccfe7cce16c5b56cdf4fed92609",
@@ -144,10 +135,6 @@ http_file(
     sha256 = "ded15e598d887ccc47bf2321371950bbf930f5e4856b9f75712ce4b2b5120480",
     urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.11/grpc_health_probe-linux-amd64"],
 )
-
-load("@dev_f110_rules_k8s_controller//:deps.bzl", "rules_k8s_controller_dependencies")
-
-rules_k8s_controller_dependencies()
 
 load("//build/rules/kustomize:def.bzl", "kustomize_binary")
 
