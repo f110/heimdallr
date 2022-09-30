@@ -19,10 +19,10 @@ import (
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
@@ -39,12 +39,12 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 				Name: "e2e",
 			},
 		},
-		BackendSelector: proxyv1alpha2.LabelSelector{
+		BackendSelector: &proxyv1alpha2.LabelSelector{
 			LabelSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{"instance": "e2e"},
 			},
 		},
-		RoleSelector: proxyv1alpha2.LabelSelector{
+		RoleSelector: &proxyv1alpha2.LabelSelector{
 			LabelSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{"instance": "e2e"},
 			},
@@ -108,12 +108,12 @@ type Framework struct {
 	Proxy        *Proxy
 	EtcdClusters *EtcdClusters
 
-	client     *clientset.Clientset
+	client     *client.Set
 	coreClient *kubernetes.Clientset
 }
 
 func New(t *testing.T, conf *rest.Config) *Framework {
-	c, err := clientset.NewForConfig(conf)
+	c, err := client.NewSet(conf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func (f *Framework) Execute() {
 	f.BehaviorDriven.Execute("")
 }
 
-func (f *Framework) Client() *clientset.Clientset {
+func (f *Framework) Client() *client.Set {
 	return f.client
 }
 
@@ -150,7 +150,7 @@ func (f *Framework) CoreClient() *kubernetes.Clientset {
 
 type Proxy struct {
 	restConfig *rest.Config
-	client     *clientset.Clientset
+	client     *client.Set
 	coreClient *kubernetes.Clientset
 
 	proxy          *proxyv1alpha2.Proxy
@@ -186,14 +186,14 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "admin",
 			Namespace: proxySpec.Namespace,
-			Labels:    proxySpec.Spec.RoleSelector.MatchLabels,
+			Labels:    proxySpec.Spec.RoleSelector.LabelSelector.MatchLabels,
 		},
 		Spec: proxyv1alpha2.RoleSpec{
 			Title:       "administrator",
 			Description: "admin",
 		},
 	}
-	role, err = p.client.ProxyV1alpha2().Roles(role.Namespace).Create(context.TODO(), role, metav1.CreateOptions{})
+	role, err = p.client.ProxyV1alpha2.CreateRole(context.TODO(), role, metav1.CreateOptions{})
 	m.NoError(err)
 	roleBinding := &proxyv1alpha2.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -210,15 +210,15 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 			{Kind: "Backend", Name: disableAuthnTestBackend.Name, Namespace: proxySpec.Namespace, Permission: "all"},
 		},
 	}
-	_, err = p.client.ProxyV1alpha2().RoleBindings(proxySpec.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+	_, err = p.client.ProxyV1alpha2.CreateRoleBinding(context.TODO(), roleBinding, metav1.CreateOptions{})
 	m.NoError(err)
 
-	_, err = p.client.ProxyV1alpha2().Proxies(proxySpec.Namespace).Create(context.TODO(), proxySpec, metav1.CreateOptions{})
+	_, err = p.client.ProxyV1alpha2.CreateProxy(context.TODO(), proxySpec, metav1.CreateOptions{})
 	m.NoError(err)
 
 	m.NoError(e2eutil.WaitForStatusOfProxyBecome(p.client, proxySpec, proxyv1alpha2.ProxyPhaseRunning, 10*time.Minute))
 	m.NoError(e2eutil.WaitForReadyOfProxy(p.client, proxySpec, 10*time.Minute))
-	proxySpec, err = p.client.ProxyV1alpha2().Proxies(proxySpec.Namespace).Get(context.TODO(), proxySpec.Name, metav1.GetOptions{})
+	proxySpec, err = p.client.ProxyV1alpha2.GetProxy(context.TODO(), proxySpec.Namespace, proxySpec.Name, metav1.GetOptions{})
 	m.NoError(err)
 
 	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, proxySpec, testUserId)
@@ -315,17 +315,17 @@ func (a *Agent) GetDashboard(m *btesting.Matcher) bool {
 type EtcdClusters struct {
 	restConfig *rest.Config
 	coreClient *kubernetes.Clientset
-	client     *clientset.Clientset
+	client     *client.Set
 
 	clusters map[string]*etcdv1alpha2.EtcdCluster
 }
 
 func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...k8sfactory.Trait) bool {
 	etcdCluster := etcd.Factory(EtcdClusterBase, traits...)
-	_, err := e.client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Create(context.TODO(), etcdCluster, metav1.CreateOptions{})
+	_, err := e.client.EtcdV1alpha2.CreateEtcdCluster(context.Background(), etcdCluster, metav1.CreateOptions{})
 	m.Must(err)
 	e.clusters[etcdCluster.GetName()] = etcdCluster
-	return m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(e.client, etcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+	return m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(e.client, etcdCluster, etcdv1alpha2.EtcdClusterPhaseRunning, 10*time.Minute))
 }
 
 func (e *EtcdClusters) EtcdCluster(name string) *EtcdCluster {
@@ -345,7 +345,7 @@ func (e *EtcdClusters) Reload(name string) error {
 	if !ok {
 		return nil
 	}
-	newEC, err := e.client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
+	newEC, err := e.client.EtcdV1alpha2.GetEtcdCluster(context.Background(), ec.Namespace, ec.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -380,24 +380,24 @@ func (c *EtcdCluster) Client(m *btesting.Matcher) *e2eutil.EtcdClient {
 	return ecClient
 }
 
-func (c *EtcdCluster) Destroy(client *clientset.Clientset) {
+func (c *EtcdCluster) Destroy(client *client.Set) {
 	if c.EtcdCluster == nil {
 		return
 	}
-	_ = client.EtcdV1alpha2().EtcdClusters(c.Namespace).Delete(context.TODO(), c.Name, metav1.DeleteOptions{})
+	_ = client.EtcdV1alpha2.DeleteEtcdCluster(context.TODO(), c.Namespace, c.Name, metav1.DeleteOptions{})
 }
 
-func (c *EtcdCluster) Update(m *btesting.Matcher, client *clientset.Clientset, traits ...k8sfactory.Trait) {
+func (c *EtcdCluster) Update(m *btesting.Matcher, client *client.Set, traits ...k8sfactory.Trait) {
 	c.Reload()
 	newEC := etcd.Factory(c.EtcdCluster, traits...)
-	_, err := client.EtcdV1alpha2().EtcdClusters(c.Namespace).Update(context.TODO(), newEC, metav1.UpdateOptions{})
+	_, err := client.EtcdV1alpha2.UpdateEtcdCluster(context.TODO(), newEC, metav1.UpdateOptions{})
 	if err != nil {
 		m.Failf("Failed to update etcd cluster: %v", err)
 	}
 	c.Reload()
 }
 
-func (c *EtcdCluster) WaitBecome(m *btesting.Matcher, client *clientset.Clientset, status etcdv1alpha2.EtcdClusterPhase) {
+func (c *EtcdCluster) WaitBecome(m *btesting.Matcher, client *client.Set, status etcdv1alpha2.EtcdClusterPhase) {
 	m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(client, c.EtcdCluster, status, 10*time.Minute))
 }
 

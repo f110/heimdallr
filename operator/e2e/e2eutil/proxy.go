@@ -28,14 +28,14 @@ import (
 	"k8s.io/client-go/transport/spdy"
 
 	"go.f110.dev/heimdallr/pkg/cert"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
-func DeployTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
+func DeployTestService(coreClient kubernetes.Interface, client *client.Set, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
 	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -45,7 +45,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	backend, err = client.ProxyV1alpha2().Backends(backend.Namespace).Create(context.TODO(), backend, metav1.CreateOptions{})
+	backend, err = client.ProxyV1alpha2.CreateBackend(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -53,7 +53,7 @@ func DeployTestService(coreClient kubernetes.Interface, client clientset.Interfa
 	return backend, nil
 }
 
-func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client clientset.Interface, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
+func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client *client.Set, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
 	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -65,7 +65,7 @@ func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client clien
 	}
 
 	backend.Spec.DisableAuthn = true
-	backend, err = client.ProxyV1alpha2().Backends(backend.Namespace).Create(context.TODO(), backend, metav1.CreateOptions{})
+	backend, err = client.ProxyV1alpha2.CreateBackend(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -115,11 +115,11 @@ func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deploymen
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: proxy.Namespace,
-			Labels:    proxy.Spec.BackendSelector.MatchLabels,
+			Labels:    proxy.Spec.BackendSelector.LabelSelector.MatchLabels,
 		},
 		Spec: proxyv1alpha2.BackendSpec{
 			Layer: "test",
-			HTTP: []*proxyv1alpha2.BackendHTTPSpec{
+			HTTP: []proxyv1alpha2.BackendHTTPSpec{
 				{
 					Path: "/",
 					ServiceSelector: &proxyv1alpha2.ServiceSelector{

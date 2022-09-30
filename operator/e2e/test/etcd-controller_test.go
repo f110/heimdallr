@@ -11,7 +11,7 @@ import (
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
 	"go.f110.dev/heimdallr/operator/e2e/framework"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
@@ -72,7 +72,7 @@ func TestEtcdController(t *testing.T) {
 				s.Step("edit version", func(s *btesting.Scenario) {
 					s.Subject(func(m *btesting.Matcher) {
 						f.EtcdClusters.EtcdCluster("update").Update(m, f.Client(), etcd.Version("v3.4.5"))
-						f.EtcdClusters.EtcdCluster("update").WaitBecome(m, f.Client(), etcdv1alpha2.ClusterPhaseUpdating)
+						f.EtcdClusters.EtcdCluster("update").WaitBecome(m, f.Client(), etcdv1alpha2.EtcdClusterPhaseUpdating)
 					})
 
 					s.It("should be ready", func(m *btesting.Matcher) {
@@ -84,7 +84,7 @@ func TestEtcdController(t *testing.T) {
 					s.Subject(func(m *btesting.Matcher) {
 						ec := f.EtcdClusters.EtcdCluster("update").EtcdCluster
 						m.NotNil(ec)
-						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.EtcdClusterPhaseRunning, 10*time.Minute))
 					})
 
 					s.It("all pods should have updated", func(m *btesting.Matcher) {
@@ -109,7 +109,7 @@ func TestEtcdController(t *testing.T) {
 				s.Step("edit version to v3.5", func(s *btesting.Scenario) {
 					s.Subject(func(m *btesting.Matcher) {
 						f.EtcdClusters.EtcdCluster("update-mm").Update(m, f.Client(), etcd.Version("v3.5.1"))
-						f.EtcdClusters.EtcdCluster("update-mm").WaitBecome(m, f.Client(), etcdv1alpha2.ClusterPhaseUpdating)
+						f.EtcdClusters.EtcdCluster("update-mm").WaitBecome(m, f.Client(), etcdv1alpha2.EtcdClusterPhaseUpdating)
 					})
 
 					s.It("should be ready", func(m *btesting.Matcher) {
@@ -121,7 +121,7 @@ func TestEtcdController(t *testing.T) {
 					s.Subject(func(m *btesting.Matcher) {
 						ec := f.EtcdClusters.EtcdCluster("update-mm").EtcdCluster
 						m.NotNil(ec)
-						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.EtcdClusterPhaseRunning, 10*time.Minute))
 					})
 
 					s.It("all pods should have updated", func(m *btesting.Matcher) {
@@ -147,7 +147,7 @@ func TestEtcdController(t *testing.T) {
 							false,
 							"minio",
 							metav1.NamespaceDefault,
-							etcdv1alpha2.AWSCredentialSelector{
+							&etcdv1alpha2.AWSCredentialSelector{
 								Name:               "minio-token",
 								Namespace:          metav1.NamespaceDefault,
 								AccessKeyIDKey:     "accesskey",
@@ -208,7 +208,7 @@ func TestEtcdController(t *testing.T) {
 			s.Step("waiting for completed restoring", func(s *btesting.Scenario) {
 				s.Subject(func(m *btesting.Matcher) {
 					m.Must(e2eutil.WaitForRestore(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, dataPutTime))
-					m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, etcdv1alpha2.ClusterPhaseRunning, 10*time.Minute))
+					m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), f.EtcdClusters.EtcdCluster("restore").EtcdCluster, etcdv1alpha2.EtcdClusterPhaseRunning, 10*time.Minute))
 				})
 
 				s.It("should restore completed", func(m *btesting.Matcher) {

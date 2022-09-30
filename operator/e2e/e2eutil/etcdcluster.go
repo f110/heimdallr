@@ -16,15 +16,15 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 
-func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alpha2.EtcdCluster, phase etcdv1alpha2.EtcdClusterPhase, timeout time.Duration) error {
+func WaitForStatusOfEtcdClusterBecome(client *client.Set, ec *etcdv1alpha2.EtcdCluster, phase etcdv1alpha2.EtcdClusterPhase, timeout time.Duration) error {
 	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
-		ec, err := client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(ctx, ec.Name, metav1.GetOptions{})
+		ec, err := client.EtcdV1alpha2.GetEtcdCluster(ctx, ec.Namespace, ec.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -37,9 +37,9 @@ func WaitForStatusOfEtcdClusterBecome(client clientset.Interface, ec *etcdv1alph
 	})
 }
 
-func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha2.Proxy, phase proxyv1alpha2.ProxyPhase, timeout time.Duration) error {
+func WaitForStatusOfProxyBecome(client *client.Set, p *proxyv1alpha2.Proxy, phase proxyv1alpha2.ProxyPhase, timeout time.Duration) error {
 	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
-		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha2.GetProxy(ctx, p.Namespace, p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -52,9 +52,9 @@ func WaitForStatusOfProxyBecome(client clientset.Interface, p *proxyv1alpha2.Pro
 	})
 }
 
-func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha2.Proxy, timeout time.Duration) error {
+func WaitForReadyOfProxy(client *client.Set, p *proxyv1alpha2.Proxy, timeout time.Duration) error {
 	return poll.PollImmediate(context.TODO(), 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
-		pr, err := client.ProxyV1alpha2().Proxies(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
+		pr, err := client.ProxyV1alpha2.GetProxy(ctx, p.Namespace, p.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -63,9 +63,9 @@ func WaitForReadyOfProxy(client clientset.Interface, p *proxyv1alpha2.Proxy, tim
 	})
 }
 
-func WaitForBackup(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
+func WaitForBackup(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
 	return poll.PollImmediate(context.TODO(), 10*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-		e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
+		e, err := client.EtcdV1alpha2.GetEtcdCluster(ctx, etcdCluster.Namespace, etcdCluster.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}
@@ -80,9 +80,9 @@ func WaitForBackup(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCl
 	})
 }
 
-func WaitForRestore(client *clientset.Clientset, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
+func WaitForRestore(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
 	return poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
-		e, err := client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Get(ctx, etcdCluster.Name, metav1.GetOptions{})
+		e, err := client.EtcdV1alpha2.GetEtcdCluster(ctx, etcdCluster.Namespace, etcdCluster.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}

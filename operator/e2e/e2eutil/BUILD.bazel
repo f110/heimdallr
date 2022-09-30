@@ -11,9 +11,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert",
-        "//pkg/k8s/api/etcd/v1alpha2",
-        "//pkg/k8s/api/proxy/v1alpha2",
-        "//pkg/k8s/client/versioned",
+        "//pkg/k8s/api/etcdv1alpha2",
+        "//pkg/k8s/api/proxyv1alpha2",
+        "//pkg/k8s/client",
         "//pkg/logger",
         "//pkg/poll",
         "//pkg/rpc",

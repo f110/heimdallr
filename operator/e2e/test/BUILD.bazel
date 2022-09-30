@@ -42,7 +42,7 @@ go_test(
         "//pkg/config/configv2",
         "//pkg/k8s",
         "//pkg/k8s/api/etcd",
-        "//pkg/k8s/api/etcd/v1alpha2",
+        "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/k8s/controllers",
         "//pkg/k8s/k8sfactory",
         "//pkg/k8s/kind",
