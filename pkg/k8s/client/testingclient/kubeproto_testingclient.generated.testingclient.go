@@ -41,6 +41,7 @@ func NewSet() *Set {
 	s.EtcdV1alpha1 = client.NewEtcdV1alpha1Client(&fakerBackend{fake: &s.fake})
 	s.EtcdV1alpha2 = client.NewEtcdV1alpha2Client(&fakerBackend{fake: &s.fake})
 	s.ProxyV1alpha1 = client.NewProxyV1alpha1Client(&fakerBackend{fake: &s.fake})
+	s.ProxyV1alpha2 = client.NewProxyV1alpha2Client(&fakerBackend{fake: &s.fake})
 	return s
 }
 
@@ -68,7 +69,6 @@ func (f *fakerBackend) Get(ctx context.Context, resourceName, kindName, namespac
 	}
 	return obj.DeepCopyObject(), nil
 }
-
 func (f *fakerBackend) List(ctx context.Context, resourceName, kindName, namespace string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
 	gvks, _, err := client.Scheme.ObjectKinds(result)
 	if err != nil {
@@ -101,7 +101,6 @@ func (f *fakerBackend) List(ctx context.Context, resourceName, kindName, namespa
 	}
 	return obj.DeepCopyObject(), err
 }
-
 func (f *fakerBackend) Create(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
 	gvks, _, err := client.Scheme.ObjectKinds(result)
 	if err != nil {
@@ -116,7 +115,6 @@ func (f *fakerBackend) Create(ctx context.Context, resourceName, kindName string
 	}
 	return obj.DeepCopyObject(), err
 }
-
 func (f *fakerBackend) Update(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	gvks, _, err := client.Scheme.ObjectKinds(result)
 	if err != nil {
@@ -130,9 +128,7 @@ func (f *fakerBackend) Update(ctx context.Context, resourceName, kindName string
 		return nil, err
 	}
 	return obj.DeepCopyObject(), err
-
 }
-
 func (f *fakerBackend) UpdateStatus(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	gvks, _, err := client.Scheme.ObjectKinds(result)
 	if err != nil {
@@ -147,13 +143,11 @@ func (f *fakerBackend) UpdateStatus(ctx context.Context, resourceName, kindName 
 	}
 	return obj.DeepCopyObject(), err
 }
-
 func (f *fakerBackend) Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error {
 	_, err := f.fake.Invokes(k8stesting.NewDeleteAction(gvr, namespace, name), nil)
 
 	return err
 }
-
 func (f *fakerBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
 	return f.fake.InvokesWatch(k8stesting.NewWatchAction(gvr, namespace, opts))
 }
