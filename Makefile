@@ -30,13 +30,65 @@ gen:
 	bazel run //pkg/database/mysql/entity:vendor_entity
 	bazel run //pkg/database/mysql/dao:vendor_dao
 
-gen-operator: operator/proto/certmanager.proto
+gen-operator: third_party_protos
 	bazel query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
 	bazel query 'kind(vendor_kubeproto, //...)' | xargs -n1 bazel run
 	bazel run //pkg/k8s/controllers:rbac
 
-operator/proto/certmanager.proto:
-	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ --proto-package github.com.jetstack.cert_manager.pkg.apis.meta.v1 --go-package github.com/jetstack/cert-manager/pkg/apis/meta/v1 --all $(CURDIR)/vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1
+third_party_protos: operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1/generated.proto \
+	operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto \
+	operator/proto/github.com/jetstack/cert-manager/pkg/apis/acmev1/generated.proto \
+	operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1/generated.proto
+
+.PHONY: operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1/generated.proto
+operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1/generated.proto:
+	mkdir -p $(@D)
+	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ \
+		--proto-package github.com.jetstack.cert_manager.pkg.apis.certmanagerv1 \
+		--go-package github.com/jetstack/cert-manager/pkg/apis/certmanager/v1 \
+		--api-sub-group cert-manager.io \
+		--api-version v1 \
+		--imports github.com/jetstack/cert-manager/pkg/apis/meta/v1:github.com.jetstack.cert_manager.pkg.apis.metav1:github.com/jetstack/cert-manager/pkg/apis/metav1 \
+		--imports github.com/jetstack/cert-manager/pkg/apis/acme/v1:github.com.jetstack.cert_manager.pkg.apis.acmev1:github.com/jetstack/cert-manager/pkg/apis/acmev1 \
+		--import-prefix operator/proto \
+		--all \
+		$(CURDIR)/vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1
+
+.PHONY: operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto
+operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto:
+	mkdir -p $(@D)
+	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ \
+		--proto-package github.com.jetstack.cert_manager.pkg.apis.metav1 \
+		--go-package github.com/jetstack/cert-manager/pkg/apis/meta/v1 \
+		--api-sub-group cert-manager.io \
+		--api-version v1 \
+		--all \
+		$(CURDIR)/vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1
+
+.PHONY: operator/proto/github.com/jetstack/cert-manager/pkg/apis/acmev1/generated.proto
+operator/proto/github.com/jetstack/cert-manager/pkg/apis/acmev1/generated.proto:
+	mkdir -p $(@D)
+	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ \
+		--proto-package github.com.jetstack.cert_manager.pkg.apis.acmev1 \
+		--go-package github.com/jetstack/cert-manager/pkg/apis/acme/v1 \
+		--api-sub-group cert-manager.io \
+		--api-version v1 \
+		--imports github.com/jetstack/cert-manager/pkg/apis/meta/v1:github.com.jetstack.cert_manager.pkg.apis.metav1:github.com/jetstack/cert-manager/pkg/apis/metav1 \
+		--import-prefix operator/proto \
+		--all \
+		$(CURDIR)/vendor/github.com/jetstack/cert-manager/pkg/apis/acme/v1
+
+.PHONY: operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1/generated.proto
+operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1/generated.proto:
+	mkdir -p $(@D)
+	bazel run @dev_f110_kubeproto//cmd/gen-go-to-protobuf -- --out $(CURDIR)/$@ \
+		--proto-package github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1 \
+		--go-package github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1 \
+		--api-sub-group coreos.com \
+		--api-domain monitoring \
+		--api-version v1 \
+		--all \
+		$(CURDIR)/vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
 
 create-cluster:
 	bazel run //:create_cluster
