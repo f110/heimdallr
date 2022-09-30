@@ -15,6 +15,10 @@ go_vendor(
         "-exclude",
         "third_party",
     ],
+    patches = [
+        "//patch:cert-manager-fix-typo.patch",
+        "//patch:prometheus-operator-fix-typo.patch",
+    ],
 )
 
 load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")

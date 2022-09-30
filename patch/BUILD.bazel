@@ -1,0 +1,7 @@
+exports_files(
+    [
+        "cert-manager-fix-typo.patch",
+        "prometheus-operator-fix-typo.patch",
+    ],
+    visibility = ["//visibility:public"],
+)
