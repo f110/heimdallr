@@ -23,6 +23,7 @@ crd_proto_manifest(
         "//pkg/k8s/api/etcdv1alpha1:etcd_proto",
         "//pkg/k8s/api/etcdv1alpha2:etcd_proto",
         "//pkg/k8s/api/proxyv1alpha1:proxy_proto",
+        "//pkg/k8s/api/proxyv1alpha2:proxy_proto",
     ],
     visibility = ["//visibility:public"],
 )
