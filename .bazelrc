@@ -1,4 +1,5 @@
-test --test_output=errors --test_tag_filters=-e2e
+test --test_output=errors --test_tag_filters=-e2e --@io_bazel_rules_docker//transitions:enable=false
+build --@io_bazel_rules_docker//transitions:enable=false
 
 test:ci --test_output=errors
 test:ci --test_tag_filters=-e2e
