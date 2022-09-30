@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@dev_f110_kubeproto//bazel:def.bzl", "go_client")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+go_client(
+    name = "go_client",
+    srcs = [
+        "//operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1",
+        "//operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient",
+    visibility = ["//visibility:public"],
+)
+
+vendor_kubeproto(
+    name = "vendor_client",
+    src = ":go_client",
+)
+
+go_library(
+    name = "thirdpartyclient",
+    srcs = ["go_client.generated.client.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
+        "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
+        "//vendor/k8s.io/apimachinery/pkg/api/errors",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/labels",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/serializer",
+        "//vendor/k8s.io/apimachinery/pkg/watch",
+        "//vendor/k8s.io/client-go/rest",
+        "//vendor/k8s.io/client-go/tools/cache",
+    ],
+)

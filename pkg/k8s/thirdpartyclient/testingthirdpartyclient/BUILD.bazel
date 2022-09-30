@@ -1,0 +1,37 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@dev_f110_kubeproto//bazel:def.bzl", "go_testing_client")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+go_testing_client(
+    name = "kubeproto_testingthirdpartyclient",
+    srcs = [
+        "//operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1",
+        "//operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1",
+    ],
+    client = "//pkg/k8s/thirdpartyclient:go_client",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient",
+    visibility = ["//visibility:public"],
+)
+
+vendor_kubeproto(
+    name = "vendor_testingthirdpartyclient",
+    src = ":kubeproto_testingthirdpartyclient",
+)
+
+go_library(
+    name = "testingthirdpartyclient",
+    srcs = ["kubeproto_testingthirdpartyclient.generated.testingclient.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/thirdpartyclient",
+        "//vendor/k8s.io/apimachinery/pkg/api/meta",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/labels",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/serializer",
+        "//vendor/k8s.io/apimachinery/pkg/watch",
+        "//vendor/k8s.io/client-go/testing",
+    ],
+)
