@@ -16,8 +16,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/fake"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
@@ -63,7 +62,6 @@ func TestProxyController(t *testing.T) {
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
-			Clientset:      runner.Client,
 			ServiceLister:  controller.serviceLister,
 			Backends:       backends,
 			Roles:          roles,
@@ -117,7 +115,6 @@ func TestProxyController(t *testing.T) {
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
-			Clientset:      runner.Client,
 			ServiceLister:  controller.serviceLister,
 			Backends:       backends,
 			Roles:          roles,
@@ -171,7 +168,7 @@ func TestProxyController(t *testing.T) {
 		})
 		runner.AssertNoUnexpectedAction(t)
 
-		etcdC, err := runner.Client.EtcdV1alpha2().EtcdClusters(ec.Namespace).Get(context.TODO(), ec.Name, metav1.GetOptions{})
+		etcdC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), ec.Namespace, ec.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
 		require.NotNil(t, etcdC.Spec.Backup)
@@ -199,7 +196,6 @@ func TestProxyController(t *testing.T) {
 
 		hp := NewHeimdallrProxy(HeimdallrProxyParams{
 			Spec:           p,
-			Clientset:      runner.Client,
 			ServiceLister:  controller.serviceLister,
 			Backends:       backends,
 			Roles:          roles,
@@ -230,7 +226,7 @@ func TestProxyController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-proxy", p.Name), namespace))
 		runner.AssertNoUnexpectedAction(t)
 
-		updatedP, err := runner.Client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		updatedP, err := runner.Client.ProxyV1alpha2.GetProxy(context.Background(), p.Namespace, p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		proxyConfigMap, err := runner.CoreClient.CoreV1().ConfigMaps(hp.Namespace).Get(context.TODO(), hp.ReverseProxyConfigName(), metav1.GetOptions{})
 		require.NoError(t, err)
@@ -268,7 +264,7 @@ func TestProxyController(t *testing.T) {
 		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
 		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, services)
 
-		hp := newHeimdallrProxy(runner.Client, controller.serviceLister, p, backends, roles, roleBindings, rpcPermissions)
+		hp := newHeimdallrProxy(controller.serviceLister, p, backends, roles, roleBindings, rpcPermissions)
 		ec, _ := hp.EtcdCluster()
 		ec = etcd.Factory(ec, etcd.Ready)
 		runner.RegisterFixtures(hp.PrepareCompleted(ec)...)
@@ -302,7 +298,7 @@ func TestProxyController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
 		updatedBackend := backends[0].DeepCopy()
-		updatedBackend.Status.DeployedBy = []*proxyv1alpha2.ProxyReference{
+		updatedBackend.Status.DeployedBy = []proxyv1alpha2.ProxyReference{
 			{Name: p.Name, Namespace: p.Namespace, Url: fmt.Sprintf("https://%s.%s.%s", updatedBackend.Name, updatedBackend.Spec.Layer, p.Spec.Domain)},
 		}
 		runner.AssertUpdateAction(t, "status", updatedBackend)
@@ -315,16 +311,14 @@ func TestProxyController(t *testing.T) {
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus, setProxyStatusNumberOf))
 		runner.AssertNoUnexpectedAction(t)
 
-		updatedP, err := runner.Client.ProxyV1alpha2().Proxies(p.Namespace).Get(context.TODO(), p.Name, metav1.GetOptions{})
+		updatedP, err := runner.Client.ProxyV1alpha2.GetProxy(context.Background(), p.Namespace, p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.False(t, updatedP.Status.Ready)
 		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha2.ProxyPhaseRunning)
 
 		for _, backend := range backends {
-			updatedB, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			updatedB, err := runner.Client.ProxyV1alpha2.GetBackend(context.Background(), backend.Namespace, backend.Name, metav1.GetOptions{})
+			require.NoError(t, err)
 
 			assert.NotEmpty(t, updatedB.Status.DeployedBy)
 			assert.Equal(t, updatedB.Status.DeployedBy[0].Name, p.Name)
@@ -340,7 +334,8 @@ func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyControl
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
 		runner.CoreClient,
-		runner.Client,
+		&runner.Client.Set,
+		&runner.ThirdPartyClient.Set,
 	)
 	require.NoError(t, err)
 
@@ -401,7 +396,7 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 			false,
 			"minio",
 			metav1.NamespaceDefault,
-			proxyv1alpha2.AWSCredentialSelector{
+			&proxyv1alpha2.AWSCredentialSelector{
 				Name:               "minio-token",
 				Namespace:          metav1.NamespaceDefault,
 				AccessKeyIDKey:     "accesskey",
@@ -426,7 +421,7 @@ func newProxy(name string) (*proxyv1alpha2.Proxy, *corev1.Secret, []*proxyv1alph
 		k8sfactory.Created,
 		k8sfactory.Label("instance", "test"),
 		proxy.Layer("test"),
-		proxy.HTTP([]*proxyv1alpha2.BackendHTTPSpec{
+		proxy.HTTP([]proxyv1alpha2.BackendHTTPSpec{
 			{
 				Path: "/",
 				ServiceSelector: &proxyv1alpha2.ServiceSelector{
@@ -500,7 +495,6 @@ func setProxyStatusNumberOf(object interface{}) {
 }
 
 func newHeimdallrProxy(
-	client *fake.Clientset,
 	serviceLister listers.ServiceLister,
 	p *proxyv1alpha2.Proxy,
 	backends []*proxyv1alpha2.Backend,
@@ -510,7 +504,6 @@ func newHeimdallrProxy(
 ) *HeimdallrProxy {
 	hp := NewHeimdallrProxy(HeimdallrProxyParams{
 		Spec:           p,
-		Clientset:      client,
 		ServiceLister:  serviceLister,
 		Backends:       backends,
 		Roles:          roles,

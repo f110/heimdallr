@@ -21,17 +21,14 @@ go_library(
         "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/k8s/api/etcd",
-        "//pkg/k8s/api/etcd/v1alpha2",
+        "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/k8s/api/proxy",
-        "//pkg/k8s/api/proxy/v1alpha2",
-        "//pkg/k8s/client/versioned",
+        "//pkg/k8s/api/proxyv1alpha2",
+        "//pkg/k8s/client",
         "//pkg/k8s/client/versioned/scheme",
         "//pkg/k8s/controllers/controllerbase",
-        "//pkg/k8s/informers/externalversions",
         "//pkg/k8s/k8sfactory",
-        "//pkg/k8s/listers/etcd/v1alpha2",
-        "//pkg/k8s/listers/monitoring/v1:monitoring",
-        "//pkg/k8s/listers/proxy/v1alpha2",
+        "//pkg/k8s/thirdpartyclient",
         "//pkg/logger",
         "//pkg/netutil",
         "//pkg/rpc",
@@ -85,17 +82,6 @@ go_library(
     ],
 )
 
-load("@dev_f110_rules_k8s_controller//k8s:def.bzl", "rbac_gen")
-
-rbac_gen(
-    name = "rbac",
-    srcs = [":controllers"],
-    controller_tools_version = "v0.5.0",
-    dir = "operator/config/rbac",
-    rolename = "heimdallr",
-    visibility = ["//visibility:public"],
-)
-
 go_test(
     name = "controllers_test",
     srcs = [
@@ -116,12 +102,16 @@ go_test(
         "//pkg/config/configv2",
         "//pkg/k8s/api/etcd",
         "//pkg/k8s/api/etcd/v1alpha2",
+        "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/k8s/api/proxy",
         "//pkg/k8s/api/proxy/v1alpha2",
-        "//pkg/k8s/client/versioned/fake",
+        "//pkg/k8s/api/proxyv1alpha2",
+        "//pkg/k8s/client",
+        "//pkg/k8s/client/testingclient",
         "//pkg/k8s/controllers/controllertest",
-        "//pkg/k8s/informers/externalversions",
         "//pkg/k8s/k8sfactory",
+        "//pkg/k8s/thirdpartyclient",
+        "//pkg/k8s/thirdpartyclient/testingthirdpartyclient",
         "//pkg/logger",
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/jarcoal/httpmock",

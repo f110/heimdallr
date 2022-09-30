@@ -36,7 +36,8 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -598,7 +599,7 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 		c.log.Debug("Don't have AnnotationKeyServerCertificate", zap.String("pod.name", pod.Name))
 		return true
 	}
-	if c.Spec.Template.Metadata != nil {
+	if c.Spec.Template != nil && c.Spec.Template.Metadata != nil {
 		if !c.EqualAnnotation(pod.Annotations, c.Spec.Template.Metadata.Annotations) {
 			return true
 		}
@@ -741,47 +742,47 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 
 func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 	if len(c.ownedPods) == 0 {
-		return etcdv1alpha2.ClusterPhasePending
+		return etcdv1alpha2.EtcdClusterPhasePending
 	}
 
 	if len(c.ownedPods) == 1 && !c.IsPodReady(c.ownedPods[0]) {
-		return etcdv1alpha2.ClusterPhaseInitializing
+		return etcdv1alpha2.EtcdClusterPhaseInitializing
 	}
 
 	if len(c.ownedPods) < c.Spec.Members {
 		if c.Status.LastReadyTransitionTime.IsZero() || !c.Status.CreatingCompleted {
-			return etcdv1alpha2.ClusterPhaseCreating
+			return etcdv1alpha2.EtcdClusterPhaseCreating
 		} else {
 			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", zap.Int("ownedPods.len", len(c.ownedPods)))
-			return etcdv1alpha2.ClusterPhaseDegrading
+			return etcdv1alpha2.EtcdClusterPhaseDegrading
 		}
 	}
 
 	if c.HasTemporaryMember() {
-		return etcdv1alpha2.ClusterPhaseUpdating
+		return etcdv1alpha2.EtcdClusterPhaseUpdating
 	}
 
 	for _, pod := range c.ownedPods {
 		if c.NeedRepair(pod) {
 			c.log.Debug("Need repair pod", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
-			return etcdv1alpha2.ClusterPhaseDegrading
+			return etcdv1alpha2.EtcdClusterPhaseDegrading
 		}
 
 		if !c.IsPodReady(pod) {
 			if c.Status.LastReadyTransitionTime.IsZero() {
-				return etcdv1alpha2.ClusterPhaseCreating
+				return etcdv1alpha2.EtcdClusterPhaseCreating
 			} else {
 				c.log.Debug("Pod is not ready", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
 				if c.Status.CreatingCompleted {
-					return etcdv1alpha2.ClusterPhaseDegrading
+					return etcdv1alpha2.EtcdClusterPhaseDegrading
 				} else {
-					return etcdv1alpha2.ClusterPhaseCreating
+					return etcdv1alpha2.EtcdClusterPhaseCreating
 				}
 			}
 		}
 	}
 
-	return etcdv1alpha2.ClusterPhaseRunning
+	return etcdv1alpha2.EtcdClusterPhaseRunning
 }
 
 func (c *EtcdCluster) CurrentInternalState() InternalState {
@@ -1026,9 +1027,9 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.Labels(c.DefaultLabels(etcdVersion)),
 		k8sfactory.Annotations(c.DefaultAnnotations()),
-		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
+		k8sfactory.ControlledBy(c.EtcdCluster, client.Scheme),
 	)
-	if c.Spec.Template.Metadata != nil {
+	if c.Spec.Template != nil && c.Spec.Template.Metadata != nil {
 		pod = k8sfactory.PodFactory(pod,
 			k8sfactory.Labels(c.Spec.Template.Metadata.Labels),
 			k8sfactory.Annotations(c.Spec.Template.Metadata.Annotations),
@@ -1358,7 +1359,7 @@ func (c *EtcdCluster) newEtcdMember(pod *corev1.Pod) *EtcdMember {
 					Labels:      l,
 					Annotations: tmpl.ObjectMeta.Annotations,
 					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemeGroupVersion.WithKind("EtcdCluster")),
+						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemaGroupVersion.WithKind("EtcdCluster")),
 					},
 				},
 				Spec: tmpl.Spec,

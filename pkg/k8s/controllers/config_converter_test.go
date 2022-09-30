@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 )
 
 func TestConfigConverter_Proxy(t *testing.T) {
@@ -30,7 +30,7 @@ func TestConfigConverter_Proxy(t *testing.T) {
 						Name: "test",
 					},
 					Spec: proxyv1alpha2.BackendSpec{
-						HTTP: []*proxyv1alpha2.BackendHTTPSpec{
+						HTTP: []proxyv1alpha2.BackendHTTPSpec{
 							{
 								Path: "/",
 								ServiceSelector: &proxyv1alpha2.ServiceSelector{
@@ -72,7 +72,7 @@ func TestConfigConverter_Proxy(t *testing.T) {
 						Name: "test",
 					},
 					Spec: proxyv1alpha2.BackendSpec{
-						HTTP: []*proxyv1alpha2.BackendHTTPSpec{
+						HTTP: []proxyv1alpha2.BackendHTTPSpec{
 							{
 								Path:  "/",
 								Agent: true,

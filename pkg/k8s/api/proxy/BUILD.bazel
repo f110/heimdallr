@@ -13,6 +13,7 @@ go_library(
         "//pkg/config",
         "//pkg/k8s/api/proxy/v1alpha1",
         "//pkg/k8s/api/proxy/v1alpha2",
+        "//pkg/k8s/api/proxyv1alpha2",
         "//pkg/k8s/client/versioned/scheme",
         "//pkg/k8s/k8sfactory",
         "//pkg/k8s/webhook",

@@ -38,11 +38,9 @@ import (
 	"k8s.io/client-go/transport/spdy"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
-	etcdlisters "go.f110.dev/heimdallr/pkg/k8s/listers/etcd/v1alpha2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -55,12 +53,12 @@ type EtcdController struct {
 
 	config            *rest.Config
 	coreClient        kubernetes.Interface
-	client            clientset.Interface
+	client            *client.EtcdV1alpha2
 	clusterDomain     string
 	runOutsideCluster bool
 
 	etcdClusterInformer  cache.SharedIndexInformer
-	clusterLister        etcdlisters.EtcdClusterLister
+	clusterLister        *client.EtcdV1alpha2EtcdClusterLister
 	clusterListerSynced  cache.InformerSynced
 	podInformer          cache.SharedIndexInformer
 	podLister            listers.PodLister
@@ -80,10 +78,10 @@ type EtcdController struct {
 }
 
 func NewEtcdController(
-	sharedInformerFactory informers.SharedInformerFactory,
+	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
 	coreClient kubernetes.Interface,
-	client clientset.Interface,
+	etcdClient *client.EtcdV1alpha2,
 	cfg *rest.Config,
 	clusterDomain string,
 	runOutsideCluster bool,
@@ -96,17 +94,17 @@ func NewEtcdController(
 	pvcInformer := coreSharedInformerFactory.Core().V1().PersistentVolumeClaims()
 	saInformer := coreSharedInformerFactory.Core().V1().ServiceAccounts()
 
-	etcdClusterInformer := sharedInformerFactory.Etcd().V1alpha2().EtcdClusters()
+	etcdClusterInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), etcdClient, metav1.NamespaceAll, 30*time.Second)
 
 	c := &EtcdController{
 		config:               cfg,
-		client:               client,
+		client:               etcdClient,
 		coreClient:           coreClient,
 		clusterDomain:        clusterDomain,
 		runOutsideCluster:    runOutsideCluster,
-		etcdClusterInformer:  etcdClusterInformer.Informer(),
-		clusterLister:        etcdClusterInformer.Lister(),
-		clusterListerSynced:  etcdClusterInformer.Informer().HasSynced,
+		etcdClusterInformer:  etcdClusterInformer.EtcdClusterInformer(),
+		clusterLister:        etcdClusterInformer.EtcdClusterLister(),
+		clusterListerSynced:  etcdClusterInformer.EtcdClusterInformer().HasSynced,
 		podInformer:          podInformer.Informer(),
 		podLister:            podInformer.Lister(),
 		podListerSynced:      podInformer.Informer().HasSynced,
@@ -186,7 +184,7 @@ func (ec *EtcdController) GetObject(key string) (interface{}, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	c, err := ec.clusterLister.EtcdClusters(namespace).Get(name)
+	c, err := ec.clusterLister.Get(namespace, name)
 	if err != nil && apierrors.IsNotFound(err) {
 		ec.Log(nil).Debug("EtcdCluster is not found", zap.String("key", key))
 		return nil, nil
@@ -203,7 +201,7 @@ func (ec *EtcdController) UpdateObject(ctx context.Context, obj interface{}) err
 		return nil
 	}
 
-	_, err := ec.client.EtcdV1alpha2().EtcdClusters(etcdCluster.Namespace).Update(ctx, etcdCluster, metav1.UpdateOptions{})
+	_, err := ec.client.UpdateEtcdCluster(ctx, etcdCluster, metav1.UpdateOptions{})
 	return err
 }
 
@@ -213,9 +211,9 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	c := obj.(*etcdv1alpha2.EtcdCluster)
 	ec.Log(ctx).Debug("syncEtcdCluster", zap.String("namespace", c.Namespace), zap.String("name", c.Name))
 
-	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha2.ClusterPhasePending {
-		c.Status.Phase = etcdv1alpha2.ClusterPhaseInitializing
-		updatedEC, err := ec.client.EtcdV1alpha2().EtcdClusters(c.Namespace).UpdateStatus(ctx, c, metav1.UpdateOptions{})
+	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha2.EtcdClusterPhasePending {
+		c.Status.Phase = etcdv1alpha2.EtcdClusterPhaseInitializing
+		updatedEC, err := ec.client.UpdateStatusEtcdCluster(ctx, c, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -338,7 +336,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	ec.updateStatus(ctx, cluster)
 
-	if cluster.Status.Phase == etcdv1alpha2.ClusterPhaseRunning && ec.shouldBackup(cluster) {
+	if cluster.Status.Phase == etcdv1alpha2.EtcdClusterPhaseRunning && ec.shouldBackup(cluster) {
 		err := ec.doBackup(ctx, cluster)
 		if err != nil {
 			cluster.Status.Backup.Succeeded = false
@@ -359,7 +357,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
 		ec.Log(ctx).Debug("Update EtcdCluster")
-		_, err := ec.client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).UpdateStatus(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
+		_, err := ec.client.UpdateStatusEtcdCluster(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1086,7 +1084,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster) {
 	cluster.Status.Phase = cluster.CurrentPhase()
 	switch cluster.Status.Phase {
-	case etcdv1alpha2.ClusterPhaseRunning, etcdv1alpha2.ClusterPhaseUpdating, etcdv1alpha2.ClusterPhaseDegrading:
+	case etcdv1alpha2.EtcdClusterPhaseRunning, etcdv1alpha2.EtcdClusterPhaseUpdating, etcdv1alpha2.EtcdClusterPhaseDegrading:
 		if cluster.Status.Ready && cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
 			cluster.Status.Restored.Completed = true
 			if cluster.Status.Restored.RestoredTime == nil {

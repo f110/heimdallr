@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
 
@@ -58,7 +58,7 @@ func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 				true,
 				"test",
 				"test",
-				proxyv1alpha2.AWSCredentialSelector{
+				&proxyv1alpha2.AWSCredentialSelector{
 					Name:               "aws",
 					Namespace:          "default",
 					AccessKeyIDKey:     "accesskey",
@@ -70,7 +70,7 @@ func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 
 		etcdC, podMonitor := hp.EtcdCluster()
 		require.NotNil(t, etcdC)
-		require.NotNil(t, podMonitor)
+		require.Nil(t, podMonitor)
 		require.NotNil(t, etcdC.Spec.Backup)
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)
@@ -93,7 +93,7 @@ func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 			proxy.EtcdBackupToGCS(
 				"test",
 				"test-path",
-				proxyv1alpha2.GCPCredentialSelector{
+				&proxyv1alpha2.GCPCredentialSelector{
 					Name:                  "gcp",
 					Namespace:             "gcs",
 					ServiceAccountJSONKey: "account.json",
@@ -104,7 +104,7 @@ func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 
 		etcdC, podMonitor := hp.EtcdCluster()
 		require.NotNil(t, etcdC)
-		require.NotNil(t, podMonitor)
+		require.Nil(t, podMonitor)
 		require.NotNil(t, etcdC.Spec.Backup)
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)

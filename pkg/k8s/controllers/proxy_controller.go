@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
 	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
-	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
-	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -32,15 +30,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
-	etcdListers "go.f110.dev/heimdallr/pkg/k8s/listers/etcd/v1alpha2"
-	mListers "go.f110.dev/heimdallr/pkg/k8s/listers/monitoring/v1"
-	proxyListers "go.f110.dev/heimdallr/pkg/k8s/listers/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 )
 
 var (
@@ -65,42 +60,39 @@ type ProxyController struct {
 	ingressLister          networkinglisters.IngressLister
 	ingressListerSynced    cache.InformerSynced
 
-	sharedInformer        informers.SharedInformerFactory
 	coreSharedInformer    kubeinformers.SharedInformerFactory
 	proxyInformer         cache.SharedIndexInformer
-	proxyLister           proxyListers.ProxyLister
+	proxyLister           *client.ProxyV1alpha2ProxyLister
 	backendInformer       cache.SharedIndexInformer
-	backendLister         proxyListers.BackendLister
+	backendLister         *client.ProxyV1alpha2BackendLister
 	roleInformer          cache.SharedIndexInformer
-	roleLister            proxyListers.RoleLister
+	roleLister            *client.ProxyV1alpha2RoleLister
 	roleBindingInformer   cache.SharedIndexInformer
-	roleBindingLister     proxyListers.RoleBindingLister
+	roleBindingLister     *client.ProxyV1alpha2RoleBindingLister
 	rpcPermissionInformer cache.SharedIndexInformer
-	rpcPermissionLister   proxyListers.RpcPermissionLister
+	rpcPermissionLister   *client.ProxyV1alpha2RpcPermissionLister
 
-	ecLister       etcdListers.EtcdClusterLister
+	ecLister       *client.EtcdV1alpha2EtcdClusterLister
 	ecListerSynced cache.InformerSynced
-	pmLister       mListers.PodMonitorLister
+	pmLister       *thirdpartyclient.CoreosComV1PodMonitorLister
 	pmListerSynced cache.InformerSynced
 
 	certManagerVersion       string
 	enablePrometheusOperator bool
 
-	clientset clientset.Interface
+	clientset           *client.Set
+	thirdPartyClientSet *thirdpartyclient.Set
 }
 
 func NewProxyController(
-	sharedInformerFactory informers.SharedInformerFactory,
+	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
-	client kubernetes.Interface,
-	proxyClient clientset.Interface,
+	coreClient kubernetes.Interface,
+	clientSet *client.Set,
+	thirdPartyClientSet *thirdpartyclient.Set,
 ) (*ProxyController, error) {
-	proxyInformer := sharedInformerFactory.Proxy().V1alpha2().Proxies()
-	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
-	roleInformer := sharedInformerFactory.Proxy().V1alpha2().Roles()
-	roleBindingInformer := sharedInformerFactory.Proxy().V1alpha2().RoleBindings()
-	rpcPermissionInformer := sharedInformerFactory.Proxy().V1alpha2().RpcPermissions()
-	ecInformer := sharedInformerFactory.Etcd().V1alpha2().EtcdClusters()
+	proxyInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.ProxyV1alpha2, metav1.NamespaceAll, 30*time.Second)
+	ecInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.EtcdV1alpha2, metav1.NamespaceAll, 30*time.Second)
 
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
@@ -109,19 +101,19 @@ func NewProxyController(
 	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
 
 	c := &ProxyController{
-		client:                 client,
-		proxyInformer:          proxyInformer.Informer(),
-		proxyLister:            proxyInformer.Lister(),
-		backendInformer:        backendInformer.Informer(),
-		backendLister:          backendInformer.Lister(),
-		roleInformer:           roleInformer.Informer(),
-		roleLister:             roleInformer.Lister(),
-		roleBindingInformer:    roleBindingInformer.Informer(),
-		roleBindingLister:      roleBindingInformer.Lister(),
-		rpcPermissionInformer:  rpcPermissionInformer.Informer(),
-		rpcPermissionLister:    rpcPermissionInformer.Lister(),
-		ecLister:               ecInformer.Lister(),
-		ecListerSynced:         ecInformer.Informer().HasSynced,
+		client:                 coreClient,
+		proxyInformer:          proxyInformer.ProxyInformer(),
+		proxyLister:            proxyInformer.ProxyLister(),
+		backendInformer:        proxyInformer.BackendInformer(),
+		backendLister:          proxyInformer.BackendLister(),
+		roleInformer:           proxyInformer.RoleInformer(),
+		roleLister:             proxyInformer.RoleLister(),
+		roleBindingInformer:    proxyInformer.RoleBindingInformer(),
+		roleBindingLister:      proxyInformer.RoleBindingLister(),
+		rpcPermissionInformer:  proxyInformer.RpcPermissionInformer(),
+		rpcPermissionLister:    proxyInformer.RpcPermissionLister(),
+		ecLister:               ecInformer.EtcdClusterLister(),
+		ecListerSynced:         ecInformer.EtcdClusterInformer().HasSynced,
 		serviceLister:          serviceInformer.Lister(),
 		serviceListerSynced:    serviceInformer.Informer().HasSynced,
 		secretLister:           secretInformer.Lister(),
@@ -132,14 +124,14 @@ func NewProxyController(
 		deploymentListerSynced: deploymentInformer.Informer().HasSynced,
 		ingressLister:          ingressInformer.Lister(),
 		ingressListerSynced:    ingressInformer.Informer().HasSynced,
-		clientset:              proxyClient,
-		sharedInformer:         sharedInformerFactory,
+		clientset:              clientSet,
+		thirdPartyClientSet:    thirdPartyClientSet,
 		coreSharedInformer:     coreSharedInformerFactory,
 		certManagerVersion:     certManagerGroupVersionOrder[len(certManagerGroupVersionOrder)-1],
 	}
-	c.Controller = controllerbase.NewController(c, client)
+	c.Controller = controllerbase.NewController(c, coreClient)
 
-	groups, apiList, err := client.Discovery().ServerGroupsAndResources()
+	groups, apiList, err := coreClient.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +144,10 @@ func NewProxyController(
 	c.discoverPrometheusOperator(apiList)
 
 	if c.enablePrometheusOperator {
-		pmInformer := sharedInformerFactory.Monitoring().V1().PodMonitors()
-		c.pmLister = pmInformer.Lister()
-		c.pmListerSynced = pmInformer.Informer().HasSynced
+		f := thirdpartyclient.NewInformerFactory(thirdPartyClientSet, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
+		coreosInformer := thirdpartyclient.NewCoreosComV1Informer(f.Cache(), thirdPartyClientSet.CoreosComV1, metav1.NamespaceAll, 30*time.Second)
+		c.pmLister = coreosInformer.PodMonitorLister()
+		c.pmListerSynced = coreosInformer.PodMonitorInformer().HasSynced
 	}
 
 	return c, nil
@@ -211,7 +204,7 @@ func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 			return c.subordinateResourceKeys(metaObj)
 		case *proxyv1alpha2.RoleBinding:
 			roleBinding := obj.(*proxyv1alpha2.RoleBinding)
-			role, err := c.roleLister.Roles(roleBinding.RoleRef.Namespace).Get(roleBinding.RoleRef.Name)
+			role, err := c.roleLister.Get(roleBinding.RoleRef.Namespace, roleBinding.RoleRef.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -243,7 +236,7 @@ func (c *ProxyController) subordinateResourceKeys(m metav1.Object) ([]string, er
 }
 
 func (c *ProxyController) dependentProxyKeys(role *proxyv1alpha2.Role) ([]string, error) {
-	proxies, err := c.proxyLister.List(labels.Everything())
+	proxies, err := c.proxyLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -255,7 +248,7 @@ NextProxy:
 		if err != nil {
 			continue
 		}
-		roles, err := c.roleLister.List(selector)
+		roles, err := c.roleLister.List(metav1.NamespaceAll, selector)
 		if err != nil {
 			continue
 		}
@@ -315,7 +308,7 @@ func (c *ProxyController) GetObject(key string) (interface{}, error) {
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	p, err := c.proxyLister.Proxies(namespace).Get(name)
+	p, err := c.proxyLister.Get(namespace, name)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -329,7 +322,7 @@ func (c *ProxyController) UpdateObject(ctx context.Context, obj interface{}) err
 		return nil
 	}
 
-	_, err := c.clientset.ProxyV1alpha2().Proxies(p.Namespace).Update(ctx, p, metav1.UpdateOptions{})
+	_, err := c.clientset.ProxyV1alpha2.UpdateProxy(ctx, p, metav1.UpdateOptions{})
 	return err
 }
 
@@ -340,7 +333,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		c.Log(ctx).Debug("Update Proxy.Status.Phase")
-		updateProxy, err := c.clientset.ProxyV1alpha2().Proxies(proxy.Namespace).UpdateStatus(ctx, proxy, metav1.UpdateOptions{})
+		updateProxy, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -355,13 +348,13 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		b, err := c.backendLister.List(selector)
+		b, err := c.backendLister.List(proxy.Spec.BackendSelector.Namespace, selector)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		backends = append(backends, b...)
 	}
-	defaultBackends, err := c.backendLister.List(defaultResourceSelector)
+	defaultBackends, err := c.backendLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -375,13 +368,13 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		r, err := c.roleLister.List(selector)
+		r, err := c.roleLister.List(proxy.Spec.RoleSelector.Namespace, selector)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		roles = append(roles, r...)
 	}
-	defaultRoles, err := c.roleLister.List(defaultResourceSelector)
+	defaultRoles, err := c.roleLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -390,18 +383,21 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	var rpcPermissions []*proxyv1alpha2.RpcPermission
+	if proxy.Spec.RpcPermissionSelector == nil {
+		proxy.Spec.RpcPermissionSelector = &proxyv1alpha2.LabelSelector{}
+	}
 	if proxy.Spec.RpcPermissionSelector.LabelSelector.Size() != 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		list, err := c.rpcPermissionLister.List(selector)
+		list, err := c.rpcPermissionLister.List(proxy.Spec.RpcPermissionSelector.Namespace, selector)
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		rpcPermissions = append(rpcPermissions, list...)
 	}
-	defaultRpcPermissions, err := c.rpcPermissionLister.List(defaultResourceSelector)
+	defaultRpcPermissions, err := c.rpcPermissionLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -411,7 +407,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	for _, v := range roles {
 		rolesMap[fmt.Sprintf("%s/%s", v.Namespace, v.Name)] = v
 	}
-	bindings, err := c.roleBindingLister.List(labels.Everything())
+	bindings, err := c.roleBindingLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -421,14 +417,14 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	})
 
 	lp := NewHeimdallrProxy(HeimdallrProxyParams{
-		Spec:               proxy,
-		Clientset:          c.clientset,
-		ServiceLister:      c.serviceLister,
-		Backends:           backends,
-		Roles:              roles,
-		RpcPermissions:     rpcPermissions,
-		RoleBindings:       roleBindings,
-		CertManagerVersion: c.certManagerVersion,
+		Spec:                proxy,
+		ThirdPartyClientSet: c.thirdPartyClientSet,
+		ServiceLister:       c.serviceLister,
+		Backends:            backends,
+		Roles:               roles,
+		RpcPermissions:      rpcPermissions,
+		RoleBindings:        roleBindings,
+		CertManagerVersion:  c.certManagerVersion,
 	})
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.Errorf(": %w", err)
@@ -446,7 +442,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		newP := lp.Object.DeepCopy()
 		newP.Status.Phase = proxyv1alpha2.ProxyPhaseError
 		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-			_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+			_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -467,7 +463,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
 		c.Log(ctx).Debug("Update Proxy")
-		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -502,7 +498,7 @@ func (c *ProxyController) Finalize(_ context.Context, _ interface{}) error {
 }
 
 func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha2.EtcdCluster, error) {
-	return c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
+	return c.ecLister.Get(lp.Namespace, lp.EtcdClusterName())
 }
 
 func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
@@ -596,10 +592,10 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp *HeimdallrProxy) error {
 	backends := lp.DefaultBackends()
 	for _, backend := range backends {
-		_, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+		_, err := c.backendLister.Get(backend.Namespace, backend.Name)
 		if apierrors.IsNotFound(err) {
 			lp.ControlObject(backend)
-			_, err = c.clientset.ProxyV1alpha2().Backends(backend.Namespace).Create(ctx, backend, metav1.CreateOptions{})
+			_, err = c.clientset.ProxyV1alpha2.CreateBackend(ctx, backend, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -608,10 +604,10 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 
 	roles := lp.DefaultRoles()
 	for _, role := range roles {
-		_, err := c.roleLister.Roles(role.Namespace).Get(role.Name)
+		_, err := c.roleLister.Get(role.Namespace, role.Name)
 		if apierrors.IsNotFound(err) {
 			lp.ControlObject(role)
-			_, err = c.clientset.ProxyV1alpha2().Roles(role.Namespace).Create(ctx, role, metav1.CreateOptions{})
+			_, err = c.clientset.ProxyV1alpha2.CreateRole(ctx, role, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -620,10 +616,10 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 
 	roleBindings := lp.DefaultRoleBindings()
 	for _, rb := range roleBindings {
-		_, err := c.roleBindingLister.RoleBindings(rb.Namespace).Get(rb.Name)
+		_, err := c.roleBindingLister.Get(rb.Namespace, rb.Name)
 		if apierrors.IsNotFound(err) {
 			lp.ControlObject(rb)
-			_, err = c.clientset.ProxyV1alpha2().RoleBindings(rb.Namespace).Create(ctx, rb, metav1.CreateOptions{})
+			_, err = c.clientset.ProxyV1alpha2.CreateRoleBinding(ctx, rb, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -632,10 +628,10 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 
 	rpcPermissions := lp.DefaultRpcPermissions()
 	for _, rpcPermission := range rpcPermissions {
-		_, err := c.rpcPermissionLister.RpcPermissions(rpcPermission.Namespace).Get(rpcPermission.Name)
+		_, err := c.rpcPermissionLister.Get(rpcPermission.Namespace, rpcPermission.Name)
 		if apierrors.IsNotFound(err) {
 			lp.ControlObject(rpcPermission)
-			_, err = c.clientset.ProxyV1alpha2().RpcPermissions(rpcPermission.Namespace).Create(ctx, rpcPermission, metav1.CreateOptions{})
+			_, err = c.clientset.ProxyV1alpha2.CreateRpcPermission(ctx, rpcPermission, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -648,10 +644,10 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *HeimdallrProxy) error {
 	newC, newPM := lp.EtcdCluster()
 
-	cluster, err := c.ecLister.EtcdClusters(lp.Namespace).Get(lp.EtcdClusterName())
+	cluster, err := c.ecLister.Get(lp.Namespace, lp.EtcdClusterName())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			cluster, err = c.clientset.EtcdV1alpha2().EtcdClusters(lp.Namespace).Create(ctx, newC, metav1.CreateOptions{})
+			cluster, err = c.clientset.EtcdV1alpha2.CreateEtcdCluster(ctx, newC, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -668,10 +664,10 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 
 	var podMonitor *monitoringv1.PodMonitor
 	if c.enablePrometheusOperator && lp.Spec.Monitor.PrometheusMonitoring {
-		podMonitor, err = c.pmLister.PodMonitors(lp.Namespace).Get(newPM.Name)
+		podMonitor, err = c.pmLister.Get(lp.Namespace, newPM.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Create(ctx, newPM, metav1.CreateOptions{})
+				_, err = c.thirdPartyClientSet.CoreosComV1.CreatePodMonitor(ctx, newPM, metav1.CreateOptions{})
 				if err != nil {
 					return xerrors.Errorf(": %w", err)
 				}
@@ -684,7 +680,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 
 	if !reflect.DeepEqual(newC.Spec, cluster.Spec) {
 		cluster.Spec = newC.Spec
-		_, err = c.clientset.EtcdV1alpha2().EtcdClusters(lp.Namespace).Update(ctx, cluster, metav1.UpdateOptions{})
+		_, err = c.clientset.EtcdV1alpha2.UpdateEtcdCluster(ctx, cluster, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -694,7 +690,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 		if !reflect.DeepEqual(podMonitor.Labels, newPM.Labels) || !reflect.DeepEqual(podMonitor.Spec, newPM.Spec) {
 			podMonitor.Spec = newPM.Spec
 			podMonitor.Labels = newPM.Labels
-			_, err = c.clientset.MonitoringV1().PodMonitors(lp.Namespace).Update(ctx, podMonitor, metav1.UpdateOptions{})
+			_, err = c.thirdPartyClientSet.CoreosComV1.UpdatePodMonitor(ctx, podMonitor, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -783,18 +779,18 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		}
 		if !found && !skipProvision && !backend.CreationTimestamp.IsZero() {
 			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				updatedB, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+				updatedB, err := c.backendLister.Get(backend.Namespace, backend.Name)
 				if err != nil {
 					return err
 				}
 
-				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, &proxyv1alpha2.ProxyReference{
+				updatedB.Status.DeployedBy = append(updatedB.Status.DeployedBy, proxyv1alpha2.ProxyReference{
 					Name:      lp.Name,
 					Namespace: lp.Namespace,
 					Url:       fmt.Sprintf("https://%s", hostname),
 				})
 
-				_, err = c.clientset.ProxyV1alpha2().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
+				_, err = c.clientset.ProxyV1alpha2.UpdateStatusBackend(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -873,13 +869,13 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 
 		if !reflect.DeepEqual(newRole.Status, r.Status) {
 			err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				updatedR, err := c.roleLister.Roles(newRole.Namespace).Get(newRole.Name)
+				updatedR, err := c.roleLister.Get(newRole.Namespace, newRole.Name)
 				if err != nil {
 					return err
 				}
 
 				updatedR.Status.Backends = backends
-				_, err = c.clientset.ProxyV1alpha2().Roles(updatedR.Namespace).UpdateStatus(ctx, updatedR, metav1.UpdateOptions{})
+				_, err = c.clientset.ProxyV1alpha2.UpdateStatusRole(ctx, updatedR, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -902,7 +898,7 @@ func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProx
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
-		_, err := c.clientset.ProxyV1alpha2().Proxies(newP.Namespace).UpdateStatus(ctx, newP, metav1.UpdateOptions{})
+		_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1104,84 +1100,12 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 
 func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *HeimdallrProxy, obj runtime.Object) error {
 	switch certificate := obj.(type) {
-	case *certmanagerv1alpha2.Certificate:
-		crt, err := c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			lp.ControlObject(certificate)
-
-			_, err = c.clientset.CertmanagerV1alpha2().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-
-			return nil
-		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		newCRT := crt.DeepCopy()
-		newCRT.Spec = certificate.Spec
-
-		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1alpha2().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		}
-	case *certmanagerv1alpha3.Certificate:
-		crt, err := c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			lp.ControlObject(certificate)
-
-			_, err = c.clientset.CertmanagerV1alpha3().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-
-			return nil
-		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		newCRT := crt.DeepCopy()
-		newCRT.Spec = certificate.Spec
-
-		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1alpha3().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		}
-	case *certmanagerv1beta1.Certificate:
-		crt, err := c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			lp.ControlObject(certificate)
-
-			_, err = c.clientset.CertmanagerV1beta1().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-
-			return nil
-		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
-
-		newCRT := crt.DeepCopy()
-		newCRT.Spec = certificate.Spec
-
-		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1beta1().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-		}
 	case *certmanagerv1.Certificate:
-		crt, err := c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Get(ctx, certificate.Name, metav1.GetOptions{})
+		crt, err := c.thirdPartyClientSet.CertManagerIoV1.GetCertificate(ctx, certificate.Namespace, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.clientset.CertmanagerV1().Certificates(certificate.Namespace).Create(ctx, certificate, metav1.CreateOptions{})
+			_, err = c.thirdPartyClientSet.CertManagerIoV1.CreateCertificate(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -1195,7 +1119,7 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.clientset.CertmanagerV1().Certificates(newCRT.Namespace).Update(ctx, newCRT, metav1.UpdateOptions{})
+			_, err = c.thirdPartyClientSet.CertManagerIoV1.UpdateCertificate(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -1206,11 +1130,11 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 }
 
 func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
-	sm, err := c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Get(ctx, serviceMonitor.Name, metav1.GetOptions{})
+	sm, err := c.thirdPartyClientSet.CoreosComV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Namespace, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)
 
-		_, err = c.clientset.MonitoringV1().ServiceMonitors(serviceMonitor.Namespace).Create(ctx, serviceMonitor, metav1.CreateOptions{})
+		_, err = c.thirdPartyClientSet.CoreosComV1.CreateServiceMonitor(ctx, serviceMonitor, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1225,7 +1149,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 	newSM.Spec = serviceMonitor.Spec
 
 	if !reflect.DeepEqual(newSM.Spec, sm.Spec) || !reflect.DeepEqual(newSM.ObjectMeta, sm.ObjectMeta) {
-		_, err = c.clientset.MonitoringV1().ServiceMonitors(newSM.Namespace).Update(ctx, newSM, metav1.UpdateOptions{})
+		_, err = c.thirdPartyClientSet.CoreosComV1.UpdateServiceMonitor(ctx, newSM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
@@ -1235,7 +1159,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 }
 
 func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha2.Proxy, error) {
-	ret, err := c.proxyLister.List(labels.Everything())
+	ret, err := c.proxyLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -1244,9 +1168,9 @@ func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha2.P
 Item:
 	for _, v := range ret {
 		if m.GetLabels() != nil {
-			for k := range v.Spec.BackendSelector.MatchLabels {
+			for k := range v.Spec.BackendSelector.LabelSelector.MatchLabels {
 				value, ok := m.GetLabels()[k]
-				if !ok || v.Spec.BackendSelector.MatchLabels[k] != value {
+				if !ok || v.Spec.BackendSelector.LabelSelector.MatchLabels[k] != value {
 					continue Item
 				}
 			}

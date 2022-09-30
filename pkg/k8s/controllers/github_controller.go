@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v41/github"
@@ -22,11 +23,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
-	proxyListers "go.f110.dev/heimdallr/pkg/k8s/listers/proxy/v1alpha2"
 )
 
 const (
@@ -36,39 +35,40 @@ const (
 type GitHubController struct {
 	*controllerbase.Controller
 
-	proxyLister         proxyListers.ProxyLister
+	proxyLister         *client.ProxyV1alpha2ProxyLister
 	proxyListerSynced   cache.InformerSynced
 	backendInformer     cache.SharedIndexInformer
-	backendLister       proxyListers.BackendLister
+	backendLister       *client.ProxyV1alpha2BackendLister
 	backendListerSynced cache.InformerSynced
 	secretLister        listers.SecretLister
 	secretListerSynced  cache.InformerSynced
 
-	client     clientset.Interface
+	client     *client.ProxyV1alpha2
 	coreClient kubernetes.Interface
 
 	transport http.RoundTripper
 }
 
 func NewGitHubController(
-	sharedInformerFactory informers.SharedInformerFactory,
+	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
 	coreClient kubernetes.Interface,
-	client clientset.Interface,
+	proxyClient *client.ProxyV1alpha2,
 	transport http.RoundTripper,
 ) (*GitHubController, error) {
-	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
-	proxyInformer := sharedInformerFactory.Proxy().V1alpha2().Proxies()
+	proxyInformers := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, metav1.NamespaceAll, 30*time.Second)
+	backendInformer := proxyInformers.BackendInformer()
+	proxyInformer := proxyInformers.ProxyInformer()
 
 	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
 
 	c := &GitHubController{
-		client:              client,
-		proxyLister:         proxyInformer.Lister(),
-		proxyListerSynced:   proxyInformer.Informer().HasSynced,
-		backendInformer:     backendInformer.Informer(),
-		backendLister:       backendInformer.Lister(),
-		backendListerSynced: backendInformer.Informer().HasSynced,
+		client:              proxyClient,
+		proxyLister:         proxyInformers.ProxyLister(),
+		proxyListerSynced:   proxyInformer.HasSynced,
+		backendInformer:     backendInformer,
+		backendLister:       proxyInformers.BackendLister(),
+		backendListerSynced: backendInformer.HasSynced,
 		secretLister:        secretInformer.Lister(),
 		secretListerSynced:  secretInformer.Informer().HasSynced,
 		transport:           transport,
@@ -122,7 +122,7 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	backend, err := c.backendLister.Backends(namespace).Get(name)
+	backend, err := c.backendLister.Get(namespace, name)
 	if err != nil && apierrors.IsNotFound(err) {
 		c.Log(nil).Debug("Backend is not found", zap.String("key", key))
 		return nil, nil
@@ -151,7 +151,7 @@ func (c *GitHubController) UpdateObject(ctx context.Context, obj interface{}) er
 		return nil
 	}
 
-	_, err := c.client.ProxyV1alpha2().Backends(backend.Namespace).Update(ctx, backend, metav1.UpdateOptions{})
+	_, err := c.client.UpdateBackend(ctx, backend, metav1.UpdateOptions{})
 	return err
 }
 
@@ -202,13 +202,13 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 
 		if !reflect.DeepEqual(backend.Status, updatedB.Status) {
 			err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				backend, err := c.backendLister.Backends(updatedB.Namespace).Get(updatedB.Name)
+				backend, err := c.backendLister.Get(updatedB.Namespace, updatedB.Name)
 				if err != nil {
 					return err
 				}
 
 				backend.Status = updatedB.Status
-				_, err = c.client.ProxyV1alpha2().Backends(backend.Namespace).UpdateStatus(ctx, backend, metav1.UpdateOptions{})
+				_, err = c.client.UpdateStatusBackend(ctx, backend, metav1.UpdateOptions{})
 				if err != nil {
 					c.Log(ctx).Debug("Failed update backend", zap.Error(err))
 					return err
@@ -229,7 +229,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 
 	if len(backend.Status.WebhookConfigurations) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+			backend, err := c.backendLister.Get(backend.Namespace, backend.Name)
 			if err != nil {
 				return err
 			}
@@ -237,7 +237,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			updatedB := backend.DeepCopy()
 			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 			if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
-				_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+				_, err = c.client.UpdateBackend(ctx, updatedB, metav1.UpdateOptions{})
 				return err
 			}
 			return nil
@@ -248,7 +248,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		return nil
 	}
 
-	webhookConfigurationStatus := make(map[string]*proxyv1alpha2.WebhookConfigurationStatus)
+	webhookConfigurationStatus := make(map[string]proxyv1alpha2.WebhookConfigurationStatus)
 	for _, v := range backend.Status.WebhookConfigurations {
 		webhookConfigurationStatus[v.Repository] = v
 	}
@@ -289,7 +289,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		}
 	}
 
-	webhookConfigurations := make([]*proxyv1alpha2.WebhookConfigurationStatus, 0)
+	webhookConfigurations := make([]proxyv1alpha2.WebhookConfigurationStatus, 0)
 	for _, v := range webhookConfigurationStatus {
 		webhookConfigurations = append(webhookConfigurations, v)
 	}
@@ -298,7 +298,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 	})
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		backend, err := c.backendLister.Backends(backend.Namespace).Get(backend.Name)
+		backend, err := c.backendLister.Get(backend.Namespace, backend.Name)
 		if err != nil {
 			return err
 		}
@@ -310,14 +310,14 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) {
 			c.Log(ctx).Debug("Update Backend Status", zap.String("name", updatedB.Name))
-			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).UpdateStatus(ctx, updatedB, metav1.UpdateOptions{})
+			_, err = c.client.UpdateStatusBackend(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
 		}
 		if !reflect.DeepEqual(updatedB.Finalizers, backend.Finalizers) {
 			c.Log(ctx).Debug("Update Backend", zap.String("name", updatedB.Name))
-			_, err = c.client.ProxyV1alpha2().Backends(updatedB.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+			_, err = c.client.UpdateBackend(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
@@ -370,7 +370,7 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 			}
 
 			u.Path = p.WebhookConfiguration.GitHub.Path
-			proxy, err := c.proxyLister.Proxies(v.Namespace).Get(v.Name)
+			proxy, err := c.proxyLister.Get(v.Namespace, v.Name)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					continue
@@ -407,8 +407,13 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 				continue
 			}
 
+			now := metav1.Now()
 			backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
-				&proxyv1alpha2.WebhookConfigurationStatus{Id: newHook.GetID(), Repository: fmt.Sprintf("%s/%s", owner, repo), UpdateTime: metav1.Now()},
+				proxyv1alpha2.WebhookConfigurationStatus{
+					Id:         newHook.GetID(),
+					Repository: fmt.Sprintf("%s/%s", owner, repo),
+					UpdateTime: &now,
+				},
 			)
 		}
 	}

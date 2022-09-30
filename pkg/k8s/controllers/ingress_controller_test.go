@@ -24,7 +24,7 @@ func TestIngressController(t *testing.T) {
 			runner.CoreSharedInformerFactory,
 			runner.SharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.ProxyV1alpha2,
 		)
 
 		ingClass, ing, svc, svcWeb := ingressControllerFixtures()
@@ -33,7 +33,7 @@ func TestIngressController(t *testing.T) {
 		err := runner.Reconcile(controller, ing)
 		require.NoError(t, err)
 
-		updatedB, err := runner.Client.ProxyV1alpha2().Backends(ing.Namespace).Get(context.TODO(), ing.Name, metav1.GetOptions{})
+		updatedB, err := runner.Client.ProxyV1alpha2.GetBackend(context.Background(), ing.Namespace, ing.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, ingClass.Labels, updatedB.Labels)
 		assert.Equal(t, ing.Spec.Rules[0].Host, updatedB.Spec.FQDN)

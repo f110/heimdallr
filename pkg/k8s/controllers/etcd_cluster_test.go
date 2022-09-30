@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -29,21 +29,21 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 	}{
 		{
 			Name:        "Doesn't have any pod",
-			ExpectPhase: etcdv1alpha2.ClusterPhasePending,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhasePending,
 		},
 		{
 			Name: "One pod created",
 			Pods: []*corev1.Pod{
 				k8sfactory.PodFactory(etcdPodBase),
 			},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseInitializing,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseInitializing,
 		},
 		{
 			Name: "There are two pods",
 			Pods: []*corev1.Pod{
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 			},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseCreating,
 		},
 		{
 			Name: "There are pods more than a majority",
@@ -52,7 +52,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 			},
 			Traits:      []k8sfactory.Trait{},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseCreating,
 		},
 		{
 			Name: "There are three pods",
@@ -61,7 +61,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 			},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseRunning,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseRunning,
 		},
 		{
 			Name: "There are two pods and 3rd pod is creating",
@@ -70,7 +70,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 				k8sfactory.PodFactory(etcdPodBase),
 			},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseCreating,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseCreating,
 		},
 		{
 			Name: "There are three pods and one pod is not ready",
@@ -80,7 +80,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseDegrading,
 		},
 		{
 			Name: "There are two pods and creation completed",
@@ -89,7 +89,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseDegrading,
 		},
 		{
 			Name: "There is temporary member",
@@ -103,7 +103,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseUpdating,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseUpdating,
 		},
 		{
 			Name: "There are three pods and one pod is failed",
@@ -113,7 +113,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase, k8sfactory.Ready, k8sfactory.PodFailed),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseDegrading,
 		},
 		{
 			Name: "There are three pods and one pod is not ready, cluster creation is already finished",
@@ -123,7 +123,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 				k8sfactory.PodFactory(etcdPodBase),
 			},
 			Traits:      []k8sfactory.Trait{etcd.Ready, etcd.CreatingCompleted},
-			ExpectPhase: etcdv1alpha2.ClusterPhaseDegrading,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseDegrading,
 		},
 	}
 

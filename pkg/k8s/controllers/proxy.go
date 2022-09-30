@@ -36,13 +36,13 @@ import (
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/netutil"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
@@ -125,8 +125,8 @@ type HeimdallrProxy struct {
 	ProxyServer     *process
 	DashboardServer *process
 
-	clientset     clientset.Interface
-	serviceLister listers.ServiceLister
+	thirdPartyClientSet *thirdpartyclient.Set
+	serviceLister       listers.ServiceLister
 
 	backends           []*proxyv1alpha2.Backend
 	roles              []*proxyv1alpha2.Role
@@ -137,29 +137,29 @@ type HeimdallrProxy struct {
 }
 
 type HeimdallrProxyParams struct {
-	Spec               *proxyv1alpha2.Proxy
-	Clientset          clientset.Interface
-	ServiceLister      listers.ServiceLister
-	Backends           []*proxyv1alpha2.Backend
-	Roles              []*proxyv1alpha2.Role
-	RpcPermissions     []*proxyv1alpha2.RpcPermission
-	RoleBindings       []*proxyv1alpha2.RoleBinding
-	CertManagerVersion string
+	Spec                *proxyv1alpha2.Proxy
+	ThirdPartyClientSet *thirdpartyclient.Set
+	ServiceLister       listers.ServiceLister
+	Backends            []*proxyv1alpha2.Backend
+	Roles               []*proxyv1alpha2.Role
+	RpcPermissions      []*proxyv1alpha2.RpcPermission
+	RoleBindings        []*proxyv1alpha2.RoleBinding
+	CertManagerVersion  string
 }
 
 func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	r := &HeimdallrProxy{
-		Name:               opt.Spec.Name,
-		Namespace:          opt.Spec.Namespace,
-		Object:             opt.Spec,
-		Spec:               opt.Spec.Spec,
-		serviceLister:      opt.ServiceLister,
-		clientset:          opt.Clientset,
-		backends:           opt.Backends,
-		roles:              opt.Roles,
-		rpcPermissions:     opt.RpcPermissions,
-		roleBindings:       opt.RoleBindings,
-		certManagerVersion: opt.CertManagerVersion,
+		Name:                opt.Spec.Name,
+		Namespace:           opt.Spec.Namespace,
+		Object:              opt.Spec,
+		Spec:                opt.Spec.Spec,
+		serviceLister:       opt.ServiceLister,
+		thirdPartyClientSet: opt.ThirdPartyClientSet,
+		backends:            opt.Backends,
+		roles:               opt.Roles,
+		rpcPermissions:      opt.RpcPermissions,
+		roleBindings:        opt.RoleBindings,
+		certManagerVersion:  opt.CertManagerVersion,
 	}
 
 	return r
@@ -206,7 +206,7 @@ func (r *HeimdallrProxy) Init(secretLister listers.SecretLister) error {
 
 func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
 	if !metav1.IsControlledBy(obj, r.Object) {
-		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy"))})
+		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy"))})
 	}
 }
 
@@ -334,7 +334,7 @@ func (r *HeimdallrProxy) DefaultBackends() []*proxyv1alpha2.Backend {
 		k8sfactory.Label("app.kubernetes.io/managed-by", "heimdallr-operator"),
 		k8sfactory.Label("app.kubernetes.io/instance", r.Name),
 		proxy.AllowRootUser,
-		proxy.HTTP([]*proxyv1alpha2.BackendHTTPSpec{
+		proxy.HTTP([]proxyv1alpha2.BackendHTTPSpec{
 			{Path: "/", Upstream: fmt.Sprintf("http://%s:%d", r.ServiceNameForDashboard(), dashboardPort)},
 		}),
 		proxy.Permission(
@@ -477,7 +477,9 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 		etcd.Version(etcdVersion),
 	)
 	if r.Spec.DataStore != nil && r.Spec.DataStore.Etcd != nil {
-		ec = etcd.Factory(ec, etcd.DefragmentSchedule(r.Spec.DataStore.Etcd.Defragment.Schedule))
+		if r.Spec.DataStore.Etcd.Defragment != nil {
+			ec = etcd.Factory(ec, etcd.DefragmentSchedule(r.Spec.DataStore.Etcd.Defragment.Schedule))
+		}
 		if r.Spec.AntiAffinity {
 			ec = etcd.Factory(ec, etcd.EnableAntiAffinity)
 		}
@@ -494,7 +496,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.Secure,
 						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Name,
 						r.Spec.DataStore.Etcd.Backup.Storage.MinIO.ServiceSelector.Namespace,
-						etcdv1alpha2.AWSCredentialSelector{
+						&etcdv1alpha2.AWSCredentialSelector{
 							Name:               r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Name,
 							Namespace:          r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.Namespace,
 							AccessKeyIDKey:     r.Spec.DataStore.Etcd.Backup.Storage.MinIO.CredentialSelector.AccessKeyIDKey,
@@ -507,7 +509,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 					etcd.BackupToGCS(
 						r.Spec.DataStore.Etcd.Backup.Storage.GCS.Bucket,
 						r.Spec.DataStore.Etcd.Backup.Storage.GCS.Path,
-						etcdv1alpha2.GCPCredentialSelector{
+						&etcdv1alpha2.GCPCredentialSelector{
 							Name:                  r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Name,
 							Namespace:             r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Namespace,
 							ServiceAccountJSONKey: r.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey,
@@ -522,13 +524,16 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 }
 
 func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdCluster) *monitoringv1.PodMonitor {
+	if r.Spec.Monitor == nil {
+		return nil
+	}
 	return &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: r.Namespace,
 			Labels:    r.Spec.Monitor.Labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemeGroupVersion.WithKind("Proxy")),
+				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
@@ -929,7 +934,7 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			Role:  r.Spec.CertificateAuthority.Vault.Role,
 		}
 	}
-	if r.Spec.Monitor.PrometheusMonitoring {
+	if r.Spec.Monitor != nil && r.Spec.Monitor.PrometheusMonitoring {
 		conf.RPCServer.MetricsBind = fmt.Sprintf(":%d", rpcMetricsServerPort)
 	}
 
@@ -1105,7 +1110,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 		k8sfactory.Name(r.DeploymentNameForMain()),
 		k8sfactory.Namespace(r.Namespace),
 		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
-		k8sfactory.Replicas(r.Spec.Replicas),
+		k8sfactory.Replicas(int32(r.Spec.Replicas)),
 		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
 		k8sfactory.Pod(pod),
 	)
@@ -1120,7 +1125,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 
 	var port int32 = 443
 	if r.Spec.Port != 0 {
-		port = r.Spec.Port
+		port = int32(r.Spec.Port)
 	}
 	svc := k8sfactory.ServiceFactory(nil,
 		k8sfactory.Name(r.ServiceNameForMain()),
@@ -1133,7 +1138,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	)
 	if r.Spec.HttpPort != 0 {
 		svc = k8sfactory.ServiceFactory(svc,
-			k8sfactory.Port("http", corev1.ProtocolTCP, r.Spec.HttpPort),
+			k8sfactory.Port("http", corev1.ProtocolTCP, int32(r.Spec.HttpPort)),
 		)
 	}
 	if r.Spec.LoadBalancerIP != "" {
@@ -1225,7 +1230,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 			),
 		)
 	}
-	replicas := r.Spec.DashboardReplicas
+	replicas := int32(r.Spec.DashboardReplicas)
 	if replicas == 0 {
 		replicas = 3 // This is default value of DashboardReplicas.
 	}
@@ -1343,7 +1348,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	}
 	var replicas int32 = 2
 	if r.Spec.RPCReplicas > 0 {
-		replicas = r.Spec.RPCReplicas
+		replicas = int32(r.Spec.RPCReplicas)
 	}
 	deployment := k8sfactory.DeploymentFactory(nil,
 		k8sfactory.Name(r.DeploymentNameForRPCServer()),
@@ -1370,7 +1375,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	}
 
 	var rpcMetrics *monitoringv1.ServiceMonitor
-	if r.Spec.Monitor.PrometheusMonitoring {
+	if r.Spec.Monitor != nil && r.Spec.Monitor.PrometheusMonitoring {
 		svc.Spec.Ports = append(svc.Spec.Ports, tcpServicePort("metrics", rpcMetricsServerPort, rpcMetricsServerPort))
 
 		rpcMetrics = &monitoringv1.ServiceMonitor{
@@ -1417,13 +1422,13 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
 	case certmanagerv1.ClusterIssuerKind:
-		ci, err := r.clientset.CertmanagerV1().ClusterIssuers().Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetClusterIssuer(context.TODO(), "", r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 		issuerObj = ci
 	case certmanagerv1.IssuerKind:
-		ci, err := r.clientset.CertmanagerV1().Issuers(r.Namespace).Get(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetIssuer(context.TODO(), r.Namespace, r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}

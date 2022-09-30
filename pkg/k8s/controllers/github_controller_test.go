@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
@@ -33,7 +33,7 @@ func TestGitHubController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.ProxyV1alpha2,
 			transport,
 		)
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestGitHubController(t *testing.T) {
 		err = runner.Reconcile(controller, backend)
 		require.NoError(t, err)
 
-		updated, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		updated, err := runner.Client.ProxyV1alpha2.GetBackend(context.Background(), backend.Namespace, backend.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
@@ -80,17 +80,18 @@ func TestGitHubController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.ProxyV1alpha2,
 			transport,
 		)
 		require.NoError(t, err)
 
 		p, backend, secrets := githubControllerFixtures(t, "test")
 		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1alpha2.WebhookConfigurationStatus{
+		now := metav1.Now()
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, proxyv1alpha2.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
-			UpdateTime: metav1.Now(),
+			UpdateTime: &now,
 		})
 		runner.RegisterFixtures(p)
 		for _, v := range secrets {
@@ -111,7 +112,7 @@ func TestGitHubController(t *testing.T) {
 		err = runner.Finalize(controller, backend)
 		require.NoError(t, err)
 
-		updated, err := runner.Client.ProxyV1alpha2().Backends(backend.Namespace).Get(context.TODO(), backend.Name, metav1.GetOptions{})
+		updated, err := runner.Client.ProxyV1alpha2.GetBackend(context.Background(), backend.Namespace, backend.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "", updated)
 		runner.AssertUpdateAction(t, "status", updated)
@@ -127,17 +128,18 @@ func TestGitHubController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.ProxyV1alpha2,
 			transport,
 		)
 		require.NoError(t, err)
 
 		p, backend, secrets := githubControllerFixtures(t, "test")
 		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, &proxyv1alpha2.WebhookConfigurationStatus{
+		now := metav1.Now()
+		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, proxyv1alpha2.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
-			UpdateTime: metav1.Now(),
+			UpdateTime: &now,
 		})
 		runner.RegisterFixtures(p)
 		for _, v := range secrets {
@@ -159,7 +161,7 @@ func TestGitHubController(t *testing.T) {
 		require.NoError(t, err)
 
 		backend.ObjectMeta.Finalizers = []string{}
-		backend.Status.WebhookConfigurations = []*proxyv1alpha2.WebhookConfigurationStatus{}
+		backend.Status.WebhookConfigurations = []proxyv1alpha2.WebhookConfigurationStatus{}
 		runner.AssertUpdateAction(t, "", backend)
 		runner.AssertUpdateAction(t, "status", backend)
 		runner.AssertNoUnexpectedAction(t)
@@ -206,7 +208,7 @@ func githubControllerFixtures(t *testing.T, name string) (*proxyv1alpha2.Proxy, 
 			}),
 		)),
 	)
-	b.Status.DeployedBy = []*proxyv1alpha2.ProxyReference{
+	b.Status.DeployedBy = []proxyv1alpha2.ProxyReference{
 		{Name: p.Name, Namespace: metav1.NamespaceDefault, Url: fmt.Sprintf("https://test.test.%s", p.Spec.Domain)},
 	}
 

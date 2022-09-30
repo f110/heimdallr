@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -43,7 +43,7 @@ func TestEtcdController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -51,11 +51,11 @@ func TestEtcdController(t *testing.T) {
 			mockOpt,
 		)
 
-		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhasePending))
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhasePending))
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhasePending))
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhasePending))
 		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
 		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
 		runner.AssertUpdateAction(t, "status", updated)
@@ -69,7 +69,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-client", e.Name), namespace))
-		updated = etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseInitializing))
+		updated = etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseInitializing))
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 
@@ -92,7 +92,7 @@ func TestEtcdController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -101,7 +101,7 @@ func TestEtcdController(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseCreating))
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseCreating))
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		member := cluster.AllMembers()[0]
@@ -153,7 +153,7 @@ func TestEtcdController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -162,7 +162,7 @@ func TestEtcdController(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
@@ -214,7 +214,7 @@ func TestEtcdController(t *testing.T) {
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
 				runner.CoreClient,
-				runner.Client,
+				runner.Client.EtcdV1alpha2,
 				nil,
 				"cluster.local",
 				false,
@@ -223,7 +223,7 @@ func TestEtcdController(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
+			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
 			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers() {
@@ -244,7 +244,7 @@ func TestEtcdController(t *testing.T) {
 			err = runner.Reconcile(controller, e)
 			require.NoError(t, err)
 
-			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.CreatedStatus)
+			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
 			runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -261,7 +261,7 @@ func TestEtcdController(t *testing.T) {
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
 				runner.CoreClient,
-				runner.Client,
+				runner.Client.EtcdV1alpha2,
 				nil,
 				"cluster.local",
 				false,
@@ -270,7 +270,7 @@ func TestEtcdController(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
+			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.Ready)
 			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 			cluster.registerBasicObjectOfEtcdCluster(runner)
 			for _, v := range cluster.AllMembers()[1:] {
@@ -290,7 +290,7 @@ func TestEtcdController(t *testing.T) {
 			err = runner.Reconcile(controller, e)
 			require.NoError(t, err)
 
-			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.CreatedStatus)
+			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
 			runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -308,7 +308,7 @@ func TestEtcdController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -317,7 +317,7 @@ func TestEtcdController(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.Ready)
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.Ready)
 		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		for _, v := range cluster.AllMembers() {
@@ -331,7 +331,7 @@ func TestEtcdController(t *testing.T) {
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseUpdating), etcd.CreatedStatus)
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
 		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
@@ -401,7 +401,7 @@ func TestEtcdController(t *testing.T) {
 					runner.SharedInformerFactory,
 					runner.CoreSharedInformerFactory,
 					runner.CoreClient,
-					runner.Client,
+					runner.Client.EtcdV1alpha2,
 					nil,
 					"cluster.local",
 					false,
@@ -410,7 +410,7 @@ func TestEtcdController(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.ClusterPhaseRunning), etcd.Ready)
+				e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
 				runner.RegisterFixtures(e)
 				cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 				cluster.registerBasicObjectOfEtcdCluster(runner)
@@ -434,7 +434,7 @@ func TestEtcdController(t *testing.T) {
 				err = runner.Reconcile(controller, e)
 				require.NoError(t, err)
 
-				updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseDegrading), etcd.CreatedStatus)
+				updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseDegrading), etcd.CreatedStatus)
 				runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 				runner.AssertUpdateAction(t, "status", updated)
 				runner.AssertNoUnexpectedAction(t)
@@ -453,7 +453,7 @@ func TestEtcdController(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -463,7 +463,7 @@ func TestEtcdController(t *testing.T) {
 		require.NoError(t, err)
 
 		e := etcd.Factory(etcdClusterBase,
-			etcd.Phase(etcdv1alpha2.ClusterPhaseRunning),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
 			etcd.Ready,
 			etcd.Backup(30, 5),
 			etcd.BackupToMinIO(
@@ -472,7 +472,7 @@ func TestEtcdController(t *testing.T) {
 				false,
 				"test",
 				metav1.NamespaceDefault,
-				etcdv1alpha2.AWSCredentialSelector{
+				&etcdv1alpha2.AWSCredentialSelector{
 					Name:               "test",
 					Namespace:          metav1.NamespaceDefault,
 					AccessKeyIDKey:     "accesskey",
@@ -507,7 +507,7 @@ func TestEtcdController(t *testing.T) {
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.ClusterPhaseInitializing), etcd.CreatedStatus)
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseInitializing), etcd.CreatedStatus)
 		updated.Status.LastReadyTransitionTime = nil
 		updated.Status.Restored = &etcdv1alpha2.RestoredStatus{Path: "backup/latest"}
 		runner.AssertUpdateAction(t, "status", updated)
@@ -538,7 +538,7 @@ func TestEtcdController_Backup(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -552,14 +552,14 @@ func TestEtcdController_Backup(t *testing.T) {
 
 		e := etcd.Factory(etcdClusterBase,
 			k8sfactory.Name(normalizeName(t.Name())),
-			etcd.Phase(etcdv1alpha2.ClusterPhaseRunning),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
 		)
 		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
 			IntervalInSecond: 30,
-			Storage: etcdv1alpha2.BackupStorageSpec{
+			Storage: &etcdv1alpha2.BackupStorageSpec{
 				MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
-					ServiceSelector: etcdv1alpha2.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
-					CredentialSelector: etcdv1alpha2.AWSCredentialSelector{
+					ServiceSelector: &etcdv1alpha2.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
+					CredentialSelector: &etcdv1alpha2.AWSCredentialSelector{
 						Name:               minIOSecret.Name,
 						Namespace:          minIOSecret.Namespace,
 						AccessKeyIDKey:     "accesskey",
@@ -592,12 +592,12 @@ func TestEtcdController_Backup(t *testing.T) {
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 
-		updatedEC, err := runner.Client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+		updatedEC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), cluster.Namespace, cluster.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.NotNil(t, updatedEC.Status.Backup)
@@ -618,7 +618,7 @@ func TestEtcdController_Backup(t *testing.T) {
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
 			runner.CoreClient,
-			runner.Client,
+			runner.Client.EtcdV1alpha2,
 			nil,
 			"cluster.local",
 			false,
@@ -632,7 +632,7 @@ func TestEtcdController_Backup(t *testing.T) {
 
 		e := etcd.Factory(etcdClusterBase,
 			k8sfactory.Name(normalizeName(t.Name())),
-			etcd.Phase(etcdv1alpha2.ClusterPhaseRunning),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
 			etcd.Backup(30, 5),
 			etcd.BackupToMinIO(
 				"etcdcontroller",
@@ -640,7 +640,7 @@ func TestEtcdController_Backup(t *testing.T) {
 				false,
 				minIOService.Name,
 				minIOService.Namespace,
-				etcdv1alpha2.AWSCredentialSelector{
+				&etcdv1alpha2.AWSCredentialSelector{
 					Name:               minIOSecret.Name,
 					Namespace:          minIOSecret.Namespace,
 					AccessKeyIDKey:     "accesskey",
@@ -669,7 +669,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
@@ -686,7 +686,7 @@ func TestEtcdController_Restore(t *testing.T) {
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
 		runner.CoreClient,
-		runner.Client,
+		runner.Client.EtcdV1alpha2,
 		nil,
 		"cluster.local",
 		false,
@@ -709,7 +709,7 @@ func TestEtcdController_Restore(t *testing.T) {
 			false,
 			"test",
 			metav1.NamespaceDefault,
-			etcdv1alpha2.AWSCredentialSelector{
+			&etcdv1alpha2.AWSCredentialSelector{
 				Name:               "test",
 				Namespace:          metav1.NamespaceDefault,
 				AccessKeyIDKey:     "accesskey",
@@ -752,7 +752,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	err = runner.Reconcile(controller, e)
 	require.NoError(t, err)
 
-	updated, err := runner.Client.EtcdV1alpha2().EtcdClusters(e.Namespace).Get(context.TODO(), e.Name, metav1.GetOptions{})
+	updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	runner.AssertUpdateAction(t, "status", updated)
 	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
@@ -760,7 +760,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-3", e.Name), k8sfactory.Namespace(e.Namespace)))
 	runner.AssertNoUnexpectedAction(t)
 
-	updatedEC, err := runner.Client.EtcdV1alpha2().EtcdClusters(cluster.Namespace).Get(context.TODO(), cluster.Name, metav1.GetOptions{})
+	updatedEC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), cluster.Namespace, cluster.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	require.NotNil(t, updatedEC.Status.Restored)

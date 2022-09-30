@@ -38,8 +38,10 @@ import (
 
 	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
 	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/fake"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
+	"go.f110.dev/heimdallr/pkg/k8s/client/testingclient"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient"
 )
 
 type ActionVerb string
@@ -90,33 +92,37 @@ type commonTestRunner struct {
 	coreActions []expectAction
 	Actions     []*Action
 
-	client     *fake.Clientset
+	client     *testingclient.Set
 	coreClient *k8sfake.Clientset
 
-	sharedInformerFactory     informers.SharedInformerFactory
+	sharedInformerFactory     *client.InformerFactory
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory
+	thirdPartyInformerFactory *thirdpartyclient.InformerFactory
 
 	transport *httpmock.MockTransport
 }
 
 func newCommonTestRunner(t *testing.T) *commonTestRunner {
-	client := fake.NewSimpleClientset()
+	clientSet := testingclient.NewSet()
+	thirdPartyClientSet := testingthirdpartyclient.NewSet()
 	coreClient := k8sfake.NewSimpleClientset()
 
-	sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
+	sharedInformerFactory := client.NewInformerFactory(&clientSet.Set, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+	thirdPartyInformerFactory := thirdpartyclient.NewInformerFactory(&thirdPartyClientSet.Set, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
-	sharedInformerFactory.Start(context.Background().Done())
+	sharedInformerFactory.Run(context.Background())
 	coreSharedInformerFactory.Start(context.Background().Done())
 
 	return &commonTestRunner{
 		t:                         t,
 		actions:                   make([]expectAction, 0),
 		coreActions:               make([]expectAction, 0),
-		client:                    client,
+		client:                    clientSet,
 		coreClient:                coreClient,
 		sharedInformerFactory:     sharedInformerFactory,
 		coreSharedInformerFactory: coreSharedInformerFactory,
+		thirdPartyInformerFactory: thirdPartyInformerFactory,
 		transport:                 httpmock.NewMockTransport(),
 	}
 }
@@ -151,33 +157,33 @@ func (f *commonTestRunner) RegisterFixtures(objs ...kruntime.Object) {
 
 func (f *commonTestRunner) RegisterProxyFixture(p *proxyv1alpha2.Proxy) {
 	f.client.Tracker().Add(p)
-	f.sharedInformerFactory.Proxy().V1alpha2().Proxies().Informer().GetIndexer().Add(p)
+	f.sharedInformerFactory.InformerFor(p).GetIndexer().Add(p)
 }
 
 func (f *commonTestRunner) RegisterBackendFixture(b ...*proxyv1alpha2.Backend) {
 	for _, v := range b {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha2().Backends().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterProxyRoleFixture(r ...*proxyv1alpha2.Role) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha2().Roles().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterProxyRoleBindingFixture(r ...*proxyv1alpha2.RoleBinding) {
 	for _, v := range r {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Proxy().V1alpha2().RoleBindings().Informer().GetIndexer().Add(v)
+		f.sharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha2.EtcdCluster) {
 	f.client.Tracker().Add(ec)
-	f.sharedInformerFactory.Etcd().V1alpha2().EtcdClusters().Informer().GetIndexer().Add(ec)
+	f.sharedInformerFactory.InformerFor(ec).GetIndexer().Add(ec)
 }
 
 func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
@@ -253,7 +259,7 @@ func (f *commonTestRunner) RegisterIngressClassFixture(ic *networkingv1.IngressC
 func (f *commonTestRunner) RegisterCertificateFixture(c ...*certmanagerv1.Certificate) {
 	for _, v := range c {
 		f.client.Tracker().Add(v)
-		f.sharedInformerFactory.Certmanager().V1().Certificates().Informer().GetIndexer().Add(v)
+		f.thirdPartyInformerFactory.InformerFor(v).GetIndexer().Add(v)
 	}
 }
 
@@ -618,7 +624,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 		},
 	}
 
-	c, err := NewProxyController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, f.client)
+	c, err := NewProxyController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, &f.client.Set, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,7 +760,7 @@ func newIngressControllerTestRunner(t *testing.T) *ingressControllerTestRunner {
 		t:                t,
 	}
 
-	c := NewIngressController(f.coreSharedInformerFactory, f.sharedInformerFactory, f.coreClient, f.client)
+	c := NewIngressController(f.coreSharedInformerFactory, f.sharedInformerFactory, f.coreClient, f.client.ProxyV1alpha2)
 	f.c = c
 
 	return f

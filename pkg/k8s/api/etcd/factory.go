@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
@@ -42,7 +42,7 @@ func Ready(object interface{}) {
 	e.Status.Ready = true
 	now := metav1.Now()
 	e.Status.LastReadyTransitionTime = &now
-	e.Status.Phase = etcdv1alpha2.ClusterPhaseRunning
+	e.Status.Phase = etcdv1alpha2.EtcdClusterPhaseRunning
 	e.Status.ClientCertSecretName = fmt.Sprintf("%s-client-cert", e.Name)
 	e.Status.CreatingCompleted = true
 }
@@ -145,18 +145,21 @@ func Backup(interval, maxBackups int) k8sfactory.Trait {
 	}
 }
 
-func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds etcdv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
+func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds *etcdv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
 	return func(object interface{}) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
 		}
 
+		if e.Spec.Backup.Storage == nil {
+			e.Spec.Backup.Storage = &etcdv1alpha2.BackupStorageSpec{}
+		}
 		e.Spec.Backup.Storage.MinIO = &etcdv1alpha2.BackupStorageMinIOSpec{
 			Bucket: bucket,
 			Path:   path,
 			Secure: secure,
-			ServiceSelector: etcdv1alpha2.ObjectSelector{
+			ServiceSelector: &etcdv1alpha2.ObjectSelector{
 				Name:      svcName,
 				Namespace: svcNamespace,
 			},
@@ -165,13 +168,16 @@ func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace strin
 	}
 }
 
-func BackupToGCS(bucket, path string, creds etcdv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
+func BackupToGCS(bucket, path string, creds *etcdv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
 	return func(object interface{}) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
 		}
 
+		if e.Spec.Backup.Storage == nil {
+			e.Spec.Backup.Storage = &etcdv1alpha2.BackupStorageSpec{}
+		}
 		e.Spec.Backup.Storage.GCS = &etcdv1alpha2.BackupStorageGCSSpec{
 			Bucket:             bucket,
 			Path:               path,

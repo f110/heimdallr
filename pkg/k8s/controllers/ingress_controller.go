@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -18,12 +19,10 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
-	proxyListers "go.f110.dev/heimdallr/pkg/k8s/listers/proxy/v1alpha2"
 )
 
 const (
@@ -42,23 +41,24 @@ type IngressController struct {
 	serviceLister            coreListers.ServiceLister
 	serviceListerSynced      cache.InformerSynced
 
-	backendLister       proxyListers.BackendLister
+	backendLister       *client.ProxyV1alpha2BackendLister
 	backendListerSynced cache.InformerSynced
 
-	client     clientset.Interface
-	coreClient kubernetes.Interface
+	proxyClient *client.ProxyV1alpha2
+	coreClient  kubernetes.Interface
 }
 
 func NewIngressController(
 	coreSharedInformerFactory coreInformers.SharedInformerFactory,
-	sharedInformerFactory informers.SharedInformerFactory,
+	sharedInformerFactory *client.InformerFactory,
 	coreClient kubernetes.Interface,
-	client clientset.Interface,
+	proxyClient *client.ProxyV1alpha2,
 ) *IngressController {
 	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
 	ingressClassInformer := coreSharedInformerFactory.Networking().V1().IngressClasses()
 	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
-	backendInformer := sharedInformerFactory.Proxy().V1alpha2().Backends()
+
+	backendInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, metav1.NamespaceAll, 30*time.Second)
 
 	ic := &IngressController{
 		ingressInformer:          ingressInformer.Informer(),
@@ -68,10 +68,10 @@ func NewIngressController(
 		ingressClassListerSynced: ingressInformer.Informer().HasSynced,
 		serviceLister:            serviceInformer.Lister(),
 		serviceListerSynced:      serviceInformer.Informer().HasSynced,
-		backendLister:            backendInformer.Lister(),
-		backendListerSynced:      backendInformer.Informer().HasSynced,
+		backendLister:            backendInformer.BackendLister(),
+		backendListerSynced:      backendInformer.BackendInformer().HasSynced,
 		coreClient:               coreClient,
-		client:                   client,
+		proxyClient:              proxyClient,
 	}
 
 	ic.Controller = controllerbase.NewController(ic, coreClient)
@@ -165,9 +165,9 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 
 	backends := make([]*proxyv1alpha2.Backend, 0)
 	for _, rule := range ingress.Spec.Rules {
-		httpRouting := make([]*proxyv1alpha2.BackendHTTPSpec, 0)
+		httpRouting := make([]proxyv1alpha2.BackendHTTPSpec, 0)
 		for _, v := range rule.HTTP.Paths {
-			httpRouting = append(httpRouting, &proxyv1alpha2.BackendHTTPSpec{
+			httpRouting = append(httpRouting, proxyv1alpha2.BackendHTTPSpec{
 				Path: v.Path,
 				ServiceSelector: &proxyv1alpha2.ServiceSelector{
 					Name:      v.Backend.Service.Name,
@@ -191,9 +191,9 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 	}
 
 	for _, b := range backends {
-		backend, err := ic.backendLister.Backends(b.Namespace).Get(b.Name)
+		backend, err := ic.backendLister.Get(b.Namespace, b.Name)
 		if err != nil && apierrors.IsNotFound(err) {
-			_, err = ic.client.ProxyV1alpha2().Backends(b.Namespace).Create(ctx, b, metav1.CreateOptions{})
+			_, err = ic.proxyClient.CreateBackend(ctx, b, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -205,7 +205,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		updatedB := backend.DeepCopy()
 		updatedB.Spec = b.Spec
 		if !reflect.DeepEqual(updatedB, backend) {
-			_, err = ic.client.ProxyV1alpha2().Backends(backend.Namespace).Update(ctx, updatedB, metav1.UpdateOptions{})
+			_, err = ic.proxyClient.UpdateBackend(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}

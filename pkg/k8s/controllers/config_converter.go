@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 )
 
 type ConfigConverter struct {

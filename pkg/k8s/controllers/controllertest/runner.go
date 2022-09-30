@@ -25,11 +25,13 @@ import (
 	"k8s.io/gengo/namer"
 	"k8s.io/gengo/types"
 
-	etcdv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha2"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
-	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/fake"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
+	"go.f110.dev/heimdallr/pkg/k8s/client/testingclient"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient"
 )
 
 type ActionVerb string
@@ -77,15 +79,18 @@ type TestRunner struct {
 	Now     time.Time
 	Actions []*Action
 
-	Client                    *fake.Clientset
+	Client                    *testingclient.Set
 	CoreClient                *k8sfake.Clientset
-	SharedInformerFactory     informers.SharedInformerFactory
+	ThirdPartyClient          *testingthirdpartyclient.Set
+	SharedInformerFactory     *client.InformerFactory
 	CoreSharedInformerFactory kubeinformers.SharedInformerFactory
+	ThirdPartyInformerFactory *thirdpartyclient.InformerFactory
 }
 
 func NewTestRunner() *TestRunner {
-	client := fake.NewSimpleClientset()
+	clientSet := testingclient.NewSet()
 	coreClient := k8sfake.NewSimpleClientset()
+	thirdPartyClientSet := testingthirdpartyclient.NewSet()
 	coreClient.Resources = []*metav1.APIResourceList{
 		{
 			GroupVersion: "cert-manager.io/v1",
@@ -97,18 +102,22 @@ func NewTestRunner() *TestRunner {
 		},
 	}
 
-	sharedInformerFactory := informers.NewSharedInformerFactory(client, 30*time.Second)
+	factory := client.NewInformerFactory(&clientSet.Set, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+	thirdPartyInformerFactory := thirdpartyclient.NewInformerFactory(&thirdPartyClientSet.Set, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
-	sharedInformerFactory.Start(context.Background().Done())
+	factory.Run(context.Background())
 	coreSharedInformerFactory.Start(context.Background().Done())
+	thirdPartyInformerFactory.Run(context.Background())
 
 	return &TestRunner{
 		Now:                       time.Now(),
-		Client:                    client,
+		Client:                    clientSet,
 		CoreClient:                coreClient,
-		SharedInformerFactory:     sharedInformerFactory,
+		ThirdPartyClient:          thirdPartyClientSet,
+		SharedInformerFactory:     factory,
 		CoreSharedInformerFactory: coreSharedInformerFactory,
+		ThirdPartyInformerFactory: thirdPartyInformerFactory,
 	}
 }
 
@@ -187,32 +196,32 @@ func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 
 func (r *TestRunner) registerProxyFixture(p *proxyv1alpha2.Proxy) {
 	r.Client.Tracker().Add(p)
-	r.SharedInformerFactory.Proxy().V1alpha2().Proxies().Informer().GetIndexer().Add(p)
+	r.SharedInformerFactory.InformerFor(p).GetIndexer().Add(p)
 }
 
 func (r *TestRunner) registerBackendFixture(b *proxyv1alpha2.Backend) {
 	r.Client.Tracker().Add(b)
-	r.SharedInformerFactory.Proxy().V1alpha2().Backends().Informer().GetIndexer().Add(b)
+	r.SharedInformerFactory.InformerFor(b).GetIndexer().Add(b)
 }
 
 func (r *TestRunner) registerProxyRoleFixture(v *proxyv1alpha2.Role) {
 	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.Proxy().V1alpha2().Roles().Informer().GetIndexer().Add(v)
+	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 }
 
 func (r *TestRunner) registerProxyRoleBindingFixture(v *proxyv1alpha2.RoleBinding) {
 	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.Proxy().V1alpha2().RoleBindings().Informer().GetIndexer().Add(v)
+	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 }
 
 func (r *TestRunner) registerRpcPermission(v *proxyv1alpha2.RpcPermission) {
 	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.Proxy().V1alpha2().RpcPermissions().Informer().GetIndexer().Add(v)
+	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
 }
 
 func (r *TestRunner) registerEtcdClusterFixture(ec *etcdv1alpha2.EtcdCluster) {
 	r.Client.Tracker().Add(ec)
-	r.SharedInformerFactory.Etcd().V1alpha2().EtcdClusters().Informer().GetIndexer().Add(ec)
+	r.SharedInformerFactory.InformerFor(ec).GetIndexer().Add(ec)
 }
 
 func (r *TestRunner) registerPodFixture(v *corev1.Pod) {
@@ -272,8 +281,8 @@ func (r *TestRunner) registerIngressClassFixture(ic *networkingv1.IngressClass) 
 }
 
 func (r *TestRunner) registerCertificateFixture(v *certmanagerv1.Certificate) {
-	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.Certmanager().V1().Certificates().Informer().GetIndexer().Add(v)
+	r.ThirdPartyClient.Tracker().Add(v)
+	r.ThirdPartyInformerFactory.InformerFor(v).GetIndexer().Add(v)
 }
 
 func (r *TestRunner) AssertUpdateAction(t *testing.T, subresource string, obj runtime.Object) bool {
@@ -435,8 +444,12 @@ func (r *TestRunner) editActions() []*Action {
 		return r.Actions
 	}
 
+	var calledActions []k8stesting.Action
+	for _, v := range [][]k8stesting.Action{r.Client.Actions(), r.CoreClient.Actions(), r.ThirdPartyClient.Actions()} {
+		calledActions = append(calledActions, v...)
+	}
 	actions := make([]*Action, 0)
-	for _, v := range append(r.Client.Actions(), r.CoreClient.Actions()...) {
+	for _, v := range calledActions {
 		switch a := v.(type) {
 		case k8stesting.CreateActionImpl:
 			// Exclude Event object because adding the event is non-blocking operation.

@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"go.f110.dev/heimdallr/pkg/config"
-	proxyv1alpha2 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 )
@@ -51,7 +51,7 @@ func IdentityProvider(provider, clientId, secretName, key string) k8sfactory.Tra
 		}
 		p.Spec.IdentityProvider.Provider = provider
 		p.Spec.IdentityProvider.ClientId = clientId
-		p.Spec.IdentityProvider.ClientSecretRef = proxyv1alpha2.SecretSelector{
+		p.Spec.IdentityProvider.ClientSecretRef = &proxyv1alpha2.SecretSelector{
 			Name: secretName,
 			Key:  key,
 		}
@@ -89,7 +89,7 @@ func EtcdBackup(interval, maxBackups int) k8sfactory.Trait {
 	}
 }
 
-func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds proxyv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
+func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds *proxyv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
 	return func(object interface{}) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
@@ -102,8 +102,11 @@ func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace s
 		if p.Spec.DataStore.Etcd.Backup == nil {
 			p.Spec.DataStore.Etcd.Backup = &proxyv1alpha2.EtcdBackupSpec{}
 		}
+		if p.Spec.DataStore.Etcd.Backup.Storage == nil {
+			p.Spec.DataStore.Etcd.Backup.Storage = &proxyv1alpha2.EtcdBackupStorageSpec{}
+		}
 		p.Spec.DataStore.Etcd.Backup.Storage.MinIO = &proxyv1alpha2.EtcdBackupMinIOSpec{
-			ServiceSelector: proxyv1alpha2.ObjectSelector{
+			ServiceSelector: &proxyv1alpha2.ObjectSelector{
 				Name:      svcName,
 				Namespace: svcNamespace,
 			},
@@ -115,7 +118,7 @@ func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace s
 	}
 }
 
-func EtcdBackupToGCS(bucket, path string, creds proxyv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
+func EtcdBackupToGCS(bucket, path string, creds *proxyv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
 	return func(object interface{}) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
@@ -127,6 +130,9 @@ func EtcdBackupToGCS(bucket, path string, creds proxyv1alpha2.GCPCredentialSelec
 		}
 		if p.Spec.DataStore.Etcd.Backup == nil {
 			p.Spec.DataStore.Etcd.Backup = &proxyv1alpha2.EtcdBackupSpec{}
+		}
+		if p.Spec.DataStore.Etcd.Backup.Storage == nil {
+			p.Spec.DataStore.Etcd.Backup.Storage = &proxyv1alpha2.EtcdBackupStorageSpec{}
 		}
 		p.Spec.DataStore.Etcd.Backup.Storage.GCS = &proxyv1alpha2.EtcdBackupGCSSpec{
 			CredentialSelector: creds,
@@ -203,7 +209,7 @@ func BackendMatchLabelSelector(namespace string, label map[string]string) k8sfac
 		if !ok {
 			return
 		}
-		p.Spec.BackendSelector = proxyv1alpha2.LabelSelector{
+		p.Spec.BackendSelector = &proxyv1alpha2.LabelSelector{
 			Namespace: namespace,
 			LabelSelector: metav1.LabelSelector{
 				MatchLabels: label,
@@ -218,7 +224,7 @@ func RoleMatchLabelSelector(namespace string, label map[string]string) k8sfactor
 		if !ok {
 			return
 		}
-		p.Spec.RoleSelector = proxyv1alpha2.LabelSelector{
+		p.Spec.RoleSelector = &proxyv1alpha2.LabelSelector{
 			Namespace: namespace,
 			LabelSelector: metav1.LabelSelector{
 				MatchLabels: label,
@@ -233,7 +239,7 @@ func RpcPermissionMatchLabelSelector(namespace string, label map[string]string) 
 		if !ok {
 			return
 		}
-		p.Spec.RoleSelector = proxyv1alpha2.LabelSelector{
+		p.Spec.RpcPermissionSelector = &proxyv1alpha2.LabelSelector{
 			Namespace: namespace,
 			LabelSelector: metav1.LabelSelector{
 				MatchLabels: label,
@@ -301,7 +307,7 @@ func DisableAuthn(object interface{}) {
 	b.Spec.DisableAuthn = true
 }
 
-func HTTP(v []*proxyv1alpha2.BackendHTTPSpec) k8sfactory.Trait {
+func HTTP(v []proxyv1alpha2.BackendHTTPSpec) k8sfactory.Trait {
 	return func(object interface{}) {
 		b, ok := object.(*proxyv1alpha2.Backend)
 		if !ok {

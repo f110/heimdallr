@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//pkg/k8s/api/etcd/v1alpha1",
         "//pkg/k8s/api/etcd/v1alpha2",
+        "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/k8s/client/versioned/scheme",
         "//pkg/k8s/k8sfactory",
         "//pkg/k8s/webhook",
