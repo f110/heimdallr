@@ -8,9 +8,9 @@ go_library(
     deps = [
         "//pkg/cmd",
         "//pkg/fsm",
-        "//pkg/k8s/client/versioned",
+        "//pkg/k8s/client",
         "//pkg/k8s/controllers",
-        "//pkg/k8s/informers/externalversions",
+        "//pkg/k8s/thirdpartyclient",
         "//pkg/k8s/webhook",
         "//pkg/logger",
         "//vendor/github.com/google/uuid",

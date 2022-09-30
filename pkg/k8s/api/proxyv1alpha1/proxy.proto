@@ -10,7 +10,7 @@ option (dev.f110.kubeproto.k8s) = {
 import "kube.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
-import "operator/proto/certmanager.proto";
+import "operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto";
 
 enum ProxyPhase {
   PROXY_PHASE_CREATING = 0 [(dev.f110.kubeproto.value) = { value: "Creating" }];
@@ -20,8 +20,8 @@ enum ProxyPhase {
 }
 
 message Proxy {
-  ProxySpec            spec   = 1;
-  optional ProxyStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+  ProxySpec   spec   = 1;
+  ProxyStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
 
   option (dev.f110.kubeproto.kind) = {
     additional_printer_columns: { name: "ready", type: "string", json_path: ".status.ready", description: "Ready", format: "byte", priority: 0 }
@@ -32,32 +32,32 @@ message Proxy {
 }
 
 message ProxySpec {
-  string                                                            domain                  = 1;
-  optional int32                                                    port                    = 2;
-  optional int32                                                    http_port               = 3;
-  optional string                                                   version                 = 4;
-  optional string                                                   etcd_version            = 5 [deprecated = true];
-  optional ProxyDataStoreSpec                                       data_store              = 6;
-  optional string                                                   load_balancer_ip        = 7 [(dev.f110.kubeproto.field) = { go_name: "LoadBalancerIP" }];
-  optional string                                                   name                    = 8;
-  optional string                                                   organization            = 9;
-  optional string                                                   administrator_unit      = 10;
-  optional string                                                   country                 = 11;
-  github.com.jetstack.cert_manager.pkg.apis.meta.v1.ObjectReference issuer_ref              = 12;
-  IdentityProviderSpec                                              identity_provider       = 13;
-  repeated string                                                   root_users              = 14;
-  SessionSpec                                                       session                 = 15;
-  int32                                                             replicas                = 16;
-  optional int32                                                    dashboard_replicas      = 17;
-  optional LabelSelector                                            backend_selector        = 18;
-  optional LabelSelector                                            role_selector           = 19;
-  optional LabelSelector                                            rpc_permission_selector = 20;
-  optional DefragmentSpec                                           defragment              = 21;
-  optional MonitorSpec                                              monitor                 = 22;
-  optional BackupSpec                                               backup                  = 23;
-  optional k8s.io.api.core.v1.ResourceRequirements proxy_resources                          = 24;
-  optional k8s.io.api.core.v1.ResourceRequirements rpc_server_resources                     = 25 [(dev.f110.kubeproto.field) = { go_name: "RPCServerResources" }];
-  optional bool                                    development                              = 26;
+  string                                                           domain                  = 1;
+  optional int32                                                   port                    = 2;
+  optional int32                                                   http_port               = 3;
+  optional string                                                  version                 = 4;
+  optional string                                                  etcd_version            = 5 [deprecated = true];
+  optional ProxyDataStoreSpec                                      data_store              = 6;
+  optional string                                                  load_balancer_ip        = 7 [(dev.f110.kubeproto.field) = { go_name: "LoadBalancerIP" }];
+  optional string                                                  name                    = 8;
+  optional string                                                  organization            = 9;
+  optional string                                                  administrator_unit      = 10;
+  optional string                                                  country                 = 11;
+  github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref              = 12;
+  IdentityProviderSpec                                             identity_provider       = 13;
+  repeated string                                                  root_users              = 14;
+  SessionSpec                                                      session                 = 15;
+  int32                                                            replicas                = 16;
+  optional int32                                                   dashboard_replicas      = 17;
+  optional LabelSelector                                           backend_selector        = 18;
+  optional LabelSelector                                           role_selector           = 19;
+  optional LabelSelector                                           rpc_permission_selector = 20;
+  optional DefragmentSpec                                          defragment              = 21;
+  optional MonitorSpec                                             monitor                 = 22;
+  optional BackupSpec                                              backup                  = 23;
+  optional k8s.io.api.core.v1.ResourceRequirements proxy_resources                         = 24;
+  optional k8s.io.api.core.v1.ResourceRequirements rpc_server_resources                    = 25 [(dev.f110.kubeproto.field) = { go_name: "RPCServerResources" }];
+  optional bool                                    development                             = 26;
 }
 
 message ProxyDataStoreSpec {
@@ -124,8 +124,8 @@ message ProxyStatus {
 }
 
 message Backend {
-  BackendSpec            spec   = 1;
-  optional BackendStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+  BackendSpec   spec   = 1;
+  BackendStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
 
   option (dev.f110.kubeproto.kind) = {
   };

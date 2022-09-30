@@ -20,8 +20,5 @@ go_library(
     ],
     importpath = "go.f110.dev/heimdallr/pkg/database/mysql/dao",
     visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/database/mysql/entity",
-        "//vendor/golang.org/x/xerrors",
-    ],
+    deps = ["//pkg/database/mysql/entity"],
 )

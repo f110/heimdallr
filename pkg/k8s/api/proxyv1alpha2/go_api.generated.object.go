@@ -1,7 +1,7 @@
 package proxyv1alpha2
 
 import (
-	"github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	metav1_1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -11,10 +11,10 @@ import (
 const GroupName = "proxy.f110.dev"
 
 var (
-	GroupVersion       = metav1.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+	GroupVersion       = metav1.GroupVersion{Group: GroupName, Version: "v1alpha2"}
 	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme        = SchemeBuilder.AddToScheme
-	SchemaGroupVersion = schema.GroupVersion{Group: "proxy.f110.dev", Version: "v1alpha1"}
+	SchemaGroupVersion = schema.GroupVersion{Group: "proxy.f110.dev", Version: "v1alpha2"}
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
@@ -46,8 +46,8 @@ const (
 type Backend struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              BackendSpec    `json:"spec"`
-	Status            *BackendStatus `json:"status,omitempty"`
+	Spec              BackendSpec   `json:"spec"`
+	Status            BackendStatus `json:"status"`
 }
 
 func (in *Backend) DeepCopyInto(out *Backend) {
@@ -55,11 +55,7 @@ func (in *Backend) DeepCopyInto(out *Backend) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		*out = new(BackendStatus)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *Backend) DeepCopy() *Backend {
@@ -116,8 +112,8 @@ func (in *BackendList) DeepCopyObject() runtime.Object {
 type Proxy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ProxySpec    `json:"spec"`
-	Status            *ProxyStatus `json:"status,omitempty"`
+	Spec              ProxySpec   `json:"spec"`
+	Status            ProxyStatus `json:"status"`
 }
 
 func (in *Proxy) DeepCopyInto(out *Proxy) {
@@ -125,11 +121,7 @@ func (in *Proxy) DeepCopyInto(out *Proxy) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		*out = new(ProxyStatus)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *Proxy) DeepCopy() *Proxy {
@@ -324,12 +316,16 @@ func (in *RoleList) DeepCopyObject() runtime.Object {
 type RpcPermission struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
+	Spec              RpcPermissionSpec   `json:"spec"`
+	Status            RpcPermissionStatus `json:"status"`
 }
 
 func (in *RpcPermission) DeepCopyInto(out *RpcPermission) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	in.Spec.DeepCopyInto(&out.Spec)
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *RpcPermission) DeepCopy() *RpcPermission {
@@ -472,7 +468,7 @@ type ProxySpec struct {
 	DataStore             *ProxyDataStoreSpec          `json:"dataStore,omitempty"`
 	LoadBalancerIP        string                       `json:"loadBalancerIp,omitempty"`
 	CertificateAuthority  *CertificateAuthoritySpec    `json:"certificateAuthority,omitempty"`
-	IssuerRef             v1.ObjectReference           `json:"issuerRef"`
+	IssuerRef             metav1_1.ObjectReference     `json:"issuerRef"`
 	IdentityProvider      IdentityProviderSpec         `json:"identityProvider"`
 	RootUsers             []string                     `json:"rootUsers"`
 	Session               SessionSpec                  `json:"session"`
@@ -602,14 +598,16 @@ func (in *RoleSpec) DeepCopy() *RoleSpec {
 }
 
 type RoleStatus struct {
-	Spec   RpcPermissionSpec   `json:"spec"`
-	Status RpcPermissionStatus `json:"status"`
+	Backends []string `json:"backends"`
 }
 
 func (in *RoleStatus) DeepCopyInto(out *RoleStatus) {
 	*out = *in
-	in.Spec.DeepCopyInto(&out.Spec)
-	in.Status.DeepCopyInto(&out.Status)
+	if in.Backends != nil {
+		t := make([]string, len(in.Backends))
+		copy(t, in.Backends)
+		out.Backends = t
+	}
 }
 
 func (in *RoleStatus) DeepCopy() *RoleStatus {
@@ -659,13 +657,58 @@ func (in *RoleRef) DeepCopy() *RoleRef {
 	return out
 }
 
+type RpcPermissionSpec struct {
+	Allow []string `json:"allow"`
+}
+
+func (in *RpcPermissionSpec) DeepCopyInto(out *RpcPermissionSpec) {
+	*out = *in
+	if in.Allow != nil {
+		t := make([]string, len(in.Allow))
+		copy(t, in.Allow)
+		out.Allow = t
+	}
+}
+
+func (in *RpcPermissionSpec) DeepCopy() *RpcPermissionSpec {
+	if in == nil {
+		return nil
+	}
+	out := new(RpcPermissionSpec)
+	in.DeepCopyInto(out)
+	return out
+}
+
+type RpcPermissionStatus struct {
+}
+
+func (in *RpcPermissionStatus) DeepCopyInto(out *RpcPermissionStatus) {
+	*out = *in
+}
+
+func (in *RpcPermissionStatus) DeepCopy() *RpcPermissionStatus {
+	if in == nil {
+		return nil
+	}
+	out := new(RpcPermissionStatus)
+	in.DeepCopyInto(out)
+	return out
+}
+
 type Permission struct {
-	Name      string     `json:"name,omitempty"`
-	Locations []Location `json:"locations"`
+	Name                 string                `json:"name,omitempty"`
+	Webhook              string                `json:"webhook,omitempty"`
+	WebhookConfiguration *WebhookConfiguration `json:"webhookConfiguration,omitempty"`
+	Locations            []Location            `json:"locations"`
 }
 
 func (in *Permission) DeepCopyInto(out *Permission) {
 	*out = *in
+	if in.WebhookConfiguration != nil {
+		in, out := &in.WebhookConfiguration, &out.WebhookConfiguration
+		*out = new(WebhookConfiguration)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Locations != nil {
 		l := make([]Location, len(in.Locations))
 		for i := range in.Locations {
@@ -948,40 +991,24 @@ func (in *BackupSpec) DeepCopy() *BackupSpec {
 	return out
 }
 
-type RpcPermissionSpec struct {
-	Allow []string `json:"allow"`
+type WebhookConfiguration struct {
+	GitHub *GitHubHookConfiguration `json:",inline"`
 }
 
-func (in *RpcPermissionSpec) DeepCopyInto(out *RpcPermissionSpec) {
+func (in *WebhookConfiguration) DeepCopyInto(out *WebhookConfiguration) {
 	*out = *in
-	if in.Allow != nil {
-		t := make([]string, len(in.Allow))
-		copy(t, in.Allow)
-		out.Allow = t
+	if in.GitHub != nil {
+		in, out := &in.GitHub, &out.GitHub
+		*out = new(GitHubHookConfiguration)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
-func (in *RpcPermissionSpec) DeepCopy() *RpcPermissionSpec {
+func (in *WebhookConfiguration) DeepCopy() *WebhookConfiguration {
 	if in == nil {
 		return nil
 	}
-	out := new(RpcPermissionSpec)
-	in.DeepCopyInto(out)
-	return out
-}
-
-type RpcPermissionStatus struct {
-}
-
-func (in *RpcPermissionStatus) DeepCopyInto(out *RpcPermissionStatus) {
-	*out = *in
-}
-
-func (in *RpcPermissionStatus) DeepCopy() *RpcPermissionStatus {
-	if in == nil {
-		return nil
-	}
-	out := new(RpcPermissionStatus)
+	out := new(WebhookConfiguration)
 	in.DeepCopyInto(out)
 	return out
 }
@@ -1135,6 +1162,41 @@ func (in *LabelsEntry) DeepCopy() *LabelsEntry {
 		return nil
 	}
 	out := new(LabelsEntry)
+	in.DeepCopyInto(out)
+	return out
+}
+
+type GitHubHookConfiguration struct {
+	Repositories              []string `json:"repositories"`
+	Path                      string   `json:"path,omitempty"`
+	Events                    []string `json:"events"`
+	ContentType               string   `json:"contentType,omitempty"`
+	CredentialSecretName      string   `json:"credentialSecretName,omitempty"`
+	CredentialSecretNamespace string   `json:"credentialSecretNamespace,omitempty"`
+	AppIdKey                  string   `json:"appIdKey,omitempty"`
+	InstallationIdKey         string   `json:"installationIdKey,omitempty"`
+	PrivateKeyKey             string   `json:"privateKeyKey,omitempty"`
+}
+
+func (in *GitHubHookConfiguration) DeepCopyInto(out *GitHubHookConfiguration) {
+	*out = *in
+	if in.Repositories != nil {
+		t := make([]string, len(in.Repositories))
+		copy(t, in.Repositories)
+		out.Repositories = t
+	}
+	if in.Events != nil {
+		t := make([]string, len(in.Events))
+		copy(t, in.Events)
+		out.Events = t
+	}
+}
+
+func (in *GitHubHookConfiguration) DeepCopy() *GitHubHookConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := new(GitHubHookConfiguration)
 	in.DeepCopyInto(out)
 	return out
 }

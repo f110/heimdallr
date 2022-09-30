@@ -20,9 +20,9 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/fsm"
-	clientset "go.f110.dev/heimdallr/pkg/k8s/client/versioned"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
-	informers "go.f110.dev/heimdallr/pkg/k8s/informers/externalversions"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/k8s/webhook"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -53,11 +53,12 @@ type mainProcess struct {
 	logEncoding        string
 	dev                bool
 
-	ctx        context.Context
-	cancel     context.CancelFunc
-	coreClient *kubernetes.Clientset
-	client     *clientset.Clientset
-	restCfg    *rest.Config
+	ctx              context.Context
+	cancel           context.CancelFunc
+	coreClient       *kubernetes.Clientset
+	client           *client.Set
+	thirdPartyClient *thirdpartyclient.Set
+	restCfg          *rest.Config
 
 	e     *controllers.EtcdController
 	proxy *controllers.ProxyController
@@ -130,10 +131,11 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if err != nil {
 		return fsm.UnknownState, err
 	}
-	m.client, err = clientset.NewForConfig(cfg)
+	m.client, err = client.NewSet(cfg)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
+	m.thirdPartyClient, err = thirdpartyclient.NewSet(cfg)
 
 	return stateStartProbe, nil
 }
@@ -196,19 +198,19 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 
 func (m *mainProcess) startWorkers() (fsm.State, error) {
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(m.coreClient, 30*time.Second)
-	sharedInformerFactory := informers.NewSharedInformerFactory(m.client, 30*time.Second)
+	factory := client.NewInformerFactory(m.client, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
-	c, err := controllers.NewProxyController(sharedInformerFactory, coreSharedInformerFactory, m.coreClient, m.client)
+	c, err := controllers.NewProxyController(factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
 	m.proxy = c
 
 	e, err := controllers.NewEtcdController(
-		sharedInformerFactory,
+		factory,
 		coreSharedInformerFactory,
 		m.coreClient,
-		m.client,
+		m.client.EtcdV1alpha2,
 		m.restCfg,
 		m.clusterDomain,
 		m.dev,
@@ -220,13 +222,13 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	}
 	m.e = e
 
-	g, err := controllers.NewGitHubController(sharedInformerFactory, coreSharedInformerFactory, m.coreClient, m.client, http.DefaultTransport)
+	g, err := controllers.NewGitHubController(factory, coreSharedInformerFactory, m.coreClient, m.client.ProxyV1alpha2, http.DefaultTransport)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
 	m.g = g
 
-	ic := controllers.NewIngressController(coreSharedInformerFactory, sharedInformerFactory, m.coreClient, m.client)
+	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.coreClient, m.client.ProxyV1alpha2)
 	m.ic = ic
 
 	if !m.disableWebhook {
@@ -240,7 +242,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	}
 
 	coreSharedInformerFactory.Start(m.ctx.Done())
-	sharedInformerFactory.Start(m.ctx.Done())
+	factory.Run(m.ctx)
 
 	c.Run(m.ctx, m.workers)
 	e.Run(m.ctx, m.workers)

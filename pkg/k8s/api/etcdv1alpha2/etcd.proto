@@ -21,8 +21,8 @@ enum EtcdClusterPhase {
 }
 
 message EtcdCluster {
-  EtcdClusterSpec            spec   = 1;
-  optional EtcdClusterStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
+  EtcdClusterSpec   spec   = 1;
+  EtcdClusterStatus status = 2 [(dev.f110.kubeproto.field) = { sub_resource: true }];
 
   option (dev.f110.kubeproto.kind) = {
     additional_printer_columns: { name: "ready", type: "string", json_path: ".status.ready", description: "Ready", format: "byte", priority: 0 }

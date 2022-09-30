@@ -1,7 +1,7 @@
 package proxyv1alpha1
 
 import (
-	"github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	metav1_1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,8 +46,8 @@ const (
 type Backend struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              BackendSpec    `json:"spec"`
-	Status            *BackendStatus `json:"status,omitempty"`
+	Spec              BackendSpec   `json:"spec"`
+	Status            BackendStatus `json:"status"`
 }
 
 func (in *Backend) DeepCopyInto(out *Backend) {
@@ -55,11 +55,7 @@ func (in *Backend) DeepCopyInto(out *Backend) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		*out = new(BackendStatus)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *Backend) DeepCopy() *Backend {
@@ -116,8 +112,8 @@ func (in *BackendList) DeepCopyObject() runtime.Object {
 type Proxy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ProxySpec    `json:"spec"`
-	Status            *ProxyStatus `json:"status,omitempty"`
+	Spec              ProxySpec   `json:"spec"`
+	Status            ProxyStatus `json:"status"`
 }
 
 func (in *Proxy) DeepCopyInto(out *Proxy) {
@@ -125,11 +121,7 @@ func (in *Proxy) DeepCopyInto(out *Proxy) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		*out = new(ProxyStatus)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *Proxy) DeepCopy() *Proxy {
@@ -491,7 +483,7 @@ type ProxySpec struct {
 	Organization          string                       `json:"organization,omitempty"`
 	AdministratorUnit     string                       `json:"administratorUnit,omitempty"`
 	Country               string                       `json:"country,omitempty"`
-	IssuerRef             v1.ObjectReference           `json:"issuerRef"`
+	IssuerRef             metav1_1.ObjectReference     `json:"issuerRef"`
 	IdentityProvider      IdentityProviderSpec         `json:"identityProvider"`
 	RootUsers             []string                     `json:"rootUsers"`
 	Session               SessionSpec                  `json:"session"`

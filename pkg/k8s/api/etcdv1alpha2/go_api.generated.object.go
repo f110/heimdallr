@@ -39,8 +39,8 @@ const (
 type EtcdCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              EtcdClusterSpec    `json:"spec"`
-	Status            *EtcdClusterStatus `json:"status,omitempty"`
+	Spec              EtcdClusterSpec   `json:"spec"`
+	Status            EtcdClusterStatus `json:"status"`
 }
 
 func (in *EtcdCluster) DeepCopyInto(out *EtcdCluster) {
@@ -48,11 +48,7 @@ func (in *EtcdCluster) DeepCopyInto(out *EtcdCluster) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		*out = new(EtcdClusterStatus)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Status.DeepCopyInto(&out.Status)
 }
 
 func (in *EtcdCluster) DeepCopy() *EtcdCluster {

@@ -7,9 +7,9 @@ proto_library(
     srcs = ["proxy.proto"],
     visibility = ["//visibility:public"],
     deps = [
+        "//operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1",
         "@dev_f110_kubeproto//:k8s_proto",
         "@dev_f110_kubeproto//:kubeproto",
-        "//operator/proto:certmanager_proto",
     ],
 )
 
@@ -24,4 +24,21 @@ load("//build/rules:vendor.bzl", "vendor_kubeproto")
 vendor_kubeproto(
     name = "vendor_go_api",
     src = ":go_api",
+)
+
+go_library(
+    name = "proxyv1alpha2",
+    srcs = [
+        "go_api.generated.object.go",
+        "util.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/api/core/v1:core",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
+        "//vendor/k8s.io/apimachinery/pkg/runtime",
+        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+    ],
 )
