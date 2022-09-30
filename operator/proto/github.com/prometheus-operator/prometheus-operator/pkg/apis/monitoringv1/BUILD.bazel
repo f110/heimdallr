@@ -1,0 +1,11 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "monitoringv1",
+    srcs = ["generated.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@dev_f110_kubeproto//:k8s_proto",
+        "@dev_f110_kubeproto//:kubeproto",
+    ],
+)

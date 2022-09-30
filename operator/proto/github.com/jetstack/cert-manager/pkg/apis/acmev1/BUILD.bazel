@@ -1,0 +1,12 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "acmev1",
+    srcs = ["generated.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1",
+        "@dev_f110_kubeproto//:k8s_proto",
+        "@dev_f110_kubeproto//:kubeproto",
+    ],
+)
