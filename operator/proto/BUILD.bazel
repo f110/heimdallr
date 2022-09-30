@@ -1,8 +1,0 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
-
-proto_library(
-    name = "certmanager_proto",
-    srcs = ["certmanager.proto"],
-    visibility = ["//visibility:public"],
-    deps = ["@dev_f110_kubeproto//:kubeproto"],
-)
