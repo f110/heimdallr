@@ -11,6 +11,7 @@ go_library(
         "types_certificate.go",
         "types_certificaterequest.go",
         "types_issuer.go",
+        "typo.go",
         "zz_generated.deepcopy.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1",
