@@ -156,7 +156,7 @@ kustomize_binary(
     version = "v4.2.0",
 )
 
-load("@dev_f110_rules_k8s_controller//k8s/kind:def.bzl", "kind_binary")
+load("//build/rules/kind:def.bzl", "kind_binary")
 
 kind_binary(
     name = "kind",
