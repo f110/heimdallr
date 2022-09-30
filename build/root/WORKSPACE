@@ -59,7 +59,7 @@ http_archive(
 
 git_repository(
     name = "dev_f110_kubeproto",
-    commit = "84b88c77de603dfb267fd778a5833f9a673b731a",
+    commit = "a37398dabdb2fccfe7cce16c5b56cdf4fed92609",
     remote = "https://github.com/f110/kubeproto",
 )
 
