@@ -55,6 +55,7 @@ job(
     command = "test",
     config_name = "ci",
     cpu_limit = "2000m",
+    memory_limit = "8096Mi",
     github_status = True,
     targets = [
         "//...",
