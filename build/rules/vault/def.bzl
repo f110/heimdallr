@@ -21,6 +21,28 @@ VAULT_ASSETS = {
             ),
         },
     },
+    "1.8.12": {
+        "linux": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.8.12/vault_1.8.12_linux_amd64.zip",
+                "88c280945db62b118435ec1bf0086a719f6b6551cba052e5f8d1e25a80884bca",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.8.12/vault_1.8.12_linux_arm64.zip",
+                "e57e719e1eec9bce9057751e2583907210d3ac99c0a01897479506fbb2af828d",
+            ),
+        },
+        "darwin": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.8.12/vault_1.8.12_darwin_amd64.zip",
+                "b398481bf33ebf9563cf69d7639014f0d652a2d5e26c0a9a424e2a39bb853354",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.8.12/vault_1.8.12_darwin_arm64.zip",
+                "20aead134ef8e77cb70efcfe047fc2e381793004fba103e7692b7dab00fe5131",
+            ),
+        },
+    },
     "1.6.3": {
         "linux": {
             "amd64": (
@@ -54,7 +76,7 @@ def _vault_binary_impl(ctx):
     if not ctx.attr.version in VAULT_ASSETS:
         fail("%s is not supported version" % ctx.attr.version)
 
-    url, checksum = VAULT_ASSETS[ctx.attr.version][os][archc]
+    url, checksum = VAULT_ASSETS[ctx.attr.version][os][arch]
     ctx.download_and_extract(
         url = url,
         sha256 = checksum,
