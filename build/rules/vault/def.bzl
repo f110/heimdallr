@@ -21,6 +21,28 @@ VAULT_ASSETS = {
             ),
         },
     },
+    "1.9.10": {
+        "linux": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.9.10/vault_1.9.10_linux_amd64.zip",
+                "2898fc3e035926f23d2ac2fe3e713b32e146fd2e8320eff3b44c46700c8bb5c5",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.9.10/vault_1.9.10_linux_arm64.zip",
+                "d553576a55db940d7f3561e8e94e1e098f261723ab2b51902e982b76360af211",
+            ),
+        },
+        "darwin": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.9.10/vault_1.9.10_darwin_amd64.zip",
+                "dccdf28f2d748e717ce644b48962159bc81c08a23d06c9a7eaeb973f6b0ef787",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.9.10/vault_1.9.10_darwin_arm64.zip",
+                "92f4aa2f9e667063134116fb831cdd33e25f5227bef613cc4c44ebead5f89148",
+            ),
+        }
+    },
     "1.8.12": {
         "linux": {
             "amd64": (
