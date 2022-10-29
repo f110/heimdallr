@@ -21,6 +21,50 @@ VAULT_ASSETS = {
             ),
         },
     },
+    "1.11.4": {
+        "linux": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_linux_amd64.zip",
+                "8764a55bdd69faedaaf5d50325d5e6806041e6305b1e66454b46dc6426d26556",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_linux_arm64.zip",
+                "60d635963201b6d06abda1c2c74199931492665bc8e716417caf248865f5f9aa",
+            ),
+        },
+        "darwin": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_darwin_amd64.zip",
+                "b7adbba2c25cd971661ad1a054deff0b0e200fd81aac1e35fb6274b83254bfe8",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_darwin_arm64.zip",
+                "0fc70b482cc61554219cc65369703439ad7af6701a6f62c09b1c9db33204ed37",
+            ),
+        },
+    },
+    "1.10.7": {
+        "linux": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_linux_amd64.zip",
+                "c966f8501bdd14a52beee564f5290c0512ed42ae9d72e62e0bfe9198c94ff41f",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_linux_arm64.zip",
+                "ad97665ca6b9b9f1c4ac8ae8b0e21403aa50cf8a291c7da13c9187bdc66894ae",
+            ),
+        },
+        "darwin": {
+            "amd64": (
+                "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_darwin_amd64.zip",
+                "00b32cdc4432dca53e521aa911c1c19e654172c96d48b1a9fbb6a2548cefb94b",
+            ),
+            "arm64": (
+                "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_darwin_arm64.zip",
+                "14b666074eebea8b35a1e7071634cee402d6584baea276e224aafc7a136e1e59",
+            ),
+        },
+    },
     "1.9.10": {
         "linux": {
             "amd64": (
