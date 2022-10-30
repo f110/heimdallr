@@ -260,6 +260,7 @@ func (e *executionRuntime) executeNode(ctx context.Context, t *testing.T, node *
 }
 
 func (e *executionRuntime) executeFunc(ctx context.Context, t *testing.T, node *node, h *hook, spy *testingSpy, step string) {
+	t.Helper()
 	if e.ask != nil && step != "" {
 		if e.hasBreakpoint && !h.step {
 			goto Continue
@@ -683,6 +684,7 @@ type testingSpy struct {
 var _ testingT = &testingSpy{}
 
 func (t *testingSpy) Errorf(format string, args ...interface{}) {
+	t.T.Helper()
 	t.message += fmt.Sprintf(format, args...)
 	t.T.Errorf(format, args...)
 }
@@ -694,4 +696,5 @@ type testingT interface {
 	Errorf(string, ...interface{})
 	Fatalf(string, ...interface{})
 	TempDir() string
+	Helper()
 }

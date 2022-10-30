@@ -284,7 +284,7 @@ func CreateCertificateAuthority(commonName, org, orgUnit, country, keyType strin
 		},
 		NotBefore:             time.Now().UTC(),
 		NotAfter:              time.Now().AddDate(10, 0, 0).UTC(),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}

@@ -90,6 +90,7 @@ func (m *Matcher) Logf(format string, args ...interface{}) {
 }
 
 func (m *Matcher) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
+	m.T.Helper()
 	success := assert.Equal(m.T, expected, actual, msgAndArgs...)
 	if !success {
 		m.failed = true

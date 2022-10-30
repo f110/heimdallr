@@ -250,7 +250,10 @@ func (c *Client) SetCA(ctx context.Context, cert *x509.Certificate, privateKey c
 		return xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusNoContent {
+
+	switch res.StatusCode {
+	case http.StatusOK, http.StatusNoContent:
+	default:
 		return xerrors.Errorf("can not set ca: %s", res.Status)
 	}
 	io.Copy(io.Discard, res.Body)
@@ -309,7 +312,10 @@ func (c *Client) SetRole(ctx context.Context, name string, role *Role) error {
 		return xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusNoContent {
+
+	switch res.StatusCode {
+	case http.StatusOK, http.StatusNoContent:
+	default:
 		return xerrors.Errorf("unexpected response: %s", res.Status)
 	}
 
