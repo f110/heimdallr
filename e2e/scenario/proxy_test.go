@@ -376,7 +376,8 @@ func DescribeL4Proxy(f *framework.Framework) {
 func TestL7ReverseProxy(t *testing.T) {
 	cond := [][]framework.ProxyCond{
 		{}, // default
-		{framework.WithVault},
+		{framework.WithLatestVault},
+		{framework.WithVaultV110},
 	}
 
 	for _, c := range cond {
@@ -403,7 +404,8 @@ func TestL7ReverseProxy(t *testing.T) {
 func TestL4Proxy(t *testing.T) {
 	cond := [][]framework.ProxyCond{
 		{},
-		{framework.WithVault},
+		{framework.WithLatestVault},
+		{framework.WithVaultV110},
 	}
 
 	for _, c := range cond {

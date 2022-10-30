@@ -57,17 +57,19 @@ const (
 )
 
 var (
-	binaryPath          *string
-	connectorBinaryPath *string
-	tunnelBinaryPath    *string
-	vaultBinaryPath     *string
+	binaryPath            *string
+	connectorBinaryPath   *string
+	tunnelBinaryPath      *string
+	vaultLatestBinaryPath *string
+	vaultV110BinaryPath   *string
 )
 
 func init() {
 	binaryPath = flag.String("e2e.binary", "", "")
 	connectorBinaryPath = flag.String("e2e.connector-binary", "", "")
 	tunnelBinaryPath = flag.String("e2e.tunnel-binary", "", "")
-	vaultBinaryPath = flag.String("e2e.vault-binary", "", "")
+	vaultLatestBinaryPath = flag.String("e2e.vault-binary", "", "")
+	vaultV110BinaryPath = flag.String("e2e.vault_110-binary", "", "")
 }
 
 type mockServer interface {
@@ -176,8 +178,14 @@ func (c *Connector) Stop() error {
 
 type ProxyCond func(*Proxy)
 
-func WithVault(p *Proxy) {
+func WithLatestVault(p *Proxy) {
 	p.ca = "vault"
+	p.vaultBinaryPath = *vaultLatestBinaryPath
+}
+
+func WithVaultV110(p *Proxy) {
+	p.ca = "vault"
+	p.vaultBinaryPath = *vaultV110BinaryPath
 }
 
 type Proxy struct {
@@ -198,6 +206,7 @@ type Proxy struct {
 	internalToken      string
 	ca                 string
 	vaultCmd           *exec.Cmd
+	vaultBinaryPath    string
 	vaultAddr          string
 	vaultRootToken     string
 	caPrivateKey       crypto.PrivateKey
@@ -502,7 +511,7 @@ func (p *Proxy) Reload() error {
 
 	if p.ca == "vault" && p.vaultCmd == nil {
 		cmd := exec.Command(
-			*vaultBinaryPath,
+			p.vaultBinaryPath,
 			"server",
 			"-dev",
 			fmt.Sprintf("-dev-listen-address=127.0.0.1:%d", p.vaultPort),

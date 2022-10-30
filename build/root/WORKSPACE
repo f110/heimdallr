@@ -153,8 +153,13 @@ kind_binary(
 load("//build/rules/vault:def.bzl", "vault_binary")
 
 vault_binary(
-    name = "vault",
-    version = "1.8.12",
+    name = "vault_latest",
+    version = "1.11.4",
+)
+
+vault_binary(
+    name = "vault_110",
+    version = "1.10.7"
 )
 
 load("@bazel_skylib//lib:unittest.bzl", "register_unittest_toolchains")

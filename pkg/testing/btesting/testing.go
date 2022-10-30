@@ -193,6 +193,7 @@ func (e *executionRuntime) walkNodes(fn func(n *node) bool) {
 }
 
 func (e *executionRuntime) executeNode(ctx context.Context, t *testing.T, node *node) {
+	t.Helper()
 	node.suite.Trigger()
 
 	if node.deferFunc != nil {
