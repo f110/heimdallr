@@ -240,9 +240,6 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 
 	if logged.status >= 200 && logged.status <= 299 && req.TLS != nil {
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
-		if p.Config.AccessProxy.HTTP.ExpectCT {
-			w.Header().Set("Expect-CT", "max-age=60,report-uri=\"https://"+p.Config.AccessProxy.HTTP.ServerName+"/ct/report\"")
-		}
 	}
 }
 

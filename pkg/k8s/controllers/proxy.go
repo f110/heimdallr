@@ -751,7 +751,6 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 					CertFile: fmt.Sprintf("%s/%s", serverCertMountPath, serverCertificateFilename),
 					KeyFile:  fmt.Sprintf("%s/%s", serverCertMountPath, serverPrivateKeyFilename),
 				},
-				ExpectCT: true,
 				Session: &configv2.Session{
 					Type:    r.Spec.Session.Type,
 					KeyFile: fmt.Sprintf("%s/%s", sessionSecretPath, cookieSecretFilename),

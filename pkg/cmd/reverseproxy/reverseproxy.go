@@ -56,7 +56,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcserver"
 	"go.f110.dev/heimdallr/pkg/server"
-	"go.f110.dev/heimdallr/pkg/server/ct"
 	"go.f110.dev/heimdallr/pkg/server/identityprovider"
 	"go.f110.dev/heimdallr/pkg/server/internalapi"
 	"go.f110.dev/heimdallr/pkg/server/token"
@@ -332,9 +331,8 @@ func (m *mainProcess) startServer() {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		return
 	}
-	ctReport := ct.NewServer()
 
-	s := server.New(m.config, m.clusterDatabase, front, m.connector, idp, t, resourceServer, ctReport)
+	s := server.New(m.config, m.clusterDatabase, front, m.connector, idp, t, resourceServer)
 	m.server = s
 	if err := m.server.Start(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)

@@ -146,8 +146,9 @@ type AuthProxyHTTP struct {
 	BindInternalApi string       `json:"bind_internal_api,omitempty"`
 	ServerName      string       `json:"server_name,omitempty"`
 	Certificate     *Certificate `json:"certificate,omitempty"`
-	ExpectCT        bool         `json:"expect_ct,omitempty"`
 	Session         *Session     `json:"session,omitempty"`
+	// Deprecated.
+	ExpectCT bool `json:"expect_ct,omitempty"`
 }
 
 type RPCServer struct {

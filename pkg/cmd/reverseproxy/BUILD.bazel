@@ -27,7 +27,6 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/rpc/rpcserver",
         "//pkg/server",
-        "//pkg/server/ct",
         "//pkg/server/identityprovider",
         "//pkg/server/internalapi",
         "//pkg/server/token",

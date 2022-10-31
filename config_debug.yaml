@@ -11,7 +11,6 @@ access_proxy:
     certificate:
       cert_file: ./tls.crt
       key_file: ./tls.key
-    expect_ct: true
     session:
       type: secure_cookie
       key_file: ./cookie_secret
