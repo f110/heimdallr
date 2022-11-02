@@ -1,10 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "database",
     srcs = [
         "ca.go",
         "cluster.go",
+        "elliptic.go",
         "relay.go",
         "token.go",
         "user.go",
@@ -15,5 +16,19 @@ go_library(
         "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
         "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
+    ],
+)
+
+go_test(
+    name = "database_test",
+    srcs = ["ca_test.go"],
+    data = glob(["testdata/**"]),
+    deps = [
+        ":database",
+        "//pkg/cert",
+        "//pkg/config/configv2",
+        "//pkg/database/memory",
+        "//vendor/github.com/stretchr/testify/assert",
+        "//vendor/github.com/stretchr/testify/require",
     ],
 )

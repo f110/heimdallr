@@ -56,8 +56,8 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) ([]*data
 
 	signedCertificates := make([]*database.SignedCertificate, 0, res.Count)
 	for _, v := range res.Kvs {
-		signedCertificate := &database.SignedCertificate{}
-		if err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(signedCertificate); err != nil {
+		signedCertificate, err := database.ParseSignedCertificate(v.Value)
+		if err != nil {
 			return nil, xerrors.Errorf(": %w", err)
 		}
 		signedCertificates = append(signedCertificates, signedCertificate)
@@ -122,11 +122,11 @@ func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.Re
 }
 
 func (c *CA) SetSignedCertificate(ctx context.Context, certificate *database.SignedCertificate) error {
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(certificate); err != nil {
+	buf, err := certificate.Marshal()
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	_, err := c.client.Put(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.Certificate.SerialNumber), buf.String())
+	_, err = c.client.Put(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.Certificate.SerialNumber), string(buf))
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}

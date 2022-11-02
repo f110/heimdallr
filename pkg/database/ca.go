@@ -1,8 +1,13 @@
 package database
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/x509"
+	"encoding/gob"
 	"math/big"
 	"time"
 )
@@ -12,8 +17,15 @@ const (
 	DefaultPrivateKeyBits = 256
 )
 
+func init() {
+	gob.Register(ecdsa.PublicKey{})
+	gob.Register(rsa.PrivateKey{})
+	gob.Register(rsa.PublicKey{})
+	gob.Register(elliptic.P256())
+}
+
 type CertificateAuthority interface {
-	// GetSignedCertificates returns a list of SignedCertificate.
+	// GetSignedCertificate returns a list of SignedCertificate.
 	// You want to get a specify SignedCertificate then also passed the serial number.
 	// You want to get all SignedCertificate then passed the nil to serialNumber.
 	GetSignedCertificate(ctx context.Context, serialNumber *big.Int) ([]*SignedCertificate, error)
@@ -33,6 +45,30 @@ type SignedCertificate struct {
 	Agent       bool
 	Device      bool
 	Comment     string
+}
+
+func ParseSignedCertificate(b []byte) (*SignedCertificate, error) {
+	signedCertificate := &SignedCertificate{}
+	if err := gob.NewDecoder(bytes.NewReader(b)).Decode(signedCertificate); err != nil {
+		return nil, err
+	}
+
+	return signedCertificate, nil
+}
+
+func (s *SignedCertificate) Marshal() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	n := &SignedCertificate{}
+	*n = *s
+	dc := &x509.Certificate{}
+	*dc = *s.Certificate
+	dc.PublicKey = nil
+	dc.PublicKeyAlgorithm = 0
+	n.Certificate = dc
+	if err := gob.NewEncoder(buf).Encode(n); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 type RevokedCertificate struct {
