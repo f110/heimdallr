@@ -22,6 +22,6 @@ If the certificate must be update due to expiration, We can make new private key
 .. code:: shell
 
     $ rm -f operator/webhook.crt operator/webhook.key
-    $ bazel run //cmd/heimctl -- util webhook-cert --common-name webhook.heimdallr.svc --private-key $(pwd)/operator/webhook.key --certificate $(pwd)/operator/webhook.crt
+    $ bazel run //cmd/heimctl -- util webhook-cert --ca-certificate $(pwd)/operator/webhook_ca.crt --ca-private-key $(pwd)/operator/webhook_ca.key --common-name webhook.heimdallr.svc --private-key $(pwd)/operator/webhook.key --certificate $(pwd)/operator/webhook.crt
 
-Also update the Secret in ``operator/config/manager/manager.yaml`` and caBundle of the ValidatingWebhookConfiguration in ``operator/config/webhook/manifests.yaml``.
+Also update the Secret in ``operator/config/manager/manager.yaml`` and ``caBundle`` in ``operator/config/webhook/manifests.yaml`` and ``operator/deploy/base/kustomization.yaml``.

@@ -22,6 +22,7 @@ import (
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
+	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
@@ -33,6 +34,7 @@ func Util(rootCmd *cmd.Command) {
 		Short: "Utilities",
 	}
 	util.AddCommand(githubSignature())
+	util.AddCommand(webhookCACert())
 	util.AddCommand(webhookCert())
 	util.AddCommand(convertV2Config())
 
@@ -66,9 +68,7 @@ func githubSignature() *cmd.Command {
 }
 
 func webhookCert() *cmd.Command {
-	commonName := ""
-	certificateFile := ""
-	privateKeyFile := ""
+	var commonName, caCertificateFile, caPrivateKeyFile, certificateFile, privateKeyFile string
 
 	wc := &cmd.Command{
 		Use:   "webhook-cert",
@@ -79,6 +79,25 @@ func webhookCert() *cmd.Command {
 			}
 			if _, err := os.Stat(privateKeyFile); err == nil {
 				return xerrors.Errorf("%s is exist", privateKeyFile)
+			}
+
+			b, err := os.ReadFile(caCertificateFile)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			block, _ := pem.Decode(b)
+			caCert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			b, err = os.ReadFile(caPrivateKeyFile)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
+			}
+			block, _ = pem.Decode(b)
+			caPrivateKey, err := x509.ParseECPrivateKey(block.Bytes)
+			if err != nil {
+				return xerrors.Errorf(": %v", err)
 			}
 
 			privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -103,7 +122,7 @@ func webhookCert() *cmd.Command {
 				BasicConstraintsValid: true,
 				SignatureAlgorithm:    x509.ECDSAWithSHA256,
 			}
-			certByte, err := x509.CreateCertificate(rand.Reader, template, template, &privKey.PublicKey, privKey)
+			certByte, err := x509.CreateCertificate(rand.Reader, template, caCert, &privKey.PublicKey, caPrivateKey)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -115,7 +134,7 @@ func webhookCert() *cmd.Command {
 				return xerrors.Errorf(": %w", err)
 			}
 			buf.Reset()
-			b, err := x509.MarshalECPrivateKey(privKey)
+			b, err = x509.MarshalECPrivateKey(privKey)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
@@ -129,11 +148,58 @@ func webhookCert() *cmd.Command {
 			return nil
 		},
 	}
+	wc.Flags().String("ca-certificate", "File path of the certificate of CA").Var(&caCertificateFile).Required()
+	wc.Flags().String("ca-private-key", "File path of the private key of CA").Var(&caPrivateKeyFile).Required()
 	wc.Flags().String("common-name", "Common Name. This value will used at SAN").Var(&commonName).Required()
 	wc.Flags().String("private-key", "File path of private key").Var(&privateKeyFile).Required()
 	wc.Flags().String("certificate", "File path of certificate").Var(&certificateFile).Required()
 
 	return wc
+}
+
+func webhookCACert() *cmd.Command {
+	var certificateFile, privateKeyFile string
+
+	cac := &cmd.Command{
+		Use:   "webhook-ca-cert",
+		Short: "Generate the CA certificate for Admission webhook server",
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
+			if _, err := os.Stat(certificateFile); err == nil {
+				return xerrors.Errorf("%s is exist", certificateFile)
+			}
+			if _, err := os.Stat(privateKeyFile); err == nil {
+				return xerrors.Errorf("%s is exist", privateKeyFile)
+			}
+
+			caCert, privKey, err := cert.CreateCertificateAuthority("heimdallr-operator CA", "", "", "", "ecdsa")
+			if err != nil {
+				return err
+			}
+			buf := new(bytes.Buffer)
+			if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if err := os.WriteFile(certificateFile, buf.Bytes(), 0644); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			buf.Reset()
+			b, err := x509.MarshalECPrivateKey(privKey.(*ecdsa.PrivateKey))
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			if err := os.WriteFile(privateKeyFile, buf.Bytes(), 0644); err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
+			return nil
+		},
+	}
+	cac.Flags().String("certificate", "File path of the certificate").Var(&certificateFile).Required()
+	cac.Flags().String("private-key", "File path of the private key").Var(&privateKeyFile).Required()
+
+	return cac
 }
 
 func convertV2Config() *cmd.Command {
