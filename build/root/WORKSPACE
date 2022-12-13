@@ -29,11 +29,11 @@ http_archive(
 
 http_archive(
     name = "rules_pkg",
+    sha256 = "8a298e832762eda1830597d64fe7db58178aa84cd5926d76d5b744d6558941c2",
     urls = [
         "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
         "https://github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
     ],
-    sha256 = "8a298e832762eda1830597d64fe7db58178aa84cd5926d76d5b744d6558941c2",
 )
 
 git_repository(
@@ -92,11 +92,11 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.19.3")
+go_register_toolchains(version = "1.19.4")
 
 gazelle_dependencies()
 
-load("//build/rules:deps.bzl", "protobuf_dependencies", "grpc_dependencies")
+load("//build/rules:deps.bzl", "grpc_dependencies", "protobuf_dependencies")
 
 protobuf_dependencies()
 
@@ -159,7 +159,7 @@ vault_binary(
 
 vault_binary(
     name = "vault_110",
-    version = "1.10.7"
+    version = "1.10.7",
 )
 
 load("@bazel_skylib//lib:unittest.bzl", "register_unittest_toolchains")
