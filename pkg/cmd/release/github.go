@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,21 +14,41 @@ import (
 	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
+	"go.f110.dev/heimdallr/pkg/githubutil"
 )
 
 type githubOpt struct {
-	Version    string
-	From       string
-	Attach     []string
-	GithubRepo string
-	BodyFile   string
+	Version                 string
+	From                    string
+	Attach                  []string
+	GithubRepo              string
+	BodyFile                string
+	GitHubAppId             int64
+	GitHubAppInstallationId int64
+	GitHubAppPrivateKeyFile string
 }
 
 func githubRelease(opt *githubOpt) error {
-	token := os.Getenv("GITHUB_APITOKEN")
-	if token == "" {
-		return xerrors.New("GITHUB_APITOKEN is mandatory")
+	var httpClient *http.Client
+	if opt.GitHubAppId == 0 || opt.GitHubAppInstallationId == 0 || opt.GitHubAppPrivateKeyFile == "" {
+		token := os.Getenv("GITHUB_APITOKEN")
+		if token == "" {
+			return xerrors.New("GITHUB_APITOKEN is mandatory")
+		}
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: token},
+		)
+		httpClient = oauth2.NewClient(context.Background(), ts)
+	} else {
+		ghApp, err := githubutil.NewApp(opt.GitHubAppId, opt.GitHubAppInstallationId, opt.GitHubAppPrivateKeyFile)
+		if err != nil {
+			return xerrors.Errorf(": %w", err)
+		}
+		t := githubutil.NewTransportWithApp(http.DefaultTransport, ghApp)
+		httpClient = &http.Client{Transport: t}
 	}
+	client := github.NewClient(httpClient)
+
 	if !strings.Contains(opt.GithubRepo, "/") {
 		return xerrors.Errorf("invalid repo name: %s", opt.GithubRepo)
 	}
@@ -48,12 +69,6 @@ func githubRelease(opt *githubOpt) error {
 		}
 		body = string(b)
 	}
-
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	tc := oauth2.NewClient(context.Background(), ts)
-	client := github.NewClient(tc)
 
 	r := strings.Split(opt.GithubRepo, "/")
 	owner, repo := r[0], r[1]
@@ -136,6 +151,8 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().StringArray("attach", "").Var(&opt.Attach)
 	ghRelease.Flags().String("repo", "").Var(&opt.GithubRepo)
 	ghRelease.Flags().String("body", "Release body").Var(&opt.BodyFile)
-
+	ghRelease.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
+	ghRelease.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
+	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
 	rootCmd.AddCommand(ghRelease)
 }

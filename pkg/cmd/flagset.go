@@ -234,6 +234,28 @@ func (fs *FlagSet) Uint(name, usage string) *Flag[uint] {
 	return f
 }
 
+func (fs *FlagSet) Int64(name, usage string) *Flag[int64] {
+	f := NewFlag(
+		name,
+		usage,
+		int64(0),
+		func(f *FlagValue[int64], s string) error {
+			v, err := strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				return err
+			}
+			*f.value = v
+			return nil
+		},
+		nil,
+		func(i int64) string {
+			return fmt.Sprintf("%d", i)
+		},
+	)
+	fs.flags = append(fs.flags, f)
+	return f
+}
+
 func (fs *FlagSet) Bool(name, usage string) *Flag[bool] {
 	f := NewFlag(
 		name,
