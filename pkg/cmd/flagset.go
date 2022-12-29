@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
+type flagTypes interface {
+	int | int64 | uint | bool | string | []string | float32 | time.Duration
+}
+
 type FlagSet struct {
 	flagSet       *pflag.FlagSet
 	name          string
@@ -140,44 +144,159 @@ func (fs *FlagSet) addFlags() {
 	}
 }
 
-func (fs *FlagSet) String(name, usage string) *StringFlag {
-	f := NewStringFlag(name, usage)
+func (fs *FlagSet) String(name, usage string) *Flag[string] {
+	f := NewFlag(
+		name,
+		usage,
+		"", func(f *FlagValue[string], in string) error {
+			*f.value = in
+			return nil
+		},
+		nil,
+		func(s string) string {
+			return s
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) StringArray(name, usage string) *StringArrayFlag {
-	f := NewStringArrayFlag(name, usage)
+func (fs *FlagSet) StringArray(name, usage string) *Flag[[]string] {
+	f := NewFlag(
+		name,
+		usage,
+		[]string{},
+		func(f *FlagValue[[]string], in string) error {
+			if in != "" {
+				*f.value = append(*f.value, in)
+			}
+			return nil
+		},
+		func(f *pflag.Flag, v []string) error {
+			if len(v) > 0 {
+				for _, vv := range v {
+					if err := f.Value.Set(vv); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
+		func(i []string) string {
+			return fmt.Sprintf("[%s]", strings.Join(i, ", "))
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Int(name, usage string) *IntFlag {
-	f := NewIntFlag(name, usage)
+func (fs *FlagSet) Int(name, usage string) *Flag[int] {
+	f := NewFlag(
+		name,
+		usage,
+		0,
+		func(f *FlagValue[int], in string) error {
+			v, err := strconv.ParseInt(in, 0, 32)
+			if err != nil {
+				return err
+			}
+			*f.value = int(v)
+			return nil
+		},
+		nil,
+		func(i int) string {
+			return fmt.Sprintf("%d", i)
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Uint(name, usage string) *UintFlag {
-	f := NewUintFlag(name, usage)
+func (fs *FlagSet) Uint(name, usage string) *Flag[uint] {
+	f := NewFlag(
+		name,
+		usage,
+		uint(0),
+		func(f *FlagValue[uint], in string) error {
+			v, err := strconv.ParseUint(in, 0, 32)
+			if err != nil {
+				return err
+			}
+			*f.value = uint(v)
+			return nil
+		},
+		nil,
+		func(u uint) string {
+			return fmt.Sprintf("%d", u)
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Bool(name, usage string) *BoolFlag {
-	f := NewBoolFlag(name, usage)
+func (fs *FlagSet) Bool(name, usage string) *Flag[bool] {
+	f := NewFlag(
+		name,
+		usage,
+		false, func(f *FlagValue[bool], in string) error {
+			var v bool
+			_, err := fmt.Sscanf(in, "%t", &v)
+			if err != nil {
+				return err
+			}
+			*f.value = v
+			return nil
+		},
+		nil,
+		func(b bool) string {
+			return fmt.Sprintf("%t", b)
+		},
+	)
+	f.flag.NoOptDefVal = "true"
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Duration(name, usage string) *DurationFlag {
-	f := NewDurationFlag(name, usage)
+func (fs *FlagSet) Duration(name, usage string) *Flag[time.Duration] {
+	f := NewFlag(
+		name,
+		usage,
+		time.Duration(0),
+		func(f *FlagValue[time.Duration], in string) error {
+			v, err := time.ParseDuration(in)
+			if err != nil {
+				return err
+			}
+			*f.value = v
+			return nil
+		},
+		nil,
+		func(d time.Duration) string {
+			return d.String()
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
 
-func (fs *FlagSet) Float32(name, usage string) *Float32Flag {
-	f := NewFloat32Flag(name, usage)
+func (fs *FlagSet) Float32(name, usage string) *Flag[float32] {
+	f := NewFlag(
+		name,
+		usage,
+		float32(0),
+		func(f *FlagValue[float32], in string) error {
+			v, err := strconv.ParseFloat(in, 32)
+			if err != nil {
+				return err
+			}
+			*f.value = float32(v)
+			return nil
+		},
+		nil,
+		func(f float32) string {
+			return strconv.FormatFloat(float64(f), 'g', -1, 32)
+		},
+	)
 	fs.flags = append(fs.flags, f)
 	return f
 }
@@ -186,452 +305,83 @@ const (
 	flagAnnotationKeyRequired = "cmd_flag_required"
 )
 
-type StringFlag struct {
-	flag         *pflag.Flag
-	defaultValue string
+type Flag[T flagTypes] struct {
+	flag                *pflag.Flag
+	defaultValue        *T
+	setValueFunc        func(*FlagValue[T], string) error
+	setDefaultValueFunc func(*pflag.Flag, T) error
+	toStr               func(T) string
 }
 
-func NewStringFlag(name, usage string) *StringFlag {
-	return &StringFlag{
+func NewFlag[T flagTypes](name, usage string, defaultValue T, setValueFunc func(*FlagValue[T], string) error, setDefaultValueFunc func(*pflag.Flag, T) error, toStr func(T) string) *Flag[T] {
+	return &Flag[T]{
 		flag: &pflag.Flag{
 			Name:  name,
 			Usage: usage,
-			Value: (*stringValue)(new(string)),
+			Value: newFlagValue(new(T), setValueFunc, toStr),
 		},
+		defaultValue:        &defaultValue,
+		setValueFunc:        setValueFunc,
+		setDefaultValueFunc: setDefaultValueFunc,
+		toStr:               toStr,
 	}
 }
 
-func (f *StringFlag) Shorthand(p string) *StringFlag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *StringFlag) Var(p *string) *StringFlag {
-	f.flag.Value = (*stringValue)(p)
-	if f.defaultValue != "" {
-		_ = f.flag.Value.Set(f.defaultValue)
-	}
-	return f
-}
-
-func (f *StringFlag) Required() *StringFlag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *StringFlag) Deprecated(msg string) *StringFlag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *StringFlag) ShorthandDeprecated(msg string) *StringFlag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *StringFlag) Hidden() *StringFlag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *StringFlag) Default(defaultValue string) *StringFlag {
-	f.flag.DefValue = defaultValue
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(defaultValue)
-	return f
-}
-
-func (f *StringFlag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *StringFlag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type IntFlag struct {
-	flag         *pflag.Flag
-	defaultValue int
-}
-
-func NewIntFlag(name, usage string) *IntFlag {
-	return &IntFlag{
-		flag: &pflag.Flag{
-			Name:  name,
-			Usage: usage,
-			Value: (*intValue)(new(int)),
-		},
-	}
-}
-
-func (f *IntFlag) Shorthand(p string) *IntFlag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *IntFlag) Var(p *int) *IntFlag {
-	f.flag.Value = (*intValue)(p)
-	if f.defaultValue != 0 {
-		_ = f.flag.Value.Set(f.flag.DefValue)
-	}
-	return f
-}
-
-func (f *IntFlag) Required() *IntFlag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *IntFlag) Deprecated(msg string) *IntFlag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *IntFlag) ShorthandDeprecated(msg string) *IntFlag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *IntFlag) Hidden() *IntFlag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *IntFlag) Default(defaultValue int) *IntFlag {
-	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(f.flag.DefValue)
-	return f
-}
-
-func (f *IntFlag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *IntFlag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type UintFlag struct {
-	flag         *pflag.Flag
-	defaultValue uint
-}
-
-func NewUintFlag(name string, usage string) *UintFlag {
-	return &UintFlag{
-		flag: &pflag.Flag{
-			Name:  name,
-			Usage: usage,
-			Value: (*uintValue)(new(uint)),
-		},
-	}
-}
-
-func (f *UintFlag) Shorthand(p string) *UintFlag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *UintFlag) Var(p *uint) *UintFlag {
-	f.flag.Value = (*uintValue)(p)
-	if f.defaultValue != 0 {
-		_ = f.flag.Value.Set(f.flag.DefValue)
-	}
-	return f
-}
-
-func (f *UintFlag) Required() *UintFlag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *UintFlag) Deprecated(msg string) *UintFlag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *UintFlag) ShorthandDeprecated(msg string) *UintFlag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *UintFlag) Hidden() *UintFlag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *UintFlag) Default(defaultValue uint) *UintFlag {
-	f.flag.DefValue = fmt.Sprintf("%d", defaultValue)
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(f.flag.DefValue)
-	return f
-}
-
-func (f *UintFlag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *UintFlag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type BoolFlag struct {
-	flag         *pflag.Flag
-	defaultValue bool
-}
-
-func NewBoolFlag(name string, usage string) *BoolFlag {
-	return &BoolFlag{
-		flag: &pflag.Flag{
-			Name:        name,
-			Usage:       usage,
-			NoOptDefVal: "true",
-			Value:       (*boolValue)(new(bool)),
-		},
-	}
-}
-
-func (f *BoolFlag) Shorthand(p string) *BoolFlag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *BoolFlag) Var(p *bool) *BoolFlag {
-	f.flag.Value = (*boolValue)(p)
-	if f.defaultValue {
-		_ = f.flag.Value.Set(f.flag.DefValue)
-	}
-	return f
-}
-
-func (f *BoolFlag) Required() *BoolFlag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *BoolFlag) Deprecated(msg string) *BoolFlag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *BoolFlag) ShorthandDeprecated(msg string) *BoolFlag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *BoolFlag) Hidden() *BoolFlag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *BoolFlag) Default(defaultValue bool) *BoolFlag {
-	f.flag.DefValue = fmt.Sprintf("%t", defaultValue)
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(f.flag.DefValue)
-	return f
-}
-
-func (f *BoolFlag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *BoolFlag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type DurationFlag struct {
-	flag         *pflag.Flag
-	defaultValue time.Duration
-}
-
-func NewDurationFlag(name string, usage string) *DurationFlag {
-	return &DurationFlag{
-		flag: &pflag.Flag{
-			Name:  name,
-			Usage: usage,
-			Value: (*durationValue)(new(time.Duration)),
-		},
-	}
-}
-
-func (f *DurationFlag) Shorthand(p string) *DurationFlag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *DurationFlag) Var(p *time.Duration) *DurationFlag {
-	f.flag.Value = (*durationValue)(p)
-	if f.defaultValue != 0 {
-		_ = f.flag.Value.Set(f.flag.DefValue)
-	}
-	return f
-}
-
-func (f *DurationFlag) Required() *DurationFlag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *DurationFlag) Deprecated(msg string) *DurationFlag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *DurationFlag) ShorthandDeprecated(msg string) *DurationFlag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *DurationFlag) Hidden() *DurationFlag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *DurationFlag) Default(defaultValue time.Duration) *DurationFlag {
-	f.flag.DefValue = defaultValue.String()
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(f.flag.DefValue)
-	return f
-}
-
-func (f *DurationFlag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *DurationFlag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type Float32Flag struct {
-	flag         *pflag.Flag
-	defaultValue float32
-}
-
-func NewFloat32Flag(name string, usage string) *Float32Flag {
-	return &Float32Flag{
-		flag: &pflag.Flag{
-			Name:  name,
-			Usage: usage,
-			Value: (*float32Value)(new(float32)),
-		},
-	}
-}
-
-func (f *Float32Flag) Shorthand(p string) *Float32Flag {
-	f.flag.Shorthand = p
-	return f
-}
-
-func (f *Float32Flag) Var(p *float32) *Float32Flag {
-	f.flag.Value = (*float32Value)(p)
-	if f.defaultValue != 0 {
-		_ = f.flag.Value.Set(f.flag.DefValue)
-	}
-	return f
-}
-
-func (f *Float32Flag) Required() *Float32Flag {
-	setAnnotationRequired(f.flag)
-	return f
-}
-
-func (f *Float32Flag) Deprecated(msg string) *Float32Flag {
-	f.flag.Deprecated = msg
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *Float32Flag) ShorthandDeprecated(msg string) *Float32Flag {
-	f.flag.ShorthandDeprecated = msg
-	return f
-}
-
-func (f *Float32Flag) Hidden() *Float32Flag {
-	f.flag.Hidden = true
-	return f
-}
-
-func (f *Float32Flag) Default(defaultValue float32) *Float32Flag {
-	f.flag.DefValue = strconv.FormatFloat(float64(defaultValue), 'g', -1, 32)
-	f.defaultValue = defaultValue
-	_ = f.flag.Value.Set(f.flag.DefValue)
-	return f
-}
-
-func (f *Float32Flag) Value() string {
-	return f.flag.Value.String()
-}
-
-func (f *Float32Flag) Flag() *pflag.Flag {
-	return f.flag
-}
-
-type StringArrayFlag struct {
-	flag         *pflag.Flag
-	defaultValue []string
-}
-
-func NewStringArrayFlag(name, usage string) *StringArrayFlag {
-	return &StringArrayFlag{
-		flag: &pflag.Flag{
-			Name:  name,
-			Usage: usage,
-			Value: (*stringArrayValue)(new([]string)),
-		},
-	}
-}
-
-func (f *StringArrayFlag) Var(p *[]string) *StringArrayFlag {
-	f.flag.Value = (*stringArrayValue)(p)
-	if len(f.defaultValue) > 0 {
-		for _, v := range f.defaultValue {
-			_ = f.flag.Value.Set(v)
+func (f *Flag[T]) Var(p *T) *Flag[T] {
+	f.flag.Value = newFlagValue(p, f.setValueFunc, f.toStr)
+	if f.defaultValue != nil {
+		if f.setDefaultValueFunc != nil {
+			_ = f.setDefaultValueFunc(f.flag, *p)
+		} else {
+			_ = f.flag.Value.Set(f.flag.DefValue)
 		}
 	}
+
 	return f
 }
 
-func (f *StringArrayFlag) Shorthand(p string) *StringArrayFlag {
+func (f *Flag[T]) Shorthand(p string) *Flag[T] {
 	f.flag.Shorthand = p
 	return f
 }
 
-func (f *StringArrayFlag) Required() *StringArrayFlag {
+func (f *Flag[T]) Required() *Flag[T] {
 	setAnnotationRequired(f.flag)
 	return f
 }
 
-func (f *StringArrayFlag) Deprecated(msg string) *StringArrayFlag {
+func (f *Flag[T]) Deprecated(msg string) *Flag[T] {
 	f.flag.Deprecated = msg
 	f.flag.Hidden = true
 	return f
 }
 
-func (f *StringArrayFlag) ShorthandDeprecated(msg string) *StringArrayFlag {
+func (f *Flag[T]) ShorthandDeprecated(msg string) *Flag[T] {
 	f.flag.ShorthandDeprecated = msg
 	return f
 }
 
-func (f *StringArrayFlag) Hidden() *StringArrayFlag {
+func (f *Flag[T]) Hidden() *Flag[T] {
 	f.flag.Hidden = true
 	return f
 }
 
-func (f *StringArrayFlag) Default(defaultValue []string) *StringArrayFlag {
-	f.flag.DefValue = fmt.Sprintf("[%s]", strings.Join(defaultValue, ", "))
-	f.defaultValue = defaultValue
-	for _, v := range defaultValue {
-		_ = f.flag.Value.Set(v)
+func (f *Flag[T]) Default(defaultValue T) *Flag[T] {
+	f.flag.DefValue = f.toStr(defaultValue)
+	f.defaultValue = &defaultValue
+	if f.setDefaultValueFunc != nil {
+		_ = f.setDefaultValueFunc(f.flag, defaultValue)
+	} else {
+		_ = f.flag.Value.Set(f.flag.DefValue)
 	}
 	return f
 }
 
-func (f *StringArrayFlag) Flag() *pflag.Flag {
+func (f *Flag[_]) Value() string {
+	return f.flag.Value.String()
+}
+
+func (f *Flag[_]) Flag() *pflag.Flag {
 	return f.flag
 }
 
@@ -653,128 +403,24 @@ func isRequiredFlag(flag *pflag.Flag) bool {
 	return false
 }
 
-type stringValue string
-
-func (s *stringValue) String() string {
-	return string(*s)
+type FlagValue[T flagTypes] struct {
+	value   *T
+	setFunc func(*FlagValue[T], string) error
+	toStr   func(T) string
 }
 
-func (s *stringValue) Set(val string) error {
-	*s = stringValue(val)
-	return nil
+func newFlagValue[T flagTypes](in *T, setValueFunc func(*FlagValue[T], string) error, toStr func(T) string) *FlagValue[T] {
+	return &FlagValue[T]{value: in, setFunc: setValueFunc, toStr: toStr}
 }
 
-func (s *stringValue) Type() string {
-	return "string"
+func (f *FlagValue[T]) String() string {
+	return f.toStr(*f.value)
 }
 
-type intValue int
-
-func (i *intValue) String() string {
-	return fmt.Sprintf("%d", *i)
+func (f *FlagValue[T]) Set(val string) error {
+	return f.setFunc(f, val)
 }
 
-func (i *intValue) Set(val string) error {
-	v, err := strconv.ParseInt(val, 0, 32)
-	if err != nil {
-		return err
-	}
-	*i = intValue(v)
-	return nil
-}
-
-func (i *intValue) Type() string {
-	return "int"
-}
-
-type uintValue uint
-
-func (i *uintValue) String() string {
-	return fmt.Sprintf("%d", *i)
-}
-
-func (i *uintValue) Set(val string) error {
-	v, err := strconv.ParseUint(val, 0, 32)
-	if err != nil {
-		return err
-	}
-	*i = uintValue(v)
-	return nil
-}
-
-func (i *uintValue) Type() string {
-	return "uint"
-}
-
-type boolValue bool
-
-func (b *boolValue) String() string {
-	return fmt.Sprintf("%t", *b)
-}
-
-func (b *boolValue) Set(val string) error {
-	var v bool
-	_, err := fmt.Sscanf(val, "%t", &v)
-	if err != nil {
-		return err
-	}
-	*b = boolValue(v)
-	return nil
-}
-
-func (b *boolValue) Type() string {
-	return "bool"
-}
-
-type durationValue time.Duration
-
-func (d *durationValue) String() string {
-	return time.Duration(*d).String()
-}
-
-func (d *durationValue) Set(val string) error {
-	v, err := time.ParseDuration(val)
-	if err != nil {
-		return err
-	}
-	*d = durationValue(v)
-	return nil
-}
-
-func (d *durationValue) Type() string {
-	return "duration"
-}
-
-type float32Value float32
-
-func (f *float32Value) String() string {
-	return strconv.FormatFloat(float64(*f), 'g', -1, 32)
-}
-
-func (f *float32Value) Set(val string) error {
-	v, err := strconv.ParseFloat(val, 32)
-	if err != nil {
-		return err
-	}
-	*f = float32Value(v)
-	return nil
-}
-
-func (f *float32Value) Type() string {
-	return "float32"
-}
-
-type stringArrayValue []string
-
-func (f *stringArrayValue) String() string {
-	return fmt.Sprintf("[%s]", strings.Join(*f, ", "))
-}
-
-func (f *stringArrayValue) Set(val string) error {
-	*f = append(*f, val)
-	return nil
-}
-
-func (f *stringArrayValue) Type() string {
-	return "stringArray"
+func (f *FlagValue[T]) Type() string {
+	return fmt.Sprintf("%T", f.value)
 }
