@@ -37,12 +37,6 @@ http_archive(
 )
 
 git_repository(
-    name = "dev_f110_mono",
-    commit = "37e2a2502edaa4e0776dd7244928751f4bacafee",
-    remote = "https://github.com/f110/mono",
-)
-
-git_repository(
     name = "dev_f110_protoc_ddl",
     commit = "b3b084d3175e253980400536b4804e681913d387",
     remote = "https://github.com/f110/protoc-ddl",
