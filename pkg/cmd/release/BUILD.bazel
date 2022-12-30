@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cmd",
+        "//pkg/githubutil",
         "//vendor/github.com/Masterminds/semver/v3:semver",
         "//vendor/github.com/google/go-containerregistry/pkg/authn",
         "//vendor/github.com/google/go-containerregistry/pkg/name",
