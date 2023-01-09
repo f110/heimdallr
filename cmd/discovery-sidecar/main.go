@@ -12,6 +12,18 @@ import (
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
+// discovery-sidecar is a sidecar for etcd Pod.
+// This sidecar works as DNS server for discovery other member.
+//
+// Start-up sequence of etcd Pod is a bit more complicated:
+//
+// 1. If the Pod needs the backup file, start "nc" for receiving the backup file from the controller.
+// 2. Start etcd and sidecar container at the same time.
+// 3. (sidecar) Sync the cache for the pod informer.
+// 4. (sidecar) Start DNS server and waiting for booting it.
+// 5. (etcd) Waiting for booting sidecar
+// 6. (etcd) Start etcd
+
 func dnsSidecar(args []string) error {
 	fs := pflag.NewFlagSet("dns-sidecar", pflag.ContinueOnError)
 	process := discovery.New()
