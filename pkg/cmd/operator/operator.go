@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,6 +39,7 @@ type mainProcess struct {
 
 	id                 string
 	metricsAddr        string
+	kubeconfigPath     string
 	leaseLockName      string
 	leaseLockNamespace string
 	clusterDomain      string
@@ -113,15 +112,7 @@ func (m *mainProcess) init() (fsm.State, error) {
 }
 
 func (m *mainProcess) setup() (fsm.State, error) {
-	kubeconfigPath := ""
-	if m.dev {
-		h, err := os.UserHomeDir()
-		if err != nil {
-			return fsm.UnknownState, err
-		}
-		kubeconfigPath = filepath.Join(h, ".kube", "config")
-	}
-	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	cfg, err := clientcmd.BuildConfigFromFlags("", m.kubeconfigPath)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
@@ -273,6 +264,7 @@ func (m *mainProcess) shutdown() (fsm.State, error) {
 
 func (m *mainProcess) Flags(fs *cmd.FlagSet) {
 	fs.String("id", "the holder identity name").Var(&m.id).Default(m.id)
+	fs.String("kubeconfig", "Path to the kubeconfig file").Var(&m.kubeconfigPath).Default(m.kubeconfigPath)
 	fs.String("metrics-addr", "The address the metric endpoint binds to.").Var(&m.metricsAddr).Default(m.metricsAddr)
 	fs.String("lease-lock-name", "the lease lock resource name").Var(&m.leaseLockName).Default(m.leaseLockName)
 	fs.String("lease-lock-namespace", "the lease lock resource namespace").Var(&m.leaseLockNamespace).Default(m.leaseLockNamespace)
