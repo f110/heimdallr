@@ -9,7 +9,7 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/k8s/client/versioned/scheme",
+        "//pkg/k8s/client",
         "//pkg/logger",
         "//vendor/go.uber.org/zap",
         "//vendor/k8s.io/api/core/v1:core",

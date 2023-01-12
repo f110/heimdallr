@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
+	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -69,7 +69,7 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 		c.Log(nil).Info(fmt.Sprintf(format, args...))
 	})
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: coreClient.CoreV1().Events(metav1.NamespaceAll)})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: base.Name()})
+	recorder := eventBroadcaster.NewRecorder(client.Scheme, corev1.EventSource{Component: base.Name()})
 	c.recoder = recorder
 
 	return c
