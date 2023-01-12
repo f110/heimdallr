@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -317,6 +318,9 @@ func Cluster(rootCmd *cmd.Command) {
 		Use:   "run-operator",
 		Short: "Run the operator",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
+			if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" && runtime.GOOS != "linux" {
+				return xerrors.New("run-operator is only support to run under Bazel on Linux")
+			}
 			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
 		},
 	}
