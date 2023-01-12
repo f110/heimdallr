@@ -171,6 +171,13 @@ func Subdomain(v string) Trait {
 	}
 }
 
+func ShareProcessNamespace(object any) {
+	switch obj := object.(type) {
+	case *corev1.Pod:
+		obj.Spec.ShareProcessNamespace = pointer.Bool(true)
+	}
+}
+
 func ContainerFactory(base *corev1.Container, traits ...Trait) *corev1.Container {
 	var c *corev1.Container
 	if base == nil {

@@ -23,6 +23,9 @@ import (
 // 4. (sidecar) Start DNS server and waiting for booting it.
 // 5. (etcd) Waiting for booting sidecar
 // 6. (etcd) Start etcd
+//
+// After started etcd, discovery-sidecar checks that the process is alive every second.
+// It detects process death, then it will be going to shutdown.
 
 func dnsSidecar(args []string) error {
 	fs := pflag.NewFlagSet("dns-sidecar", pflag.ContinueOnError)
