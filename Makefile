@@ -6,7 +6,7 @@ DATABASE_NAME = heimdallr
 
 DSN = $(DATABASE_USER)@tcp($(DATABASE_HOST))/$(DATABASE_NAME)
 WEBHOOK_CERT = --cert $(CURDIR)/operator/webhook.crt --key $(CURDIR)/operator/webhook.key
-OPERATOR_ARG = --lease-lock-name operator --lease-lock-namespace default --cluster-domain cluster.local --dev --log-level=debug --log-encoding=console $(WEBHOOK_CERT)
+OPERATOR_ARG = --lease-lock-name operator --kubeconfig $(CURDIR)/.kubeconfig --lease-lock-namespace default --cluster-domain cluster.local --dev --log-level=debug --log-encoding=console $(WEBHOOK_CERT)
 
 run:
 	$(BAZEL) run //cmd/heimdallr-proxy -- -c $(CURDIR)/config_debug.yaml
