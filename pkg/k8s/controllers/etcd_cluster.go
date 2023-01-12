@@ -1062,7 +1062,8 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 	if c.Spec.VolumeClaimTemplate != nil {
 		dataVolume = k8sfactory.NewPersistentVolumeClaimVolumeSource("data", "/data", podName)
 	}
-	runVolume := k8sfactory.NewEmptyDirVolumeSource("share", "/var/run/sidecar")
+	sidecarVolume := k8sfactory.NewEmptyDirVolumeSource("share", "/var/run/sidecar")
+	runVolume := k8sfactory.NewEmptyDirVolumeSource("run", "/var/run/etcd")
 
 	var addMemberContainer *corev1.Container
 	if clusterState == "existing" {
@@ -1125,7 +1126,11 @@ do
 	sleep 1
 done
 echo '' > /etc/resolv.conf
-/usr/local/bin/etcd %s`, strings.Join(etcdArgs, " "))
+mkdir -p /var/run/etcd
+/usr/local/bin/etcd %s &
+ETCD_PID=$!
+echo $ETCD_PID > /var/run/etcd/pid
+wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 	etcdContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("etcd"),
 		k8sfactory.Image(fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion), []string{"/bin/sh"}),
@@ -1140,6 +1145,7 @@ echo '' > /etc/resolv.conf
 		k8sfactory.Volume(serverCertVolume),
 		k8sfactory.Volume(caVolume),
 		k8sfactory.Volume(dataVolume),
+		k8sfactory.Volume(sidecarVolume),
 		k8sfactory.Volume(runVolume),
 	)
 
@@ -1149,6 +1155,7 @@ echo '' > /etc/resolv.conf
 		"--cluster-domain", c.ClusterDomain,
 		"--ttl", "5",
 		"--ready-file", "/var/run/sidecar/ready",
+		"--etcd-pid-file", "/var/run/etcd/pid",
 	}
 	if c.Spec.Development {
 		sidecarArgs = append(sidecarArgs, "--log-level", "debug")
@@ -1162,6 +1169,7 @@ echo '' > /etc/resolv.conf
 		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(8080, "/readiness")),
 		k8sfactory.Port("dns", corev1.ProtocolUDP, 53),
 		k8sfactory.Port("pprof", corev1.ProtocolTCP, 8080),
+		k8sfactory.Volume(sidecarVolume),
 		k8sfactory.Volume(runVolume),
 	)
 
@@ -1170,6 +1178,7 @@ echo '' > /etc/resolv.conf
 		k8sfactory.Volume(serverCertVolume),
 		k8sfactory.Volume(clientCertVolume),
 		k8sfactory.Volume(dataVolume),
+		k8sfactory.Volume(sidecarVolume),
 		k8sfactory.Volume(runVolume),
 		k8sfactory.Subdomain(c.ServerDiscoveryServiceName()),
 		k8sfactory.ServiceAccount(c.ServiceAccountName()),
@@ -1184,6 +1193,7 @@ echo '' > /etc/resolv.conf
 		k8sfactory.InitContainer(addMemberContainer),
 		k8sfactory.Container(etcdContainer),
 		k8sfactory.Container(sidecarContainer),
+		k8sfactory.ShareProcessNamespace,
 	)
 	if antiAffinity {
 		pod = k8sfactory.PodFactory(pod,

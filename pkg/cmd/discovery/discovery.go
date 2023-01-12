@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -8,6 +9,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -25,6 +28,7 @@ import (
 const (
 	stateInit fsm.State = iota
 	stateStart
+	stateWaitingEtcd
 	stateShutdown
 )
 
@@ -37,6 +41,7 @@ type mainProcess struct {
 	ttl           int
 	dev           bool
 	readyFile     string
+	etcdPidFile   string
 
 	sharedInformerFactory informers.SharedInformerFactory
 	dnsServer             *dns.Sidecar
@@ -46,9 +51,10 @@ func New() *mainProcess {
 	m := &mainProcess{}
 	m.FSM = fsm.NewFSM(
 		map[fsm.State]fsm.StateFunc{
-			stateInit:     m.init,
-			stateStart:    m.start,
-			stateShutdown: m.shutdown,
+			stateInit:        m.init,
+			stateStart:       m.start,
+			stateWaitingEtcd: m.waitingEtcd,
+			stateShutdown:    m.shutdown,
 		},
 		stateInit,
 		stateShutdown,
@@ -62,6 +68,7 @@ func (m *mainProcess) Flags(fs *pflag.FlagSet) {
 	fs.StringVar(&m.clusterDomain, "cluster-domain", "", "Cluster domain suffix")
 	fs.IntVar(&m.ttl, "ttl", 10, "DNS Record TTL")
 	fs.StringVar(&m.readyFile, "ready-file", "", "Status file path. After booting, creating an empty file.")
+	fs.StringVar(&m.etcdPidFile, "etcd-pid-file", "", "The file path that contains a pid for etcd")
 	fs.BoolVar(&m.dev, "dev", false, "Development mode")
 }
 
@@ -154,6 +161,7 @@ Wait:
 			logger.Log.Debug("Unexpected response", zap.Any("addrs", addrs))
 		}
 	}
+	t.Stop()
 
 	if m.readyFile != "" {
 		logger.Log.Debug("Create file", zap.String("path", m.readyFile))
@@ -166,9 +174,64 @@ Wait:
 	return fsm.WaitState, nil
 }
 
+func (m *mainProcess) waitingEtcd() (fsm.State, error) {
+	if m.etcdPidFile == "" {
+		logger.Log.Info("Skip to wait starting etcd because --etcd-pid-file is not set")
+		return fsm.WaitState, nil
+	}
+
+	var process *os.Process
+	t := time.NewTicker(100 * time.Millisecond)
+	timeout := time.After(10 * time.Second)
+Wait:
+	for {
+		select {
+		case <-t.C:
+			if _, err := os.Stat(m.etcdPidFile); os.IsNotExist(err) {
+				continue
+			}
+			buf, err := os.ReadFile(m.etcdPidFile)
+			if err != nil {
+				logger.Log.Debug("Cannot read pid file", zap.Error(err))
+				continue
+			}
+			etcdPid, err := strconv.Atoi(string(bytes.TrimSpace(buf)))
+			if err != nil {
+				logger.Log.Debug("invalid pid", zap.Error(err))
+				continue
+			}
+			etcdProcess, err := os.FindProcess(etcdPid)
+			if err != nil {
+				logger.Log.Debug("Could not find pid", zap.Int("pid", etcdPid), zap.Error(err))
+				continue
+			}
+			process = etcdProcess
+			break Wait
+		case <-timeout:
+			return fsm.UnknownState, xerrors.Errorf("etcd process is not found")
+		}
+	}
+	go func() {
+		t := time.NewTicker(1 * time.Second)
+		for {
+			select {
+			case <-t.C:
+				if err := process.Signal(syscall.Signal(0)); err != nil {
+					logger.Log.Info("Detect process death", zap.Error(err))
+					m.Shutdown()
+					return
+				}
+			}
+		}
+	}()
+
+	return fsm.WaitState, nil
+}
+
 func (m *mainProcess) shutdown() (fsm.State, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := m.dnsServer.Shutdown(ctx); err != nil {
+		cancel()
 		return fsm.UnknownState, xerrors.Errorf(": %w", err)
 	}
 	cancel()

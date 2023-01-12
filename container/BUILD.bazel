@@ -146,7 +146,6 @@ container_push(
 
 pkg_tar(
     name = "bin_sidecar",
-    srcs = ["//cmd/discovery-sidecar"],
     files = {
         "//cmd/discovery-sidecar:linux": "/usr/local/bin/discovery-sidecar",
     },
