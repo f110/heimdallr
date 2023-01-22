@@ -12,10 +12,10 @@ import (
 func TestFlagSet(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		fs := NewFlagSet("cmd", pflag.ContinueOnError)
-		foo, bar, baz, piyo := "bar", "bar", "bar", "bar"
+		foo, bar, baz, piyo := "bar", "bar", "foo", "bar"
 		fs.String("foo", "Usage foo").Var(&foo)
 		fs.String("bar", "Usage bar").Var(&bar).Shorthand("b")
-		fs.String("baz", "Usage baz").Var(&baz).Default("foo")
+		fs.String("baz", "Usage baz").Var(&baz).Default(baz)
 		fs.String("piyo", "Usage piyo").Default("foo").Var(&piyo)
 		err := fs.Parse([]string{"cmd", "--foo", t.Name(), "-b", "baz"})
 		require.NoError(t, err)

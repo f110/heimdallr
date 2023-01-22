@@ -148,7 +148,7 @@ func (fs *FlagSet) String(name, usage string) *Flag[string] {
 	f := NewFlag(
 		name,
 		usage,
-		"", func(f *FlagValue[string], in string) error {
+		func(f *FlagValue[string], in string) error {
 			*f.value = in
 			return nil
 		},
@@ -165,7 +165,6 @@ func (fs *FlagSet) StringArray(name, usage string) *Flag[[]string] {
 	f := NewFlag(
 		name,
 		usage,
-		[]string{},
 		func(f *FlagValue[[]string], in string) error {
 			if in != "" {
 				*f.value = append(*f.value, in)
@@ -194,7 +193,6 @@ func (fs *FlagSet) Int(name, usage string) *Flag[int] {
 	f := NewFlag(
 		name,
 		usage,
-		0,
 		func(f *FlagValue[int], in string) error {
 			v, err := strconv.ParseInt(in, 0, 32)
 			if err != nil {
@@ -216,7 +214,6 @@ func (fs *FlagSet) Uint(name, usage string) *Flag[uint] {
 	f := NewFlag(
 		name,
 		usage,
-		uint(0),
 		func(f *FlagValue[uint], in string) error {
 			v, err := strconv.ParseUint(in, 0, 32)
 			if err != nil {
@@ -238,7 +235,6 @@ func (fs *FlagSet) Int64(name, usage string) *Flag[int64] {
 	f := NewFlag(
 		name,
 		usage,
-		int64(0),
 		func(f *FlagValue[int64], s string) error {
 			v, err := strconv.ParseInt(s, 10, 64)
 			if err != nil {
@@ -260,7 +256,7 @@ func (fs *FlagSet) Bool(name, usage string) *Flag[bool] {
 	f := NewFlag(
 		name,
 		usage,
-		false, func(f *FlagValue[bool], in string) error {
+		func(f *FlagValue[bool], in string) error {
 			var v bool
 			_, err := fmt.Sscanf(in, "%t", &v)
 			if err != nil {
@@ -283,7 +279,6 @@ func (fs *FlagSet) Duration(name, usage string) *Flag[time.Duration] {
 	f := NewFlag(
 		name,
 		usage,
-		time.Duration(0),
 		func(f *FlagValue[time.Duration], in string) error {
 			v, err := time.ParseDuration(in)
 			if err != nil {
@@ -305,7 +300,6 @@ func (fs *FlagSet) Float32(name, usage string) *Flag[float32] {
 	f := NewFlag(
 		name,
 		usage,
-		float32(0),
 		func(f *FlagValue[float32], in string) error {
 			v, err := strconv.ParseFloat(in, 32)
 			if err != nil {
@@ -335,14 +329,13 @@ type Flag[T flagTypes] struct {
 	toStr               func(T) string
 }
 
-func NewFlag[T flagTypes](name, usage string, defaultValue T, setValueFunc func(*FlagValue[T], string) error, setDefaultValueFunc func(*pflag.Flag, T) error, toStr func(T) string) *Flag[T] {
+func NewFlag[T flagTypes](name, usage string, setValueFunc func(*FlagValue[T], string) error, setDefaultValueFunc func(*pflag.Flag, T) error, toStr func(T) string) *Flag[T] {
 	return &Flag[T]{
 		flag: &pflag.Flag{
 			Name:  name,
 			Usage: usage,
 			Value: newFlagValue(new(T), setValueFunc, toStr),
 		},
-		defaultValue:        &defaultValue,
 		setValueFunc:        setValueFunc,
 		setDefaultValueFunc: setDefaultValueFunc,
 		toStr:               toStr,
