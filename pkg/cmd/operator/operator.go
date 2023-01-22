@@ -98,7 +98,7 @@ func (m *mainProcess) init() (fsm.State, error) {
 		return fsm.UnknownState, errors.New("--cert is mandatory if the webhook is enabled")
 	}
 	if !m.disableWebhook && m.keyFile == "" {
-		return fsm.UnknownState, errors.New("--key is mandatory if the webhook is enabed")
+		return fsm.UnknownState, errors.New("--key is mandatory if the webhook is enabled")
 	}
 
 	if err := logger.InitByFlags(); err != nil {

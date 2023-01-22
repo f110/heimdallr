@@ -4,7 +4,10 @@ import (
 	"net/http"
 	"sync"
 
+	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+
+	"go.f110.dev/heimdallr/pkg/logger"
 )
 
 type Probe struct {
@@ -26,6 +29,7 @@ func NewProbe(addr string) *Probe {
 }
 
 func (p *Probe) Start() error {
+	logger.Log.Info("Start probe server", zap.String("addr", p.s.Addr))
 	if err := p.s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return xerrors.Errorf(": %w", err)
 	}
