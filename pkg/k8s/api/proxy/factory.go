@@ -156,6 +156,9 @@ func ClientSecret(name, key string) k8sfactory.Trait {
 		if !ok {
 			return
 		}
+		if p.Spec.IdentityProvider.ClientSecretRef == nil {
+			p.Spec.IdentityProvider.ClientSecretRef = &proxyv1alpha2.SecretSelector{}
+		}
 		p.Spec.IdentityProvider.ClientSecretRef.Name = name
 		p.Spec.IdentityProvider.ClientSecretRef.Key = key
 	}
