@@ -18,3 +18,11 @@ go_binary(
     embed = [":heimdallr-proxy_lib"],
     visibility = ["//visibility:public"],
 )
+
+go_binary(
+    name = "linux",
+    embed = [":heimdallr-proxy_lib"],
+    goarch = "amd64",
+    goos = "linux",
+    visibility = ["//visibility:public"],
+)

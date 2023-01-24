@@ -18,3 +18,11 @@ go_binary(
     embed = [":heim-dashboard_lib"],
     visibility = ["//visibility:public"],
 )
+
+go_binary(
+    name = "linux",
+    embed = [":heim-dashboard_lib"],
+    goos = "linux",
+    goarch = "amd64",
+    visibility = ["//visibility:public"],
+)
