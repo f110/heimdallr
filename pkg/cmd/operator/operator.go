@@ -59,6 +59,8 @@ type mainProcess struct {
 	thirdPartyClient *thirdpartyclient.Set
 	restCfg          *rest.Config
 
+	probeServer *controllers.Probe
+
 	e     *controllers.EtcdController
 	proxy *controllers.ProxyController
 	g     *controllers.GitHubController
@@ -132,9 +134,8 @@ func (m *mainProcess) setup() (fsm.State, error) {
 }
 
 func (m *mainProcess) startProbe() (fsm.State, error) {
-	probe := controllers.NewProbe(m.probeAddr)
-	go probe.Start()
-	probe.Ready()
+	m.probeServer = controllers.NewProbe(m.probeAddr)
+	go m.probeServer.Start()
 
 	return stateLeaderElection, nil
 }
@@ -240,6 +241,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	g.Run(m.ctx, m.workers)
 	ic.Run(m.ctx, m.workers)
 
+	m.probeServer.Ready()
 	return fsm.WaitState, nil
 }
 
