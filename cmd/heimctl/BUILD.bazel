@@ -16,3 +16,11 @@ go_binary(
     embed = [":heimctl_lib"],
     visibility = ["//visibility:public"],
 )
+
+go_binary(
+    name = "linux",
+    goos = "linux",
+    goarch = "amd64",
+    embed = [":heimctl_lib"],
+    visibility = ["//visibility:public"],
+)

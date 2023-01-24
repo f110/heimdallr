@@ -5,11 +5,10 @@ load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES", "REGISTRY")
 
 pkg_tar(
     name = "bin",
-    srcs = [
-        "//cmd/heimdallr-proxy",
-    ],
+    files = {
+      "//cmd/heimdallr-proxy:linux": "/usr/local/bin/heimdallr-proxy"
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(
@@ -33,12 +32,11 @@ container_push(
 
 pkg_tar(
     name = "bin_rpcserver",
-    srcs = [
-        "//cmd/heim-rpcserver",
-        "@grpc_health_probe//file",
-    ],
+    files = {
+        "//cmd/heim-rpcserver:linux": "/usr/local/bin/heim-rpcserver",
+        "@grpc_health_probe//file": "/usr/local/bin/grpc_health_probe",
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(
@@ -63,11 +61,10 @@ container_push(
 
 pkg_tar(
     name = "bin_dashboard",
-    srcs = [
-        "//cmd/heim-dashboard",
-    ],
+    files = {
+        "//cmd/heim-dashboard:linux": "/usr/local/bin/heim-dashboard"
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(
@@ -92,9 +89,10 @@ container_push(
 
 pkg_tar(
     name = "bin_ctl",
-    srcs = ["//cmd/heimctl"],
+    files = {
+        "//cmd/heimctl:linux": "/usr/local/bin/heimctl"
+    },
     mode = "0755",
-    package_dir = "/usr/local/bin",
 )
 
 container_image(
