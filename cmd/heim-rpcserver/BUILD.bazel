@@ -18,3 +18,11 @@ go_binary(
     embed = [":heim-rpcserver_lib"],
     visibility = ["//visibility:public"],
 )
+
+go_binary(
+    name = "linux",
+    embed = [":heim-rpcserver_lib"],
+    goos = "linux",
+    goarch = "amd64",
+    visibility = ["//visibility:public"],
+)
