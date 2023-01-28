@@ -1198,7 +1198,7 @@ message ThanosRulerSpec {
   // recorded rule data.
   // Note: Currently only the CAFile, CertFile, and KeyFile fields are supported.
   // Maps to the '--grpc-server-tls-*' CLI args.
-  optional TLSConfig g_r_p_c_server_tls_config = 39 [(dev.f110.kubeproto.field) = { go_name: "GRPCServerTLSConfig", api_field_name: "grpcServerTlsConfig", inline: false }];
+  optional TLSConfig grpc_tls_config_server = 39 [(dev.f110.kubeproto.field) = { go_name: "GRPCServerTLSConfig", api_field_name: "grpcServerTlsConfig", inline: false }];
   // The external Query URL the Thanos Ruler will set in the 'Source' field
   // of all alerts.
   // Maps to the '--alert.query-url' CLI arg.
@@ -1265,7 +1265,7 @@ message ThanosSpec {
   // recorded rule data.
   // Note: Currently only the CAFile, CertFile, and KeyFile fields are supported.
   // Maps to the '--grpc-server-tls-*' CLI args.
-  optional TLSConfig g_r_p_c_server_tls_config = 12 [(dev.f110.kubeproto.field) = { go_name: "GRPCServerTLSConfig", api_field_name: "grpcServerTlsConfig", inline: false }];
+  optional TLSConfig grpc_tls_config_server = 12 [(dev.f110.kubeproto.field) = { go_name: "GRPCServerTLSConfig", api_field_name: "grpcServerTlsConfig", inline: false }];
   // LogLevel for Thanos sidecar to be configured with.
   optional string log_level = 13 [(dev.f110.kubeproto.field) = { go_name: "LogLevel", api_field_name: "logLevel", inline: false }];
   // LogFormat for Thanos sidecar to be configured with.

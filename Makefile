@@ -35,7 +35,6 @@ gen:
 gen-operator: third_party_protos
 	$(BAZEL) query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run
 	$(BAZEL) query 'kind(vendor_kubeproto, //...)' | xargs -n1 bazel run
-	$(BAZEL) run //pkg/k8s/controllers:rbac
 
 third_party_protos: operator/proto/github.com/jetstack/cert-manager/pkg/apis/certmanagerv1/generated.proto \
 	operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto \

@@ -27,7 +27,15 @@ var (
 	Scheme         = runtime.NewScheme()
 	ParameterCodec = runtime.NewParameterCodec(Scheme)
 	Codecs         = serializer.NewCodecFactory(Scheme)
+	AddToScheme    = localSchemeBuilder.AddToScheme
 )
+
+var localSchemeBuilder = runtime.SchemeBuilder{
+	etcdv1alpha1.AddToScheme,
+	etcdv1alpha2.AddToScheme,
+	proxyv1alpha1.AddToScheme,
+	proxyv1alpha2.AddToScheme,
+}
 
 func init() {
 	for _, v := range []func(*runtime.Scheme) error{
@@ -50,6 +58,13 @@ type Backend interface {
 	UpdateStatus(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error
 	Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error)
+	GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
+	ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
+	CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
+	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
 }
 type Set struct {
 	EtcdV1alpha1  *EtcdV1alpha1
@@ -199,6 +214,88 @@ func (r *restBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource
 	opts.Watch = true
 	return r.client.Get().
 		Namespace(namespace).
+		Resource(gvr.Resource).
+		VersionedParams(&opts, ParameterCodec).
+		Timeout(timeout).
+		Watch(ctx)
+}
+
+func (r *restBackend) GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
+	return result, r.client.Get().
+		Resource(resourceName).
+		Name(name).
+		VersionedParams(&opts, ParameterCodec).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
+	return result, r.client.Get().
+		Resource(resourceName).
+		VersionedParams(&opts, ParameterCodec).
+		Timeout(timeout).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
+	return result, r.client.Post().
+		Resource(resourceName).
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	return result, r.client.Put().
+		Resource(resourceName).
+		Name(m.GetName()).
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	return result, r.client.Put().
+		Resource(resourceName).
+		Name(m.GetName()).
+		SubResource("status").
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error {
+	return r.client.Delete().
+		Resource(gvr.Resource).
+		Name(name).
+		Body(&opts).
+		Do(ctx).
+		Error()
+}
+
+func (r *restBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
+	opts.Watch = true
+	return r.client.Get().
 		Resource(gvr.Resource).
 		VersionedParams(&opts, ParameterCodec).
 		Timeout(timeout).
