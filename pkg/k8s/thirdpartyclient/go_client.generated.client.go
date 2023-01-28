@@ -24,7 +24,13 @@ var (
 	Scheme         = runtime.NewScheme()
 	ParameterCodec = runtime.NewParameterCodec(Scheme)
 	Codecs         = serializer.NewCodecFactory(Scheme)
+	AddToScheme    = localSchemeBuilder.AddToScheme
 )
+
+var localSchemeBuilder = runtime.SchemeBuilder{
+	certmanagerv1.AddToScheme,
+	monitoringv1.AddToScheme,
+}
 
 func init() {
 	for _, v := range []func(*runtime.Scheme) error{
@@ -45,6 +51,13 @@ type Backend interface {
 	UpdateStatus(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error
 	Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error)
+	GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
+	ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
+	CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
+	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
 }
 type Set struct {
 	CertManagerIoV1 *CertManagerIoV1
@@ -176,6 +189,88 @@ func (r *restBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource
 		Watch(ctx)
 }
 
+func (r *restBackend) GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
+	return result, r.client.Get().
+		Resource(resourceName).
+		Name(name).
+		VersionedParams(&opts, ParameterCodec).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
+	return result, r.client.Get().
+		Resource(resourceName).
+		VersionedParams(&opts, ParameterCodec).
+		Timeout(timeout).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
+	return result, r.client.Post().
+		Resource(resourceName).
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	return result, r.client.Put().
+		Resource(resourceName).
+		Name(m.GetName()).
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	return result, r.client.Put().
+		Resource(resourceName).
+		Name(m.GetName()).
+		SubResource("status").
+		VersionedParams(&opts, ParameterCodec).
+		Body(obj).
+		Do(ctx).
+		Into(result)
+}
+
+func (r *restBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error {
+	return r.client.Delete().
+		Resource(gvr.Resource).
+		Name(name).
+		Body(&opts).
+		Do(ctx).
+		Error()
+}
+
+func (r *restBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
+	opts.Watch = true
+	return r.client.Get().
+		Resource(gvr.Resource).
+		VersionedParams(&opts, ParameterCodec).
+		Timeout(timeout).
+		Watch(ctx)
+}
+
 type CertManagerIoV1 struct {
 	backend Backend
 }
@@ -264,8 +359,8 @@ func (c *CertManagerIoV1) WatchCertificateRequest(ctx context.Context, namespace
 	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "certificaterequests"}, namespace, opts)
 }
 
-func (c *CertManagerIoV1) GetClusterIssuer(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.ClusterIssuer, error) {
-	result, err := c.backend.Get(ctx, "clusterissuers", "ClusterIssuer", namespace, name, opts, &certmanagerv1.ClusterIssuer{})
+func (c *CertManagerIoV1) GetClusterIssuer(ctx context.Context, name string, opts metav1.GetOptions) (*certmanagerv1.ClusterIssuer, error) {
+	result, err := c.backend.GetClusterScoped(ctx, "clusterissuers", "ClusterIssuer", name, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +368,7 @@ func (c *CertManagerIoV1) GetClusterIssuer(ctx context.Context, namespace, name 
 }
 
 func (c *CertManagerIoV1) CreateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.CreateOptions) (*certmanagerv1.ClusterIssuer, error) {
-	result, err := c.backend.Create(ctx, "clusterissuers", "ClusterIssuer", v, opts, &certmanagerv1.ClusterIssuer{})
+	result, err := c.backend.CreateClusterScoped(ctx, "clusterissuers", "ClusterIssuer", v, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
 	}
@@ -281,27 +376,27 @@ func (c *CertManagerIoV1) CreateClusterIssuer(ctx context.Context, v *certmanage
 }
 
 func (c *CertManagerIoV1) UpdateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.UpdateOptions) (*certmanagerv1.ClusterIssuer, error) {
-	result, err := c.backend.Update(ctx, "clusterissuers", "ClusterIssuer", v, opts, &certmanagerv1.ClusterIssuer{})
+	result, err := c.backend.UpdateClusterScoped(ctx, "clusterissuers", "ClusterIssuer", v, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
-func (c *CertManagerIoV1) DeleteClusterIssuer(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, namespace, name, opts)
+func (c *CertManagerIoV1) DeleteClusterIssuer(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	return c.backend.DeleteClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, name, opts)
 }
 
-func (c *CertManagerIoV1) ListClusterIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.ClusterIssuerList, error) {
-	result, err := c.backend.List(ctx, "clusterissuers", "ClusterIssuer", namespace, opts, &certmanagerv1.ClusterIssuerList{})
+func (c *CertManagerIoV1) ListClusterIssuer(ctx context.Context, opts metav1.ListOptions) (*certmanagerv1.ClusterIssuerList, error) {
+	result, err := c.backend.ListClusterScoped(ctx, "clusterissuers", "ClusterIssuer", opts, &certmanagerv1.ClusterIssuerList{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.ClusterIssuerList), nil
 }
 
-func (c *CertManagerIoV1) WatchClusterIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, namespace, opts)
+func (c *CertManagerIoV1) WatchClusterIssuer(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.WatchClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, opts)
 }
 
 func (c *CertManagerIoV1) GetIssuer(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.Issuer, error) {
@@ -814,10 +909,10 @@ func (f *CertManagerIoV1Informer) ClusterIssuerInformer() cache.SharedIndexInfor
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListClusterIssuer(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListClusterIssuer(context.TODO(), metav1.ListOptions{})
 				},
 				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchClusterIssuer(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchClusterIssuer(context.TODO(), metav1.ListOptions{})
 				},
 			},
 			&certmanagerv1.ClusterIssuer{},
@@ -1087,16 +1182,16 @@ func NewCertManagerIoV1ClusterIssuerLister(indexer cache.Indexer) *CertManagerIo
 	return &CertManagerIoV1ClusterIssuerLister{indexer: indexer}
 }
 
-func (x *CertManagerIoV1ClusterIssuerLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.ClusterIssuer, error) {
+func (x *CertManagerIoV1ClusterIssuerLister) List(selector labels.Selector) ([]*certmanagerv1.ClusterIssuer, error) {
 	var ret []*certmanagerv1.ClusterIssuer
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+	err := cache.ListAll(x.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*certmanagerv1.ClusterIssuer).DeepCopy())
 	})
 	return ret, err
 }
 
-func (x *CertManagerIoV1ClusterIssuerLister) Get(namespace, name string) (*certmanagerv1.ClusterIssuer, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+func (x *CertManagerIoV1ClusterIssuerLister) Get(name string) (*certmanagerv1.ClusterIssuer, error) {
+	obj, exists, err := x.indexer.GetByKey("/" + name)
 	if err != nil {
 		return nil, err
 	}

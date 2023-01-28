@@ -14,8 +14,8 @@ import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 
 enum ACMEChallengeType {
-  ACME_CHALLENGE_TYPE_HTTP__01 = 0 [(dev.f110.kubeproto.value) = { value: "HTTP-01" }];
-  ACME_CHALLENGE_TYPE_DNS__01  = 1 [(dev.f110.kubeproto.value) = { value: "DNS-01" }];
+  ACME_CHALLENGE_TYPE_HTTP_01 = 0 [(dev.f110.kubeproto.value) = { value: "HTTP-01" }];
+  ACME_CHALLENGE_TYPE_DNS_01  = 1 [(dev.f110.kubeproto.value) = { value: "DNS-01" }];
 }
 
 enum AzureDNSEnvironment {
@@ -144,7 +144,7 @@ message ACMEChallengeSolverHTTP01 {
 message ACMEChallengeSolverHTTP01GatewayHTTPRoute {
   // Optional service type for Kubernetes solver service. Supported values
   // are NodePort or ClusterIP. If unset, defaults to NodePort.
-  optional k8s.io.api.core.v1.ServiceType service_type = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceType", api_field_name: "serviceType", inline: false }];
+  optional .k8s.io.api.core.v1.ServiceType service_type = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceType", api_field_name: "serviceType", inline: false }];
   // The labels that cert-manager will use when creating the temporary
   // HTTPRoute needed for solving the HTTP-01 challenge. These labels
   // must match the label selector of at least one Gateway.
@@ -154,7 +154,7 @@ message ACMEChallengeSolverHTTP01GatewayHTTPRoute {
 message ACMEChallengeSolverHTTP01Ingress {
   // Optional service type for Kubernetes solver service. Supported values
   // are NodePort or ClusterIP. If unset, defaults to NodePort.
-  optional k8s.io.api.core.v1.ServiceType service_type = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceType", api_field_name: "serviceType", inline: false }];
+  optional .k8s.io.api.core.v1.ServiceType service_type = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceType", api_field_name: "serviceType", inline: false }];
   // The ingress class to use when creating Ingress resources to solve ACME
   // challenges that use this challenge solver.
   // Only one of 'class' or 'name' may be specified.
@@ -193,9 +193,9 @@ message ACMEChallengeSolverHTTP01IngressPodSpec {
   // More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
   map<string, string> node_selector = 1 [(dev.f110.kubeproto.field) = { go_name: "NodeSelector", api_field_name: "nodeSelector", inline: false }];
   // If specified, the pod's scheduling constraints
-  optional k8s.io.api.core.v1.Affinity affinity = 2 [(dev.f110.kubeproto.field) = { go_name: "Affinity", api_field_name: "affinity", inline: false }];
+  optional .k8s.io.api.core.v1.Affinity affinity = 2 [(dev.f110.kubeproto.field) = { go_name: "Affinity", api_field_name: "affinity", inline: false }];
   // If specified, the pod's tolerations.
-  repeated k8s.io.api.core.v1.Toleration tolerations = 3 [(dev.f110.kubeproto.field) = { go_name: "Tolerations", api_field_name: "tolerations", inline: false }];
+  repeated .k8s.io.api.core.v1.Toleration tolerations = 3 [(dev.f110.kubeproto.field) = { go_name: "Tolerations", api_field_name: "tolerations", inline: false }];
   // If specified, the pod's priorityClassName.
   optional string priority_class_name = 4 [(dev.f110.kubeproto.field) = { go_name: "PriorityClassName", api_field_name: "priorityClassName", inline: false }];
   // If specified, the pod's service account
@@ -233,7 +233,7 @@ message ACMEExternalAccountBinding {
   // the External Account Binding keyID above.
   // The secret key stored in the Secret **must** be un-padded, base64 URL
   // encoded data.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector key = 2 [(dev.f110.kubeproto.field) = { go_name: "Key", api_field_name: "keySecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector key = 2 [(dev.f110.kubeproto.field) = { go_name: "Key", api_field_name: "keySecretRef", inline: false }];
   // Deprecated: keyAlgorithm field exists for historical compatibility
   // reasons and should not be used. The algorithm is now hardcoded to HS256
   // in golang/x/crypto/acme.
@@ -278,7 +278,7 @@ message ACMEIssuer {
   // Optionally, a `key` may be specified to select a specific entry within
   // the named Secret resource.
   // If `key` is not specified, a default of `tls.key` will be used.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector private_key = 6 [(dev.f110.kubeproto.field) = { go_name: "PrivateKey", api_field_name: "privateKeySecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector private_key = 6 [(dev.f110.kubeproto.field) = { go_name: "PrivateKey", api_field_name: "privateKeySecretRef", inline: false }];
   // Solvers is a list of challenge solvers that will be used to solve
   // ACME challenges for the matching domains.
   // Solver configurations must be provided in order to obtain certificates
@@ -301,22 +301,22 @@ message ACMEIssuer {
 }
 
 message ACMEIssuerDNS01ProviderAcmeDNS {
-  string                                                             host           = 1 [(dev.f110.kubeproto.field) = { go_name: "Host", api_field_name: "host", inline: false }];
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector account_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "AccountSecret", api_field_name: "accountSecretRef", inline: false }];
+  string                                                              host           = 1 [(dev.f110.kubeproto.field) = { go_name: "Host", api_field_name: "host", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector account_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "AccountSecret", api_field_name: "accountSecretRef", inline: false }];
 }
 
 message ACMEIssuerDNS01ProviderAkamai {
-  string                                                             service_consumer_domain = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceConsumerDomain", api_field_name: "serviceConsumerDomain", inline: false }];
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_token            = 2 [(dev.f110.kubeproto.field) = { go_name: "ClientToken", api_field_name: "clientTokenSecretRef", inline: false }];
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_secret           = 3 [(dev.f110.kubeproto.field) = { go_name: "ClientSecret", api_field_name: "clientSecretSecretRef", inline: false }];
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector access_token            = 4 [(dev.f110.kubeproto.field) = { go_name: "AccessToken", api_field_name: "accessTokenSecretRef", inline: false }];
+  string                                                              service_consumer_domain = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceConsumerDomain", api_field_name: "serviceConsumerDomain", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_token            = 2 [(dev.f110.kubeproto.field) = { go_name: "ClientToken", api_field_name: "clientTokenSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_secret           = 3 [(dev.f110.kubeproto.field) = { go_name: "ClientSecret", api_field_name: "clientSecretSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector access_token            = 4 [(dev.f110.kubeproto.field) = { go_name: "AccessToken", api_field_name: "accessTokenSecretRef", inline: false }];
 }
 
 message ACMEIssuerDNS01ProviderAzureDNS {
   // if both this and ClientSecret are left unset MSI will be used
   optional string client_id = 1 [(dev.f110.kubeproto.field) = { go_name: "ClientID", api_field_name: "clientID", inline: false }];
   // if both this and ClientID are left unset MSI will be used
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "ClientSecret", api_field_name: "clientSecretSecretRef", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector client_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "ClientSecret", api_field_name: "clientSecretSecretRef", inline: false }];
   // ID of the Azure subscription
   string subscription_id = 3 [(dev.f110.kubeproto.field) = { go_name: "SubscriptionID", api_field_name: "subscriptionID", inline: false }];
   // when specifying ClientID and ClientSecret then this field is also needed
@@ -332,8 +332,8 @@ message ACMEIssuerDNS01ProviderAzureDNS {
 }
 
 message ACMEIssuerDNS01ProviderCloudDNS {
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector service_account = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccount", api_field_name: "serviceAccountSecretRef", inline: false }];
-  string                                                                      project         = 2 [(dev.f110.kubeproto.field) = { go_name: "Project", api_field_name: "project", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector service_account = 1 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccount", api_field_name: "serviceAccountSecretRef", inline: false }];
+  string                                                                       project         = 2 [(dev.f110.kubeproto.field) = { go_name: "Project", api_field_name: "project", inline: false }];
   // HostedZoneName is an optional field that tells cert-manager in which
   // Cloud DNS zone the challenge record has to be created.
   // If left empty cert-manager will automatically choose a zone.
@@ -346,13 +346,13 @@ message ACMEIssuerDNS01ProviderCloudflare {
   // API key to use to authenticate with Cloudflare.
   // Note: using an API token to authenticate is now the recommended method
   // as it allows greater control of permissions.
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_key = 2 [(dev.f110.kubeproto.field) = { go_name: "APIKey", api_field_name: "apiKeySecretRef", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_key = 2 [(dev.f110.kubeproto.field) = { go_name: "APIKey", api_field_name: "apiKeySecretRef", inline: false }];
   // API token used to authenticate with Cloudflare.
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_token = 3 [(dev.f110.kubeproto.field) = { go_name: "APIToken", api_field_name: "apiTokenSecretRef", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_token = 3 [(dev.f110.kubeproto.field) = { go_name: "APIToken", api_field_name: "apiTokenSecretRef", inline: false }];
 }
 
 message ACMEIssuerDNS01ProviderDigitalOcean {
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector token = 1 [(dev.f110.kubeproto.field) = { go_name: "Token", api_field_name: "tokenSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector token = 1 [(dev.f110.kubeproto.field) = { go_name: "Token", api_field_name: "tokenSecretRef", inline: false }];
 }
 
 message ACMEIssuerDNS01ProviderRFC2136 {
@@ -363,7 +363,7 @@ message ACMEIssuerDNS01ProviderRFC2136 {
   string nameserver = 1 [(dev.f110.kubeproto.field) = { go_name: "Nameserver", api_field_name: "nameserver", inline: false }];
   // The name of the secret containing the TSIG value.
   // If ``tsigKeyName`` is defined, this field is required.
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector t_s_i_g_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "TSIGSecret", api_field_name: "tsigSecretSecretRef", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector t_s_i_g_secret = 2 [(dev.f110.kubeproto.field) = { go_name: "TSIGSecret", api_field_name: "tsigSecretSecretRef", inline: false }];
   // The TSIG Key name configured in the DNS.
   // If ``tsigSecretSecretRef`` is defined, this field is required.
   optional string t_s_i_g_key_name = 3 [(dev.f110.kubeproto.field) = { go_name: "TSIGKeyName", api_field_name: "tsigKeyName", inline: false }];
@@ -380,7 +380,7 @@ message ACMEIssuerDNS01ProviderRoute53 {
   optional string access_key_id = 1 [(dev.f110.kubeproto.field) = { go_name: "AccessKeyID", api_field_name: "accessKeyID", inline: false }];
   // The SecretAccessKey is used for authentication. If not set we fall-back to using env vars, shared credentials file or AWS Instance metadata
   // https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_access_key = 2 [(dev.f110.kubeproto.field) = { go_name: "SecretAccessKey", api_field_name: "secretAccessKeySecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_access_key = 2 [(dev.f110.kubeproto.field) = { go_name: "SecretAccessKey", api_field_name: "secretAccessKeySecretRef", inline: false }];
   // Role is a Role ARN which the Route53 provider will assume using either the explicit credentials AccessKeyID/SecretAccessKey
   // or the inferred credentials from environment variables, shared credentials file or AWS Instance metadata
   optional string role = 3 [(dev.f110.kubeproto.field) = { go_name: "Role", api_field_name: "role", inline: false }];
@@ -408,7 +408,7 @@ message ACMEIssuerDNS01ProviderWebhook {
   // should use a SecretKeySelector to reference a Secret resource.
   // For details on the schema of this field, consult the webhook provider
   // implementation's documentation.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3 [(dev.f110.kubeproto.field) = { go_name: "Config", api_field_name: "config", inline: false }];
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3 [(dev.f110.kubeproto.field) = { go_name: "Config", api_field_name: "config", inline: false }];
 }
 
 message ACMEIssuerStatus {
@@ -461,9 +461,9 @@ message Challenge {
 }
 
 message ChallengeList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated Challenge                            items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated Challenge                             items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message ChallengeSpec {
@@ -502,7 +502,7 @@ message ChallengeSpec {
   // If the Issuer does not exist, processing will be retried.
   // If the Issuer is not an 'ACME' Issuer, an error will be returned and the
   // Challenge will be marked as failed.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 9 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 9 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
 }
 
 message ChallengeStatus {
@@ -537,9 +537,9 @@ message Order {
 }
 
 message OrderList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated Order                                items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated Order                                 items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message OrderSpec {
@@ -552,7 +552,7 @@ message OrderSpec {
   // If the Issuer does not exist, processing will be retried.
   // If the Issuer is not an 'ACME' Issuer, an error will be returned and the
   // Order will be marked as failed.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
   // CommonName is the common name as specified on the DER encoded CSR.
   // If specified, this value must also be present in `dnsNames` or `ipAddresses`.
   // This field must match the corresponding field on the DER encoded CSR.
@@ -567,7 +567,7 @@ message OrderSpec {
   repeated string ip_addresses = 5 [(dev.f110.kubeproto.field) = { go_name: "IPAddresses", api_field_name: "ipAddresses", inline: false }];
   // Duration is the duration for the not after date for the requested certificate.
   // this is set on order creation as pe the ACME spec.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 6 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 6 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
 }
 
 message OrderStatus {
@@ -596,5 +596,5 @@ message OrderStatus {
   optional string reason = 6 [(dev.f110.kubeproto.field) = { go_name: "Reason", api_field_name: "reason", inline: false }];
   // FailureTime stores the time that this order failed.
   // This is used to influence garbage collection and back-off.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time failure_time = 7 [(dev.f110.kubeproto.field) = { go_name: "FailureTime", api_field_name: "failureTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time failure_time = 7 [(dev.f110.kubeproto.field) = { go_name: "FailureTime", api_field_name: "failureTime", inline: false }];
 }
