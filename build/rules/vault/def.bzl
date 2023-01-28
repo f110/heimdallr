@@ -35,11 +35,11 @@ VAULT_ASSETS = {
         "darwin": {
             "amd64": (
                 "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_darwin_amd64.zip",
-                "b7adbba2c25cd971661ad1a054deff0b0e200fd81aac1e35fb6274b83254bfe8",
+                "33e5c0ab227f5cd997826712295e8437a8682807ea414e9dc35cb78071032543",
             ),
             "arm64": (
                 "https://releases.hashicorp.com/vault/1.11.4/vault_1.11.4_darwin_arm64.zip",
-                "0fc70b482cc61554219cc65369703439ad7af6701a6f62c09b1c9db33204ed37",
+                "e4ecc1bd182d9d50ff8607ad9e4588b5f85daf028c13d365c947714233a5683c",
             ),
         },
     },
@@ -57,11 +57,11 @@ VAULT_ASSETS = {
         "darwin": {
             "amd64": (
                 "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_darwin_amd64.zip",
-                "00b32cdc4432dca53e521aa911c1c19e654172c96d48b1a9fbb6a2548cefb94b",
+                "65f6af80710c7742b615f76e55ba1b2bb17392b93a7cab887d46de29c911aab3",
             ),
             "arm64": (
                 "https://releases.hashicorp.com/vault/1.10.7/vault_1.10.7_darwin_arm64.zip",
-                "14b666074eebea8b35a1e7071634cee402d6584baea276e224aafc7a136e1e59",
+                "50f61d41c558947f780a406d34442b9ae5ad36a207ca9d1b7bfac1732f96eb8d",
             ),
         },
     },
