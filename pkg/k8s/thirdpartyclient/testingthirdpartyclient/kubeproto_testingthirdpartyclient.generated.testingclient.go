@@ -149,3 +149,30 @@ func (f *fakerBackend) Delete(ctx context.Context, gvr schema.GroupVersionResour
 func (f *fakerBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
 	return f.fake.InvokesWatch(k8stesting.NewWatchAction(gvr, namespace, opts))
 }
+func (f *fakerBackend) GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
+	return f.Get(ctx, resourceName, kindName, "", name, opts, result)
+}
+
+func (f *fakerBackend) ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
+	return f.List(ctx, resourceName, kindName, "", opts, result)
+}
+
+func (f *fakerBackend) CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
+	return f.Create(ctx, resourceName, kindName, obj, opts, result)
+}
+
+func (f *fakerBackend) UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	return f.Update(ctx, resourceName, kindName, obj, opts, result)
+}
+
+func (f *fakerBackend) UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+	return f.UpdateStatus(ctx, resourceName, kindName, obj, opts, result)
+}
+
+func (f *fakerBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error {
+	return f.Delete(ctx, gvr, "", name, opts)
+}
+
+func (f *fakerBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error) {
+	return f.Watch(ctx, gvr, "", opts)
+}

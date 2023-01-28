@@ -95,10 +95,10 @@ message CertificateCondition {
   // Type of the condition, known values are (`Ready`, `Issuing`).
   CertificateConditionType type = 1 [(dev.f110.kubeproto.field) = { go_name: "Type", api_field_name: "type", inline: false }];
   // Status of the condition, one of (`True`, `False`, `Unknown`).
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
   // LastTransitionTime is the timestamp corresponding to the last status
   // change of this condition.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
   // Reason is a brief machine readable explanation for the condition's last
   // transition.
   optional string reason = 4 [(dev.f110.kubeproto.field) = { go_name: "Reason", api_field_name: "reason", inline: false }];
@@ -123,9 +123,9 @@ message CertificateKeystores {
 }
 
 message CertificateList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated Certificate                          items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated Certificate                           items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message CertificatePrivateKey {
@@ -177,10 +177,10 @@ message CertificateRequestCondition {
   // `Approved`, `Denied`).
   CertificateRequestConditionType type = 1 [(dev.f110.kubeproto.field) = { go_name: "Type", api_field_name: "type", inline: false }];
   // Status of the condition, one of (`True`, `False`, `Unknown`).
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
   // LastTransitionTime is the timestamp corresponding to the last status
   // change of this condition.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
   // Reason is a brief machine readable explanation for the condition's last
   // transition.
   optional string reason = 4 [(dev.f110.kubeproto.field) = { go_name: "Reason", api_field_name: "reason", inline: false }];
@@ -190,15 +190,15 @@ message CertificateRequestCondition {
 }
 
 message CertificateRequestList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated CertificateRequest                   items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated CertificateRequest                    items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message CertificateRequestSpec {
   // The requested 'duration' (i.e. lifetime) of the Certificate.
   // This option may be ignored/overridden by some issuer types.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 1 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 1 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
   // IssuerRef is a reference to the issuer for this CertificateRequest.  If
   // the `kind` field is not set, or set to `Issuer`, an Issuer resource with
   // the given name in the same namespace as the CertificateRequest will be
@@ -206,7 +206,7 @@ message CertificateRequestSpec {
   // the provided name will be used. The `name` field in this stanza is
   // required at all times. The group field refers to the API group of the
   // issuer which defaults to `cert-manager.io` if empty.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
   // The PEM-encoded x509 certificate signing request to be submitted to the
   // CA for signing.
   optional bytes request = 3 [(dev.f110.kubeproto.field) = { go_name: "Request", api_field_name: "request", inline: false }];
@@ -250,7 +250,7 @@ message CertificateRequestStatus {
   optional bytes c_a = 3 [(dev.f110.kubeproto.field) = { go_name: "CA", api_field_name: "ca", inline: false }];
   // FailureTime stores the time that this CertificateRequest failed. This is
   // used to influence garbage collection and back-off.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time failure_time = 4 [(dev.f110.kubeproto.field) = { go_name: "FailureTime", api_field_name: "failureTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time failure_time = 4 [(dev.f110.kubeproto.field) = { go_name: "FailureTime", api_field_name: "failureTime", inline: false }];
 }
 
 message CertificateSecretTemplate {
@@ -275,13 +275,13 @@ message CertificateSpec {
   // `renewBefore` period before its expiry, whichever is later. Minimum
   // accepted duration is 1 hour. Value must be in units accepted by Go
   // time.ParseDuration https://golang.org/pkg/time/#ParseDuration
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 3 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 3 [(dev.f110.kubeproto.field) = { go_name: "Duration", api_field_name: "duration", inline: false }];
   // How long before the currently issued certificate's expiry
   // cert-manager should renew the certificate. The default is 2/3 of the
   // issued certificate's duration. Minimum accepted value is 5 minutes.
   // Value must be in units accepted by Go time.ParseDuration
   // https://golang.org/pkg/time/#ParseDuration
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration renew_before = 4 [(dev.f110.kubeproto.field) = { go_name: "RenewBefore", api_field_name: "renewBefore", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration renew_before = 4 [(dev.f110.kubeproto.field) = { go_name: "RenewBefore", api_field_name: "renewBefore", inline: false }];
   // DNSNames is a list of DNS subjectAltNames to be set on the Certificate.
   repeated string dns_names = 5 [(dev.f110.kubeproto.field) = { go_name: "DNSNames", api_field_name: "dnsNames", inline: false }];
   // IPAddresses is a list of IP address subjectAltNames to be set on the Certificate.
@@ -309,7 +309,7 @@ message CertificateSpec {
   // If the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the
   // provided name will be used.
   // The `name` field in this stanza is required at all times.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 12 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference issuer_ref = 12 [(dev.f110.kubeproto.field) = { go_name: "IssuerRef", api_field_name: "issuerRef", inline: false }];
   // IsCA will mark this Certificate as valid for certificate signing.
   // This will automatically add the `cert sign` usage to the list of `usages`.
   optional bool is_c_a = 13 [(dev.f110.kubeproto.field) = { go_name: "IsCA", api_field_name: "isCA", inline: false }];
@@ -340,17 +340,17 @@ message CertificateStatus {
   // Certificate resource.
   // If set, cert-manager will not re-request another Certificate until
   // 1 hour has elapsed from this time.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time last_failure_time = 2 [(dev.f110.kubeproto.field) = { go_name: "LastFailureTime", api_field_name: "lastFailureTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time last_failure_time = 2 [(dev.f110.kubeproto.field) = { go_name: "LastFailureTime", api_field_name: "lastFailureTime", inline: false }];
   // The time after which the certificate stored in the secret named
   // by this resource in spec.secretName is valid.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time not_before = 3 [(dev.f110.kubeproto.field) = { go_name: "NotBefore", api_field_name: "notBefore", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time not_before = 3 [(dev.f110.kubeproto.field) = { go_name: "NotBefore", api_field_name: "notBefore", inline: false }];
   // The expiration time of the certificate stored in the secret named
   // by this resource in `spec.secretName`.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time not_after = 4 [(dev.f110.kubeproto.field) = { go_name: "NotAfter", api_field_name: "notAfter", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time not_after = 4 [(dev.f110.kubeproto.field) = { go_name: "NotAfter", api_field_name: "notAfter", inline: false }];
   // RenewalTime is the time at which the certificate will be next
   // renewed.
   // If not set, no upcoming renewal is scheduled.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time renewal_time = 5 [(dev.f110.kubeproto.field) = { go_name: "RenewalTime", api_field_name: "renewalTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time renewal_time = 5 [(dev.f110.kubeproto.field) = { go_name: "RenewalTime", api_field_name: "renewalTime", inline: false }];
   // The current 'revision' of the certificate as issued.
   // When a CertificateRequest resource is created, it will have the
   // `cert-manager.io/certificate-revision` set to one greater than the
@@ -379,13 +379,14 @@ message ClusterIssuer {
   IssuerStatus status = 4 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
 
   option (dev.f110.kubeproto.kind) = {
+    scope: SCOPE_CLUSTER
   };
 }
 
 message ClusterIssuerList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated ClusterIssuer                        items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated ClusterIssuer                         items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message Issuer {
@@ -402,10 +403,10 @@ message IssuerCondition {
   // Type of the condition, known values are (`Ready`).
   IssuerConditionType type = 1 [(dev.f110.kubeproto.field) = { go_name: "Type", api_field_name: "type", inline: false }];
   // Status of the condition, one of (`True`, `False`, `Unknown`).
-  github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.ConditionStatus status = 2 [(dev.f110.kubeproto.field) = { go_name: "Status", api_field_name: "status", inline: false }];
   // LastTransitionTime is the timestamp corresponding to the last status
   // change of this condition.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time last_transition_time = 3 [(dev.f110.kubeproto.field) = { go_name: "LastTransitionTime", api_field_name: "lastTransitionTime", inline: false }];
   // Reason is a brief machine readable explanation for the condition's last
   // transition.
   optional string reason = 4 [(dev.f110.kubeproto.field) = { go_name: "Reason", api_field_name: "reason", inline: false }];
@@ -423,7 +424,7 @@ message IssuerCondition {
 message IssuerConfig {
   // ACME configures this issuer to communicate with a RFC8555 (ACME) server
   // to obtain signed x509 certificates.
-  optional github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuer acme = 1 [(dev.f110.kubeproto.field) = { go_name: "ACME", api_field_name: "acme", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuer acme = 1 [(dev.f110.kubeproto.field) = { go_name: "ACME", api_field_name: "acme", inline: false }];
   // CA configures this issuer to sign certificates using a signing CA keypair
   // stored in a Secret resource.
   // This is used to build internal PKIs that are managed by cert-manager.
@@ -440,9 +441,9 @@ message IssuerConfig {
 }
 
 message IssuerList {
-  k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
-  k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
-  repeated Issuer                               items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.TypeMeta type_meta = 1 [(dev.f110.kubeproto.field) = { go_name: "TypeMeta", inline: true }];
+  .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta list_meta = 2 [(dev.f110.kubeproto.field) = { go_name: "ListMeta", api_field_name: "metadata", inline: false }];
+  repeated Issuer                                items     = 3 [(dev.f110.kubeproto.field) = { go_name: "Items", api_field_name: "items", inline: false }];
 }
 
 message IssuerSpec {
@@ -456,7 +457,7 @@ message IssuerStatus {
   // ACME specific status options.
   // This field should only be set if the Issuer is configured to use an ACME
   // server to issue certificates.
-  optional github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerStatus acme = 2 [(dev.f110.kubeproto.field) = { go_name: "ACME", api_field_name: "acme", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerStatus acme = 2 [(dev.f110.kubeproto.field) = { go_name: "ACME", api_field_name: "acme", inline: false }];
 }
 
 message JKSKeystore {
@@ -471,7 +472,7 @@ message JKSKeystore {
   bool create = 1 [(dev.f110.kubeproto.field) = { go_name: "Create", api_field_name: "create", inline: false }];
   // PasswordSecretRef is a reference to a key in a Secret resource
   // containing the password used to encrypt the JKS keystore.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector password_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "PasswordSecretRef", api_field_name: "passwordSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector password_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "PasswordSecretRef", api_field_name: "passwordSecretRef", inline: false }];
 }
 
 message PKCS12Keystore {
@@ -486,7 +487,7 @@ message PKCS12Keystore {
   bool create = 1 [(dev.f110.kubeproto.field) = { go_name: "Create", api_field_name: "create", inline: false }];
   // PasswordSecretRef is a reference to a key in a Secret resource
   // containing the password used to encrypt the PKCS12 keystore.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector password_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "PasswordSecretRef", api_field_name: "passwordSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector password_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "PasswordSecretRef", api_field_name: "passwordSecretRef", inline: false }];
 }
 
 message SelfSignedIssuer {
@@ -507,12 +508,12 @@ message VaultAppRole {
   // to authenticate with Vault.
   // The `key` field must be specified and denotes which entry within the Secret
   // resource is used as the app role secret.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_ref = 3 [(dev.f110.kubeproto.field) = { go_name: "SecretRef", api_field_name: "secretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_ref = 3 [(dev.f110.kubeproto.field) = { go_name: "SecretRef", api_field_name: "secretRef", inline: false }];
 }
 
 message VaultAuth {
   // TokenSecretRef authenticates with Vault by presenting a token.
-  optional github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector token_secret_ref = 1 [(dev.f110.kubeproto.field) = { go_name: "TokenSecretRef", api_field_name: "tokenSecretRef", inline: false }];
+  optional .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector token_secret_ref = 1 [(dev.f110.kubeproto.field) = { go_name: "TokenSecretRef", api_field_name: "tokenSecretRef", inline: false }];
   // AppRole authenticates with Vault using the App Role auth mechanism,
   // with the role and secret stored in a Kubernetes Secret resource.
   optional VaultAppRole app_role = 2 [(dev.f110.kubeproto.field) = { go_name: "AppRole", api_field_name: "appRole", inline: false }];
@@ -548,7 +549,7 @@ message VaultKubernetesAuth {
   // The required Secret field containing a Kubernetes ServiceAccount JWT used
   // for authenticating with Vault. Use of 'ambient credentials' is not
   // supported.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "SecretRef", api_field_name: "secretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "SecretRef", api_field_name: "secretRef", inline: false }];
   // A required field containing the Vault Role to assume. A Role binds a
   // Kubernetes ServiceAccount with a set of Vault policies.
   string role = 3 [(dev.f110.kubeproto.field) = { go_name: "Role", api_field_name: "role", inline: false }];
@@ -559,7 +560,7 @@ message VenafiCloud {
   // Defaults to "https://api.venafi.cloud/v1".
   optional string url = 1 [(dev.f110.kubeproto.field) = { go_name: "URL", api_field_name: "url", inline: false }];
   // APITokenSecretRef is a secret key selector for the Venafi Cloud API token.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_token_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "APITokenSecretRef", api_field_name: "apiTokenSecretRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector api_token_secret_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "APITokenSecretRef", api_field_name: "apiTokenSecretRef", inline: false }];
 }
 
 message VenafiIssuer {
@@ -583,7 +584,7 @@ message VenafiTPP {
   // CredentialsRef is a reference to a Secret containing the username and
   // password for the TPP server.
   // The secret must contain two keys, 'username' and 'password'.
-  github.com.jetstack.cert_manager.pkg.apis.metav1.LocalObjectReference credentials_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "CredentialsRef", api_field_name: "credentialsRef", inline: false }];
+  .github.com.jetstack.cert_manager.pkg.apis.metav1.LocalObjectReference credentials_ref = 2 [(dev.f110.kubeproto.field) = { go_name: "CredentialsRef", api_field_name: "credentialsRef", inline: false }];
   // CABundle is a PEM encoded TLS certificate to use to verify connections to
   // the TPP instance.
   // If specified, system roots will not be used and the issuing CA for the
