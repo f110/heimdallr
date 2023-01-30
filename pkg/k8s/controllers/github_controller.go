@@ -227,7 +227,7 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error {
 	backend := obj.(*proxyv1alpha2.Backend)
 
-	if len(backend.Status.WebhookConfigurations) == 0 {
+	if len(backend.Status.WebhookConfiguration) == 0 {
 		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 			backend, err := c.backendLister.Get(backend.Namespace, backend.Name)
 			if err != nil {
@@ -249,7 +249,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 	}
 
 	webhookConfigurationStatus := make(map[string]proxyv1alpha2.WebhookConfigurationStatus)
-	for _, v := range backend.Status.WebhookConfigurations {
+	for _, v := range backend.Status.WebhookConfiguration {
 		webhookConfigurationStatus[v.Repository] = v
 	}
 
@@ -304,8 +304,8 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		}
 
 		updatedB := backend.DeepCopy()
-		updatedB.Status.WebhookConfigurations = webhookConfigurations
-		if len(updatedB.Status.WebhookConfigurations) == 0 {
+		updatedB.Status.WebhookConfiguration = webhookConfigurations
+		if len(updatedB.Status.WebhookConfiguration) == 0 {
 			controllerbase.RemoveFinalizer(&updatedB.ObjectMeta, githubControllerFinalizerName)
 		}
 		if !reflect.DeepEqual(updatedB.Status, backend.Status) {
@@ -408,7 +408,7 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 			}
 
 			now := metav1.Now()
-			backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations,
+			backend.Status.WebhookConfiguration = append(backend.Status.WebhookConfiguration,
 				proxyv1alpha2.WebhookConfigurationStatus{
 					Id:         newHook.GetID(),
 					Repository: fmt.Sprintf("%s/%s", owner, repo),

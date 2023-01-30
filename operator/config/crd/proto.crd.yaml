@@ -357,31 +357,34 @@ spec:
                       type: string
                     webhookConfiguration:
                       properties:
-                        appIdKey:
-                          type: string
-                        contentType:
-                          type: string
-                        credentialSecretName:
-                          type: string
-                        credentialSecretNamespace:
-                          type: string
-                        events:
-                          items:
-                            type: string
-                          type: array
-                        installationIdKey:
-                          type: string
-                        path:
-                          type: string
-                        privateKeyKey:
-                          type: string
-                        repositories:
-                          items:
-                            type: string
-                          type: array
-                      required:
-                      - repositories
-                      - events
+                        github:
+                          properties:
+                            appIdKey:
+                              type: string
+                            contentType:
+                              type: string
+                            credentialSecretName:
+                              type: string
+                            credentialSecretNamespace:
+                              type: string
+                            events:
+                              items:
+                                type: string
+                              type: array
+                            installationIdKey:
+                              type: string
+                            path:
+                              type: string
+                            privateKeyKey:
+                              type: string
+                            repositories:
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - repositories
+                          - events
+                          type: object
                       type: object
                   type: object
                 type: array
@@ -467,7 +470,7 @@ spec:
                       type: string
                   type: object
                 type: array
-              webhookConfigurations:
+              webhookConfiguration:
                 items:
                   properties:
                     id:
@@ -1151,7 +1154,7 @@ spec:
                                 type: string
                               namespace:
                                 type: string
-                              serviceAccountJsonKey:
+                              serviceAccountJSONKey:
                                 type: string
                             type: object
                           path:
@@ -1163,7 +1166,7 @@ spec:
                             type: string
                           credentialSelector:
                             properties:
-                              accessKeyIdKey:
+                              accessKeyIDKey:
                                 type: string
                               name:
                                 type: string
@@ -1611,7 +1614,7 @@ spec:
             properties:
               backup:
                 properties:
-                  bakcupStatusHistory:
+                  backupStatusHistory:
                     items:
                       properties:
                         etcdRevision:

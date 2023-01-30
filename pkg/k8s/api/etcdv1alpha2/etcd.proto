@@ -84,7 +84,7 @@ message BackupStorageGCSSpec {
 message GCPCredentialSelector {
   optional string name                     = 1;
   optional        string namespace         = 2;
-  optional string service_account_json_key = 3 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccountJSONKey" }];
+  optional string service_account_json_key = 3 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccountJSONKey" api_field_name: "serviceAccountJSONKey" }];
 }
 
 message ObjectSelector {
@@ -95,7 +95,7 @@ message ObjectSelector {
 message AWSCredentialSelector {
   optional string name                  = 1;
   optional        string namespace      = 2;
-  optional string access_key_id_key     = 3 [(dev.f110.kubeproto.field) = { go_name: "AccessKeyIDKey" }];
+  optional string access_key_id_key     = 3 [(dev.f110.kubeproto.field) = { go_name: "AccessKeyIDKey" api_field_name: "accessKeyIDKey" }];
   optional string secret_access_key_key = 4;
 }
 
@@ -122,7 +122,7 @@ message MemberStatus {
 message BackupStatus {
   optional bool succeeded                                                = 1;
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time last_succeeded_time = 2;
-  repeated BackupStatusHistory                       history             = 3 [(dev.f110.kubeproto.field) = { api_field_name: "bakcupStatusHistory" }];
+  repeated BackupStatusHistory                       history             = 3 [(dev.f110.kubeproto.field) = { api_field_name: "backupStatusHistory" }];
 }
 
 message BackupStatusHistory {

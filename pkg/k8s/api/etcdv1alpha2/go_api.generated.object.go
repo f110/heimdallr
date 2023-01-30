@@ -267,7 +267,7 @@ func (in *MemberStatus) DeepCopy() *MemberStatus {
 type BackupStatus struct {
 	Succeeded         bool                  `json:"succeeded,omitempty"`
 	LastSucceededTime *metav1.Time          `json:"lastSucceededTime,omitempty"`
-	History           []BackupStatusHistory `json:"bakcupStatusHistory"`
+	History           []BackupStatusHistory `json:"backupStatusHistory"`
 }
 
 func (in *BackupStatus) DeepCopyInto(out *BackupStatus) {
@@ -524,7 +524,7 @@ func (in *ObjectSelector) DeepCopy() *ObjectSelector {
 type AWSCredentialSelector struct {
 	Name               string `json:"name,omitempty"`
 	Namespace          string `json:"namespace,omitempty"`
-	AccessKeyIDKey     string `json:"accessKeyIdKey,omitempty"`
+	AccessKeyIDKey     string `json:"accessKeyIDKey,omitempty"`
 	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
 }
 
@@ -544,7 +544,7 @@ func (in *AWSCredentialSelector) DeepCopy() *AWSCredentialSelector {
 type GCPCredentialSelector struct {
 	Name                  string `json:"name,omitempty"`
 	Namespace             string `json:"namespace,omitempty"`
-	ServiceAccountJSONKey string `json:"serviceAccountJsonKey,omitempty"`
+	ServiceAccountJSONKey string `json:"serviceAccountJSONKey,omitempty"`
 }
 
 func (in *GCPCredentialSelector) DeepCopyInto(out *GCPCredentialSelector) {
