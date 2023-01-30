@@ -88,7 +88,7 @@ func TestGitHubController(t *testing.T) {
 		p, backend, secrets := githubControllerFixtures(t, "test")
 		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
 		now := metav1.Now()
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, proxyv1alpha2.WebhookConfigurationStatus{
+		backend.Status.WebhookConfiguration = append(backend.Status.WebhookConfiguration, proxyv1alpha2.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
 			UpdateTime: &now,
@@ -136,7 +136,7 @@ func TestGitHubController(t *testing.T) {
 		p, backend, secrets := githubControllerFixtures(t, "test")
 		backend = proxy.BackendFactory(backend, k8sfactory.Delete, k8sfactory.Finalizer(githubControllerFinalizerName))
 		now := metav1.Now()
-		backend.Status.WebhookConfigurations = append(backend.Status.WebhookConfigurations, proxyv1alpha2.WebhookConfigurationStatus{
+		backend.Status.WebhookConfiguration = append(backend.Status.WebhookConfiguration, proxyv1alpha2.WebhookConfigurationStatus{
 			Id:         1234,
 			Repository: "f110/heimdallr",
 			UpdateTime: &now,
@@ -161,7 +161,7 @@ func TestGitHubController(t *testing.T) {
 		require.NoError(t, err)
 
 		backend.ObjectMeta.Finalizers = []string{}
-		backend.Status.WebhookConfigurations = []proxyv1alpha2.WebhookConfigurationStatus{}
+		backend.Status.WebhookConfiguration = []proxyv1alpha2.WebhookConfigurationStatus{}
 		runner.AssertUpdateAction(t, "", backend)
 		runner.AssertUpdateAction(t, "status", backend)
 		runner.AssertNoUnexpectedAction(t)
