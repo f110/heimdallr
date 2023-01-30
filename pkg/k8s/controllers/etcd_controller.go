@@ -339,6 +339,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	if cluster.Status.Phase == etcdv1alpha2.EtcdClusterPhaseRunning && ec.shouldBackup(cluster) {
 		err := ec.doBackup(ctx, cluster)
 		if err != nil {
+			ec.Log(ctx).Warn("Failed backup", zap.Error(err))
 			cluster.Status.Backup.Succeeded = false
 			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
 		} else {
@@ -349,6 +350,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 
 		err = ec.doRotateBackup(ctx, cluster)
 		if err != nil {
+			ec.Log(ctx).Warn("Failed rotate backup", zap.Error(err))
 			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
 		}
 
