@@ -246,7 +246,7 @@ message Location {
 }
 
 message WebhookConfiguration {
-  optional GitHubHookConfiguration github = 1 [(dev.f110.kubeproto.field) = { go_name: "GitHub" inline: true }];
+  optional GitHubHookConfiguration github = 1 [(dev.f110.kubeproto.field) = { go_name: "GitHub" }];
 }
 
 message GitHubHookConfiguration {
@@ -262,8 +262,8 @@ message GitHubHookConfiguration {
 }
 
 message BackendStatus {
-  repeated ProxyReference             deployed_by            = 1;
-  repeated WebhookConfigurationStatus webhook_configurations = 2;
+  repeated ProxyReference             deployed_by           = 1;
+  repeated WebhookConfigurationStatus webhook_configuration = 2;
 }
 
 message ProxyReference {

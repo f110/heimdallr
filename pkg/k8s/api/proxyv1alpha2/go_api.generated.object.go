@@ -429,8 +429,8 @@ func (in *BackendSpec) DeepCopy() *BackendSpec {
 }
 
 type BackendStatus struct {
-	DeployedBy            []ProxyReference             `json:"deployedBy"`
-	WebhookConfigurations []WebhookConfigurationStatus `json:"webhookConfigurations"`
+	DeployedBy           []ProxyReference             `json:"deployedBy"`
+	WebhookConfiguration []WebhookConfigurationStatus `json:"webhookConfiguration"`
 }
 
 func (in *BackendStatus) DeepCopyInto(out *BackendStatus) {
@@ -442,12 +442,12 @@ func (in *BackendStatus) DeepCopyInto(out *BackendStatus) {
 		}
 		out.DeployedBy = l
 	}
-	if in.WebhookConfigurations != nil {
-		l := make([]WebhookConfigurationStatus, len(in.WebhookConfigurations))
-		for i := range in.WebhookConfigurations {
-			in.WebhookConfigurations[i].DeepCopyInto(&l[i])
+	if in.WebhookConfiguration != nil {
+		l := make([]WebhookConfigurationStatus, len(in.WebhookConfiguration))
+		for i := range in.WebhookConfiguration {
+			in.WebhookConfiguration[i].DeepCopyInto(&l[i])
 		}
-		out.WebhookConfigurations = l
+		out.WebhookConfiguration = l
 	}
 }
 
@@ -992,7 +992,7 @@ func (in *BackupSpec) DeepCopy() *BackupSpec {
 }
 
 type WebhookConfiguration struct {
-	*GitHubHookConfiguration `json:",inline"`
+	GitHub *GitHubHookConfiguration `json:"github,omitempty"`
 }
 
 func (in *WebhookConfiguration) DeepCopyInto(out *WebhookConfiguration) {

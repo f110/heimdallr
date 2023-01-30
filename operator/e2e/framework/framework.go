@@ -277,11 +277,9 @@ func (a *Agent) Get(m *btesting.Matcher, backend *proxyv1alpha2.Backend, body io
 	if a.clientCert != nil {
 		tlsConfig.Certificates = []tls.Certificate{*a.clientCert}
 	}
+	dialer := &net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}
 	transport := &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
+		DialContext:           dialer.DialContext,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
