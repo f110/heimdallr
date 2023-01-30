@@ -670,11 +670,11 @@ func (in *RoleRef) DeepCopy() *RoleRef {
 }
 
 type ServiceSelector struct {
-	LabelSelector metav1.LabelSelector `json:",inline"`
-	Namespace     string               `json:"namespace,omitempty"`
-	Name          string               `json:"name,omitempty"`
-	Port          string               `json:"port,omitempty"`
-	Scheme        string               `json:"scheme,omitempty"`
+	metav1.LabelSelector `json:",inline"`
+	Namespace            string `json:"namespace,omitempty"`
+	Name                 string `json:"name,omitempty"`
+	Port                 string `json:"port,omitempty"`
+	Scheme               string `json:"scheme,omitempty"`
 }
 
 func (in *ServiceSelector) DeepCopyInto(out *ServiceSelector) {
@@ -717,12 +717,12 @@ func (in *Permission) DeepCopy() *Permission {
 }
 
 type WebhookConfiguration struct {
-	Github GitHubHookConfiguration `json:",inline"`
+	GitHubHookConfiguration `json:",inline"`
 }
 
 func (in *WebhookConfiguration) DeepCopyInto(out *WebhookConfiguration) {
 	*out = *in
-	out.Github = in.Github
+	out.GitHubHookConfiguration = in.GitHubHookConfiguration
 }
 
 func (in *WebhookConfiguration) DeepCopy() *WebhookConfiguration {
@@ -848,8 +848,8 @@ func (in *SessionSpec) DeepCopy() *SessionSpec {
 }
 
 type LabelSelector struct {
-	LabelSelector metav1.LabelSelector `json:",inline"`
-	Namespace     string               `json:"namespace,omitempty"`
+	metav1.LabelSelector `json:",inline"`
+	Namespace            string `json:"namespace,omitempty"`
 }
 
 func (in *LabelSelector) DeepCopyInto(out *LabelSelector) {
