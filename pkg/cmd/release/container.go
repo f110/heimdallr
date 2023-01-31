@@ -43,7 +43,7 @@ func containerReleaseCmd(repository, sha256File, tag string, override bool) erro
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	desc, err := remote.Image(ref)
+	desc, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
