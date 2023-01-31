@@ -99,7 +99,10 @@ delete-cluster:
 	$(BAZEL) run //:delete_cluster
 
 push:
-	$(BAZEL) query 'kind(container_push, //...)' | xargs -n1 bazel run
+	$(BAZEL) query 'kind(container_push, //...)' | xargs -n1 $(BAZEL) run --stamp
+
+tag-container:
+	$(BAZEL) query 'kind(sh_binary, //container/...)' | xargs -n1 $(BAZEL) run --stamp
 
 run-e2e:
 	$(BAZEL) test --config e2e //operator/e2e/test:test_test
