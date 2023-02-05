@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -18,17 +19,44 @@ import (
 )
 
 type githubOpt struct {
-	Version                 string
-	From                    string
-	Attach                  []string
-	GithubRepo              string
-	BodyFile                string
-	GitHubAppId             int64
-	GitHubAppInstallationId int64
-	GitHubAppPrivateKeyFile string
+	Version                     string
+	From                        string
+	Attach                      []string
+	GithubRepo                  string
+	BodyFile                    string
+	GitHubAppIdFile             string
+	GitHubAppInstallationIdFile string
+	GitHubAppId                 int64
+	GitHubAppInstallationId     int64
+	GitHubAppPrivateKeyFile     string
 }
 
 func githubRelease(opt *githubOpt) error {
+	if v := os.Getenv("GITHUB_APP_ID_FILE"); v != "" {
+		buf, err := os.ReadFile(v)
+		if err != nil {
+			return err
+		}
+		appId, err := strconv.ParseInt(string(buf), 10, 64)
+		if err != nil {
+			return err
+		}
+		opt.GitHubAppId = appId
+	}
+	if v := os.Getenv("GITHUB_INSTALLATION_ID_FILE"); v != "" {
+		buf, err := os.ReadFile(v)
+		if err != nil {
+			return err
+		}
+		installationId, err := strconv.ParseInt(string(buf), 10, 64)
+		if err != nil {
+			return err
+		}
+		opt.GitHubAppInstallationId = installationId
+	}
+	if v := os.Getenv("GITHUB_PRIVATE_KEY"); v != "" {
+		opt.GitHubAppPrivateKeyFile = v
+	}
 	var httpClient *http.Client
 	if opt.GitHubAppId == 0 || opt.GitHubAppInstallationId == 0 || opt.GitHubAppPrivateKeyFile == "" {
 		token := os.Getenv("GITHUB_APITOKEN")
@@ -151,6 +179,8 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().StringArray("attach", "").Var(&opt.Attach)
 	ghRelease.Flags().String("repo", "").Var(&opt.GithubRepo)
 	ghRelease.Flags().String("body", "Release body").Var(&opt.BodyFile)
+	ghRelease.Flags().String("github-app-id-file", "The file that contains GitHub App ID").Var(&opt.GitHubAppIdFile)
+	ghRelease.Flags().String("github-installation-id-file", "The file that contains GitHub App Installation ID").Var(&opt.GitHubAppInstallationIdFile)
 	ghRelease.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
 	ghRelease.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
 	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)

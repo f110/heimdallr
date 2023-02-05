@@ -32,6 +32,8 @@ job(
         secret(env_name = "GITHUB_INSTALLATION_ID", vault_path = "/globemaster/github-app/heimdallr-release", vault_key = "installationid"),
     ],
     env = {
+        "GITHUB_APP_ID_FILE": "/var/github/appid",
+        "GITHUB_INSTALLATION_ID_FILE": "/var/github/installationid",
         "GITHUB_PRIVATE_KEY": "/var/github/privatekey",
     },
 )
