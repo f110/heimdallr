@@ -106,11 +106,18 @@ func githubRelease(opt *githubOpt) error {
 		return xerrors.Errorf(": %w", err)
 	}
 
-	// Create new release
+	// Create new release or Update the release
 	attachedFiles := make(map[string]struct{})
 	if release != nil {
 		for _, v := range release.Assets {
 			attachedFiles[v.GetName()] = struct{}{}
+		}
+		if release.GetBody() != body {
+			release.Body = github.String(body)
+			release, res, err = client.Repositories.EditRelease(context.Background(), owner, repo, release.GetID(), release)
+			if err != nil {
+				return xerrors.Errorf(": %w", err)
+			}
 		}
 	} else {
 		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From, true)
