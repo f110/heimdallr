@@ -36,4 +36,6 @@ job(
         "GITHUB_INSTALLATION_ID_FILE": "/var/github/installationid",
         "GITHUB_PRIVATE_KEY": "/var/github/privatekey",
     },
+    cpu_limit = "2000m",
+    memory_limit = "8096Mi",
 )
