@@ -84,7 +84,7 @@ func editDeployment(v map[interface{}]interface{}, version string) {
 		v := c.(map[interface{}]interface{})
 		if i, ok := v["image"]; ok {
 			image := i.(string)
-			if strings.Contains(image, "heimdallr-operator") {
+			if strings.Contains(image, "heimdallr/operator") {
 				s := strings.Split(image, ":")
 				v["image"] = s[0] + ":" + version
 			}
