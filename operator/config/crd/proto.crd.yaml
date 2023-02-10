@@ -1138,7 +1138,7 @@ spec:
                 type: boolean
               backup:
                 properties:
-                  intervalInSecond:
+                  intervalInSeconds:
                     type: integer
                   maxBackups:
                     type: integer

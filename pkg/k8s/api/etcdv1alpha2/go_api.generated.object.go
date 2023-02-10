@@ -217,9 +217,9 @@ func (in *PodTemplateSpec) DeepCopy() *PodTemplateSpec {
 }
 
 type BackupSpec struct {
-	IntervalInSecond int                `json:"intervalInSecond,omitempty"`
-	MaxBackups       int                `json:"maxBackups,omitempty"`
-	Storage          *BackupStorageSpec `json:"storage,omitempty"`
+	IntervalInSeconds int                `json:"intervalInSeconds,omitempty"`
+	MaxBackups        int                `json:"maxBackups,omitempty"`
+	Storage           *BackupStorageSpec `json:"storage,omitempty"`
 }
 
 func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
