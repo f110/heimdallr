@@ -1163,12 +1163,15 @@ func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
 		return false
 	}
 	if cluster.Status.Backup == nil {
+		logger.Log.Debug("Never backed up")
 		return true
 	}
 	if cluster.Status.Backup.LastSucceededTime.IsZero() {
+		logger.Log.Debug("LastSucceededTime is zero")
 		return true
 	}
 	if cluster.Status.Backup.LastSucceededTime.Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
+		logger.Log.Debug("Backed up is expired")
 		return true
 	}
 
