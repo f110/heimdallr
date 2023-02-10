@@ -178,6 +178,7 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 		return stateShutdown, err
 	}
 	go e.Run(m.ctx)
+	m.probeServer.Ready()
 
 	select {
 	case <-elected:
@@ -241,7 +242,6 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	g.Run(m.ctx, m.workers)
 	ic.Run(m.ctx, m.workers)
 
-	m.probeServer.Ready()
 	return fsm.WaitState, nil
 }
 
