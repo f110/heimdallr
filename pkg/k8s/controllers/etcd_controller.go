@@ -1168,7 +1168,7 @@ func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
 	if cluster.Status.Backup.LastSucceededTime.IsZero() {
 		return true
 	}
-	if cluster.Status.Backup.LastSucceededTime.Add(time.Duration(cluster.Spec.Backup.IntervalInSecond) * time.Second).Before(time.Now()) {
+	if cluster.Status.Backup.LastSucceededTime.Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
 		return true
 	}
 

@@ -57,9 +57,9 @@ message EtcdClusterStatus {
 }
 
 message BackupSpec {
-  optional int32             interval_in_second = 1;
-  optional int32             max_backups        = 2;
-  optional BackupStorageSpec storage            = 3;
+  optional int32             interval_in_seconds = 1;
+  optional int32             max_backups         = 2;
+  optional BackupStorageSpec storage             = 3;
 }
 
 message BackupStorageSpec {
