@@ -119,7 +119,7 @@ message ObjectSelector {
 message AWSCredentialSelector {
   optional string name                  = 1;
   optional        string namespace      = 2;
-  optional string access_key_id_key     = 3 [(dev.f110.kubeproto.field) = { go_name: "AccessKeyIDKey" }];
+  optional string access_key_id_key     = 3 [(dev.f110.kubeproto.field) = { go_name: "AccessKeyIDKey" api_field_name: "accessKeyIDKey" }];
   optional string secret_access_key_key = 4;
 }
 

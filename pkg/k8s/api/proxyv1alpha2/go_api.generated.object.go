@@ -1346,7 +1346,7 @@ func (in *ObjectSelector) DeepCopy() *ObjectSelector {
 type AWSCredentialSelector struct {
 	Name               string `json:"name,omitempty"`
 	Namespace          string `json:"namespace,omitempty"`
-	AccessKeyIDKey     string `json:"accessKeyIdKey,omitempty"`
+	AccessKeyIDKey     string `json:"accessKeyIDKey,omitempty"`
 	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
 }
 
