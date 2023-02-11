@@ -193,7 +193,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(m.coreClient, 30*time.Second)
 	factory := client.NewInformerFactory(m.client, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
-	c, err := controllers.NewProxyController(factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient)
+	c, err := controllers.NewProxyController(m.ctx, factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient)
 	if err != nil {
 		return fsm.UnknownState, err
 	}

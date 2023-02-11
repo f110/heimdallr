@@ -85,6 +85,7 @@ type ProxyController struct {
 }
 
 func NewProxyController(
+	ctx context.Context,
 	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
 	coreClient kubernetes.Interface,
@@ -148,6 +149,7 @@ func NewProxyController(
 		coreosInformer := thirdpartyclient.NewCoreosComV1Informer(f.Cache(), thirdPartyClientSet.CoreosComV1, metav1.NamespaceAll, 30*time.Second)
 		c.pmLister = coreosInformer.PodMonitorLister()
 		c.pmListerSynced = coreosInformer.PodMonitorInformer().HasSynced
+		f.Run(ctx)
 	}
 
 	return c, nil
@@ -1130,7 +1132,7 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 }
 
 func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
-	sm, err := c.thirdPartyClientSet.CoreosComV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Namespace, metav1.GetOptions{})
+	sm, err := c.thirdPartyClientSet.CoreosComV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)
 
