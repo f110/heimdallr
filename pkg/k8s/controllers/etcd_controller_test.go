@@ -555,7 +555,7 @@ func TestEtcdController_Backup(t *testing.T) {
 			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
 		)
 		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
-			IntervalInSecond: 30,
+			IntervalInSeconds: 30,
 			Storage: &etcdv1alpha2.BackupStorageSpec{
 				MinIO: &etcdv1alpha2.BackupStorageMinIOSpec{
 					ServiceSelector: &etcdv1alpha2.ObjectSelector{Name: minIOService.Name, Namespace: minIOService.Namespace},
