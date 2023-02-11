@@ -624,7 +624,7 @@ func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
 		},
 	}
 
-	c, err := NewProxyController(f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, &f.client.Set, nil)
+	c, err := NewProxyController(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, &f.client.Set, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
