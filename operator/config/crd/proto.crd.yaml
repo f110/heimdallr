@@ -2300,7 +2300,7 @@ spec:
                                     type: string
                                   credentialSelector:
                                     properties:
-                                      accessKeyIdKey:
+                                      accessKeyIDKey:
                                         type: string
                                       name:
                                         type: string

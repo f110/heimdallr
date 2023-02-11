@@ -172,7 +172,7 @@ func TestProxyController(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Version, etcdC.Spec.Version)
 		require.NotNil(t, etcdC.Spec.Backup)
-		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSecond)
+		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.IntervalInSecond, etcdC.Spec.Backup.IntervalInSeconds)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.MaxBackups, etcdC.Spec.Backup.MaxBackups)
 		require.NotNil(t, etcdC.Spec.Backup.Storage.MinIO)
 		assert.Equal(t, p.Spec.DataStore.Etcd.Backup.Storage.MinIO.Bucket, etcdC.Spec.Backup.Storage.MinIO.Bucket)
@@ -331,6 +331,7 @@ func TestProxyController(t *testing.T) {
 func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyController) {
 	runner := controllertest.NewTestRunner()
 	controller, err := NewProxyController(
+		context.Background(),
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
 		runner.CoreClient,
