@@ -31,7 +31,7 @@ type ObjectSelector struct {
 type AWSCredentialSelector struct {
 	Name               string `json:"name,omitempty"`
 	Namespace          string `json:"namespace,omitempty"`
-	AccessKeyIDKey     string `json:"accessKeyIDKey,omitempty"`
+	AccessKeyIDKey     string `json:"accessKeyIdKey,omitempty"`
 	SecretAccessKeyKey string `json:"secretAccessKeyKey,omitempty"`
 }
 
