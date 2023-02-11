@@ -139,8 +139,8 @@ func Backup(interval, maxBackups int) k8sfactory.Trait {
 			return
 		}
 		e.Spec.Backup = &etcdv1alpha2.BackupSpec{
-			IntervalInSecond: interval,
-			MaxBackups:       maxBackups,
+			IntervalInSeconds: interval,
+			MaxBackups:        maxBackups,
 		}
 	}
 }
