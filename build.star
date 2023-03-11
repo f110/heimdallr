@@ -12,7 +12,7 @@ job(
     ],
     cpu_limit = "2000m",
     memory_limit = "8096Mi",
-    event = ["push"],
+    event = ["push", "pull_request"],
 )
 
 job(
