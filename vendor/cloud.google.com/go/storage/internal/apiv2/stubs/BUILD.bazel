@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "stubs",
+    srcs = ["storage.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/cloud.google.com/go/storage/internal/apiv2/stubs",
+    importpath = "cloud.google.com/go/storage/internal/apiv2/stubs",
+    visibility = ["//vendor/cloud.google.com/go/storage:__subpackages__"],
+    deps = [
+        "//vendor/google.golang.org/genproto/googleapis/api/annotations",
+        "//vendor/google.golang.org/genproto/googleapis/iam/v1:iam",
+        "//vendor/google.golang.org/genproto/googleapis/type/date",
+        "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/codes",
+        "//vendor/google.golang.org/grpc/status",
+        "//vendor/google.golang.org/protobuf/reflect/protoreflect",
+        "//vendor/google.golang.org/protobuf/runtime/protoimpl",
+        "//vendor/google.golang.org/protobuf/types/known/emptypb",
+        "//vendor/google.golang.org/protobuf/types/known/fieldmaskpb",
+        "//vendor/google.golang.org/protobuf/types/known/timestamppb",
+    ],
+)

@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "date",
+    srcs = ["date.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/genproto/googleapis/type/date",
+    importpath = "google.golang.org/genproto/googleapis/type/date",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/google.golang.org/protobuf/reflect/protoreflect",
+        "//vendor/google.golang.org/protobuf/runtime/protoimpl",
+    ],
+)

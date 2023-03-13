@@ -4,6 +4,7 @@ go_library(
     name = "zap",
     srcs = [
         "array.go",
+        "array_go118.go",
         "config.go",
         "doc.go",
         "encoder.go",
@@ -28,6 +29,7 @@ go_library(
         "//vendor/go.uber.org/atomic",
         "//vendor/go.uber.org/multierr",
         "//vendor/go.uber.org/zap/buffer",
+        "//vendor/go.uber.org/zap/internal",
         "//vendor/go.uber.org/zap/internal/bufferpool",
         "//vendor/go.uber.org/zap/zapcore",
     ],

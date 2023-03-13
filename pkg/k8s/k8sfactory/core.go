@@ -271,7 +271,7 @@ func ReadinessProbe(p *corev1.Probe) Trait {
 
 func TCPProbe(port int) *corev1.Probe {
 	return &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
 				Port: intstr.FromInt(port),
 			},
@@ -281,7 +281,7 @@ func TCPProbe(port int) *corev1.Probe {
 
 func HTTPProbe(port int, path string) *corev1.Probe {
 	return &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Port: intstr.FromInt(port),
 				Path: path,
@@ -292,7 +292,7 @@ func HTTPProbe(port int, path string) *corev1.Probe {
 
 func ExecProbe(command ...string) *corev1.Probe {
 	return &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{Command: command},
 		},
 	}

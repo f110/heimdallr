@@ -7,8 +7,8 @@ go_library(
     importpath = "cloud.google.com/go/iam",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/cloud.google.com/go/iam/apiv1/iampb",
         "//vendor/github.com/googleapis/gax-go/v2:gax-go",
-        "//vendor/google.golang.org/genproto/googleapis/iam/v1:iam",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/codes",
         "//vendor/google.golang.org/grpc/metadata",
