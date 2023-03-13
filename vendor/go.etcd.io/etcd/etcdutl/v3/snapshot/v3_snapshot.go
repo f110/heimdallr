@@ -69,9 +69,6 @@ type Manager interface {
 
 // NewV3 returns a new snapshot Manager for v3.x snapshot.
 func NewV3(lg *zap.Logger) Manager {
-	if lg == nil {
-		lg = zap.NewExample()
-	}
 	return &v3Manager{lg: lg}
 }
 
@@ -325,7 +322,7 @@ func (s *v3Manager) copyAndVerifyDB() error {
 		return err
 	}
 
-	if err := fileutil.CreateDirAll(s.snapDir); err != nil {
+	if err := fileutil.CreateDirAll(s.lg, s.snapDir); err != nil {
 		return err
 	}
 
@@ -386,7 +383,7 @@ func (s *v3Manager) copyAndVerifyDB() error {
 //
 // TODO: This code ignores learners !!!
 func (s *v3Manager) saveWALAndSnap() (*raftpb.HardState, error) {
-	if err := fileutil.CreateDirAll(s.walDir); err != nil {
+	if err := fileutil.CreateDirAll(s.lg, s.walDir); err != nil {
 		return nil, err
 	}
 
@@ -479,6 +476,6 @@ func (s *v3Manager) updateCIndex(commit uint64, term uint64) error {
 	be := backend.NewDefaultBackend(s.outDbPath())
 	defer be.Close()
 
-	cindex.UpdateConsistentIndex(be.BatchTx(), commit, term, false)
+	cindex.UpdateConsistentIndex(be.BatchTx(), commit, term)
 	return nil
 }

@@ -4,6 +4,7 @@ go_library(
     name = "clockwork",
     srcs = [
         "clockwork.go",
+        "context.go",
         "ticker.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/jonboulle/clockwork",

@@ -16,7 +16,7 @@ go_library(
     importpath = "go.etcd.io/etcd/server/v3/auth",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/form3tech-oss/jwt-go",
+        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
         "//vendor/github.com/prometheus/client_golang/prometheus",
         "//vendor/go.etcd.io/etcd/api/v3/authpb",
         "//vendor/go.etcd.io/etcd/api/v3/etcdserverpb",

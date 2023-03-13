@@ -13,6 +13,7 @@ go_library(
         "metrics.go",
         "read_tx.go",
         "tx_buffer.go",
+        "verify.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/go.etcd.io/etcd/server/v3/mvcc/backend",
     importpath = "go.etcd.io/etcd/server/v3/mvcc/backend",

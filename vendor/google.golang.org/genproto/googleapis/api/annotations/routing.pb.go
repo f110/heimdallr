@@ -37,73 +37,78 @@ const (
 )
 
 // Specifies the routing information that should be sent along with the request
-// in the form of routing headers.
+// in the form of routing header.
 // **NOTE:** All service configuration rules follow the "last one wins" order.
 //
 // The examples below will apply to an RPC which has the following request type:
 //
 // Message Definition:
 //
-//     message Request {
-//       // The name of the Table
-//       // Values can be of the following formats:
-//       // - `projects/<project>/tables/<table>`
-//       // - `projects/<project>/instances/<instance>/tables/<table>`
-//       // - `region/<region>/zones/<zone>/tables/<table>`
-//       string table_name = 1;
+//	message Request {
+//	  // The name of the Table
+//	  // Values can be of the following formats:
+//	  // - `projects/<project>/tables/<table>`
+//	  // - `projects/<project>/instances/<instance>/tables/<table>`
+//	  // - `region/<region>/zones/<zone>/tables/<table>`
+//	  string table_name = 1;
 //
-//       // This value specifies routing for replication.
-//       // It can be in the following formats:
-//       // - `profiles/<profile_id>`
-//       // - a legacy `profile_id` that can be any string
-//       string app_profile_id = 2;
-//     }
+//	  // This value specifies routing for replication.
+//	  // It can be in the following formats:
+//	  // - `profiles/<profile_id>`
+//	  // - a legacy `profile_id` that can be any string
+//	  string app_profile_id = 2;
+//	}
 //
 // Example message:
 //
-//     {
-//       table_name: projects/proj_foo/instances/instance_bar/table/table_baz,
-//       app_profile_id: profiles/prof_qux
-//     }
+//	{
+//	  table_name: projects/proj_foo/instances/instance_bar/table/table_baz,
+//	  app_profile_id: profiles/prof_qux
+//	}
 //
-// ## Example 1
+// The routing header consists of one or multiple key-value pairs. Every key
+// and value must be percent-encoded, and joined together in the format of
+// `key1=value1&key2=value2`.
+// In the examples below I am skipping the percent-encoding for readablity.
+//
+// # Example 1
 //
 // Extracting a field from the request to put into the routing header
 // unchanged, with the key equal to the field name.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take the `app_profile_id`.
-//       routing_parameters {
-//         field: "app_profile_id"
-//       }
-//     };
+//	option (google.api.routing) = {
+//	  // Take the `app_profile_id`.
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params: app_profile_id=profiles/prof_qux
+//	x-goog-request-params: app_profile_id=profiles/prof_qux
 //
-// ## Example 2
+// # Example 2
 //
 // Extracting a field from the request to put into the routing header
 // unchanged, with the key different from the field name.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take the `app_profile_id`, but name it `routing_id` in the header.
-//       routing_parameters {
-//         field: "app_profile_id"
-//         path_template: "{routing_id=**}"
-//       }
-//     };
+//	option (google.api.routing) = {
+//	  // Take the `app_profile_id`, but name it `routing_id` in the header.
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	    path_template: "{routing_id=**}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params: routing_id=profiles/prof_qux
+//	x-goog-request-params: routing_id=profiles/prof_qux
 //
-// ## Example 3
+// # Example 3
 //
 // Extracting a field from the request to put into the routing
 // header, while matching a path template syntax on the field's value.
@@ -111,91 +116,91 @@ const (
 // NB: it is more useful to send nothing than to send garbage for the purpose
 // of dynamic routing, since garbage pollutes cache. Thus the matching.
 //
-// ### Sub-example 3a
+// # Sub-example 3a
 //
 // The field matches the template.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take the `table_name`, if it's well-formed (with project-based
-//       // syntax).
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{table_name=projects/*/instances/*/**}"
-//       }
-//     };
+//	option (google.api.routing) = {
+//	  // Take the `table_name`, if it's well-formed (with project-based
+//	  // syntax).
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{table_name=projects/*/instances/*/**}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     table_name=projects/proj_foo/instances/instance_bar/table/table_baz
+//	x-goog-request-params:
+//	table_name=projects/proj_foo/instances/instance_bar/table/table_baz
 //
-// ### Sub-example 3b
+// # Sub-example 3b
 //
 // The field does not match the template.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take the `table_name`, if it's well-formed (with region-based
-//       // syntax).
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{table_name=regions/*/zones/*/**}"
-//       }
-//     };
+//	option (google.api.routing) = {
+//	  // Take the `table_name`, if it's well-formed (with region-based
+//	  // syntax).
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{table_name=regions/*/zones/*/**}"
+//	  }
+//	};
 //
 // result:
 //
-//     <no routing header will be sent>
+//	<no routing header will be sent>
 //
-// ### Sub-example 3c
+// # Sub-example 3c
 //
 // Multiple alternative conflictingly named path templates are
 // specified. The one that matches is used to construct the header.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take the `table_name`, if it's well-formed, whether
-//       // using the region- or projects-based syntax.
+//	option (google.api.routing) = {
+//	  // Take the `table_name`, if it's well-formed, whether
+//	  // using the region- or projects-based syntax.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{table_name=regions/*/zones/*/**}"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{table_name=projects/*/instances/*/**}"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{table_name=regions/*/zones/*/**}"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{table_name=projects/*/instances/*/**}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     table_name=projects/proj_foo/instances/instance_bar/table/table_baz
+//	x-goog-request-params:
+//	table_name=projects/proj_foo/instances/instance_bar/table/table_baz
 //
-// ## Example 4
+// # Example 4
 //
 // Extracting a single routing header key-value pair by matching a
 // template syntax on (a part of) a single request field.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // Take just the project id from the `table_name` field.
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{routing_id=projects/*}/**"
-//       }
-//     };
+//	option (google.api.routing) = {
+//	  // Take just the project id from the `table_name` field.
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{routing_id=projects/*}/**"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params: routing_id=projects/proj_foo
+//	x-goog-request-params: routing_id=projects/proj_foo
 //
-// ## Example 5
+// # Example 5
 //
 // Extracting a single routing header key-value pair by matching
 // several conflictingly named path templates on (parts of) a single request
@@ -203,87 +208,87 @@ const (
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // If the `table_name` does not have instances information,
-//       // take just the project id for routing.
-//       // Otherwise take project + instance.
+//	option (google.api.routing) = {
+//	  // If the `table_name` does not have instances information,
+//	  // take just the project id for routing.
+//	  // Otherwise take project + instance.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{routing_id=projects/*}/**"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{routing_id=projects/*/instances/*}/**"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{routing_id=projects/*}/**"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{routing_id=projects/*/instances/*}/**"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     routing_id=projects/proj_foo/instances/instance_bar
+//	x-goog-request-params:
+//	routing_id=projects/proj_foo/instances/instance_bar
 //
-// ## Example 6
+// # Example 6
 //
 // Extracting multiple routing header key-value pairs by matching
 // several non-conflicting path templates on (parts of) a single request field.
 //
-// ### Sub-example 6a
+// # Sub-example 6a
 //
 // Make the templates strict, so that if the `table_name` does not
 // have an instance information, nothing is sent.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // The routing code needs two keys instead of one composite
-//       // but works only for the tables with the "project-instance" name
-//       // syntax.
+//	option (google.api.routing) = {
+//	  // The routing code needs two keys instead of one composite
+//	  // but works only for the tables with the "project-instance" name
+//	  // syntax.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{project_id=projects/*}/instances/*/**"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "projects/*/{instance_id=instances/*}/**"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{project_id=projects/*}/instances/*/**"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "projects/*/{instance_id=instances/*}/**"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     project_id=projects/proj_foo,instance_id=instances/instance_bar
+//	x-goog-request-params:
+//	project_id=projects/proj_foo&instance_id=instances/instance_bar
 //
-// ### Sub-example 6b
+// # Sub-example 6b
 //
 // Make the templates loose, so that if the `table_name` does not
-// have an instance information, the project id part is sent.
+// have an instance information, just the project id part is sent.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // The routing code wants two keys instead of one composite
-//       // but will work with just the `project_id` for tables without
-//       // an instance in the `table_name`.
+//	option (google.api.routing) = {
+//	  // The routing code wants two keys instead of one composite
+//	  // but will work with just the `project_id` for tables without
+//	  // an instance in the `table_name`.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{project_id=projects/*}/**"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "projects/*/{instance_id=instances/*}/**"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{project_id=projects/*}/**"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "projects/*/{instance_id=instances/*}/**"
+//	  }
+//	};
 //
 // result (is the same as 6a for our example message because it has the instance
 // information):
 //
-//     x-goog-request-params:
-//     project_id=projects/proj_foo,instance_id=instances/instance_bar
+//	x-goog-request-params:
+//	project_id=projects/proj_foo&instance_id=instances/instance_bar
 //
-// ## Example 7
+// # Example 7
 //
 // Extracting multiple routing header key-value pairs by matching
 // several path templates on multiple request fields.
@@ -296,26 +301,26 @@ const (
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // The routing needs both `project_id` and `routing_id`
-//       // (from the `app_profile_id` field) for routing.
+//	option (google.api.routing) = {
+//	  // The routing needs both `project_id` and `routing_id`
+//	  // (from the `app_profile_id` field) for routing.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{project_id=projects/*}/**"
-//       }
-//       routing_parameters {
-//         field: "app_profile_id"
-//         path_template: "{routing_id=**}"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{project_id=projects/*}/**"
+//	  }
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	    path_template: "{routing_id=**}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     project_id=projects/proj_foo,routing_id=profiles/prof_qux
+//	x-goog-request-params:
+//	project_id=projects/proj_foo&routing_id=profiles/prof_qux
 //
-// ## Example 8
+// # Example 8
 //
 // Extracting a single routing header key-value pair by matching
 // several conflictingly named path templates on several request fields. The
@@ -323,86 +328,89 @@ const (
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // The `routing_id` can be a project id or a region id depending on
-//       // the table name format, but only if the `app_profile_id` is not set.
-//       // If `app_profile_id` is set it should be used instead.
+//	option (google.api.routing) = {
+//	  // The `routing_id` can be a project id or a region id depending on
+//	  // the table name format, but only if the `app_profile_id` is not set.
+//	  // If `app_profile_id` is set it should be used instead.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{routing_id=projects/*}/**"
-//       }
-//       routing_parameters {
-//          field: "table_name"
-//          path_template: "{routing_id=regions/*}/**"
-//       }
-//       routing_parameters {
-//         field: "app_profile_id"
-//         path_template: "{routing_id=**}"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{routing_id=projects/*}/**"
+//	  }
+//	  routing_parameters {
+//	     field: "table_name"
+//	     path_template: "{routing_id=regions/*}/**"
+//	  }
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	    path_template: "{routing_id=**}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params: routing_id=profiles/prof_qux
+//	x-goog-request-params: routing_id=profiles/prof_qux
 //
-// ## Example 9
+// # Example 9
 //
 // Bringing it all together.
 //
 // annotation:
 //
-//     option (google.api.routing) = {
-//       // For routing both `table_location` and a `routing_id` are needed.
-//       //
-//       // table_location can be either an instance id or a region+zone id.
-//       //
-//       // For `routing_id`, take the value of `app_profile_id`
-//       // - If it's in the format `profiles/<profile_id>`, send
-//       // just the `<profile_id>` part.
-//       // - If it's any other literal, send it as is.
-//       // If the `app_profile_id` is empty, and the `table_name` starts with
-//       // the project_id, send that instead.
+//	option (google.api.routing) = {
+//	  // For routing both `table_location` and a `routing_id` are needed.
+//	  //
+//	  // table_location can be either an instance id or a region+zone id.
+//	  //
+//	  // For `routing_id`, take the value of `app_profile_id`
+//	  // - If it's in the format `profiles/<profile_id>`, send
+//	  // just the `<profile_id>` part.
+//	  // - If it's any other literal, send it as is.
+//	  // If the `app_profile_id` is empty, and the `table_name` starts with
+//	  // the project_id, send that instead.
 //
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "projects/*/{table_location=instances/*}/tables/*"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{table_location=regions/*/zones/*}/tables/*"
-//       }
-//       routing_parameters {
-//         field: "table_name"
-//         path_template: "{routing_id=projects/*}/**"
-//       }
-//       routing_parameters {
-//         field: "app_profile_id"
-//         path_template: "{routing_id=**}"
-//       }
-//       routing_parameters {
-//         field: "app_profile_id"
-//         path_template: "profiles/{routing_id=*}"
-//       }
-//     };
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "projects/*/{table_location=instances/*}/tables/*"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{table_location=regions/*/zones/*}/tables/*"
+//	  }
+//	  routing_parameters {
+//	    field: "table_name"
+//	    path_template: "{routing_id=projects/*}/**"
+//	  }
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	    path_template: "{routing_id=**}"
+//	  }
+//	  routing_parameters {
+//	    field: "app_profile_id"
+//	    path_template: "profiles/{routing_id=*}"
+//	  }
+//	};
 //
 // result:
 //
-//     x-goog-request-params:
-//     table_location=instances/instance_bar,routing_id=prof_qux
-type Routing struct {
+//	x-goog-request-params:
+//	table_location=instances/instance_bar&routing_id=prof_qux
+type RoutingRule struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	// A collection of Routing Parameter specifications.
-	// **NOTE:** If multiple parameters have the same name, "last one wins" rule
-	// is used to determine which one gets sent.
-	RoutingParameters []*RoutingParameter `protobuf:"bytes,1,rep,name=routing_parameters,json=routingParameters,proto3" json:"routing_parameters,omitempty"`
+	// **NOTE:** If multiple Routing Parameters describe the same key
+	// (via the `path_template` field or via the `field` field when
+	// `path_template` is not provided), "last one wins" rule
+	// determines which Parameter gets used.
+	// See the examples for more details.
+	RoutingParameters []*RoutingParameter `protobuf:"bytes,2,rep,name=routing_parameters,json=routingParameters,proto3" json:"routing_parameters,omitempty"`
 }
 
-func (x *Routing) Reset() {
-	*x = Routing{}
+func (x *RoutingRule) Reset() {
+	*x = RoutingRule{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_google_api_routing_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -410,13 +418,13 @@ func (x *Routing) Reset() {
 	}
 }
 
-func (x *Routing) String() string {
+func (x *RoutingRule) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Routing) ProtoMessage() {}
+func (*RoutingRule) ProtoMessage() {}
 
-func (x *Routing) ProtoReflect() protoreflect.Message {
+func (x *RoutingRule) ProtoReflect() protoreflect.Message {
 	mi := &file_google_api_routing_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -428,12 +436,12 @@ func (x *Routing) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Routing.ProtoReflect.Descriptor instead.
-func (*Routing) Descriptor() ([]byte, []int) {
+// Deprecated: Use RoutingRule.ProtoReflect.Descriptor instead.
+func (*RoutingRule) Descriptor() ([]byte, []int) {
 	return file_google_api_routing_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Routing) GetRoutingParameters() []*RoutingParameter {
+func (x *RoutingRule) GetRoutingParameters() []*RoutingParameter {
 	if x != nil {
 		return x.RoutingParameters
 	}
@@ -484,6 +492,24 @@ type RoutingParameter struct {
 	// - The value is extracted from the request message's `table_name` field
 	//   if it matches the full pattern specified:
 	//   `projects/*/instances/*/tables/*`.
+	//
+	// **NB:** If the `path_template` field is not provided, the key name is
+	// equal to the field name, and the whole field should be sent as a value.
+	// This makes the pattern for the field and the value functionally equivalent
+	// to `**`, and the configuration
+	//
+	//     {
+	//       field: "table_name"
+	//     }
+	//
+	// is a functionally equivalent shorthand to:
+	//
+	//     {
+	//       field: "table_name"
+	//       path_template: "{table_name=**}"
+	//     }
+	//
+	// See Example 1 for more details.
 	PathTemplate string `protobuf:"bytes,2,opt,name=path_template,json=pathTemplate,proto3" json:"path_template,omitempty"`
 }
 
@@ -536,7 +562,7 @@ func (x *RoutingParameter) GetPathTemplate() string {
 var file_google_api_routing_proto_extTypes = []protoimpl.ExtensionInfo{
 	{
 		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
-		ExtensionType: (*Routing)(nil),
+		ExtensionType: (*RoutingRule)(nil),
 		Field:         72295729,
 		Name:          "google.api.routing",
 		Tag:           "bytes,72295729,opt,name=routing",
@@ -546,7 +572,9 @@ var file_google_api_routing_proto_extTypes = []protoimpl.ExtensionInfo{
 
 // Extension fields to descriptorpb.MethodOptions.
 var (
-	// optional google.api.Routing routing = 72295729;
+	// See RoutingRule.
+	//
+	// optional google.api.RoutingRule routing = 72295729;
 	E_Routing = &file_google_api_routing_proto_extTypes[0]
 )
 
@@ -557,30 +585,30 @@ var file_google_api_routing_proto_rawDesc = []byte{
 	0x74, 0x69, 0x6e, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0a, 0x67, 0x6f, 0x6f, 0x67,
 	0x6c, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x1a, 0x20, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
-	0x6f, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x56, 0x0a, 0x07, 0x52, 0x6f, 0x75, 0x74,
-	0x69, 0x6e, 0x67, 0x12, 0x4b, 0x0a, 0x12, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x5f, 0x70,
-	0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x1c, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x52, 0x6f, 0x75,
-	0x74, 0x69, 0x6e, 0x67, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x52, 0x11, 0x72,
-	0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x73,
-	0x22, 0x4d, 0x0a, 0x10, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x61, 0x72, 0x61, 0x6d,
-	0x65, 0x74, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x05, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x70, 0x61,
-	0x74, 0x68, 0x5f, 0x74, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0c, 0x70, 0x61, 0x74, 0x68, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x3a,
-	0x50, 0x0a, 0x07, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x12, 0x1e, 0x2e, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x4d, 0x65, 0x74,
-	0x68, 0x6f, 0x64, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0xb1, 0xca, 0xbc, 0x22, 0x20,
-	0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x07, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e,
-	0x67, 0x42, 0x6a, 0x0a, 0x0e, 0x63, 0x6f, 0x6d, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
-	0x61, 0x70, 0x69, 0x42, 0x0c, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x72, 0x6f, 0x74,
-	0x6f, 0x50, 0x01, 0x5a, 0x41, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x67, 0x6f, 0x6c, 0x61,
-	0x6e, 0x67, 0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x67, 0x65, 0x6e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f,
-	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x61, 0x70, 0x69, 0x73, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x61,
-	0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x3b, 0x61, 0x6e, 0x6e, 0x6f, 0x74,
-	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0xa2, 0x02, 0x04, 0x47, 0x41, 0x50, 0x49, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x5a, 0x0a, 0x0b, 0x52, 0x6f, 0x75, 0x74,
+	0x69, 0x6e, 0x67, 0x52, 0x75, 0x6c, 0x65, 0x12, 0x4b, 0x0a, 0x12, 0x72, 0x6f, 0x75, 0x74, 0x69,
+	0x6e, 0x67, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x73, 0x18, 0x02, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x61, 0x70, 0x69,
+	0x2e, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65,
+	0x72, 0x52, 0x11, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65,
+	0x74, 0x65, 0x72, 0x73, 0x22, 0x4d, 0x0a, 0x10, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x50,
+	0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x69, 0x65, 0x6c,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x12, 0x23,
+	0x0a, 0x0d, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x74, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x70, 0x61, 0x74, 0x68, 0x54, 0x65, 0x6d, 0x70, 0x6c,
+	0x61, 0x74, 0x65, 0x3a, 0x54, 0x0a, 0x07, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x12, 0x1e,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0xb1,
+	0xca, 0xbc, 0x22, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x75, 0x6c, 0x65,
+	0x52, 0x07, 0x72, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x42, 0x6a, 0x0a, 0x0e, 0x63, 0x6f, 0x6d,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x42, 0x0c, 0x52, 0x6f, 0x75,
+	0x74, 0x69, 0x6e, 0x67, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x41, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x67, 0x6f, 0x6c, 0x61, 0x6e, 0x67, 0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x67,
+	0x65, 0x6e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x61, 0x70,
+	0x69, 0x73, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x73, 0x3b, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0xa2, 0x02,
+	0x04, 0x47, 0x41, 0x50, 0x49, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -597,14 +625,14 @@ func file_google_api_routing_proto_rawDescGZIP() []byte {
 
 var file_google_api_routing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_google_api_routing_proto_goTypes = []interface{}{
-	(*Routing)(nil),                    // 0: google.api.Routing
+	(*RoutingRule)(nil),                // 0: google.api.RoutingRule
 	(*RoutingParameter)(nil),           // 1: google.api.RoutingParameter
 	(*descriptorpb.MethodOptions)(nil), // 2: google.protobuf.MethodOptions
 }
 var file_google_api_routing_proto_depIdxs = []int32{
-	1, // 0: google.api.Routing.routing_parameters:type_name -> google.api.RoutingParameter
+	1, // 0: google.api.RoutingRule.routing_parameters:type_name -> google.api.RoutingParameter
 	2, // 1: google.api.routing:extendee -> google.protobuf.MethodOptions
-	0, // 2: google.api.routing:type_name -> google.api.Routing
+	0, // 2: google.api.routing:type_name -> google.api.RoutingRule
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	2, // [2:3] is the sub-list for extension type_name
@@ -619,7 +647,7 @@ func file_google_api_routing_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_google_api_routing_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Routing); i {
+			switch v := v.(*RoutingRule); i {
 			case 0:
 				return &v.state
 			case 1:

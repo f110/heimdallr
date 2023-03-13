@@ -22,7 +22,7 @@ go_binary(
 go_binary(
     name = "linux",
     embed = [":heim-rpcserver_lib"],
-    goos = "linux",
     goarch = "amd64",
+    goos = "linux",
     visibility = ["//visibility:public"],
 )

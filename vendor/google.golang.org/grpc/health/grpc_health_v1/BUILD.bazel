@@ -10,7 +10,6 @@ go_library(
     importpath = "google.golang.org/grpc/health/grpc_health_v1",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/golang/protobuf/proto",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/codes",
         "//vendor/google.golang.org/grpc/status",

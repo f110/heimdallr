@@ -6,7 +6,7 @@ load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES", "REGISTRY")
 pkg_tar(
     name = "bin",
     files = {
-      "//cmd/heimdallr-proxy:linux": "/usr/local/bin/heimdallr-proxy"
+        "//cmd/heimdallr-proxy:linux": "/usr/local/bin/heimdallr-proxy",
     },
     mode = "0755",
 )
@@ -62,7 +62,7 @@ container_push(
 pkg_tar(
     name = "bin_dashboard",
     files = {
-        "//cmd/heim-dashboard:linux": "/usr/local/bin/heim-dashboard"
+        "//cmd/heim-dashboard:linux": "/usr/local/bin/heim-dashboard",
     },
     mode = "0755",
 )
@@ -90,7 +90,7 @@ container_push(
 pkg_tar(
     name = "bin_ctl",
     files = {
-        "//cmd/heimctl:linux": "/usr/local/bin/heimctl"
+        "//cmd/heimctl:linux": "/usr/local/bin/heimctl",
     },
     mode = "0755",
 )

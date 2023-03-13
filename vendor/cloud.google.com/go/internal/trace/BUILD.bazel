@@ -8,6 +8,7 @@ go_library(
     visibility = ["//vendor/cloud.google.com/go:__subpackages__"],
     deps = [
         "//vendor/go.opencensus.io/trace",
+        "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/api/googleapi",
         "//vendor/google.golang.org/genproto/googleapis/rpc/code",
         "//vendor/google.golang.org/grpc/status",

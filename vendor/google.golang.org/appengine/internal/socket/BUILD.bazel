@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "socket",
+    srcs = ["socket_service.pb.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/appengine/internal/socket",
+    importpath = "google.golang.org/appengine/internal/socket",
+    visibility = ["//vendor/google.golang.org/appengine:__subpackages__"],
+    deps = ["//vendor/github.com/golang/protobuf/proto"],
+)

@@ -6,6 +6,7 @@ go_library(
         "conn_pool.go",
         "creds.go",
         "settings.go",
+        "version.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/google.golang.org/api/internal",
     importpath = "google.golang.org/api/internal",

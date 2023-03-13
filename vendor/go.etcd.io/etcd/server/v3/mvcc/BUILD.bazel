@@ -4,6 +4,7 @@ go_library(
     name = "mvcc",
     srcs = [
         "doc.go",
+        "hash.go",
         "index.go",
         "key_index.go",
         "kv.go",
@@ -27,6 +28,7 @@ go_library(
         "//vendor/github.com/google/btree",
         "//vendor/github.com/prometheus/client_golang/prometheus",
         "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
+        "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.etcd.io/etcd/pkg/v3/adt",
         "//vendor/go.etcd.io/etcd/pkg/v3/schedule",
         "//vendor/go.etcd.io/etcd/pkg/v3/traceutil",
