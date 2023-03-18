@@ -5,8 +5,5 @@ go_library(
     srcs = ["vault.go"],
     importpath = "go.f110.dev/heimdallr/pkg/cert/vault",
     visibility = ["//visibility:public"],
-    deps = [
-        "//vendor/github.com/hashicorp/vault/api",
-        "//vendor/golang.org/x/xerrors",
-    ],
+    deps = ["//vendor/golang.org/x/xerrors"],
 )

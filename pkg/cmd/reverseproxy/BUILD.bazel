@@ -35,7 +35,6 @@ go_library(
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2:go-grpc-middleware",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
-        "//vendor/github.com/hashicorp/vault/api",
         "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.etcd.io/etcd/server/v3/embed",
         "//vendor/go.f110.dev/protoc-ddl/probe",

@@ -160,7 +160,9 @@ func (c *Connector) Stop() error {
 
 	doneCh := make(chan struct{})
 	go func() {
-		c.cmd.Process.Wait()
+		if c.cmd != nil && c.cmd.Process != nil {
+			c.cmd.Process.Wait()
+		}
 		close(doneCh)
 	}()
 	if err := c.cmd.Process.Signal(os.Interrupt); err != nil {
@@ -510,6 +512,8 @@ func (p *Proxy) Reload() error {
 	}
 
 	if p.ca == "vault" && p.vaultCmd == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		cmd := exec.Command(
 			p.vaultBinaryPath,
 			"server",
@@ -526,14 +530,14 @@ func (p *Proxy) Reload() error {
 			return xerrors.Errorf(": %w", err)
 		}
 
-		vaultClient, err := vault.NewClient(fmt.Sprintf("http://127.0.0.1:%d", p.vaultPort), p.vaultRootToken, "")
+		vaultClient, err := vault.NewClient(fmt.Sprintf("http://127.0.0.1:%d", p.vaultPort), p.vaultRootToken, "pki", "")
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		if err := vaultClient.EnablePKI(context.Background()); err != nil {
+		if err := vaultClient.EnablePKI(ctx); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		err = vaultClient.SetRole(context.Background(), vaultRoleName, &vault.Role{
+		err = vaultClient.SetRole(ctx, vaultRoleName, &vault.Role{
 			AllowedDomains:   []string{rpc.ServerHostname},
 			AllowSubDomains:  true,
 			AllowLocalhost:   true,
@@ -548,7 +552,7 @@ func (p *Proxy) Reload() error {
 		if err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
-		if err := vaultClient.SetCA(context.Background(), p.CA, p.caPrivateKey); err != nil {
+		if err := vaultClient.SetCA(ctx, p.CA, p.caPrivateKey); err != nil {
 			return xerrors.Errorf(": %w", err)
 		}
 	}

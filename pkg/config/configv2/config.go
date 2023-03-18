@@ -428,7 +428,7 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		}
 
 		if ca.Vault.Addr != "" {
-			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, ca.Vault.Role)
+			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, "pki", ca.Vault.Role)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
