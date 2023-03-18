@@ -18,7 +18,6 @@ go_library(
         "//pkg/fsm",
         "//pkg/logger",
         "//pkg/rpc/rpcserver",
-        "//vendor/github.com/hashicorp/vault/api",
         "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.f110.dev/protoc-ddl/probe",
         "//vendor/golang.org/x/xerrors",

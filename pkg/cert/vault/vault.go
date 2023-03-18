@@ -8,33 +8,85 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"path"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/vault/api"
 	"golang.org/x/xerrors"
 )
 
+var (
+	ErrOperationNotPermitted = Error{Message: "operation is not permitted"}
+)
+
+type Error struct {
+	Message        string
+	StatusCode     int
+	VerboseMessage string
+}
+
+type ErrMessage struct {
+	Errors []string
+}
+
+func (e Error) Error() string {
+	return e.Message
+}
+
+func (e Error) Verbose() string {
+	if e.VerboseMessage == "" {
+		return fmt.Sprintf("%d: %s", e.StatusCode, e.Message)
+	}
+	return fmt.Sprintf("%d: %s", e.StatusCode, e.VerboseMessage)
+}
+
+type ClientOpt func(*clientOpt)
+
+type clientOpt struct {
+	HttpClient *http.Client
+}
+
+func HttpClient(c *http.Client) ClientOpt {
+	return func(opt *clientOpt) {
+		opt.HttpClient = c
+	}
+}
+
 type Client struct {
-	client *api.Client
-	role   string
+	addr       *url.URL
+	httpClient *http.Client
+	token      string
+	mountPath  string
+	role       string
 
 	certPool *x509.CertPool
 	caCert   *x509.Certificate
 }
 
-func NewClient(addr, token, role string) (*Client, error) {
-	vault, err := api.NewClient(&api.Config{Address: addr})
+// NewClient makes a client for Vault PKI with a static token
+func NewClient(addr, token, mountPath, role string, opts ...ClientOpt) (*Client, error) {
+	opt := &clientOpt{}
+	for _, v := range opts {
+		v(opt)
+	}
+
+	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	vault.SetToken(token)
+	httpClient := opt.HttpClient
+	if httpClient == nil {
+		httpClient = &http.Client{}
+	}
 
-	return &Client{client: vault, role: role}, nil
+	return &Client{addr: u, token: token, mountPath: mountPath, role: role, httpClient: httpClient}, nil
 }
 
 func (c *Client) GetCertPool(ctx context.Context) (*x509.CertPool, error) {
@@ -71,55 +123,69 @@ func (c *Client) GetCACertificate(ctx context.Context) (*x509.Certificate, error
 }
 
 func (c *Client) getCACert(ctx context.Context) (*x509.Certificate, error) {
-	req := c.client.NewRequest(http.MethodGet, "/v1/pki/ca")
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
+	req, err := c.newRequest(ctx, http.MethodGet, path.Join("v1", c.mountPath, "ca"), nil)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("unexpected response: %s", res.Status)
+
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	if len(buf) == 0 {
-		return nil, xerrors.Errorf("response is empty")
-	}
-	caCert, err := x509.ParseCertificate(buf)
+	cert, err := x509.ParseCertificate(buf)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-
-	return caCert, nil
+	return cert, nil
 }
 
 func (c *Client) GenerateCertificate(ctx context.Context, commonName string, altNames []string) (*x509.Certificate, crypto.PrivateKey, error) {
-	req := c.client.NewRequest(http.MethodPost, fmt.Sprintf("/v1/pki/issue/%s", c.role))
-	err := req.SetJSONBody(map[string]interface{}{
-		"common_name":        commonName,
-		"alt_names":          strings.Join(altNames, ","),
-		"format":             "der",
-		"private_key_format": "pkcs8",
-	})
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	res, err := c.client.RawRequestWithContext(rCtx, req)
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "issue", c.role),
+		map[string]any{
+			"common_name":        commonName,
+			"alt_names":          strings.Join(altNames, ","),
+			"format":             "der",
+			"private_key_format": "pkcs8",
+		},
+	)
+	if err != nil {
+		return nil, nil, xerrors.Errorf(": %w", err)
+	}
+
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, xerrors.Errorf("unexpected response: %s", res.Status)
+
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return nil, nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
-	secret, err := api.ParseSecret(res.Body)
-	if err != nil {
+
+	b, _ := httputil.DumpResponse(res, true)
+	log.Print(string(b))
+
+	resObj := &PKIResponse{}
+	if err := json.NewDecoder(res.Body).Decode(resObj); err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
-	certBytes, err := base64.StdEncoding.DecodeString(secret.Data["certificate"].(string))
+	certBytes, err := base64.StdEncoding.DecodeString(resObj.Data.Certificate)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
@@ -127,7 +193,7 @@ func (c *Client) GenerateCertificate(ctx context.Context, commonName string, alt
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
-	keyBytes, err := base64.StdEncoding.DecodeString(secret.Data["private_key"].(string))
+	keyBytes, err := base64.StdEncoding.DecodeString(resObj.Data.PrivateKey)
 	if err != nil {
 		return nil, nil, xerrors.Errorf(": %w", err)
 	}
@@ -144,29 +210,37 @@ func (c *Client) Sign(ctx context.Context, csr *x509.CertificateRequest) (*x509.
 	if err := pem.Encode(buf, &pem.Block{Bytes: csr.Raw, Type: "CERTIFICATE REQUEST"}); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-
-	req := c.client.NewRequest(http.MethodPost, fmt.Sprintf("/v1/pki/sign/%s", c.role))
-	err := req.SetJSONBody(map[string]interface{}{
-		"csr":         buf.String(),
-		"common_name": csr.Subject.CommonName,
-		"format":      "der",
-	})
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "sign", c.role),
+		map[string]any{
+			"csr":         buf.String(),
+			"common_name": csr.Subject.CommonName,
+			"format":      "der",
+		},
+	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	secret, err := api.ParseSecret(res.Body)
-	if err != nil {
+
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
+	}
+
+	resObj := &PKIResponse{}
+	if err := json.NewDecoder(res.Body).Decode(resObj); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	certBytes, err := base64.StdEncoding.DecodeString(secret.Data["certificate"].(string))
+	certBytes, err := base64.StdEncoding.DecodeString(resObj.Data.Certificate)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
@@ -179,37 +253,61 @@ func (c *Client) Sign(ctx context.Context, csr *x509.CertificateRequest) (*x509.
 }
 
 func (c *Client) Revoke(ctx context.Context, cert *x509.Certificate) error {
-	req := c.client.NewRequest(http.MethodPost, "/v1/pki/revoke")
-	err := req.SetJSONBody(map[string]interface{}{
-		"serial_number": strings.ReplaceAll(fmt.Sprintf("% x", cert.SerialNumber.Bytes()), " ", ":"),
-	})
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "revoke"),
+		map[string]any{
+			"serial_number": strings.ReplaceAll(fmt.Sprintf("% x", cert.SerialNumber.Bytes()), " ", ":"),
+		},
+	)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return xerrors.Errorf("unexpected response: %s", res.Status)
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
 
 	return nil
 }
 
-func (c *Client) EnablePKI(_ context.Context) error {
-	err := c.client.Sys().Mount("pki/", &api.MountInput{
-		Type: "pki",
-	})
+func (c *Client) EnablePKI(ctx context.Context) error {
+	req, err := c.newRequest(ctx, http.MethodPost, path.Join("v1/sys/mounts", c.mountPath), map[string]any{"type": "pki"})
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-
-	err = c.client.Sys().TuneMount("pki/", api.MountConfigInput{
-		MaxLeaseTTL: "8760h",
-	})
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
+	}
+	res.Body.Close()
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+	}
+
+	req, err = c.newRequest(ctx, http.MethodPost, path.Join("v1/sys/mounts", c.mountPath, "tune"), map[string]any{"max_lease_ttl": "8760h"})
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	res, err = c.httpClient.Do(req)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	res.Body.Close()
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
 
 	return nil
@@ -239,22 +337,27 @@ func (c *Client) SetCA(ctx context.Context, cert *x509.Certificate, privateKey c
 		}
 	}
 
-	req := c.client.NewRequest(http.MethodPost, "/v1/pki/config/ca")
-	if err := req.SetJSONBody(map[string]interface{}{"pem_bundle": pemBundle.String()}); err != nil {
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "config/ca"),
+		map[string]any{
+			"pem_bundle": pemBundle.String(),
+		},
+	)
+	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case http.StatusOK, http.StatusNoContent:
-	default:
-		return xerrors.Errorf("can not set ca: %s", res.Status)
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
 	io.Copy(io.Discard, res.Body)
 
@@ -301,45 +404,99 @@ type Role struct {
 }
 
 func (c *Client) SetRole(ctx context.Context, name string, role *Role) error {
-	req := c.client.NewRequest(http.MethodPost, fmt.Sprintf("/v1/pki/roles/%s", name))
-	if err := req.SetJSONBody(role); err != nil {
+	body := new(bytes.Buffer)
+	if err := json.NewEncoder(body).Encode(role); err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
+	req, err := c.newRequestWithRawBody(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "roles", name),
+		body,
+	)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case http.StatusOK, http.StatusNoContent:
-	default:
-		return xerrors.Errorf("unexpected response: %s", res.Status)
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+	}
+	return nil
+}
+
+func (c *Client) GenerateRoot(ctx context.Context, commonName string) error {
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		path.Join("v1", c.mountPath, "root/generate/internal"),
+		map[string]any{
+			"common_name": commonName,
+			"ttl":         "26280h", // 3 years
+		},
+	)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return xerrors.Errorf(": %w", err)
+	}
+	defer res.Body.Close()
+
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return xerrors.Errorf(": %w", err)
 	}
 
 	return nil
 }
 
-func (c *Client) GenerateRoot(ctx context.Context, commonName string) error {
-	req := c.client.NewRequest(http.MethodPost, "/v1/pki/root/generate/internal")
-	if err := req.SetJSONBody(map[string]interface{}{
-		"common_name": commonName,
-		"ttl":         "26280h", // 3 years
-	}); err != nil {
-		return xerrors.Errorf(": %w", err)
+func (c *Client) newRequest(ctx context.Context, method, path string, body map[string]any) (*http.Request, error) {
+	var bodyBytes io.Reader
+	if body != nil {
+		b := new(bytes.Buffer)
+		if err := json.NewEncoder(b).Encode(body); err != nil {
+			return nil, xerrors.Errorf(": %w", err)
+		}
+		bodyBytes = b
 	}
-	rCtx, cancel := context.WithTimeout(ctx, time.Second)
-	res, err := c.client.RawRequestWithContext(rCtx, req)
-	cancel()
-	if err != nil {
-		return xerrors.Errorf(": %w", err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return xerrors.Errorf("unexpected response: %s", res.Status)
-	}
+	return c.newRequestWithRawBody(ctx, method, path, bodyBytes)
+}
 
-	return nil
+func (c *Client) newRequestWithRawBody(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
+	u := &url.URL{}
+	*u = *c.addr
+	u.Path = path
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
+	req.Header.Set("X-Vault-Token", c.token)
+	return req, nil
+}
+
+// PKIResponse represents the response of PKI engine.
+type PKIResponse struct {
+	LeaseId       string `json:"lease_id"`
+	Renewable     bool   `json:"renewable"`
+	LeaseDuration int    `json:"lease_duration"`
+	Data          struct {
+		Certificate    string   `json:"certificate"`
+		IssuingCA      string   `json:"issuing_ca"`
+		CAChain        []string `json:"ca_chain"`
+		PrivateKey     string   `json:"private_key"`
+		PrivateKeyType string   `json:"private_key_type"`
+		SerialNumber   string   `json:"serial_number"`
+	} `json:"data"`
+	Warnings []string `json:"warnings"`
+	Auth     any      `json:"auth"`
 }

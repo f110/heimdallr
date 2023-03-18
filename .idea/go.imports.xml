@@ -8,6 +8,9 @@
         <option value="golang.org/x/net/context" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/fmt" />
         <option value="golang.org/x/tools/go/ssa/interp/testdata/src/time" />
+        <option value="gopkg.in/square/go-jose.v2" />
+        <option value="gopkg.in/square/go-jose.v2/json" />
+        <option value="k8s.io/apimachinery/pkg/util/json" />
       </array>
     </option>
   </component>

@@ -421,7 +421,7 @@ func TestL4Proxy(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
-			f := framework.New(t)
+			f := framework.New(t, c...)
 			defer f.Execute()
 
 			DescribeL4Proxy(f)

@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/protoc-ddl/probe"
 	"golang.org/x/xerrors"
@@ -53,7 +52,6 @@ type mainProcess struct {
 	datastoreType   string
 	etcdClient      *clientv3.Client
 	conn            *sql.DB
-	vault           *api.Client
 	ca              *cert.CertificateAuthority
 	userDatabase    database.UserDatabase
 	clusterDatabase database.ClusterDatabase
@@ -105,15 +103,6 @@ func (m *mainProcess) init() (fsm.State, error) {
 func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.Config.Logger); err != nil {
 		return fsm.UnknownState, xerrors.Errorf(": %v", err)
-	}
-
-	if m.Config.CertificateAuthority.Vault != nil {
-		vault, err := api.NewClient(&api.Config{Address: m.Config.CertificateAuthority.Vault.Addr})
-		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
-		}
-		vault.SetToken(m.Config.CertificateAuthority.Vault.Token)
-		m.vault = vault
 	}
 
 	switch m.datastoreType {

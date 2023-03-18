@@ -24,7 +24,6 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
-	"github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/server/v3/embed"
 	"go.f110.dev/protoc-ddl/probe"
@@ -101,7 +100,6 @@ type mainProcess struct {
 	clusterDatabase database.ClusterDatabase
 	sessionStore    session.Store
 	connector       *connector.Server
-	vaultClient     *api.Client
 
 	rpcServerConn *grpc.ClientConn
 	revokedCert   *rpcclient.RevokedCertificateWatcher
@@ -426,7 +424,7 @@ func (m *mainProcess) startVault() error {
 
 	m.config.CertificateAuthority.Vault.Addr = fmt.Sprintf("http://127.0.0.1:%d", vaultPort)
 	m.config.CertificateAuthority.Vault.Token = rootToken
-	vaultClient, err := vault.NewClient(m.config.CertificateAuthority.Vault.Addr, rootToken, "")
+	vaultClient, err := vault.NewClient(m.config.CertificateAuthority.Vault.Addr, rootToken, "pki", "")
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
