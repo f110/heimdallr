@@ -22,12 +22,12 @@ go_library(
         "//vendor/github.com/caos/oidc/pkg/op",
         "//vendor/github.com/golang-jwt/jwt",
         "//vendor/github.com/gorilla/mux",
-        "//vendor/github.com/gorilla/websocket",
         "//vendor/github.com/miekg/dns",
         "//vendor/golang.org/x/xerrors",
         "//vendor/gopkg.in/square/go-jose.v2:go-jose_v2",
         "//vendor/k8s.io/api/core/v1:core",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/kubernetes",
+        "//vendor/nhooyr.io/websocket",
     ],
 )

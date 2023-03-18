@@ -23,7 +23,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/securecookie v1.1.1
-	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2 v2.0.0-20220308023801-e4a6915ea237
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2.0.20201002093600-73cf2ae9d891
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -62,6 +61,7 @@ require (
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/utils v0.0.0-20230308161112-d77c459e9343
+	nhooyr.io/websocket v1.8.7
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.3.0
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20210415151418-c5206de65a78
@@ -107,6 +107,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/schema v1.2.0 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
@@ -114,6 +115,7 @@ require (
 	github.com/jonboulle/clockwork v0.2.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
