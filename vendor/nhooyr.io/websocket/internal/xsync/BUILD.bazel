@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "xsync",
+    srcs = [
+        "go.go",
+        "int64.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/nhooyr.io/websocket/internal/xsync",
+    importpath = "nhooyr.io/websocket/internal/xsync",
+    visibility = ["//vendor/nhooyr.io/websocket:__subpackages__"],
+)

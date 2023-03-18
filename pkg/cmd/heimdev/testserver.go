@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/gorilla/websocket"
 	"golang.org/x/xerrors"
+	"nhooyr.io/websocket"
 
 	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/authproxy"
@@ -84,27 +84,25 @@ func testServer(port int, publicKeyFile string) error {
 		}
 	})
 	http.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
-		upgrader := &websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
-		conn, err := upgrader.Upgrade(w, req, nil)
+		conn, err := websocket.Accept(w, req, &websocket.AcceptOptions{})
 		if err != nil {
 			return
 		}
+		defer conn.Close(websocket.StatusNormalClosure, "")
 
-		go func() {
-			for {
-				typ, buf, err := conn.ReadMessage()
-				if err != nil {
-					log.Print(err)
-					return
-				}
-				log.Print(string(buf))
-
-				if err := conn.WriteMessage(typ, buf); err != nil {
-					log.Print(err)
-					return
-				}
+		for {
+			typ, buf, err := conn.Read(req.Context())
+			if err != nil {
+				log.Print(err)
+				return
 			}
-		}()
+			log.Print(string(buf))
+
+			if err := conn.Write(req.Context(), typ, buf); err != nil {
+				log.Print(err)
+				return
+			}
+		}
 	})
 	http.HandleFunc("/ws_client", func(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, `<!DOCTYPE html>
