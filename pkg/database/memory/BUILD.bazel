@@ -12,7 +12,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database/memory",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
         "//pkg/database",
         "//pkg/netutil",
         "//vendor/golang.org/x/xerrors",

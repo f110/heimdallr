@@ -13,18 +13,15 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"math"
 	"math/big"
 	"os"
 	"time"
 
 	"golang.org/x/xerrors"
-	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 )
 
@@ -36,7 +33,6 @@ func Util(rootCmd *cmd.Command) {
 	util.AddCommand(githubSignature())
 	util.AddCommand(webhookCACert())
 	util.AddCommand(webhookCert())
-	util.AddCommand(convertV2Config())
 
 	rootCmd.AddCommand(util)
 }
@@ -200,54 +196,4 @@ func webhookCACert() *cmd.Command {
 	cac.Flags().String("private-key", "File path of the private key").Var(&privateKeyFile).Required()
 
 	return cac
-}
-
-func convertV2Config() *cmd.Command {
-	v1Config := ""
-	output := ""
-
-	cc := &cmd.Command{
-		Use:   "convert-v2-config",
-		Short: "Covert to v2 config from v1",
-		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			var outWriter io.Writer
-			if output == "" {
-				outWriter = os.Stdout
-			} else {
-				f, err := os.Open(output)
-				if err != nil {
-					return xerrors.Errorf(": %w", err)
-				}
-				outWriter = f
-			}
-
-			conf := &config.Config{}
-			readBuf, err := os.ReadFile(v1Config)
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			if err := yaml.Unmarshal(readBuf, &conf); err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			v2Conf := configutil.V1ToV2(conf)
-
-			b, err := yaml.Marshal(v2Conf)
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			n, err := outWriter.Write(b)
-			if err != nil {
-				return xerrors.Errorf(": %w", err)
-			}
-			if len(b) != n {
-				return xerrors.New("short write")
-			}
-
-			return nil
-		},
-	}
-	cc.Flags().String("config", "Config file which is v1 format").Var(&v1Config).Shorthand("c").Required()
-	cc.Flags().String("output", "Output file").Var(&output)
-
-	return cc
 }

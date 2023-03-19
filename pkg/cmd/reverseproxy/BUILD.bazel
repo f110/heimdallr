@@ -10,7 +10,6 @@ go_library(
         "//pkg/authproxy",
         "//pkg/cert",
         "//pkg/cert/vault",
-        "//pkg/config",
         "//pkg/config/configutil",
         "//pkg/config/configv2",
         "//pkg/connector",

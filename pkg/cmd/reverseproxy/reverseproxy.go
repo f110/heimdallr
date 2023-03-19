@@ -38,7 +38,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cert/vault"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configutil"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/connector"
@@ -595,13 +594,13 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 	if m.config.AccessProxy.HTTP.Bind != "" {
 		switch m.config.AccessProxy.HTTP.Session.Type {
-		case config.SessionTypeSecureCookie:
+		case configv2.SessionTypeSecureCookie:
 			m.sessionStore = session.NewSecureCookieStore(
 				m.config.AccessProxy.HTTP.Session.HashKey,
 				m.config.AccessProxy.HTTP.Session.BlockKey,
 				m.config.AccessProxy.ServerNameHost,
 			)
-		case config.SessionTypeMemcached:
+		case configv2.SessionTypeMemcached:
 			m.sessionStore = session.NewMemcachedStore(m.config.AccessProxy.HTTP.Session, m.config.AccessProxy.ServerNameHost)
 		}
 	}

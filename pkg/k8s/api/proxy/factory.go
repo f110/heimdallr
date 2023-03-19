@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
@@ -202,7 +202,7 @@ func CookieSession(object interface{}) {
 	}
 
 	p.Spec.Session = proxyv1alpha2.SessionSpec{
-		Type: config.SessionTypeSecureCookie,
+		Type: configv2.SessionTypeSecureCookie,
 	}
 }
 

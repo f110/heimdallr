@@ -9,7 +9,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/config/configutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/k8s",
         "//pkg/logger",
@@ -25,8 +24,6 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":configutil"],
     deps = [
-        "//pkg/cert",
-        "//pkg/config",
         "//pkg/config/configv2",
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/stretchr/testify/require",

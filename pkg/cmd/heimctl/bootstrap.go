@@ -22,7 +22,6 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
@@ -131,7 +130,7 @@ func bootstrap(confFile string) error {
 	_, err = os.Stat(absPath(conf.AccessProxy.HTTP.Session.KeyFile, dir))
 	if os.IsNotExist(err) {
 		switch conf.AccessProxy.HTTP.Session.Type {
-		case config.SessionTypeSecureCookie:
+		case configv2.SessionTypeSecureCookie:
 			hashKey := securecookie.GenerateRandomKey(32)
 			blockKey := securecookie.GenerateRandomKey(16)
 			f, err := os.Create(absPath(conf.AccessProxy.HTTP.Session.KeyFile, dir))

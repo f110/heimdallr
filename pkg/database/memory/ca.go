@@ -9,13 +9,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/database"
 )
 
 type CA struct {
-	config *config.CertificateAuthority
-
 	mu                  sync.Mutex
 	signedCertificates  []*database.SignedCertificate
 	revokedCertificates []*database.RevokedCertificate
