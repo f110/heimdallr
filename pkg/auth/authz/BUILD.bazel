@@ -6,7 +6,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/auth/authz",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",

@@ -31,13 +31,20 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert/vault"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (
-	EmbedEtcdUrlFilename = "embed_etcd_url"
+	EmbedEtcdUrlFilename    = "embed_etcd_url"
+	SessionTypeSecureCookie = "secure_cookie"
+	SessionTypeMemcached    = "memcached"
+	TemplateLoaderShotgun   = "shotgun"
+	TemplateLoaderEmbed     = "embed"
+)
+
+var (
+	ErrRoleNotFound = xerrors.New("configv2: role not found")
 )
 
 var SystemRole = &Role{
@@ -345,7 +352,7 @@ func (d *Dashboard) Load(dir string) error {
 }
 
 func (t *Template) inflate(dir string) error {
-	if t.Dir != "" && t.Loader == config.TemplateLoaderShotgun {
+	if t.Dir != "" && t.Loader == TemplateLoaderShotgun {
 		t.Dir = filepath.Join(dir, t.Dir)
 	}
 	return nil
@@ -451,7 +458,7 @@ func (ca *CertificateAuthority) Load(dir string) error {
 
 func (s *Session) Load(dir string) error {
 	switch s.Type {
-	case config.SessionTypeSecureCookie:
+	case SessionTypeSecureCookie:
 		b, err := os.ReadFile(absPath(s.KeyFile, dir))
 		if err != nil {
 			return xerrors.Errorf(": %v", err)
@@ -752,7 +759,7 @@ func (a *AuthorizationEngine) GetRole(name string) (*Role, error) {
 		return v, nil
 	}
 
-	return &Role{}, config.ErrRoleNotFound
+	return &Role{}, ErrRoleNotFound
 }
 
 func (a *AuthorizationEngine) GetRPCPermission(name string) (*RPCPermission, bool) {
