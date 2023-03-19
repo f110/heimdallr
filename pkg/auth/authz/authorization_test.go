@@ -99,6 +99,33 @@ func TestAuthorization(t *testing.T) {
 	t.Run("RequireAuthzBackend", func(t *testing.T) {
 		t.Parallel()
 
+		t.Run("Commonly", func(t *testing.T) {
+			t.Parallel()
+
+			backend := &configv2.Backend{
+				Name: "test",
+				Permissions: []*configv2.Permission{
+					{Name: "ok", Locations: []configv2.Location{{Any: "/"}}},
+				},
+			}
+			role := &configv2.Role{
+				Name: "test",
+				Bindings: []*configv2.Binding{
+					{Backend: "test", Permission: "ok"},
+				},
+			}
+			user := &database.User{Id: "foobar@example.com", Roles: []string{"test"}}
+
+			a := newAuthorization(t, backend, role)
+			req := httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/ok", nil)
+			err := a.Authorization(context.TODO(), req, user, nil)
+			require.NoError(t, err)
+
+			req = httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/user/1", nil)
+			err = a.Authorization(context.TODO(), req, user, nil)
+			require.NoError(t, err)
+		})
+
 		t.Run("Normal", func(t *testing.T) {
 			t.Parallel()
 

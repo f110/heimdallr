@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-sql-driver/mysql"
-	"github.com/gorilla/mux"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/namespace"
 	"go.uber.org/zap"
@@ -279,7 +279,7 @@ type Permission struct {
 	WebHook   string     `json:"webhook,omitempty"` // name of webhook provider (e.g. github)
 	Locations []Location `json:"locations"`
 
-	router *mux.Router
+	router *chi.Mux
 }
 
 type RPCPermission struct {
@@ -475,7 +475,7 @@ func (s *Session) Load(dir string) error {
 }
 
 func (p *Permission) inflate() {
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 	for _, l := range p.Locations {
 		l.AddRouter(r)
 	}
@@ -483,8 +483,8 @@ func (p *Permission) inflate() {
 }
 
 func (p *Permission) Match(req *http.Request) bool {
-	match := &mux.RouteMatch{}
-	if p.router.Match(req, match) {
+	ctx := chi.NewRouteContext()
+	if p.router.Match(ctx, req.Method, req.URL.Path) {
 		return true
 	}
 
@@ -1067,9 +1067,9 @@ func (b *Backend) inflate() error {
 
 func (b *Backend) MatchList(req *http.Request) map[string]struct{} {
 	allMatched := make(map[string]struct{})
-	match := &mux.RouteMatch{}
+	ctx := chi.NewRouteContext()
 	for _, p := range b.Permissions {
-		if p.router.Match(req, match) {
+		if p.router.Match(ctx, req.Method, req.URL.Path) {
 			allMatched[p.Name] = struct{}{}
 		}
 	}
@@ -1081,37 +1081,70 @@ func (b *Backend) Agent() bool {
 	return b.agent
 }
 
-func (l *Location) AddRouter(r *mux.Router) {
+var noopHandler = func(_ http.ResponseWriter, _ *http.Request) {}
+
+func (l *Location) AddRouter(r *chi.Mux) {
 	if l.Any != "" {
-		r.PathPrefix(l.Any)
+		pattern := l.Any
+		// For exact match
+		r.HandleFunc(pattern, noopHandler)
+
+		// For prefix match
+		if pattern == "/" {
+			pattern = "/*"
+		} else if pattern[len(pattern)-2:] != "/*" {
+			if pattern[len(pattern)-1] == '/' {
+				pattern = pattern + "*"
+			} else {
+				pattern = pattern + "/*"
+			}
+		}
+		r.HandleFunc(pattern, noopHandler)
 	}
 	if l.Get != "" {
-		r.Methods(http.MethodGet).PathPrefix(l.Get)
+		l.registRouter(r, http.MethodGet, l.Get)
 	}
 	if l.Post != "" {
-		r.Methods(http.MethodPost).PathPrefix(l.Post)
+		l.registRouter(r, http.MethodPost, l.Post)
 	}
 	if l.Put != "" {
-		r.Methods(http.MethodPut).PathPrefix(l.Put)
+		l.registRouter(r, http.MethodPut, l.Put)
 	}
 	if l.Delete != "" {
-		r.Methods(http.MethodDelete).PathPrefix(l.Delete)
+		l.registRouter(r, http.MethodDelete, l.Delete)
 	}
 	if l.Head != "" {
-		r.Methods(http.MethodHead).PathPrefix(l.Head)
+		l.registRouter(r, http.MethodHead, l.Head)
 	}
 	if l.Connect != "" {
-		r.Methods(http.MethodConnect).PathPrefix(l.Connect)
+		l.registRouter(r, http.MethodConnect, l.Connect)
 	}
 	if l.Options != "" {
-		r.Methods(http.MethodOptions).PathPrefix(l.Options)
+		l.registRouter(r, http.MethodOptions, l.Options)
 	}
 	if l.Trace != "" {
-		r.Methods(http.MethodTrace).PathPrefix(l.Trace)
+		l.registRouter(r, http.MethodTrace, l.Trace)
 	}
 	if l.Patch != "" {
-		r.Methods(http.MethodPatch).PathPrefix(l.Patch)
+		l.registRouter(r, http.MethodPatch, l.Patch)
 	}
+}
+
+func (*Location) registRouter(r *chi.Mux, method, pattern string) {
+	// For exact match
+	r.MethodFunc(method, pattern, noopHandler)
+
+	// For prefix match
+	if pattern == "/" {
+		pattern = "/*"
+	} else if pattern[len(pattern)-2:] != "/*" {
+		if pattern[len(pattern)-1] == '/' {
+			pattern = pattern + "*"
+		} else {
+			pattern = pattern + "/*"
+		}
+	}
+	r.MethodFunc(method, pattern, noopHandler)
 }
 
 func (l *Logger) ZapConfig(encoder zapcore.EncoderConfig) *zap.Config {

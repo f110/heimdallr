@@ -51,6 +51,12 @@ func Test_Authenticate(t *testing.T) {
 						},
 					},
 					{
+						Name: "commonly",
+						Permissions: []*configv2.Permission{
+							{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+						},
+					},
+					{
 						Name:               "topsecret",
 						MaxSessionDuration: &configv2.Duration{Duration: 1 * time.Minute},
 						Permissions: []*configv2.Permission{
@@ -85,6 +91,7 @@ func Test_Authenticate(t *testing.T) {
 						Bindings: []*configv2.Binding{
 							{Backend: "test", Permission: "ok"},
 							{Backend: "topsecret", Permission: "ok"},
+							{Backend: "commonly", Permission: "all"},
 						},
 					},
 				},
@@ -139,6 +146,19 @@ func Test_Authenticate(t *testing.T) {
 
 	t.Run("Cookie", func(t *testing.T) {
 		t.Parallel()
+
+		t.Run("commonly usage", func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "http://commonly.proxy.example.com/user", nil)
+			c, err := s.Cookie(session.New("foobar@example.com"))
+			require.NoError(t, err)
+			req.AddCookie(c)
+
+			user, _, err := a.Authenticate(context.TODO(), req)
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
+		})
 
 		t.Run("normal", func(t *testing.T) {
 			t.Parallel()
