@@ -4,6 +4,7 @@ go_library(
     name = "signer",
     srcs = [
         "request-signature-streaming.go",
+        "request-signature-streaming-unsigned-trailer.go",
         "request-signature-v2.go",
         "request-signature-v4.go",
         "utils.go",
@@ -12,7 +13,7 @@ go_library(
     importpath = "github.com/minio/minio-go/v7/pkg/signer",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/github.com/minio/md5-simd",
         "//vendor/github.com/minio/minio-go/v7/pkg/s3utils",
-        "//vendor/github.com/minio/sha256-simd",
     ],
 )

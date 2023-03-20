@@ -18,8 +18,10 @@
 package minio
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -44,6 +46,7 @@ type ErrorResponse struct {
 	Message    string
 	BucketName string
 	Key        string
+	Resource   string
 	RequestID  string `xml:"RequestId"`
 	HostID     string `xml:"HostId"`
 
@@ -63,14 +66,14 @@ type ErrorResponse struct {
 //
 // For example:
 //
-//   import s3 "github.com/minio/minio-go/v7"
-//   ...
-//   ...
-//   reader, stat, err := s3.GetObject(...)
-//   if err != nil {
-//      resp := s3.ToErrorResponse(err)
-//   }
-//   ...
+//	import s3 "github.com/minio/minio-go/v7"
+//	...
+//	...
+//	reader, stat, err := s3.GetObject(...)
+//	if err != nil {
+//	   resp := s3.ToErrorResponse(err)
+//	}
+//	...
 func ToErrorResponse(err error) ErrorResponse {
 	switch err := err.(type) {
 	case ErrorResponse:
@@ -98,6 +101,19 @@ const (
 	reportIssue = "Please report this issue at https://github.com/minio/minio-go/issues."
 )
 
+// xmlDecodeAndBody reads the whole body up to 1MB and
+// tries to XML decode it into v.
+// The body that was read and any error from reading or decoding is returned.
+func xmlDecodeAndBody(bodyReader io.Reader, v interface{}) ([]byte, error) {
+	// read the whole body (up to 1MB)
+	const maxBodyLength = 1 << 20
+	body, err := io.ReadAll(io.LimitReader(bodyReader, maxBodyLength))
+	if err != nil {
+		return nil, err
+	}
+	return bytes.TrimSpace(body), xmlDecoder(bytes.NewReader(body), v)
+}
+
 // httpRespToErrorResponse returns a new encoded ErrorResponse
 // structure as error.
 func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string) error {
@@ -111,7 +127,7 @@ func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string)
 		Server:     resp.Header.Get("Server"),
 	}
 
-	err := xmlDecoder(resp.Body, &errResp)
+	errBody, err := xmlDecodeAndBody(resp.Body, &errResp)
 	// Xml decoding failed with no body, fall back to HTTP headers.
 	if err != nil {
 		switch resp.StatusCode {
@@ -156,10 +172,17 @@ func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string)
 				Key:        objectName,
 			}
 		default:
+			msg := resp.Status
+			if len(errBody) > 0 {
+				msg = string(errBody)
+				if len(msg) > 1024 {
+					msg = msg[:1024] + "..."
+				}
+			}
 			errResp = ErrorResponse{
 				StatusCode: resp.StatusCode,
 				Code:       resp.Status,
-				Message:    resp.Status,
+				Message:    msg,
 				BucketName: bucketName,
 			}
 		}
@@ -226,26 +249,6 @@ func errUnexpectedEOF(totalRead, totalSize int64, bucketName, objectName string)
 		Message:    msg,
 		BucketName: bucketName,
 		Key:        objectName,
-	}
-}
-
-// errInvalidBucketName - Invalid bucket name response.
-func errInvalidBucketName(message string) error {
-	return ErrorResponse{
-		StatusCode: http.StatusBadRequest,
-		Code:       "InvalidBucketName",
-		Message:    message,
-		RequestID:  "minio",
-	}
-}
-
-// errInvalidObjectName - Invalid object name response.
-func errInvalidObjectName(message string) error {
-	return ErrorResponse{
-		StatusCode: http.StatusNotFound,
-		Code:       "NoSuchKey",
-		Message:    message,
-		RequestID:  "minio",
 	}
 }
 

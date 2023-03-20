@@ -31,7 +31,9 @@ go_library(
         "api-put-object-file-context.go",
         "api-put-object-multipart.go",
         "api-put-object-streaming.go",
+        "api-putobject-snowball.go",
         "api-remove.go",
+        "api-restore.go",
         "api-s3-datatypes.go",
         "api-select.go",
         "api-stat.go",
@@ -53,6 +55,7 @@ go_library(
     deps = [
         "//vendor/github.com/google/uuid",
         "//vendor/github.com/json-iterator/go",
+        "//vendor/github.com/klauspost/compress/s2",
         "//vendor/github.com/minio/md5-simd",
         "//vendor/github.com/minio/minio-go/v7/pkg/credentials",
         "//vendor/github.com/minio/minio-go/v7/pkg/encrypt",

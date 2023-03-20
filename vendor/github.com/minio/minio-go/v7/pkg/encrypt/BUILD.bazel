@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "encrypt",
-    srcs = ["server-side.go"],
+    srcs = [
+        "fips_disabled.go",
+        "server-side.go",
+    ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v7/pkg/encrypt",
     importpath = "github.com/minio/minio-go/v7/pkg/encrypt",
     visibility = ["//visibility:public"],
