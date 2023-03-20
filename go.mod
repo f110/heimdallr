@@ -11,6 +11,7 @@ require (
 	github.com/caos/oidc v1.0.0
 	github.com/fatih/color v1.12.0
 	github.com/fsnotify/fsnotify v1.6.0
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-logr/zapr v1.2.3
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible

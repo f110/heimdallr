@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "chi",
+    srcs = [
+        "chain.go",
+        "chi.go",
+        "context.go",
+        "mux.go",
+        "tree.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/go-chi/chi/v5",
+    importpath = "github.com/go-chi/chi/v5",
+    visibility = ["//visibility:public"],
+)

@@ -287,7 +287,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		p.ServeSlackWebHook(context.Background(), recoder, req)
 
 		res := recoder.Result()
-		// BadGateway is a normal status in test due to backend not found.
+		// BadGateway is a normal status in test because backend not found.
 		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 }
