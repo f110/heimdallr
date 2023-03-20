@@ -12,9 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"path"
 	"strings"
@@ -177,9 +175,6 @@ func (c *Client) GenerateCertificate(ctx context.Context, commonName string, alt
 	case http.StatusForbidden:
 		return nil, nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
 	}
-
-	b, _ := httputil.DumpResponse(res, true)
-	log.Print(string(b))
 
 	resObj := &PKIResponse{}
 	if err := json.NewDecoder(res.Body).Decode(resObj); err != nil {
