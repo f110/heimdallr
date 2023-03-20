@@ -16,7 +16,6 @@ go_library(
     deps = [
         "//pkg/cert",
         "//pkg/cmd",
-        "//pkg/config",
         "//pkg/config/configutil",
         "//pkg/config/configv2",
         "//pkg/k8s/api/etcd",

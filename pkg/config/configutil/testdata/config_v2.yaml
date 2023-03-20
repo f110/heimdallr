@@ -31,11 +31,12 @@ dashboard:
   template:
     loader: shotgun
 certificate_authority:
-  cert_file: ./ca.crt
-  key_file: ./ca.key
-  organization: test
-  organization_unit: dev
-  country: jp
+  local:
+    cert_file: ./ca.crt
+    key_file: ./ca.key
+    organization: test
+    organization_unit: dev
+    country: jp
 identity_provider:
   provider: google
   client_id: 70353433905-pqk31pc51d76hnk225tssjh9mkaof3da.apps.googleusercontent.com

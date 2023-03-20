@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
@@ -244,7 +243,7 @@ func (r *HeimdallrProxy) InternalTokenSecretName() string {
 
 func (r *HeimdallrProxy) CookieSecretName() string {
 	switch r.Spec.Session.Type {
-	case config.SessionTypeSecureCookie:
+	case configv2.SessionTypeSecureCookie:
 		return r.Name + "-cookie-secret"
 	default:
 		return r.Spec.Session.KeySecretRef.Name

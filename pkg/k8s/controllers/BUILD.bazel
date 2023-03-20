@@ -18,7 +18,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert",
-        "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/k8s/api/etcd",
         "//pkg/k8s/api/etcdv1alpha2",
@@ -98,7 +97,6 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":controllers"],
     deps = [
-        "//pkg/config",
         "//pkg/config/configv2",
         "//pkg/k8s/api/etcd",
         "//pkg/k8s/api/etcd/v1alpha2",

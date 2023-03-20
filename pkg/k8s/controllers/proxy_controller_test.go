@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 
-	"go.f110.dev/heimdallr/pkg/config"
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
@@ -241,11 +241,11 @@ func TestProxyController(t *testing.T) {
 		assert.NotEmpty(t, proxyConfigMap.Data[roleFilename])
 		assert.NotEmpty(t, proxyConfigMap.Data[rpcPermissionFilename])
 
-		roleConfig := make([]*config.Role, 0)
+		roleConfig := make([]*configv2.Role, 0)
 		if err := yaml.Unmarshal([]byte(proxyConfigMap.Data[roleFilename]), &roleConfig); err != nil {
 			t.Fatal(err)
 		}
-		roleMap := make(map[string]*config.Role)
+		roleMap := make(map[string]*configv2.Role)
 		for _, v := range roleConfig {
 			roleMap[v.Name] = v
 		}
