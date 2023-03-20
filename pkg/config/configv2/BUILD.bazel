@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert/vault",
-        "//pkg/config",
         "//pkg/k8s",
         "//pkg/rpc",
         "//vendor/github.com/go-sql-driver/mysql",

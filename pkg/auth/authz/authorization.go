@@ -9,7 +9,6 @@ import (
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
-	"go.f110.dev/heimdallr/pkg/config"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -68,7 +67,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 	}
 	for _, r := range user.Roles {
 		role, err := a.Config.AuthorizationEngine.GetRole(r)
-		if err == config.ErrRoleNotFound {
+		if err == configv2.ErrRoleNotFound {
 			continue
 		}
 		if err != nil {
@@ -105,7 +104,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 func (a *authorization) AuthorizationSocket(_ context.Context, backend *configv2.Backend, user *database.User) error {
 	for _, r := range user.Roles {
 		role, err := a.Config.AuthorizationEngine.GetRole(r)
-		if err == config.ErrRoleNotFound {
+		if err == configv2.ErrRoleNotFound {
 			continue
 		}
 		if err != nil {
