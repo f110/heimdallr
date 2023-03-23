@@ -16,13 +16,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/securecookie"
 	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
+	"go.f110.dev/heimdallr/pkg/session"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -131,8 +131,8 @@ func bootstrap(confFile string) error {
 	if os.IsNotExist(err) {
 		switch conf.AccessProxy.HTTP.Session.Type {
 		case configv2.SessionTypeSecureCookie:
-			hashKey := securecookie.GenerateRandomKey(32)
-			blockKey := securecookie.GenerateRandomKey(16)
+			hashKey := session.GenerateRandomKey(32)
+			blockKey := session.GenerateRandomKey(16)
 			f, err := os.Create(absPath(conf.AccessProxy.HTTP.Session.KeyFile, dir))
 			if err != nil {
 				return xerrors.Errorf(": %v", err)

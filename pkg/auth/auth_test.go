@@ -30,9 +30,12 @@ import (
 )
 
 func TestInit(t *testing.T) {
+	s, err := session.NewSecureCookieStore([]byte("test"), []byte("foobarfoobarfoob"), "")
+	require.NoError(t, err)
+
 	Init(
 		&configv2.Config{AccessProxy: &configv2.AccessProxy{}},
-		session.NewSecureCookieStore([]byte(""), []byte(""), ""),
+		s,
 		memory.NewUserDatabase(),
 		memory.NewTokenDatabase(),
 		&testRevokedCertClient{},
@@ -40,7 +43,8 @@ func TestInit(t *testing.T) {
 }
 
 func TestAuthenticate(t *testing.T) {
-	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	require.NoError(t, err)
 	u := memory.NewUserDatabase()
 	rc := &testRevokedCertClient{}
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
@@ -318,7 +322,8 @@ func TestAuthenticate(t *testing.T) {
 }
 
 func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
-	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	require.NoError(t, err)
 	u := memory.NewUserDatabase()
 	token := memory.NewTokenDatabase()
 	conf := &configv2.Config{
@@ -346,7 +351,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 			},
 		},
 	}
-	err := conf.AccessProxy.Setup(conf.AccessProxy.Backends)
+	err = conf.AccessProxy.Setup(conf.AccessProxy.Backends)
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(conf.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	require.NoError(t, err)

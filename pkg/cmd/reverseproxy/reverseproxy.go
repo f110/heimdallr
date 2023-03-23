@@ -595,11 +595,15 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if m.config.AccessProxy.HTTP.Bind != "" {
 		switch m.config.AccessProxy.HTTP.Session.Type {
 		case configv2.SessionTypeSecureCookie:
-			m.sessionStore = session.NewSecureCookieStore(
+			s, err := session.NewSecureCookieStore(
 				m.config.AccessProxy.HTTP.Session.HashKey,
 				m.config.AccessProxy.HTTP.Session.BlockKey,
 				m.config.AccessProxy.ServerNameHost,
 			)
+			if err != nil {
+				return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			}
+			m.sessionStore = s
 		case configv2.SessionTypeMemcached:
 			m.sessionStore = session.NewMemcachedStore(m.config.AccessProxy.HTTP.Session, m.config.AccessProxy.ServerNameHost)
 		}

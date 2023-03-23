@@ -28,7 +28,6 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/gorilla/securecookie"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -284,8 +283,8 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	}
 	f.Write(internalToken)
 	f.Close()
-	hashKey := securecookie.GenerateRandomKey(32)
-	blockKey := securecookie.GenerateRandomKey(16)
+	hashKey := session.GenerateRandomKey(32)
+	blockKey := session.GenerateRandomKey(16)
 	f, err = os.Create(filepath.Join(dir, "cookie_secret"))
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -295,7 +294,10 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	f.WriteString(hex.EncodeToString(blockKey))
 	f.Close()
 
-	sessionStore := session.NewSecureCookieStore([]byte(hex.EncodeToString(hashKey)), []byte(hex.EncodeToString(blockKey)), "e2e.f110.dev")
+	sessionStore, err := session.NewSecureCookieStore([]byte(hex.EncodeToString(hashKey)), []byte(hex.EncodeToString(blockKey)), "e2e.f110.dev")
+	if err != nil {
+		return nil, xerrors.Errorf(": %w", err)
+	}
 
 	if err := os.WriteFile(filepath.Join(dir, "identityprovider"), []byte("identityprovider"), 0644); err != nil {
 		return nil, xerrors.Errorf(": %w", err)
