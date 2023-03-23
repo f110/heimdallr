@@ -104,7 +104,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			Level: "debug",
 		},
 	}
-	s := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
+	require.NoError(t, err)
 	err = conf.AccessProxy.Setup(backends)
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(roles, rpcPermissions)

@@ -67,7 +67,7 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					m.Equal(f.Proxy.DomainHost, cookie.Domain)
 					m.True(cookie.HttpOnly)
 					m.True(cookie.Secure)
-					sess, err := f.Agents.DecodeCookieValue(cookie.Name, cookie.Value)
+					sess, err := f.Agents.DecodeCookieValue(cookie.Value)
 					m.NoError(err)
 					m.Empty(sess.Id)
 					m.NotEmpty(sess.Unique)

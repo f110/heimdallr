@@ -258,8 +258,8 @@ func (a *Agents) RPCClient(id string) *rpcclient.ClientWithUserToken {
 	return rpcclient.NewClientWithUserToken(conn).WithToken(token)
 }
 
-func (a *Agents) DecodeCookieValue(name, value string) (*session.Session, error) {
-	return a.sessionStore.DecodeValue(name, value)
+func (a *Agents) DecodeCookieValue(value string) (*session.Session, error) {
+	return a.sessionStore.DecodeValue(value)
 }
 
 type Agent struct {
