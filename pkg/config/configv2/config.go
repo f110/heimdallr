@@ -129,9 +129,10 @@ type CertificateAuthorityLocal struct {
 }
 
 type CertificateAuthorityVault struct {
-	Addr  string `json:"addr"`
-	Token string `json:"token"`
-	Role  string `json:"role"`
+	Addr      string `json:"addr"`
+	Token     string `json:"token"`
+	Role      string `json:"role"`
+	MountPath string `json:"mount_path,omitempty"`
 
 	Dir string `json:"-"`
 }
@@ -433,9 +434,12 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		} else {
 			ca.Vault.Dir = v
 		}
+		if ca.Vault.MountPath == "" {
+			ca.Vault.MountPath = "pki/"
+		}
 
 		if ca.Vault.Addr != "" {
-			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, "pki", ca.Vault.Role)
+			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, ca.Vault.MountPath, ca.Vault.Role)
 			if err != nil {
 				return xerrors.Errorf(": %w", err)
 			}
