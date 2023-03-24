@@ -25,7 +25,7 @@ type vaultCertificateAuthority struct {
 }
 
 func newVaultCertificateAuthority(db database.CertificateAuthority, conf *configv2.CertificateAuthorityVault) (*vaultCertificateAuthority, error) {
-	c, err := vault.NewClient(conf.Addr, conf.Token, "pki", conf.Role)
+	c, err := vault.NewClient(conf.Addr, conf.Token, conf.MountPath, conf.Role)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
