@@ -99,7 +99,7 @@ delete-cluster:
 	$(BAZEL) run //:delete_cluster
 
 push:
-	$(BAZEL) query 'kind(container_push, //...)' | xargs -n1 $(BAZEL) run --stamp
+	$(BAZEL) query 'kind(oci_push, //...)' | xargs -n1 $(BAZEL) run --stamp
 
 tag-container:
 	$(BAZEL) query 'kind(sh_binary, //container/...)' | xargs -n1 $(BAZEL) run --stamp

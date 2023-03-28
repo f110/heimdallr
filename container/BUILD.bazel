@@ -1,10 +1,10 @@
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("//:RELEASE.bzl", "RELEASE_MESSAGE", "VERSION")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES", "REGISTRY")
+load("//container:util.bzl", "container_image")
 
 pkg_tar(
-    name = "bin",
+    name = "bin_proxy",
     files = {
         "//cmd/heimdallr-proxy:linux": "/usr/local/bin/heimdallr-proxy",
     },
@@ -12,22 +12,16 @@ pkg_tar(
 )
 
 container_image(
-    name = "image",
-    base = "@com_google_distroless_base//image",
+    name = "proxy",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimdallr-proxy"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    tars = [":bin"],
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "push",
-    format = "Docker",
-    image = ":image",
-    registry = REGISTRY,
+    architecture = "amd64",
+    tars = [":bin_proxy"],
     repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
+    repotags = ["heimdallr/proxy:latest"],
 )
 
 pkg_tar(
@@ -40,23 +34,15 @@ pkg_tar(
 )
 
 container_image(
-    name = "image_rpcserver",
-    base = "@com_google_distroless_base//image",
+    name = "rpcserver",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heim-rpcserver"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
     tars = [":bin_rpcserver"],
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "push_rpcserver",
-    format = "Docker",
-    image = ":image_rpcserver",
-    registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
-    tag = "dev-{BUILD_USER}",
+    repotags = ["heimdallr/rpcserver:latest"]
 )
 
 pkg_tar(
@@ -68,23 +54,15 @@ pkg_tar(
 )
 
 container_image(
-    name = "image_dashboard",
-    base = "@com_google_distroless_base//image",
+    name = "dashboard",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heim-dashboard"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
     tars = [":bin_dashboard"],
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "push_dashboard",
-    format = "Docker",
-    image = ":image_dashboard",
-    registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["dashboard"],
-    tag = "dev-{BUILD_USER}",
+    repotags = ["heimdallr/dashboard:latest"]
 )
 
 pkg_tar(
@@ -96,22 +74,15 @@ pkg_tar(
 )
 
 container_image(
-    name = "image_ctl",
-    base = "@com_google_distroless_base//image",
+    name = "ctl",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimctl"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
     tars = [":bin_ctl"],
-)
-
-container_push(
-    name = "push_ctl",
-    format = "Docker",
-    image = ":image_ctl",
-    registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["ctl"],
-    tag = "dev-{BUILD_USER}",
+    repotags = ["heimdallr/ctl:latest"]
 )
 
 pkg_tar(
@@ -123,23 +94,15 @@ pkg_tar(
 )
 
 container_image(
-    name = "image_operator",
-    base = "@com_google_distroless_base//image",
+    name = "operator",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimdallrcontroller"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
     tars = [":bin_operator"],
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "push_operator",
-    format = "Docker",
-    image = ":image_operator",
-    registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["operator"],
-    tag = "dev-{BUILD_USER}",
+    repotags = ["heimdallr/operator:latest"]
 )
 
 pkg_tar(
@@ -151,23 +114,15 @@ pkg_tar(
 )
 
 container_image(
-    name = "image_sidecar",
-    base = "@com_google_distroless_base//image",
+    name = "sidecar",
+    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/discovery-sidecar"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
     tars = [":bin_sidecar"],
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "push_sidecar",
-    format = "Docker",
-    image = ":image_sidecar",
-    registry = REGISTRY,
     repository = CONTAINER_IMAGE_REPOSITORIES["sidecar"],
-    tag = "dev-{BUILD_USER}",
+    repotags = ["heimdallr/sidecar:latest"],
 )
 
 sh_binary(
@@ -176,14 +131,14 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["proxy"],
+        CONTAINER_IMAGE_REPOSITORIES["proxy"],
         "--sha256",
-        "$(location //container:push.digest)",
+        "$(location //container:proxy.digest)",
         "--tag",
         VERSION,
     ],
     data = [
-        "//container:push.digest",
+        "//container:proxy.digest",
     ],
 )
 
@@ -193,14 +148,14 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+        CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
         "--sha256",
-        "$(location //container:push_rpcserver.digest)",
+        "$(location //container:rpcserver.digest)",
         "--tag",
         VERSION,
     ],
     data = [
-        "//container:push_rpcserver.digest",
+        "//container:rpcserver.digest",
     ],
 )
 
@@ -210,14 +165,14 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+        CONTAINER_IMAGE_REPOSITORIES["dashboard"],
         "--sha256",
-        "$(location //container:push_dashboard.digest)",
+        "$(location //container:dashboard.digest)",
         "--tag",
         VERSION,
     ],
     data = [
-        "//container:push_dashboard.digest",
+        "//container:dashboard.digest",
     ],
 )
 
@@ -227,14 +182,14 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["ctl"],
+        CONTAINER_IMAGE_REPOSITORIES["ctl"],
         "--sha256",
-        "$(location //container:push_ctl.digest)",
+        "$(location //container:ctl.digest)",
         "--tag",
         VERSION,
     ],
     data = [
-        "//container:push_ctl.digest",
+        "//container:ctl.digest",
     ],
 )
 
@@ -244,14 +199,14 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["operator"],
+        CONTAINER_IMAGE_REPOSITORIES["operator"],
         "--sha256",
-        "$(location //container:push_operator.digest)",
+        "$(location //container:operator.digest)",
         "--tag",
         VERSION,
     ],
     data = [
-        ":push_operator.digest",
+        ":operator.digest",
     ],
 )
 
@@ -261,12 +216,12 @@ sh_binary(
     args = [
         "container",
         "--repository",
-        REGISTRY + "/" + CONTAINER_IMAGE_REPOSITORIES["sidecar"],
+        CONTAINER_IMAGE_REPOSITORIES["sidecar"],
         "--sha256",
-        "$(location //container:push_sidecar.digest)",
+        "$(location //container:sidecar.digest)",
         "--tag",
         VERSION,
         "--override",
     ],
-    data = [":push_sidecar.digest"],
+    data = [":sidecar.digest"],
 )
