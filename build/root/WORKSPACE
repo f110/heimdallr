@@ -22,9 +22,10 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_docker",
-    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
+    name = "rules_oci",
+    sha256 = "4a738bdbeacb0e1df070209dddfa7b55fed9bbc553b905cf3d2dd25115e0b598",
+    strip_prefix = "rules_oci-0.3.8",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v0.3.8/rules_oci-v0.3.8.tar.gz",
 )
 
 http_archive(
@@ -100,23 +101,23 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
-load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
-load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos = "repositories")
-load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
 
-_go_image_repos()
+rules_oci_dependencies()
 
-container_repositories()
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "LATEST_ZOT_VERSION", "oci_register_toolchains")
 
-load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
+)
 
-container_deps()
+load("@rules_oci//oci:pull.bzl", "oci_pull")
 
-container_pull(
+oci_pull(
     name = "com_google_distroless_base",
-    digest = "sha256:6010a285f9a871e8f1f33142d53e2ad6d9d102d647704ac191c191f5becc2516",
-    registry = "gcr.io",
-    repository = "distroless/base",
+    image = "gcr.io/distroless/base",
+    digest = "sha256:96cc7cc4e9cf999c74620522b9f25f91bdc6e1d076b16cbef20b404ad40aa86e", # linux/amd64
 )
 
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")

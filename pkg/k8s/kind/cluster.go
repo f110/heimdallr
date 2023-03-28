@@ -223,6 +223,8 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 				"docker.io/"+image.repoTags,
 				fmt.Sprintf("%s:%s", image.Repository, image.Tag),
 			)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
 				return err
 			}
