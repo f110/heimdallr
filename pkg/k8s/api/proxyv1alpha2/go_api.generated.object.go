@@ -969,12 +969,12 @@ func (in *MonitorSpec) DeepCopy() *MonitorSpec {
 }
 
 type BackupSpec struct {
-	IntervalInSecond int64          `json:"intervalInSecond"`
-	MaxBackups       int            `json:"maxBackups,omitempty"`
-	Bucket           string         `json:"bucket"`
-	Path             string         `json:"path"`
-	CredentialRef    SecretSelector `json:"credentialRef"`
-	Endpoint         string         `json:"endpoint,omitempty"`
+	IntervalInSeconds int64          `json:"intervalInSeconds"`
+	MaxBackups        int            `json:"maxBackups,omitempty"`
+	Bucket            string         `json:"bucket"`
+	Path              string         `json:"path"`
+	CredentialRef     SecretSelector `json:"credentialRef"`
+	Endpoint          string         `json:"endpoint,omitempty"`
 }
 
 func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
@@ -1219,9 +1219,9 @@ func (in *DefragmentSpec) DeepCopy() *DefragmentSpec {
 }
 
 type EtcdBackupSpec struct {
-	IntervalInSecond int                    `json:"intervalInSecond,omitempty"`
-	MaxBackups       int                    `json:"maxBackups,omitempty"`
-	Storage          *EtcdBackupStorageSpec `json:"storage,omitempty"`
+	IntervalInSeconds int                    `json:"intervalInSeconds,omitempty"`
+	MaxBackups        int                    `json:"maxBackups,omitempty"`
+	Storage           *EtcdBackupStorageSpec `json:"storage,omitempty"`
 }
 
 func (in *EtcdBackupSpec) DeepCopyInto(out *EtcdBackupSpec) {

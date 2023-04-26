@@ -87,9 +87,9 @@ message ProxyDataStoreEtcdSpec {
 }
 
 message EtcdBackupSpec {
-  optional int32                 interval_in_second = 1;
-  optional int32                 max_backups        = 2;
-  optional EtcdBackupStorageSpec storage            = 3;
+  optional int32                 interval_in_seconds = 1;
+  optional int32                 max_backups         = 2;
+  optional EtcdBackupStorageSpec storage             = 3;
 }
 
 message EtcdBackupStorageSpec {
@@ -161,12 +161,12 @@ message MonitorSpec {
 }
 
 message BackupSpec {
-  int64           interval_in_second = 1;
-  optional int32  max_backups        = 2;
-  string          bucket             = 3;
-  string          path               = 4;
-  SecretSelector  credential_ref     = 5;
-  optional string endpoint           = 6;
+  int64           interval_in_seconds = 1;
+  optional int32  max_backups         = 2;
+  string          bucket              = 3;
+  string          path                = 4;
+  SecretSelector  credential_ref      = 5;
+  optional string endpoint            = 6;
 }
 
 message ProxyStatus {

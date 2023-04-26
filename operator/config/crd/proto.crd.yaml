@@ -2222,7 +2222,7 @@ spec:
                     type: object
                   endpoint:
                     type: string
-                  intervalInSecond:
+                  intervalInSeconds:
                     format: int64
                     type: integer
                   maxBackups:
@@ -2230,7 +2230,7 @@ spec:
                   path:
                     type: string
                 required:
-                - intervalInSecond
+                - intervalInSeconds
                 - bucket
                 - path
                 - credentialRef
@@ -2272,7 +2272,7 @@ spec:
                         type: boolean
                       backup:
                         properties:
-                          intervalInSecond:
+                          intervalInSeconds:
                             type: integer
                           maxBackups:
                             type: integer
