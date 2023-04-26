@@ -5,7 +5,7 @@ container_image is a macro function for creating and publishing the container im
 Publishing the image doesn't regard "repotags". So published image doesn't have the tag.
 """
 
-def container_image(name, repository, repotags, base = None, entrypoint = [], labels = {}, architecture = "", tars = []):
+def container_image(name, repotags, base = None, entrypoint = [], labels = {}, architecture = "", tars = []):
     oci_image(
         name = name,
         base = base,
@@ -34,5 +34,5 @@ def container_image(name, repository, repotags, base = None, entrypoint = [], la
     oci_push(
         name = "%s.push" % name,
         image = ":%s" % name,
-        repository = repository,
+        repotags = repotags,
     )

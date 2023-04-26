@@ -13,15 +13,14 @@ pkg_tar(
 
 container_image(
     name = "proxy",
+    architecture = "amd64",
     base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimdallr-proxy"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    architecture = "amd64",
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["proxy"] + ":latest"],
     tars = [":bin_proxy"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
-    repotags = ["heimdallr/proxy:latest"],
 )
 
 pkg_tar(
@@ -40,9 +39,8 @@ container_image(
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["rpcserver"] + ":latest"],
     tars = [":bin_rpcserver"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
-    repotags = ["heimdallr/rpcserver:latest"]
 )
 
 pkg_tar(
@@ -60,9 +58,8 @@ container_image(
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["dashboard"] + ":latest"],
     tars = [":bin_dashboard"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["dashboard"],
-    repotags = ["heimdallr/dashboard:latest"]
 )
 
 pkg_tar(
@@ -80,9 +77,8 @@ container_image(
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["ctl"] + ":latest"],
     tars = [":bin_ctl"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["ctl"],
-    repotags = ["heimdallr/ctl:latest"]
 )
 
 pkg_tar(
@@ -100,9 +96,8 @@ container_image(
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["operator"] + ":latest"],
     tars = [":bin_operator"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["operator"],
-    repotags = ["heimdallr/operator:latest"]
 )
 
 pkg_tar(
@@ -120,9 +115,8 @@ container_image(
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
+    repotags = [CONTAINER_IMAGE_REPOSITORIES["sidecar"] + ":latest"],
     tars = [":bin_sidecar"],
-    repository = CONTAINER_IMAGE_REPOSITORIES["sidecar"],
-    repotags = ["heimdallr/sidecar:latest"],
 )
 
 sh_binary(
