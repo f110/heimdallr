@@ -484,7 +484,7 @@ func (r *HeimdallrProxy) newEtcdCluster() *etcdv1alpha2.EtcdCluster {
 		}
 
 		if r.Spec.DataStore.Etcd.Backup != nil {
-			ec = etcd.Factory(ec, etcd.Backup(r.Spec.DataStore.Etcd.Backup.IntervalInSecond, r.Spec.DataStore.Etcd.Backup.MaxBackups))
+			ec = etcd.Factory(ec, etcd.Backup(r.Spec.DataStore.Etcd.Backup.IntervalInSeconds, r.Spec.DataStore.Etcd.Backup.MaxBackups))
 
 			switch {
 			case r.Spec.DataStore.Etcd.Backup.Storage.MinIO != nil:

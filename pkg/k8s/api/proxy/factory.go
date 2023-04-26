@@ -84,7 +84,7 @@ func EtcdBackup(interval, maxBackups int) k8sfactory.Trait {
 		if p.Spec.DataStore.Etcd.Backup == nil {
 			p.Spec.DataStore.Etcd.Backup = &proxyv1alpha2.EtcdBackupSpec{}
 		}
-		p.Spec.DataStore.Etcd.Backup.IntervalInSecond = interval
+		p.Spec.DataStore.Etcd.Backup.IntervalInSeconds = interval
 		p.Spec.DataStore.Etcd.Backup.MaxBackups = maxBackups
 	}
 }

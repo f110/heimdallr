@@ -43,7 +43,7 @@ spec:
         schedule: "18 13 * * *"
   development: true
 #  backup:
-#    intervalInSecond: 60
+#    intervalInSeconds: 60
 #    maxBackups: 10
 #    bucket: proxy
 #    path: backup
