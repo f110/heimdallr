@@ -21,7 +21,7 @@ def go_binary_for_container(**kwargs):
 
         go_binary(
             name = platform,
-            goarch = "amd64",
-            goos = "linux",
+            goarch = arch,
+            goos = os,
             **kwargs
         )
