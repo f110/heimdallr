@@ -220,7 +220,7 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 				"ctr", "-n", "k8s.io",
 				"images", "tag",
 				"--force",
-				"docker.io/"+image.repoTags,
+				image.repoTags,
 				fmt.Sprintf("%s:%s", image.Repository, image.Tag),
 			)
 			cmd.Stdout = os.Stdout
