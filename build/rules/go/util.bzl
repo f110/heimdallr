@@ -14,3 +14,14 @@ def multiplatform_go_binary(name_prefix, **kwargs):
             goos = os,
             **kwargs
         )
+
+def go_binary_for_container(**kwargs):
+    for platform in ["linux_amd64", "linux_arm64"]:
+        os, arch = platform.split("_")
+
+        go_binary(
+            name = platform,
+            goarch = "amd64",
+            goos = "linux",
+            **kwargs
+        )

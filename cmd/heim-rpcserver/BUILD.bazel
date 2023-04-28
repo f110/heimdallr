@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("//build/rules/go:util.bzl", "go_binary_for_container")
 
 go_library(
     name = "heim-rpcserver_lib",
@@ -19,10 +20,7 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-go_binary(
-    name = "linux",
+go_binary_for_container(
     embed = [":heim-rpcserver_lib"],
-    goarch = "amd64",
-    goos = "linux",
     visibility = ["//visibility:public"],
 )

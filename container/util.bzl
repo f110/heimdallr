@@ -1,19 +1,37 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push", "oci_tarball")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push", "oci_tarball")
 
 """
 container_image is a macro function for creating and publishing the container image.
 Publishing the image doesn't regard "repotags". So published image doesn't have the tag.
 """
 
-def container_image(name, repotags, base = None, entrypoint = [], labels = {}, architecture = "", tars = []):
+def container_image(name, repotags, amd64_tar, arm64_tar, base = None, entrypoint = [], labels = {}):
     oci_image(
-        name = name,
+        name = "%s.linux_amd64" % name,
         base = base,
         entrypoint = entrypoint,
         labels = labels,
-        architecture = architecture,
-        tars = tars,
+        architecture = "amd64",
+        tars = [amd64_tar],
         visibility = ["//visibility:public"],
+    )
+
+    oci_image(
+        name = "%s.linux_arm64" % name,
+        base = base,
+        entrypoint = entrypoint,
+        labels = labels,
+        architecture = "arm64",
+        tars = [arm64_tar],
+        visibility = ["//visibility:public"],
+    )
+
+    oci_image_index(
+        name = name,
+        images = [
+            "%s.linux_amd64" % name,
+            "%s.linux_arm64" % name,
+        ],
     )
 
     native.genrule(
@@ -25,8 +43,15 @@ def container_image(name, repotags, base = None, entrypoint = [], labels = {}, a
     )
 
     oci_tarball(
-        name = "%s.tar" % name,
-        image = ":%s" % name,
+        name = "%s.amd64_tar" % name,
+        image = ":%s.linux_amd64" % name,
+        repotags = repotags,
+        visibility = ["//visibility:public"],
+    )
+
+    oci_tarball(
+        name = "%s.arm64_tar" % name,
+        image = ":%s.linux_arm64" % name,
         repotags = repotags,
         visibility = ["//visibility:public"],
     )

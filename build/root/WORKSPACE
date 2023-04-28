@@ -116,8 +116,12 @@ load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 oci_pull(
     name = "com_google_distroless_base",
-    digest = "sha256:96cc7cc4e9cf999c74620522b9f25f91bdc6e1d076b16cbef20b404ad40aa86e",  # linux/amd64
+    digest = "sha256:e711a716d8b7fe9c4f7bbf1477e8e6b451619fcae0bc94fdf6109d490bf6cea0",
     image = "gcr.io/distroless/base",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
 )
 
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
@@ -125,10 +129,17 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
 http_file(
-    name = "grpc_health_probe",
+    name = "grpc_health_probe_amd64",
     downloaded_file_path = "grpc_health_probe",
     sha256 = "ded15e598d887ccc47bf2321371950bbf930f5e4856b9f75712ce4b2b5120480",
     urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.11/grpc_health_probe-linux-amd64"],
+)
+
+http_file(
+    name = "grpc_health_probe_arm64",
+    downloaded_file_path = "grpc_health_probe",
+    sha256 = "c90f9894f49bab503b22936df1adf5251f7291e26edbf40de549a70b4ebaba70",
+    urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.11/grpc_health_probe-linux-arm64"],
 )
 
 load("//build/rules/kustomize:def.bzl", "kustomize_binary")
