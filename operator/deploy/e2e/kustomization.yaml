@@ -6,3 +6,18 @@ resources:
 images:
   - name: ghcr.io/f110/heimdallr/operator
     newTag: e2e
+
+patchesJson6902:
+  - target:
+      version: v1
+      group: apps
+      kind: Deployment
+      name: heimdallr-operator
+      namespace: heimdallr
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --log-level=debug
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --log-encoding=console
