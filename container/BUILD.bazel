@@ -23,12 +23,12 @@ container_image(
     name = "proxy",
     amd64_tar = ":bin_proxy_amd64",
     arm64_tar = ":bin_proxy_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimdallr-proxy"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["proxy"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["proxy"],
+    tags = ["latest"],
 )
 
 pkg_tar(
@@ -53,12 +53,12 @@ container_image(
     name = "rpcserver",
     amd64_tar = ":bin_rpcserver_amd64",
     arm64_tar = ":bin_rpcserver_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heim-rpcserver"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["rpcserver"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["rpcserver"],
+    tags = ["latest"],
 )
 
 pkg_tar(
@@ -81,12 +81,12 @@ container_image(
     name = "dashboard",
     amd64_tar = ":bin_dashboard_amd64",
     arm64_tar = ":bin_dashboard_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heim-dashboard"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["dashboard"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["dashboard"],
+    tags = ["latest"],
 )
 
 pkg_tar(
@@ -109,12 +109,12 @@ container_image(
     name = "ctl",
     amd64_tar = ":bin_ctl_amd64",
     arm64_tar = ":bin_ctl_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimctl"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["ctl"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["ctl"],
+    tags = ["latest"],
 )
 
 pkg_tar(
@@ -137,12 +137,12 @@ container_image(
     name = "operator",
     amd64_tar = ":bin_operator_amd64",
     arm64_tar = ":bin_operator_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/heimdallrcontroller"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["operator"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["operator"],
+    tags = ["latest"],
 )
 
 pkg_tar(
@@ -165,12 +165,12 @@ container_image(
     name = "sidecar",
     amd64_tar = ":bin_sidecar_amd64",
     arm64_tar = ":bin_sidecar_arm64",
-    base = "@com_google_distroless_base",
     entrypoint = ["/usr/local/bin/discovery-sidecar"],
     labels = {
         "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
     },
-    repotags = [CONTAINER_IMAGE_REPOSITORIES["sidecar"] + ":latest"],
+    repository = CONTAINER_IMAGE_REPOSITORIES["sidecar"],
+    tags = ["latest"],
 )
 
 sh_binary(

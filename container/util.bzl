@@ -2,26 +2,24 @@ load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push", "oc
 
 """
 container_image is a macro function for creating and publishing the container image.
-Publishing the image doesn't regard "repotags". So published image doesn't have the tag.
+Publishing the image doesn't regard "tags". So published image doesn't have the tag.
 """
 
-def container_image(name, repotags, amd64_tar, arm64_tar, base = None, entrypoint = [], labels = {}):
+def container_image(name, tags, amd64_tar, arm64_tar, base_amd64 = "@com_google_distroless_base_amd64", base_arm64 = "@com_google_distroless_base_arm64", entrypoint = [], labels = {}, repository = None):
     oci_image(
         name = "%s.linux_amd64" % name,
-        base = base,
+        base = base_amd64,
         entrypoint = entrypoint,
         labels = labels,
-        architecture = "amd64",
         tars = [amd64_tar],
         visibility = ["//visibility:public"],
     )
 
     oci_image(
         name = "%s.linux_arm64" % name,
-        base = base,
+        base = base_arm64,
         entrypoint = entrypoint,
         labels = labels,
-        architecture = "arm64",
         tars = [arm64_tar],
         visibility = ["//visibility:public"],
     )
@@ -45,19 +43,20 @@ def container_image(name, repotags, amd64_tar, arm64_tar, base = None, entrypoin
     oci_tarball(
         name = "%s.amd64_tar" % name,
         image = ":%s.linux_amd64" % name,
-        repotags = repotags,
+        repo_tags = [repository + ":" + x + "_amd64" for x in tags],
         visibility = ["//visibility:public"],
     )
 
     oci_tarball(
         name = "%s.arm64_tar" % name,
         image = ":%s.linux_arm64" % name,
-        repotags = repotags,
+        repo_tags = [repository + ":" + x + "_arm64" for x in tags],
         visibility = ["//visibility:public"],
     )
 
     oci_push(
         name = "%s.push" % name,
         image = ":%s" % name,
-        repotags = repotags,
+        repository = repository,
+        remote_tags = tags,
     )

@@ -23,9 +23,9 @@ http_archive(
 
 http_archive(
     name = "rules_oci",
-    sha256 = "d7b0760ba28554b71941ea0bbfd0a9f089bf250fd4448f9c116e1cb7a63b3933",
-    strip_prefix = "rules_oci-0.4.0",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v0.4.0/rules_oci-v0.4.0.tar.gz",
+    sha256 = "be1fce88d05dd0b946f3c874f8af1a473468ea4daba0b69b459a5866416e10d5",
+    strip_prefix = "rules_oci-1.4.2",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.4.2/rules_oci-v1.4.2.tar.gz",
 )
 
 http_archive(
@@ -82,13 +82,15 @@ oci_register_toolchains(
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 oci_pull(
-    name = "com_google_distroless_base",
-    digest = "sha256:e711a716d8b7fe9c4f7bbf1477e8e6b451619fcae0bc94fdf6109d490bf6cea0",
-    image = "gcr.io/distroless/base",
-    platforms = [
-        "linux/amd64",
-        "linux/arm64",
-    ],
+    name = "com_google_distroless_base_amd64",
+    digest = "sha256:2fc6702c4a81d196ef1f5a7561b9ab74f243d8633af15aaf7ac0632650fe07b7",  # latest-amd64
+    image = "gcr.io/distroless/base-debian12",
+)
+
+oci_pull(
+    name = "com_google_distroless_base_arm64",
+    digest = "sha256:a12a6de828bd0d0fb5f7ad49a161284efc0846b9204beab73ed75100cd1ce51e",  # latest-arm64
+    image = "gcr.io/distroless/base-debian12",
 )
 
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
