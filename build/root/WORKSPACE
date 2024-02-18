@@ -23,17 +23,16 @@ http_archive(
 
 http_archive(
     name = "rules_oci",
-    sha256 = "be1fce88d05dd0b946f3c874f8af1a473468ea4daba0b69b459a5866416e10d5",
-    strip_prefix = "rules_oci-1.4.2",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.4.2/rules_oci-v1.4.2.tar.gz",
+    sha256 = "cf6b8be82cde30daef18a09519d75269650317e40d917c8633cf8e3ab5645ea5",
+    strip_prefix = "rules_oci-1.7.2",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.2/rules_oci-v1.7.2.tar.gz",
 )
 
 http_archive(
     name = "rules_pkg",
-    sha256 = "335632735e625d408870ec3e361e192e99ef7462315caa887417f4d88c4c8fb8",
+    sha256 = "d250924a2ecc5176808fc4c25d5cf5e9e79e6346d79d5ab1c493e289e722d1d0",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.9.0/rules_pkg-0.9.0.tar.gz",
-        "https://github.com/bazelbuild/rules_pkg/releases/download/0.9.0/rules_pkg-0.9.0.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/0.10.1/rules_pkg-0.10.1.tar.gz",
     ],
 )
 
