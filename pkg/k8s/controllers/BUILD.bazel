@@ -33,7 +33,7 @@ go_library(
         "//pkg/rpc",
         "//pkg/version",
         "//vendor/cloud.google.com/go/storage",
-        "//vendor/github.com/bradleyfalzon/ghinstallation",
+        "//vendor/github.com/bradleyfalzon/ghinstallation/v2:ghinstallation",
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/google/go-github/v41/github",
         "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager",
