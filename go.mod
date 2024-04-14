@@ -1,13 +1,15 @@
 module go.f110.dev/heimdallr
 
-go 1.20
+go 1.21
+
+toolchain go1.22.2
 
 require (
 	cloud.google.com/go/storage v1.28.1
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/bazelbuild/buildtools v0.0.0-20220907133145-b9bfff5d7f91
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
-	github.com/bradleyfalzon/ghinstallation v1.1.1
+	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/caos/oidc v1.0.0
 	github.com/fatih/color v1.12.0
 	github.com/fsnotify/fsnotify v1.6.0
@@ -15,9 +17,9 @@ require (
 	github.com/go-logr/zapr v1.2.3
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/golang-jwt/jwt/v4 v4.4.3
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/protobuf v1.5.3
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.1.4
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-github/v41 v41.0.0
@@ -82,7 +84,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v0.0.0-20170826194844-b3af78e1d186 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/docker/cli v20.10.7+incompatible // indirect
 	github.com/docker/docker v17.12.1-ce+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
@@ -100,7 +101,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/gnostic v0.6.9 // indirect
-	github.com/google/go-github/v29 v29.0.2 // indirect
+	github.com/google/go-github/v60 v60.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
