@@ -54,7 +54,7 @@ sh_binary(
         "cluster",
         "create",
         "--kind=$(location @kind//:file)",
-        "--k8s-version=v1.22.0",
+        "--k8s-version=v1.28.7",
         "--crd=$(location //operator/config/crd:crd)",
     ],
     data = [
