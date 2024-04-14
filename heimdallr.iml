@@ -9,7 +9,6 @@
       <excludeFolder url="file://$MODULE_DIR$/bazel-heimdallr" />
       <excludeFolder url="file://$MODULE_DIR$/bazel-out" />
       <excludeFolder url="file://$MODULE_DIR$/bazel-testlogs" />
-      <excludeFolder url="file://$MODULE_DIR$/.sl" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Bundled Protobuf Distribution" level="application" />
