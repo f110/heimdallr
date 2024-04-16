@@ -50,6 +50,8 @@ type Controller struct {
 	useFinalizer bool
 }
 
+var _ cache.ResourceEventHandler = (*Controller)(nil)
+
 func NewController(base ControllerBase, coreClient kubernetes.Interface) *Controller {
 	c := &Controller{
 		Base: base,
@@ -187,7 +189,7 @@ func (c *Controller) worker() {
 	c.log.Debug("Stop worker")
 }
 
-func (c *Controller) OnAdd(obj interface{}) {
+func (c *Controller) OnAdd(obj interface{}, _ bool) {
 	c.enqueue(obj)
 }
 

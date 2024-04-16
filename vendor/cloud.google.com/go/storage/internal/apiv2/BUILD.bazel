@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "apiv2",
     srcs = [
+        "auxiliary.go",
         "doc.go",
-        "metadata.go",
         "storage_client.go",
         "version.go",
     ],
@@ -14,14 +14,14 @@ go_library(
     deps = [
         "//vendor/cloud.google.com/go/iam/apiv1/iampb",
         "//vendor/cloud.google.com/go/storage/internal",
-        "//vendor/cloud.google.com/go/storage/internal/apiv2/stubs",
+        "//vendor/cloud.google.com/go/storage/internal/apiv2/storagepb",
         "//vendor/github.com/googleapis/gax-go/v2:gax-go",
         "//vendor/google.golang.org/api/iterator",
         "//vendor/google.golang.org/api/option",
         "//vendor/google.golang.org/api/option/internaloption",
         "//vendor/google.golang.org/api/transport/grpc",
         "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/metadata",
+        "//vendor/google.golang.org/grpc/codes",
         "//vendor/google.golang.org/protobuf/proto",
     ],
 )
