@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "oidc",
+    srcs = [
+        "authorization.go",
+        "code_challenge.go",
+        "device_authorization.go",
+        "discovery.go",
+        "error.go",
+        "introspection.go",
+        "jwt_profile.go",
+        "keyset.go",
+        "revocation.go",
+        "session.go",
+        "token.go",
+        "token_request.go",
+        "types.go",
+        "userinfo.go",
+        "util.go",
+        "verifier.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/zitadel/oidc/v3/pkg/oidc",
+    importpath = "github.com/zitadel/oidc/v3/pkg/oidc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/go-jose/go-jose/v4:go-jose",
+        "//vendor/github.com/muhlemmer/gu",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/crypto",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/strings",
+        "//vendor/github.com/zitadel/schema",
+        "//vendor/golang.org/x/oauth2",
+        "//vendor/golang.org/x/text/language",
+    ],
+)

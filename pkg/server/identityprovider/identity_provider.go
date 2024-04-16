@@ -1,13 +1,16 @@
 package identityprovider
 
 import (
+	"context"
 	"io"
+	"log"
 	"net/http"
+	"net/http/httputil"
 	"time"
 
-	"github.com/caos/oidc/pkg/client/rp"
-	"github.com/caos/oidc/pkg/oidc"
 	"github.com/julienschmidt/httprouter"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
@@ -25,10 +28,22 @@ type Server struct {
 	database        database.UserDatabase
 	sessionStore    session.Store
 	oauth2Config    oauth2.Config
-	idTokenVerifier rp.IDTokenVerifier
+	idTokenVerifier *rp.IDTokenVerifier
 }
 
 var _ server.ChildServer = &Server{}
+
+type dumpTransport struct{}
+
+func (*dumpTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	b, _ := httputil.DumpRequest(r, true)
+	log.Printf("REQUEST: %s", string(b))
+
+	res, err := http.DefaultTransport.RoundTrip(r)
+	b, _ = httputil.DumpResponse(res, true)
+	log.Printf("RESPONSE: %s", string(b))
+	return res, err
+}
 
 func NewServer(conf *configv2.Config, database database.UserDatabase, store session.Store) (*Server, error) {
 	issuer := ""
@@ -51,11 +66,13 @@ func NewServer(conf *configv2.Config, database database.UserDatabase, store sess
 	}
 
 	relyingParty, err := rp.NewRelyingPartyOIDC(
+		context.TODO(),
 		issuer,
 		conf.IdentityProvider.ClientId,
 		conf.IdentityProvider.ClientSecret,
 		conf.IdentityProvider.RedirectUrl,
 		scopes,
+		rp.WithHTTPClient(&http.Client{Transport: &dumpTransport{}}),
 	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
@@ -133,14 +150,14 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 	logger.Log.Debug("raw_id_token", zap.String("token", rawIdToken))
-	idToken, err := rp.VerifyIDToken(req.Context(), rawIdToken, s.idTokenVerifier)
+	idToken, err := rp.VerifyIDToken[*oidc.IDTokenClaims](req.Context(), rawIdToken, s.idTokenVerifier)
 	if err != nil {
 		logger.Log.Info("Not verified id token", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if idToken.GetEmail() == "" {
+	if idToken.Email == "" {
 		logger.Log.Info("Could not get email address. Probably, you should set more scope.")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -148,15 +165,15 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 
 	rootUser := false
 	for _, v := range s.Config.AuthorizationEngine.RootUsers {
-		if v == idToken.GetEmail() {
+		if v == idToken.Email {
 			rootUser = true
 			break
 		}
 	}
 
-	user, err := s.database.Get(idToken.GetEmail())
+	user, err := s.database.Get(idToken.Email)
 	if err != nil && !rootUser {
-		logger.Log.Info("Could not get email", zap.Error(err), zap.String("email", idToken.GetEmail()))
+		logger.Log.Info("Could not get email", zap.Error(err), zap.String("email", idToken.Email))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -165,7 +182,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	if sess.From != "" {
 		redirectUrl = sess.From
 	}
-	sess.SetId(idToken.GetEmail())
+	sess.SetId(idToken.Email)
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		logger.Log.Info("Failed write session", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
