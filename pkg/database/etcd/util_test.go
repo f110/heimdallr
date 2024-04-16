@@ -42,8 +42,8 @@ func TestMain(m *testing.M) {
 	c := embed.NewConfig()
 	c.Dir = dataDir
 	c.LogLevel = "fatal"
-	c.LPUrls[0].Host = "localhost:0"
-	c.LCUrls[0] = *etcdUrl
+	c.ListenPeerUrls[0].Host = "localhost:0"
+	c.ListenClientUrls[0] = *etcdUrl
 
 	e, err := embed.StartEtcd(c)
 	if err != nil {

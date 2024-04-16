@@ -6,7 +6,6 @@ go_library(
         "blake2b.go",
         "blake2bAVX2_amd64.go",
         "blake2bAVX2_amd64.s",
-        "blake2b_amd64.go",
         "blake2b_amd64.s",
         "blake2b_generic.go",
         "blake2b_ref.go",

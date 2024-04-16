@@ -66,6 +66,7 @@ go_library(
         "//vendor/golang.org/x/net/http2",
         "//vendor/golang.org/x/net/trace",
         "//vendor/google.golang.org/grpc",
+        "//vendor/google.golang.org/grpc/credentials/insecure",
         "//vendor/google.golang.org/grpc/grpclog",
         "//vendor/google.golang.org/grpc/keepalive",
         "//vendor/gopkg.in/natefinch/lumberjack.v2:lumberjack_v2",

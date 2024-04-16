@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "base.go",
         "doc.go",
+        "health.go",
         "metrics.go",
         "peer.go",
     ],
@@ -19,6 +20,7 @@ go_library(
         "//vendor/go.etcd.io/etcd/client/pkg/v3/types",
         "//vendor/go.etcd.io/etcd/raft/v3:raft",
         "//vendor/go.etcd.io/etcd/server/v3/auth",
+        "//vendor/go.etcd.io/etcd/server/v3/config",
         "//vendor/go.etcd.io/etcd/server/v3/etcdserver",
         "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api",
         "//vendor/go.etcd.io/etcd/server/v3/etcdserver/api/membership",

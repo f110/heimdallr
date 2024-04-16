@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "doc.go",
         "encoder.go",
+        "filter.go",
         "iterator.go",
         "key.go",
         "kv.go",

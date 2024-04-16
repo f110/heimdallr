@@ -12,6 +12,7 @@ go_library(
     importpath = "cloud.google.com/go/storage/internal/apiv2",
     visibility = ["//vendor/cloud.google.com/go/storage:__subpackages__"],
     deps = [
+        "//vendor/cloud.google.com/go/iam/apiv1/iampb",
         "//vendor/cloud.google.com/go/storage/internal",
         "//vendor/cloud.google.com/go/storage/internal/apiv2/stubs",
         "//vendor/github.com/googleapis/gax-go/v2:gax-go",
@@ -19,7 +20,6 @@ go_library(
         "//vendor/google.golang.org/api/option",
         "//vendor/google.golang.org/api/option/internaloption",
         "//vendor/google.golang.org/api/transport/grpc",
-        "//vendor/google.golang.org/genproto/googleapis/iam/v1:iam",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/metadata",
         "//vendor/google.golang.org/protobuf/proto",
