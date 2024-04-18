@@ -370,8 +370,8 @@ func (m *mainProcess) startEmbedEtcd() error {
 	c := embed.NewConfig()
 	c.Dir = m.config.Datastore.DataDir
 	c.LogLevel = "fatal"
-	c.LPUrls[0].Host = "localhost:0"
-	c.LCUrls[0] = *m.config.Datastore.EtcdUrl
+	c.ListenPeerUrls[0].Host = "localhost:0"
+	c.ListenClientUrls[0] = *m.config.Datastore.EtcdUrl
 
 	e, err := embed.StartEtcd(c)
 	if err != nil {
@@ -381,7 +381,7 @@ func (m *mainProcess) startEmbedEtcd() error {
 
 	select {
 	case <-e.Server.ReadyNotify():
-		logger.Log.Info("Start embed etcd", zap.String("url", c.LCUrls[0].String()))
+		logger.Log.Info("Start embed etcd", zap.String("url", c.ListenClientUrls[0].String()))
 	case <-time.After(10 * time.Second):
 		logger.Log.Error("Failed start embed etcd")
 		return xerrors.New("failed start embed etcd")

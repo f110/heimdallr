@@ -25,6 +25,7 @@ go_library(
     importpath = "go.etcd.io/etcd/server/v3/mvcc",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/github.com/dustin/go-humanize",
         "//vendor/github.com/google/btree",
         "//vendor/github.com/prometheus/client_golang/prometheus",
         "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
