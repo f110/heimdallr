@@ -2,12 +2,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "zapr",
-    srcs = ["zapr.go"],
+    srcs = [
+        "slogzapr.go",
+        "zapr.go",
+        "zapr_noslog.go",
+        "zapr_slog.go",
+    ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/go-logr/zapr",
     importpath = "github.com/go-logr/zapr",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/go-logr/logr",
+        "//vendor/github.com/go-logr/logr/slogr",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
     ],
