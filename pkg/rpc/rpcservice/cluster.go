@@ -3,7 +3,7 @@ package rpcservice
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -65,10 +65,7 @@ func (s *ClusterService) AgentList(_ context.Context, _ *rpc.RequestAgentList) (
 
 	result := make([]*rpc.Agent, len(connected))
 	for i, v := range connected {
-		connectedAt, err := ptypes.TimestampProto(v.ConnectedAt)
-		if err != nil {
-			return nil, err
-		}
+		connectedAt := timestamppb.New(v.ConnectedAt)
 
 		result[i] = &rpc.Agent{
 			Name:        v.Name,
