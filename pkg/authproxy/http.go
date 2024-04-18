@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-github/v41/github"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -382,10 +382,10 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 
 	if user.Id != "" {
 		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-			StandardClaims: jwt.StandardClaims{
-				Id:        user.Id,
-				IssuedAt:  time.Now().Unix(),
-				ExpiresAt: time.Now().Add(TokenExpiration).Unix(),
+			RegisteredClaims: jwt.RegisteredClaims{
+				Subject:   user.Id,
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
 			},
 			Roles: user.Roles,
 		})

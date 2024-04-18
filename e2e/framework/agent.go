@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/xerrors"
@@ -244,10 +244,10 @@ func (a *Agents) RPCClient(id string) *rpcclient.ClientWithUserToken {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		StandardClaims: jwt.StandardClaims{
-			Id:        RootUserId,
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   RootUserId,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 		},
 	})
 	token, err := claim.SignedString(a.signPrivateKey)

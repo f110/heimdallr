@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
@@ -1054,7 +1054,7 @@ func (s *Server) verifyRequest(handle httprouter.Handle) httprouter.Handle {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		req = req.WithContext(context.WithValue(req.Context(), VerifiedUserIdKey, claim.Id))
+		req = req.WithContext(context.WithValue(req.Context(), VerifiedUserIdKey, claim.Subject))
 
 		handle(w, req, params)
 	}

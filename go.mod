@@ -16,7 +16,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-logr/zapr v1.2.3
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0

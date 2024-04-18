@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/xerrors"
 	"nhooyr.io/websocket"
 
