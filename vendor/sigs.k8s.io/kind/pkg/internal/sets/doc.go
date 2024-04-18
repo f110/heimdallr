@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,8 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package defaults contains cross-api-version configuration defaults
-package defaults
-
-// Image is the default for the Config.Image field, aka the default node image.
-const Image = "kindest/node:v1.29.2@sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245"
+// Package sets implements set types.
+//
+// This is forked from k8s.io/apimachinery/pkg/util/sets (under the same project
+// and license), because k8s.io/apimachinery is a relatively heavy dependency
+// and we only need some trivial utilities. Avoiding importing k8s.io/apimachinery
+// makes kind easier to embed in other projects for testing etc.
+//
+// The set implementation is relatively small and very stable.
+package sets

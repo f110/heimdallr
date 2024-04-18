@@ -4,6 +4,7 @@ go_library(
     name = "errors",
     srcs = [
         "aggregate.go",
+        "aggregate_forked.go",
         "concurrent.go",
         "doc.go",
         "errors.go",
@@ -13,6 +14,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/pkg/errors",
-        "//vendor/k8s.io/apimachinery/pkg/util/errors",
+        "//vendor/sigs.k8s.io/kind/pkg/internal/sets",
     ],
 )
