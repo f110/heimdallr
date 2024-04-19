@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -501,10 +501,10 @@ func TestAuthentication_UnaryCall(t *testing.T) {
 	t.Run("with jwt", func(t *testing.T) {
 		t.Parallel()
 
-		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
-			Id:        "foobar@example.com",
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(10 * time.Second).Unix(),
+		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.RegisteredClaims{
+			Subject:   "foobar@example.com",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Second)),
 		})
 		jwtToken, err := claim.SignedString(a.Config.AccessProxy.Credential.SigningPrivateKey)
 		require.NoError(t, err)

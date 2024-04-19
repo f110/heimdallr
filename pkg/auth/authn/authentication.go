@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
@@ -280,7 +280,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 			logger.Log.Info("Invalid token", zap.Error(err))
 			return nil, ErrInvalidToken
 		}
-		userId = claims.Id
+		userId = claims.Subject
 	} else if len(md.Get(rpc.InternalTokenMetadataKey)) > 0 {
 		logger.Log.Debug("Found internal token", zap.String("token", md.Get(rpc.InternalTokenMetadataKey)[0]))
 		t := md.Get(rpc.InternalTokenMetadataKey)[0]

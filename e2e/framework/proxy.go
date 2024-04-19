@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-cmp/cmp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"golang.org/x/xerrors"
@@ -610,10 +610,10 @@ func (p *Proxy) setupRPCClient() error {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		StandardClaims: jwt.StandardClaims{
-			Id:        RootUserId,
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   RootUserId,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 		},
 	})
 	token, err := claim.SignedString(p.signPrivateKey)
@@ -645,10 +645,10 @@ func (p *Proxy) syncUsers() error {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		StandardClaims: jwt.StandardClaims{
-			Id:        RootUserId,
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(authproxy.TokenExpiration).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   RootUserId,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 		},
 	})
 	token, err := claim.SignedString(p.signPrivateKey)

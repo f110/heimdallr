@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"

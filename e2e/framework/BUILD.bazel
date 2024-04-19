@@ -25,7 +25,7 @@ go_library(
         "//pkg/testing/btesting",
         "//vendor/github.com/go-chi/chi/v5:chi",
         "//vendor/github.com/go-jose/go-jose/v4:go-jose",
-        "//vendor/github.com/golang-jwt/jwt",
+        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
         "//vendor/github.com/google/go-cmp/cmp",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
         "//vendor/github.com/miekg/dns",
