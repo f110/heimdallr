@@ -7,9 +7,8 @@ go_library(
     importpath = "github.com/google/s2a-go/internal/handshaker/service",
     visibility = ["//vendor/github.com/google/s2a-go:__subpackages__"],
     deps = [
-        "//vendor/google.golang.org/appengine",
-        "//vendor/google.golang.org/appengine/socket",
         "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/grpclog",
+        "//vendor/google.golang.org/grpc/credentials",
+        "//vendor/google.golang.org/grpc/credentials/insecure",
     ],
 )
