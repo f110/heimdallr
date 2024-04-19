@@ -17,11 +17,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/gorilla/mux"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/xerrors"
-	"gopkg.in/square/go-jose.v2"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 )
@@ -55,14 +55,6 @@ func openIDProvider(port int, signingPrivateKey string) error {
 		privateKey = loadedPrivateKey
 	}
 
-	if err := os.Setenv(op.OidcDevMode, "1"); err != nil {
-		panic(err)
-	}
-	conf := &op.Config{
-		Issuer:    fmt.Sprintf("http://127.0.0.1:%d/", port),
-		CryptoKey: sha256.Sum256([]byte("test")),
-	}
-
 	st := newProviderStorage(privateKey)
 	st.Clients = []op.Client{
 		&client{
@@ -72,7 +64,7 @@ func openIDProvider(port int, signingPrivateKey string) error {
 		},
 	}
 
-	p, err := op.NewOpenIDProvider(context.Background(), conf, st)
+	p, err := op.NewProvider(&op.Config{CryptoKey: sha256.Sum256([]byte("test"))}, st, op.StaticIssuer(fmt.Sprintf("http://127.0.0.1:%d/", port)), op.WithAllowInsecure())
 	if err != nil {
 		return xerrors.Errorf(": %w", err)
 	}
@@ -127,14 +119,14 @@ func OpenIDProvider(rootCmd *cmd.Command) {
 }
 
 type providerStorage struct {
-	SigningKey       crypto.PrivateKey
+	signingKey       crypto.PrivateKey
 	SigningPublicKey crypto.PublicKey
 	Clients          []op.Client
 
 	authRequests map[string]*authRequest
 }
 
-var _ op.Storage = &providerStorage{}
+var _ op.Storage = (*providerStorage)(nil)
 
 func newProviderStorage(signingKey crypto.PrivateKey) *providerStorage {
 	var publicKey crypto.PublicKey
@@ -143,7 +135,7 @@ func newProviderStorage(signingKey crypto.PrivateKey) *providerStorage {
 		publicKey = v.Public()
 	}
 	return &providerStorage{
-		SigningKey:       signingKey,
+		signingKey:       signingKey,
 		SigningPublicKey: publicKey,
 		authRequests:     make(map[string]*authRequest),
 	}
@@ -220,9 +212,14 @@ func (a *providerStorage) RevokeToken(ctx context.Context, token string, userID 
 	panic("implement me")
 }
 
-func (a *providerStorage) GetSigningKey(ctx context.Context, keys chan<- jose.SigningKey) {
+func (a *providerStorage) GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a *providerStorage) SigningKey(_ context.Context) (op.SigningKey, error) {
 	var algo jose.SignatureAlgorithm
-	switch v := a.SigningKey.(type) {
+	switch v := a.signingKey.(type) {
 	case *ecdsa.PrivateKey:
 		switch v.Params().BitSize {
 		case 256:
@@ -235,21 +232,22 @@ func (a *providerStorage) GetSigningKey(ctx context.Context, keys chan<- jose.Si
 	case *rsa.PrivateKey:
 		algo = jose.RS256
 	}
-	keys <- jose.SigningKey{
-		Algorithm: algo,
-		Key:       a.SigningKey,
-	}
+
+	return &signingKey{id: "foobar", algo: algo, key: a.signingKey}, nil
 }
 
-func (a *providerStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) {
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{
-				Key:       a.SigningPublicKey,
-				KeyID:     "foobar",
-				Algorithm: "RS256",
-				Use:       "sig",
+func (a *providerStorage) SignatureAlgorithms(_ context.Context) ([]jose.SignatureAlgorithm, error) {
+	return []jose.SignatureAlgorithm{jose.RS256}, nil
+}
+
+func (a *providerStorage) KeySet(_ context.Context) ([]op.Key, error) {
+	return []op.Key{
+		&signingPublicKey{
+			signingKey: signingKey{
+				id:   "foobar",
+				algo: jose.RS256,
 			},
+			key: a.SigningPublicKey,
 		},
 	}, nil
 }
@@ -275,24 +273,24 @@ func (a *providerStorage) AuthorizeClientIDSecret(ctx context.Context, clientID,
 	return xerrors.Errorf("%s is not found", clientID)
 }
 
-func (a *providerStorage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error {
+func (a *providerStorage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
 	for _, v := range scopes {
 		switch v {
 		case "email":
-			userinfo.SetEmail(userID, true)
-			userinfo.SetSubject(userID)
+			userinfo.Email = userID
+			userinfo.Subject = userID
 		}
 	}
 
 	return nil
 }
 
-func (a *providerStorage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {
+func (a *providerStorage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (a *providerStorage) SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+func (a *providerStorage) SetIntrospectionFromToken(ctx context.Context, userinfo *oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -302,7 +300,7 @@ func (a *providerStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID
 	return nil, nil
 }
 
-func (a *providerStorage) GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
+func (a *providerStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -315,6 +313,45 @@ func (a *providerStorage) ValidateJWTProfileScopes(ctx context.Context, userID s
 func (a *providerStorage) Health(ctx context.Context) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+type signingKey struct {
+	id   string
+	algo jose.SignatureAlgorithm
+	key  crypto.PrivateKey
+}
+
+var _ op.SigningKey = (*signingKey)(nil)
+
+func (s *signingKey) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return s.algo
+}
+
+func (s *signingKey) Key() any {
+	return s.key
+}
+
+func (s *signingKey) ID() string {
+	return s.id
+}
+
+type signingPublicKey struct {
+	signingKey
+	key crypto.PublicKey
+}
+
+var _ op.Key = (*signingPublicKey)(nil)
+
+func (s *signingPublicKey) Algorithm() jose.SignatureAlgorithm {
+	return s.algo
+}
+
+func (s *signingPublicKey) Use() string {
+	return "sig"
+}
+
+func (s *signingPublicKey) Key() any {
+	return s.key
 }
 
 type client struct {

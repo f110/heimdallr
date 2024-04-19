@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "client",
+    srcs = [
+        "client.go",
+        "errors.go",
+        "jwt_profile.go",
+        "key.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/zitadel/oidc/v3/pkg/client",
+    importpath = "github.com/zitadel/oidc/v3/pkg/client",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/go-jose/go-jose/v4:go-jose",
+        "//vendor/github.com/zitadel/logging",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/crypto",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/http",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/oidc",
+        "//vendor/go.opentelemetry.io/otel",
+        "//vendor/golang.org/x/oauth2",
+    ],
+)

@@ -14,14 +14,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/xerrors"
-	"gopkg.in/square/go-jose.v2"
 
 	"go.f110.dev/heimdallr/pkg/netutil"
 )
@@ -75,21 +74,20 @@ func NewIdentityProvider(redirectURL string) (*IdentityProvider, error) {
 		},
 	}
 	idp.providerStorage = st
-	// This is workaround to create OpenID Provider without SSL.
-	os.Setenv(op.OidcDevMode, "1")
-	p, err := op.NewOpenIDProvider(context.Background(), &op.Config{
-		Issuer:    fmt.Sprintf("http://127.0.0.1:%d/", port),
-		CryptoKey: sha256.Sum256([]byte("e2eframework")),
-	}, st)
+	p, err := op.NewProvider(
+		&op.Config{CryptoKey: sha256.Sum256([]byte("e2eframework"))},
+		st,
+		op.StaticIssuer(fmt.Sprintf("http://127.0.0.1:%d/", port)),
+		op.WithAllowInsecure(),
+	)
 	if err != nil {
 		return nil, xerrors.Errorf(": %w", err)
 	}
-	os.Unsetenv(op.OidcDevMode)
 
-	router := p.HttpHandler().(*mux.Router)
-	router.Methods(http.MethodGet).Path("/login").HandlerFunc(idp.handleAuth)
-	router.Methods(http.MethodPost).Path("/login").HandlerFunc(idp.handleLogin)
-	router.Methods(http.MethodGet).Path("/custom-idp/authorized").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router := p.Handler.(*chi.Mux)
+	router.MethodFunc(http.MethodGet, "/login", idp.handleAuth)
+	router.MethodFunc(http.MethodPost, "/login", idp.handleLogin)
+	router.MethodFunc(http.MethodGet, "/custom-idp/authorized", func(w http.ResponseWriter, req *http.Request) {
 		log.Print("OK")
 	})
 	//router.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, req *http.Request) {
@@ -169,14 +167,14 @@ func (i *IdentityProvider) handleLogin(w http.ResponseWriter, req *http.Request)
 }
 
 type providerStorage struct {
-	SigningKey       crypto.PrivateKey
-	SigningPublicKey crypto.PublicKey
+	signingKey       crypto.PrivateKey
+	signingPublicKey crypto.PublicKey
 	Clients          []op.Client
 
 	authRequests map[string]*authRequest
 }
 
-var _ op.Storage = &providerStorage{}
+var _ op.Storage = (*providerStorage)(nil)
 
 func newProviderStorage(signingKey crypto.PrivateKey) *providerStorage {
 	var publicKey crypto.PublicKey
@@ -187,8 +185,8 @@ func newProviderStorage(signingKey crypto.PrivateKey) *providerStorage {
 		publicKey = pubKeyInterface.Public()
 	}
 	return &providerStorage{
-		SigningKey:       signingKey,
-		SigningPublicKey: publicKey,
+		signingKey:       signingKey,
+		signingPublicKey: publicKey,
 		authRequests:     make(map[string]*authRequest),
 	}
 }
@@ -269,9 +267,14 @@ func (p *providerStorage) RevokeToken(ctx context.Context, token string, userID 
 	panic("implement me")
 }
 
-func (p *providerStorage) GetSigningKey(_ context.Context, keys chan<- jose.SigningKey) {
+func (p *providerStorage) GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *providerStorage) SigningKey(_ context.Context) (op.SigningKey, error) {
 	var algo jose.SignatureAlgorithm
-	switch v := p.SigningKey.(type) {
+	switch v := p.signingKey.(type) {
 	case *ecdsa.PrivateKey:
 		switch v.Params().BitSize {
 		case 256:
@@ -284,21 +287,21 @@ func (p *providerStorage) GetSigningKey(_ context.Context, keys chan<- jose.Sign
 	case *rsa.PrivateKey:
 		algo = jose.RS256
 	}
-	keys <- jose.SigningKey{
-		Algorithm: algo,
-		Key:       p.SigningKey,
-	}
+	return &signingKey{id: "e2eframework", algo: algo, key: p.signingKey}, nil
 }
 
-func (p *providerStorage) GetKeySet(ctx context.Context) (*jose.JSONWebKeySet, error) {
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{
-				Key:       p.SigningPublicKey,
-				KeyID:     "e2eframework",
-				Algorithm: "RS256",
-				Use:       "sig",
+func (p *providerStorage) SignatureAlgorithms(_ context.Context) ([]jose.SignatureAlgorithm, error) {
+	return []jose.SignatureAlgorithm{jose.RS256}, nil
+}
+
+func (p *providerStorage) KeySet(_ context.Context) ([]op.Key, error) {
+	return []op.Key{
+		&signingPublicKey{
+			signingKey: signingKey{
+				id:   "e2eframework",
+				algo: jose.RS256,
 			},
+			key: p.signingPublicKey,
 		},
 	}, nil
 }
@@ -326,26 +329,26 @@ func (p *providerStorage) AuthorizeClientIDSecret(_ context.Context, clientID, c
 
 func (p *providerStorage) SetUserinfoFromScopes(
 	_ context.Context,
-	userinfo oidc.UserInfoSetter,
+	userinfo *oidc.UserInfo,
 	userID, clientID string,
 	scopes []string,
 ) error {
 	for _, v := range scopes {
 		switch v {
 		case "email":
-			userinfo.SetEmail(userID, true)
-			userinfo.SetSubject(userID)
+			userinfo.Email = userID
+			userinfo.Subject = userID
 		}
 	}
 	return nil
 }
 
-func (p *providerStorage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {
+func (p *providerStorage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p *providerStorage) SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+func (p *providerStorage) SetIntrospectionFromToken(ctx context.Context, userinfo *oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -355,7 +358,7 @@ func (p *providerStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID
 	return nil, nil
 }
 
-func (p *providerStorage) GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
+func (p *providerStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -368,6 +371,45 @@ func (p *providerStorage) ValidateJWTProfileScopes(ctx context.Context, userID s
 func (p *providerStorage) Health(ctx context.Context) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+type signingKey struct {
+	id   string
+	algo jose.SignatureAlgorithm
+	key  crypto.PrivateKey
+}
+
+var _ op.SigningKey = (*signingKey)(nil)
+
+func (s *signingKey) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return s.algo
+}
+
+func (s *signingKey) Key() any {
+	return s.key
+}
+
+func (s *signingKey) ID() string {
+	return s.id
+}
+
+type signingPublicKey struct {
+	signingKey
+	key crypto.PublicKey
+}
+
+var _ op.Key = (*signingPublicKey)(nil)
+
+func (s *signingPublicKey) Algorithm() jose.SignatureAlgorithm {
+	return s.algo
+}
+
+func (s *signingPublicKey) Use() string {
+	return "sig"
+}
+
+func (s *signingPublicKey) Key() any {
+	return s.key
 }
 
 type authRequest struct {

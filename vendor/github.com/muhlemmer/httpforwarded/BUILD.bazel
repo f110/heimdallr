@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "httpforwarded",
+    srcs = [
+        "doc.go",
+        "format.go",
+        "parse.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/muhlemmer/httpforwarded",
+    importpath = "github.com/muhlemmer/httpforwarded",
+    visibility = ["//visibility:public"],
+)

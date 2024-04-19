@@ -7,6 +7,8 @@ go_library(
         "chi.go",
         "context.go",
         "mux.go",
+        "path_value.go",
+        "path_value_fallback.go",
         "tree.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/go-chi/chi/v5",

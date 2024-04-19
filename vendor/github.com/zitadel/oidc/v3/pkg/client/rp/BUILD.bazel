@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "rp",
+    srcs = [
+        "delegation.go",
+        "device.go",
+        "errors.go",
+        "jwks.go",
+        "log.go",
+        "relying_party.go",
+        "tockenexchange.go",
+        "verifier.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/zitadel/oidc/v3/pkg/client/rp",
+    importpath = "github.com/zitadel/oidc/v3/pkg/client/rp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/go-jose/go-jose/v4:go-jose",
+        "//vendor/github.com/google/uuid",
+        "//vendor/github.com/zitadel/logging",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/client",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/http",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/oidc",
+        "//vendor/github.com/zitadel/oidc/v3/pkg/oidc/grants/tokenexchange",
+        "//vendor/golang.org/x/oauth2",
+        "//vendor/golang.org/x/oauth2/clientcredentials",
+    ],
+)
