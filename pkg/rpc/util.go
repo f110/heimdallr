@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.f110.dev/heimdallr/pkg/database"
 )
@@ -17,7 +17,7 @@ func DatabaseUserToRPCUser(in *database.User) *UserItem {
 		maintainRoles = append(maintainRoles, v)
 	}
 
-	lastLogin, _ := ptypes.TimestampProto(in.LastLogin)
+	lastLogin := timestamppb.New(in.LastLogin)
 	return &UserItem{
 		Id:            in.Id,
 		Roles:         in.Roles,
@@ -31,10 +31,7 @@ func DatabaseUserToRPCUser(in *database.User) *UserItem {
 }
 
 func DatabaseCertToRPCCert(in *database.SignedCertificate) *CertItem {
-	issuedAt, err := ptypes.TimestampProto(in.IssuedAt)
-	if err != nil {
-		return nil
-	}
+	issuedAt := timestamppb.New(in.IssuedAt)
 
 	return &CertItem{
 		SerialNumber: in.Certificate.SerialNumber.Bytes(),
@@ -56,14 +53,8 @@ func DatabaseCertToRPCCertWithByte(in *database.SignedCertificate) *CertItem {
 }
 
 func DatabaseRevokedCertToRPCCert(in *database.RevokedCertificate) *CertItem {
-	issuedAt, err := ptypes.TimestampProto(in.IssuedAt)
-	if err != nil {
-		return nil
-	}
-	revokedAt, err := ptypes.TimestampProto(in.RevokedAt)
-	if err != nil {
-		return nil
-	}
+	issuedAt := timestamppb.New(in.IssuedAt)
+	revokedAt := timestamppb.New(in.RevokedAt)
 
 	return &CertItem{
 		SerialNumber: in.SerialNumber.Bytes(),

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
@@ -279,10 +278,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 		serialNumber := big.NewInt(0)
 		serialNumber.SetBytes(v.SerialNumber)
-		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
-		if err != nil {
-			continue
-		}
+		issuedAt := v.IssuedAt.AsTime()
 		signedCertificates = append(signedCertificates, &certificate{
 			SerialNumber: serialNumber.Text(16),
 			CommonName:   v.CommonName,
@@ -313,14 +309,8 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 		serialNumber := big.NewInt(0)
 		serialNumber.SetBytes(v.SerialNumber)
-		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
-		if err != nil {
-			continue
-		}
-		revokedAt, err := ptypes.Timestamp(v.RevokedAt)
-		if err != nil {
-			continue
-		}
+		issuedAt := v.IssuedAt.AsTime()
+		revokedAt := v.RevokedAt.AsTime()
 		revokedList = append(revokedList, &certificate{
 			SerialNumber: serialNumber.Text(16),
 			CommonName:   v.CommonName,
@@ -792,10 +782,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 		serialNumber := big.NewInt(0)
 		serialNumber.SetBytes(v.SerialNumber)
-		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
-		if err != nil {
-			continue
-		}
+		issuedAt := v.IssuedAt.AsTime()
 		signedCertificates = append(signedCertificates, &certificate{
 			SerialNumber: serialNumber.Text(16),
 			CommonName:   v.CommonName,
@@ -823,14 +810,8 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 		serialNumber := big.NewInt(0)
 		serialNumber.SetBytes(v.SerialNumber)
-		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
-		if err != nil {
-			continue
-		}
-		revokedAt, err := ptypes.Timestamp(v.RevokedAt)
-		if err != nil {
-			continue
-		}
+		issuedAt := v.IssuedAt.AsTime()
+		revokedAt := v.RevokedAt.AsTime()
 		revokedList = append(revokedList, &certificate{
 			SerialNumber: serialNumber.Text(16),
 			CommonName:   v.CommonName,
@@ -851,11 +832,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 	connectedAgents := make([]*agent, len(agents))
 	for i, v := range agents {
-		connectedAt, err := ptypes.Timestamp(v.ConnectedAt)
-		if err != nil {
-			logger.Log.Info("Can't convert to time.Time from protobuf.Timestamp. skipping", zap.String("name", v.Name))
-			continue
-		}
+		connectedAt := v.ConnectedAt.AsTime()
 		connectedAgents[i] = &agent{
 			Name:        v.Name,
 			FromAddr:    v.FromAddr,
@@ -946,10 +923,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 	for _, v := range signed {
 		serialNumber := big.NewInt(0)
 		serialNumber.SetBytes(v.SerialNumber)
-		issuedAt, err := ptypes.Timestamp(v.IssuedAt)
-		if err != nil {
-			continue
-		}
+		issuedAt := v.IssuedAt.AsTime()
 
 		signedCertificates = append(signedCertificates, &certificate{
 			SerialNumber: serialNumber.Text(16),

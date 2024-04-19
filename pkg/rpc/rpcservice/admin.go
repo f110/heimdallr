@@ -3,9 +3,9 @@ package rpcservice
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -97,10 +97,7 @@ func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc
 		}
 		tokens := make([]*rpc.AccessTokenItem, len(t))
 		for i, v := range t {
-			issuedAt, err := ptypes.TimestampProto(v.CreatedAt)
-			if err != nil {
-				return nil, err
-			}
+			issuedAt := timestamppb.New(v.CreatedAt)
 			tokens[i] = &rpc.AccessTokenItem{
 				Name:     v.Name,
 				Value:    v.Value,
@@ -268,11 +265,7 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 		return nil, err
 	}
 
-	issuedAt, err := ptypes.TimestampProto(newToken.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-
+	issuedAt := timestamppb.New(newToken.CreatedAt)
 	logger.Audit.Info("Issue token", zap.String("user", req.GetUserId()), auditBy(ctx))
 	return &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{
 		Name:     newToken.Name,

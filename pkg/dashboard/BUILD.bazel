@@ -15,7 +15,6 @@ go_library(
         "//pkg/template",
         "//tmpl/dashboard",
         "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/golang/protobuf/ptypes",
         "//vendor/github.com/julienschmidt/httprouter",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/xerrors",
