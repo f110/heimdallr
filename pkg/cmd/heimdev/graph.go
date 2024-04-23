@@ -5,8 +5,6 @@ import (
 	"context"
 	"os"
 
-	"golang.org/x/xerrors"
-
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/fsm"
 )
@@ -14,7 +12,7 @@ import (
 func graph(dir string) error {
 	buf := new(bytes.Buffer)
 	if err := fsm.NewDotOutput(buf, dir); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	buf.WriteTo(os.Stdout)
 	return nil

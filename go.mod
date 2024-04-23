@@ -45,11 +45,10 @@ require (
 	go.etcd.io/etcd/etcdutl/v3 v3.5.13
 	go.etcd.io/etcd/server/v3 v3.5.13
 	go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2
-	go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f
+	go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.19.0
-	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/api v0.162.0
 	google.golang.org/grpc v1.63.0
 	google.golang.org/protobuf v1.33.0

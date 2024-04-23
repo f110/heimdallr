@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"gopkg.in/yaml.v2"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
@@ -28,12 +28,12 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 			break
 		}
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		kind, err := detectKind(v)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		switch kind {
 		case "CustomResourceDefinition":
@@ -43,11 +43,11 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 		}
 
 		if err := e.Encode(v); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 	if err := e.Close(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -56,11 +56,11 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 func detectKind(v interface{}) (string, error) {
 	b, err := yaml.Marshal(v)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 	bc := &basic{}
 	if err := yaml.Unmarshal(b, bc); err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	if bc.Kind != "" {
@@ -95,11 +95,11 @@ func editDeployment(v map[interface{}]interface{}, version string) {
 func manifestCleaner(input, output, version string) error {
 	reader, err := os.Open(input)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	writer, err := os.Create(output)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return finalizer(reader, writer, version)

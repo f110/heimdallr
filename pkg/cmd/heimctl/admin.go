@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -20,7 +20,7 @@ import (
 func getClient(confFile string) (*rpcclient.Client, error) {
 	conf, err := configutil.ReadConfig(confFile)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 
 	cp := conf.CertificateAuthority.CertPool
@@ -31,12 +31,12 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	c, err := rpcclient.NewWithStaticToken(conn)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 
 	return c, nil
@@ -51,7 +51,7 @@ func userList(c *rpcclient.Client, role string) error {
 		userList, err = c.ListAllUser()
 	}
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	for _, v := range userList {
 		fmt.Printf("%s\n", v.Id)

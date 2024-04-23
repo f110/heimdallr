@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
@@ -55,7 +55,7 @@ func (r *RelayLocator) Set(ctx context.Context, relay *database.Relay) error {
 		ConnectedAt: relay.ConnectedAt,
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	return nil
 }
@@ -63,14 +63,14 @@ func (r *RelayLocator) Set(ctx context.Context, relay *database.Relay) error {
 func (r *RelayLocator) Update(ctx context.Context, relay *database.Relay) error {
 	v, err := r.dao.Relay.SelectEndpoint(ctx, relay.Name, relay.Addr)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	v.FromAddr = relay.FromAddr
 	v.ConnectedAt = relay.ConnectedAt
 
 	if err := r.dao.Relay.Update(ctx, v); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -79,12 +79,12 @@ func (r *RelayLocator) Update(ctx context.Context, relay *database.Relay) error 
 func (r *RelayLocator) Delete(ctx context.Context, name, addr string) error {
 	v, err := r.dao.Relay.SelectEndpoint(ctx, name, addr)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	err = r.dao.Relay.Delete(ctx, v.Id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	return nil
 }

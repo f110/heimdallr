@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
@@ -30,19 +30,19 @@ const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 func bootstrap(confFile string) error {
 	p, err := filepath.Abs(confFile)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	dir := filepath.Dir(p)
 	confBuf, err := os.ReadFile(p)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	conf := &configv2.Config{}
 	if err := yaml.Unmarshal(confBuf, conf); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if conf.AccessProxy == nil || conf.AccessProxy.Credential == nil || conf.CertificateAuthority == nil {
-		return xerrors.New("not enough configuration")
+		return xerrors.NewWithStack("not enough configuration")
 	}
 
 	_, err = os.Stat(absPath(conf.CertificateAuthority.Local.CertFile, dir))
@@ -51,27 +51,27 @@ func bootstrap(confFile string) error {
 	keyFileExist := !os.IsNotExist(err)
 	if !certFileExist && !keyFileExist {
 		if err := generateNewCertificateAuthority(conf, dir); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 	}
 
 	b, err := os.ReadFile(absPath(conf.CertificateAuthority.Local.CertFile, dir))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	block, _ := pem.Decode(b)
 	c, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	b, err = os.ReadFile(absPath(conf.CertificateAuthority.Local.KeyFile, dir))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	block, _ = pem.Decode(b)
 	privateKey, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	_, err = os.Stat(absPath(conf.AccessProxy.HTTP.Certificate.CertFile, dir))
@@ -80,7 +80,7 @@ func bootstrap(confFile string) error {
 	keyFileExist = !os.IsNotExist(err)
 	if !certFileExist && !keyFileExist {
 		if err := createNewServerCertificate(conf, dir, c, privateKey); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 	}
 
@@ -88,14 +88,14 @@ func bootstrap(confFile string) error {
 	if os.IsNotExist(err) {
 		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		b, err := x509.MarshalECPrivateKey(privateKey)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if err := cert.PemEncode(absPath(conf.AccessProxy.Credential.SigningPrivateKeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 	}
 
@@ -107,7 +107,7 @@ func bootstrap(confFile string) error {
 		}
 		f, err := os.Create(absPath(conf.AccessProxy.Credential.InternalTokenFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		f.Write(b)
 		f.Close()
@@ -117,11 +117,11 @@ func bootstrap(confFile string) error {
 	if os.IsNotExist(err) {
 		b := make([]byte, 32)
 		if _, err := io.ReadFull(rand.Reader, b); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		f, err := os.Create(absPath(conf.AccessProxy.Credential.GithubWebHookSecretFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		f.Write(b)
 		f.Close()
@@ -135,7 +135,7 @@ func bootstrap(confFile string) error {
 			blockKey := session.GenerateRandomKey(16)
 			f, err := os.Create(absPath(conf.AccessProxy.HTTP.Session.KeyFile, dir))
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			f.WriteString(hex.EncodeToString(hashKey))
 			f.WriteString("\n")
@@ -162,19 +162,19 @@ func absPath(path, dir string) string {
 func generateNewCertificateAuthority(conf *configv2.Config, dir string) error {
 	c, privateKey, err := cert.CreateCertificateAuthorityForConfig(conf)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(absPath(conf.CertificateAuthority.Local.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 
 	if err := cert.PemEncode(absPath(conf.CertificateAuthority.Local.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	return nil
 }
@@ -184,13 +184,13 @@ func createNewServerCertificate(conf *configv2.Config, dir string, ca *x509.Cert
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(absPath(conf.AccessProxy.HTTP.Certificate.KeyFile, dir), "EC PRIVATE KEY", b, nil); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	if err := cert.PemEncode(absPath(conf.AccessProxy.HTTP.Certificate.CertFile, dir), "CERTIFICATE", c.Raw, nil); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	return nil
 }

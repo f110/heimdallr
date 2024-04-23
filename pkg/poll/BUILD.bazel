@@ -5,5 +5,5 @@ go_library(
     srcs = ["poll.go"],
     importpath = "go.f110.dev/heimdallr/pkg/poll",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/golang.org/x/xerrors"],
+    deps = ["//vendor/go.f110.dev/xerrors"],
 )

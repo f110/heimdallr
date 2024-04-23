@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -36,14 +36,14 @@ func NewConnectionManager(conf *configv2.Config, locator database.RelayLocator) 
 func (p *ConnectionManager) GetConn(name string) (*tls.Conn, error) {
 	r, ok := p.locator.Get(name)
 	if !ok {
-		return nil, xerrors.New("connector: relay not found")
+		return nil, xerrors.NewWithStack("connector: relay not found")
 	}
 
 	conn, err := tls.Dial("tcp", r.Addr, &tls.Config{
 		RootCAs: p.config.CertificateAuthority.CertPool,
 	})
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	go p.heartbeat(conn)
 

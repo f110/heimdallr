@@ -610,7 +610,7 @@ go.f110.dev/protoc-ddl/internal/generator
 go.f110.dev/protoc-ddl/internal/migrate
 go.f110.dev/protoc-ddl/internal/schema
 go.f110.dev/protoc-ddl/probe
-# go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f
+# go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238
 ## explicit; go 1.22.0
 go.f110.dev/xerrors
 # go.opencensus.io v0.24.0
@@ -805,10 +805,6 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.5.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
-## explicit; go 1.17
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
 # google.golang.org/api v0.162.0
 ## explicit; go 1.19
 google.golang.org/api/googleapi

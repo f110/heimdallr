@@ -10,8 +10,8 @@ import (
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -40,7 +40,7 @@ func NewUserDatabase(_ context.Context, client *clientv3.Client, systemUsers ...
 	for _, v := range systemUsers {
 		value, err := database.MarshalUser(v)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		kv := &mvccpb.KeyValue{
 			Value:   value,
@@ -72,26 +72,26 @@ func (d *UserDatabase) Get(id string, opts ...database.UserDatabaseOption) (*dat
 		}
 		res, err := d.client.Get(context.Background(), d.key(id))
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		if res.Count == 0 {
 			return nil, database.ErrUserNotFound
 		}
 		user, err := database.UnmarshalUser(res.Kvs[0])
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		return user, nil
 	}
 
 	all, err := d.cache.All()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	for _, v := range all {
 		user, err := database.UnmarshalUser(v)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, err
 		}
 
 		if user.Id == id {
@@ -99,20 +99,20 @@ func (d *UserDatabase) Get(id string, opts ...database.UserDatabaseOption) (*dat
 		}
 	}
 
-	return nil, database.ErrUserNotFound
+	return nil, xerrors.WithStack(database.ErrUserNotFound)
 }
 
 func (d *UserDatabase) GetAll() ([]*database.User, error) {
 	all, err := d.cache.All()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	users := make([]*database.User, 0, d.cache.Len())
 	for _, v := range all {
 		user, err := database.UnmarshalUser(v)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, err
 		}
 
 		users = append(users, user)
@@ -124,33 +124,33 @@ func (d *UserDatabase) GetAll() ([]*database.User, error) {
 func (d *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName string) (string, error) {
 	all, err := d.cache.All()
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", err
 	}
 
 	for _, v := range all {
 		user, err := database.UnmarshalUser(v)
 		if err != nil {
-			return "", xerrors.Errorf(": %w", err)
+			return "", err
 		}
 		if user.LoginName == loginName {
 			return user.Id, nil
 		}
 	}
 
-	return "", database.ErrUserNotFound
+	return "", xerrors.WithStack(database.ErrUserNotFound)
 }
 
 func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	all, err := d.cache.All()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	users := make([]*database.User, 0, d.cache.Len())
 	for _, v := range all {
 		user, err := database.UnmarshalUser(v)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, err
 		}
 		if !user.ServiceAccount() {
 			continue
@@ -165,7 +165,7 @@ func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
 	all, err := d.tokenCache.All()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	tokens := make([]*database.AccessToken, 0)
@@ -185,7 +185,7 @@ func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, erro
 func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
 	all, err := d.tokenCache.All()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	for _, v := range all {
@@ -203,7 +203,7 @@ func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, erro
 
 func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	if user.Id == "" {
-		return xerrors.New("etcd: User.Id is required")
+		return xerrors.NewWithStack("etcd: User.Id is required")
 	}
 
 	if !user.ServiceAccount() && len(user.Roles) == 0 {
@@ -212,7 +212,7 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 
 	b, err := database.MarshalUser(user)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 
 	res, err := d.client.Txn(ctx).
@@ -220,10 +220,10 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 		Then(clientv3.OpPut(d.key(user.Id), string(b))).
 		Commit()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if !res.Succeeded {
-		return xerrors.New("etcd: Failed update database")
+		return xerrors.NewWithStack("etcd: Failed update database")
 	}
 
 	return nil
@@ -232,12 +232,12 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.AccessToken) error {
 	b, err := yaml.Marshal(token)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	_, err = d.client.Put(ctx, fmt.Sprintf("user_token/%s", token.Value), string(b))
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -246,7 +246,7 @@ func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.Acces
 func (d *UserDatabase) Delete(ctx context.Context, id string) error {
 	_, err := d.client.Delete(ctx, d.key(id))
 	if err != nil {
-		return xerrors.Errorf(": $v", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -255,19 +255,19 @@ func (d *UserDatabase) Delete(ctx context.Context, id string) error {
 func (d *UserDatabase) SetState(ctx context.Context, unique string) (string, error) {
 	buf := make([]byte, 10)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-		return "", xerrors.Errorf("database: failure generate state: %v", err)
+		return "", xerrors.WithMessage(err, "database: failure generate state")
 	}
 	stateString := base64.StdEncoding.EncodeToString(buf)
 
 	s := &state{State: stateString[:len(stateString)-2], Unique: unique, CreatedAt: now()}
 	b, err := yaml.Marshal(s)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	_, err = d.client.Put(ctx, fmt.Sprintf("user_state/%s", s.State), string(b))
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	return s.State, nil
 }
@@ -275,15 +275,15 @@ func (d *UserDatabase) SetState(ctx context.Context, unique string) (string, err
 func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string, error) {
 	res, err := d.client.Get(ctx, fmt.Sprintf("user_state/%s", stateString))
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	if res.Count == 0 {
-		return "", xerrors.New("database: state not found")
+		return "", xerrors.NewWithStack("database: state not found")
 	}
 
 	s := &state{}
 	if err := yaml.Unmarshal(res.Kvs[0].Value, s); err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	if s.CreatedAt.Add(1 * time.Hour).Before(now()) {
 		_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", stateString))
@@ -291,7 +291,7 @@ func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string
 			logger.Log.Warn("failure delete state", zap.String("state", stateString))
 		}
 
-		return "", xerrors.New("database: state not founds")
+		return "", xerrors.NewWithStack("database: state not founds")
 	}
 
 	return s.Unique, nil
@@ -300,7 +300,7 @@ func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string
 func (d *UserDatabase) DeleteState(ctx context.Context, state string) error {
 	_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", state))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil

@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"golang.org/x/xerrors"
 	"k8s.io/client-go/rest"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
@@ -30,7 +29,7 @@ func init() {
 func setupSuite(id string) (*kind.Cluster, error) {
 	k8sCluster, err := kind.NewCluster(framework.Config.KindFile, "e2e-"+id, "")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if err := k8sCluster.Create(framework.Config.ClusterVersion, 3); err != nil {
 		log.Fatalf("Could not create a cluster: %v", err)
@@ -40,12 +39,12 @@ func setupSuite(id string) (*kind.Cluster, error) {
 
 	cfg, err := k8sCluster.RESTConfig()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	RESTConfig = cfg
 
 	if err := k8sCluster.WaitReady(context.TODO()); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if framework.Config.ProxyImageFile != "" ||
 		framework.Config.RPCImageFile != "" ||
@@ -87,21 +86,21 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	}
 
 	if err := kind.InstallCertManager(cfg, "operator-e2e"); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if err := kind.InstallMinIO(cfg, "operator-e2e"); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	if err := k8sCluster.Apply(framework.Config.AllInOneManifest, "e2e"); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	crds, err := k8s.ReadCRDFile(framework.Config.AllInOneManifest)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return k8sCluster, nil

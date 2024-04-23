@@ -20,8 +20,8 @@ go_library(
         "//pkg/netutil",
         "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
         "//vendor/go.etcd.io/etcd/client/v3:client",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

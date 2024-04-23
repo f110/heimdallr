@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/k8s"
 )
@@ -18,14 +18,14 @@ const (
 func GetHostname() (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	if os.Getenv("MY_IP_ADDRESS") != "" && os.Getenv("MY_NAMESPACE") != "" {
 		// Running on k8s
 		clusterDomain, err := k8s.GetClusterDomain()
 		if err != nil {
-			return "", xerrors.Errorf(": %v", err)
+			return "", err
 		}
 
 		h := strings.ReplaceAll(os.Getenv("MY_IP_ADDRESS"), ".", "-")

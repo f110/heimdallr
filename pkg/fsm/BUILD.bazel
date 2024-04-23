@@ -8,5 +8,4 @@ go_library(
     ],
     importpath = "go.f110.dev/heimdallr/pkg/fsm",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/golang.org/x/xerrors"],
 )

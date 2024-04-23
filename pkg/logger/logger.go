@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/spf13/pflag"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -36,7 +36,7 @@ func Init(conf *configv2.Logger) error {
 		}
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -58,7 +58,7 @@ func InitByFlags() error {
 		}
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func initLogger(conf *configv2.Logger) error {
 	zapConf := conf.ZapConfig(encoderConf)
 	l, err := zapConf.Build()
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	Log = l
@@ -137,7 +137,7 @@ func initAuditLogger(conf *configv2.Logger) error {
 	zapConf := conf.ZapConfig(encoderConf)
 	l, err := zapConf.Build()
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	Audit = l.Named("audit")

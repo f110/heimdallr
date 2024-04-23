@@ -13,7 +13,7 @@ import (
 
 	"github.com/mattn/go-shellwords"
 	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 type Command struct {
@@ -76,7 +76,7 @@ func (c *Command) Usage() string {
 
 func (c *Command) Execute(args []string) error {
 	if c.executed {
-		return xerrors.New("already executed")
+		return xerrors.NewWithStack("already executed")
 	}
 
 	c.executed = true
@@ -108,7 +108,7 @@ func (c *Command) runCommand(ctx context.Context, args []string) error {
 
 	if c.Run == nil {
 		c.printUsage()
-		return xerrors.New("command not found")
+		return xerrors.NewWithStack("command not found")
 	}
 	return c.Run(ctx, c, fs.Args())
 }

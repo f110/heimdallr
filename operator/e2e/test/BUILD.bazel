@@ -49,7 +49,6 @@ go_test(
         "//pkg/logger",
         "//pkg/testing/btesting",
         "//vendor/go.etcd.io/etcd/client/v3:client",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
         "//vendor/k8s.io/client-go/rest",
     ],

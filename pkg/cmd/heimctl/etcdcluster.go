@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -36,12 +36,12 @@ func EtcdCluster(rootCmd *cmd.Command) {
 			loader := clientcmd.NewInteractiveDeferredLoadingClientConfig(loadingRules, overrides, os.Stdin)
 			cfg, err := loader.ClientConfig()
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
 			client, err := clientset.NewForConfig(cfg)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			ns := namespaceFlag
 			if ns == "" {
@@ -49,7 +49,7 @@ func EtcdCluster(rootCmd *cmd.Command) {
 			}
 			etcdCluster, err := client.EtcdV1alpha2().EtcdClusters(ns).Get(context.Background(), name, metav1.GetOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if etcdCluster.Spec.Template.Metadata.Annotations == nil {
 				etcdCluster.Spec.Template.Metadata.Annotations = make(map[string]string)
@@ -57,7 +57,7 @@ func EtcdCluster(rootCmd *cmd.Command) {
 			etcdCluster.Spec.Template.Metadata.Annotations[etcd.AnnotationKeyRestartedAt] = time.Now().Format(time.RFC3339)
 			_, err = client.EtcdV1alpha2().EtcdClusters(ns).Update(context.Background(), etcdCluster, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
 			return nil

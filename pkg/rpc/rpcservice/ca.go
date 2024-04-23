@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"

@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 var (
@@ -15,7 +15,7 @@ func GetClusterDomain() (string, error) {
 	// Running on k8s
 	b, err := os.ReadFile(ResolvFile)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	searchDomains := ""
 	for _, line := range strings.Split(string(b), "\n") {

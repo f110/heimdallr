@@ -12,8 +12,8 @@ go_library(
         "//pkg/config/configv2",
         "//pkg/k8s",
         "//pkg/logger",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

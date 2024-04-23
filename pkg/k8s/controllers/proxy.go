@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	mrand "math/rand"
 	"net/url"
@@ -21,7 +20,7 @@ import (
 	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
 	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -619,21 +618,21 @@ func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 
 	caCert, privateKey, err := cert.CreateCertificateAuthority(caName, organization, administratorUnit, country, "ecdsa")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	privKeyBuf := new(bytes.Buffer)
 	if err := pem.Encode(privKeyBuf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	certBuf := new(bytes.Buffer)
 	if err := pem.Encode(certBuf, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	secret := k8sfactory.SecretFactory(nil,
@@ -650,15 +649,15 @@ func (r *HeimdallrProxy) NewCA() (*corev1.Secret, error) {
 func (r *HeimdallrProxy) NewSigningPrivateKey() (*corev1.Secret, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	secret := k8sfactory.SecretFactory(nil,
@@ -728,12 +727,12 @@ func (r *HeimdallrProxy) NewInternalTokenSecret() (*corev1.Secret, error) {
 
 func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
-		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(xerrors.NewWithStack("EtcdCluster is not created yet"))
 	}
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	etcdUrl.Scheme = "etcds"
 
@@ -808,7 +807,7 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	}
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	configMap := k8sfactory.ConfigMapFactory(nil,
@@ -853,7 +852,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	configMap := k8sfactory.ConfigMapFactory(nil,
@@ -867,12 +866,12 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 
 func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	if r.Datastore == nil {
-		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(xerrors.NewWithStack("EtcdCluster is not created yet"))
 	}
 
 	etcdUrl, err := url.Parse(r.Datastore.Status.ClientEndpoint)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	etcdUrl.Scheme = "etcds"
 
@@ -938,7 +937,7 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 
 	b, err := yaml.Marshal(conf)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	configMap := k8sfactory.ConfigMapFactory(nil,
@@ -985,17 +984,17 @@ func (r *HeimdallrProxy) LabelsForDefragmentJob() map[string]string {
 func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 	proxyBinary, err := ConfigConverter{}.Proxy(r.Backends(), r.serviceLister)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	roleBinary, err := ConfigConverter{}.Role(r.Backends(), r.Roles(), r.RoleBindings())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	rpcPermissionBinary, err := ConfigConverter{}.RPCPermission(r.RpcPermissions())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	configMap := k8sfactory.ConfigMapFactory(nil,
@@ -1014,12 +1013,12 @@ func (r *HeimdallrProxy) ReverseProxyConfig() (*corev1.ConfigMap, error) {
 
 func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	if r.Datastore == nil {
-		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(xerrors.NewWithStack("EtcdCluster is not created yet"))
 	}
 
 	conf, err := r.ConfigForMain()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1154,7 +1153,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &process{
@@ -1167,7 +1166,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 
 func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 	if err := r.checkSelfSignedIssuer(); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	caVolume := k8sfactory.NewSecretVolumeSource(
@@ -1186,7 +1185,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 
 	conf, err := r.ConfigForDashboard()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1266,12 +1265,12 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 
 func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	if r.Datastore == nil {
-		return nil, controllerbase.WrapRetryError(errors.New("EtcdCluster is not created yet"))
+		return nil, controllerbase.WrapRetryError(xerrors.NewWithStack("EtcdCluster is not created yet"))
 	}
 
 	conf, err := r.ConfigForRPCServer()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
@@ -1369,7 +1368,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 
 	reverseProxyConf, err := r.ReverseProxyConfig()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	var rpcMetrics *monitoringv1.ServiceMonitor
@@ -1422,13 +1421,13 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	case certmanagerv1.ClusterIssuerKind:
 		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetClusterIssuer(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		issuerObj = ci
 	case certmanagerv1.IssuerKind:
 		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetIssuer(context.TODO(), r.Namespace, r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		issuerObj = ci
 	}
@@ -1439,7 +1438,7 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 			r.selfSignedIssuer = true
 		}
 		if v.Spec.CA != nil {
-			return errors.New("controllers: ClusterIssuer.Spec.CA is not supported")
+			return xerrors.New("controllers: ClusterIssuer.Spec.CA is not supported")
 		}
 	case *certmanagerv1alpha2.Issuer:
 		if v.Spec.SelfSigned != nil {
@@ -1544,25 +1543,25 @@ func findService(lister listers.ServiceLister, sel *proxyv1alpha2.ServiceSelecto
 	if sel.Name != "" {
 		svc, err := lister.Services(ns).Get(sel.Name)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		return svc, nil
 	}
 
 	selector, err := metav1.LabelSelectorAsSelector(&sel.LabelSelector)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	services, err := lister.Services(ns).List(selector)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if len(services) == 0 {
-		return nil, xerrors.Errorf("%s not found", sel.LabelSelector.String())
+		return nil, xerrors.NewfWithStack("%s not found", sel.LabelSelector.String())
 	}
 	if len(services) > 1 {
-		return nil, xerrors.Errorf("Found %d services: %s", len(services), sel.LabelSelector.String())
+		return nil, xerrors.NewfWithStack("Found %d services: %s", len(services), sel.LabelSelector.String())
 	}
 
 	return services[0], nil

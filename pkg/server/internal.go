@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -35,10 +36,10 @@ func NewInternal(conf *configv2.Config, child ...ChildServer) *Internal {
 
 func (s *Internal) Start() error {
 	logger.Log.Info("Start Internal server", zap.String("listen", s.Config.AccessProxy.HTTP.BindInternalApi))
-	return s.server.ListenAndServe()
+	return xerrors.WithStack(s.server.ListenAndServe())
 }
 
 func (s *Internal) Shutdown(ctx context.Context) error {
 	logger.Log.Info("Shutdown Internal server")
-	return s.server.Shutdown(ctx)
+	return xerrors.WithStack(s.server.Shutdown(ctx))
 }

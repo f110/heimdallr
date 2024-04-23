@@ -16,9 +16,9 @@ go_library(
         "//vendor/github.com/go-sql-driver/mysql",
         "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.etcd.io/etcd/client/v3/namespace",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/zapcore",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

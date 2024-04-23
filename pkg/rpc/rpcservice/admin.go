@@ -3,8 +3,8 @@ package rpcservice
 import (
 	"context"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.f110.dev/heimdallr/pkg/auth"

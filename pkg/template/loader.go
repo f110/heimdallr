@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -84,14 +84,14 @@ func (l *Loader) Render(w io.Writer, name string, data interface{}) error {
 			}
 			b, err := os.ReadFile(path)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 
 			t = t.New(name)
 			_, err = t.Parse(string(b))
 			if err != nil {
 				logger.Log.Debug("Failure parsing template", zap.Error(err))
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			parsed[name] = struct{}{}
 

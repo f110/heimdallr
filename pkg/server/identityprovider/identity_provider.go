@@ -11,9 +11,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -57,7 +57,7 @@ func NewServer(conf *configv2.Config, database database.UserDatabase, store sess
 	case "custom":
 		issuer = conf.IdentityProvider.Issuer
 	default:
-		return nil, xerrors.Errorf("unknown provider: %s", conf.IdentityProvider.Provider)
+		return nil, xerrors.Newf("unknown provider: %s", conf.IdentityProvider.Provider)
 	}
 
 	scopes := []string{oidc.ScopeOpenID}
@@ -75,7 +75,7 @@ func NewServer(conf *configv2.Config, database database.UserDatabase, store sess
 		rp.WithHTTPClient(&http.Client{Transport: &dumpTransport{}}),
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	s := &Server{

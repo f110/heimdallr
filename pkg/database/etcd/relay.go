@@ -7,8 +7,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -64,11 +64,11 @@ func (l *RelayLocator) Get(name string) (*database.Relay, bool) {
 func (l *RelayLocator) Set(ctx context.Context, r *database.Relay) error {
 	b, err := yaml.Marshal(r)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	putRes, err := l.client.Put(ctx, fmt.Sprintf("relay/%s/%s", r.Name, r.Addr), string(b))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if putRes.PrevKv == nil {
 		r.Version = 1
@@ -87,7 +87,7 @@ func (l *RelayLocator) Update(ctx context.Context, relay *database.Relay) error 
 	relay.UpdatedAt = time.Now()
 	b, err := yaml.Marshal(relay)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	key := fmt.Sprintf("relay/%s/%s", relay.Name, relay.Addr)
@@ -96,10 +96,10 @@ func (l *RelayLocator) Update(ctx context.Context, relay *database.Relay) error 
 		Then(clientv3.OpPut(key, string(b))).
 		Commit()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if !txnRes.Succeeded {
-		return xerrors.New("database: failure update relay record")
+		return xerrors.NewWithStack("database: failure update relay record")
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (l *RelayLocator) Update(ctx context.Context, relay *database.Relay) error 
 func (l *RelayLocator) Delete(ctx context.Context, name, addr string) error {
 	_, err := l.client.Delete(ctx, fmt.Sprintf("relay/%s/%s", name, addr))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	l.mu.Lock()

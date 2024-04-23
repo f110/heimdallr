@@ -2,14 +2,13 @@ package poll
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 var (
-	ErrTimedOut = errors.New("poll: timed out")
+	ErrTimedOut = xerrors.New("poll: timed out")
 )
 
 type Func func(ctx context.Context) (done bool, err error)
@@ -26,7 +25,7 @@ func Poll(ctx context.Context, interval, timeout time.Duration, fn Func) error {
 			done, err := fn(fnCtx)
 			cancel()
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 			if done {
 				return nil
@@ -47,7 +46,7 @@ func PollImmediate(ctx context.Context, interval, timeout time.Duration, fn Func
 		return nil
 	}
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return Poll(ctx, interval, timeout, fn)

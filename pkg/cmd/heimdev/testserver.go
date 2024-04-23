@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"nhooyr.io/websocket"
 
 	"go.f110.dev/heimdallr/pkg/auth/authn"
@@ -25,19 +25,19 @@ import (
 func testServer(port int, publicKeyFile string) error {
 	fBuf, err := os.ReadFile(publicKeyFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	block, rest := pem.Decode(fBuf)
 	if len(rest) != 0 {
-		return xerrors.New("heimdev: invalid pem file")
+		return xerrors.NewWithStack("heimdev: invalid pem file")
 	}
 	if block.Type != "PUBLIC KEY" {
-		return xerrors.Errorf("heimdev: PEM file type is not PUBLIC KEY: %s", block.Type)
+		return xerrors.NewfWithStack("heimdev: PEM file type is not PUBLIC KEY: %s", block.Type)
 	}
 
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	http.Handle("/favicon.ico", http.NotFoundHandler())

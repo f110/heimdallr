@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd/reverseproxy"
 	"go.f110.dev/heimdallr/pkg/version"
@@ -40,7 +39,7 @@ func command(args []string) error {
 	process.VaultBin = vaultBin
 	go process.SignalHandling(syscall.SIGTERM, syscall.SIGINT)
 	if err := process.Loop(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package configutil
 
 import (
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s"
@@ -19,7 +18,7 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 	if conf.AccessProxy.HTTP.Certificate != nil && k8s.CanWatchVolume(conf.AccessProxy.HTTP.Certificate.CertFile) {
 		mountPath, err := k8s.FindMountPath(conf.AccessProxy.HTTP.Certificate.CertFile)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		w, err := k8s.NewVolumeWatcher(mountPath, func() {
 			logger.Log.Info("Reload certificate")
@@ -28,7 +27,7 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 			}
 		})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		r.certWatcher = w
 	}
@@ -37,7 +36,7 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 		k8s.CanWatchVolume(conf.AuthorizationEngine.RPCPermissionFile) {
 		mountPath, err := k8s.FindMountPath(conf.AccessProxy.ProxyFile)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		w, err := k8s.NewVolumeWatcher(mountPath, func() {
 			if err := conf.AccessProxy.ReloadConfig(); err != nil {
@@ -48,7 +47,7 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 			}
 		})
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		r.configWatcher = w
 	}

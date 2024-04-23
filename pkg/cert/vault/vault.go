@@ -17,7 +17,7 @@ import (
 	"path"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 var (
@@ -29,6 +29,8 @@ type Error struct {
 	StatusCode     int
 	VerboseMessage string
 }
+
+var _ error = (*Error)(nil)
 
 type ErrMessage struct {
 	Errors []string
@@ -77,7 +79,7 @@ func NewClient(addr, token, mountPath, role string, opts ...ClientOpt) (*Client,
 
 	u, err := url.Parse(addr)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	httpClient := opt.HttpClient
 	if httpClient == nil {
@@ -94,11 +96,11 @@ func (c *Client) GetCertPool(ctx context.Context) (*x509.CertPool, error) {
 
 	caCert, err := c.GetCACertificate(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	certPool.AddCert(caCert)
 
@@ -113,7 +115,7 @@ func (c *Client) GetCACertificate(ctx context.Context) (*x509.Certificate, error
 
 	caCert, err := c.getCACert(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	c.caCert = caCert
@@ -123,27 +125,27 @@ func (c *Client) GetCACertificate(ctx context.Context) (*x509.Certificate, error
 func (c *Client) getCACert(ctx context.Context) (*x509.Certificate, error) {
 	req, err := c.newRequest(ctx, http.MethodGet, path.Join("v1", c.mountPath, "ca"), nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return nil, xerrors.WithStack(ErrOperationNotPermitted)
 	}
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	cert, err := x509.ParseCertificate(buf)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	return cert, nil
 }
@@ -161,40 +163,40 @@ func (c *Client) GenerateCertificate(ctx context.Context, commonName string, alt
 		},
 	)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, err
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return nil, nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return nil, nil, xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	resObj := &PKIResponse{}
 	if err := json.NewDecoder(res.Body).Decode(resObj); err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 	certBytes, err := base64.StdEncoding.DecodeString(resObj.Data.Certificate)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 	keyBytes, err := base64.StdEncoding.DecodeString(resObj.Data.PrivateKey)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 	privateKey, err := x509.ParsePKCS8PrivateKey(keyBytes)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 
 	return cert, privateKey, nil
@@ -203,7 +205,7 @@ func (c *Client) GenerateCertificate(ctx context.Context, commonName string, alt
 func (c *Client) Sign(ctx context.Context, csr *x509.CertificateRequest) (*x509.Certificate, error) {
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Bytes: csr.Raw, Type: "CERTIFICATE REQUEST"}); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	req, err := c.newRequest(
 		ctx,
@@ -216,32 +218,32 @@ func (c *Client) Sign(ctx context.Context, csr *x509.CertificateRequest) (*x509.
 		},
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return nil, xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return nil, xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	resObj := &PKIResponse{}
 	if err := json.NewDecoder(res.Body).Decode(resObj); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	certBytes, err := base64.StdEncoding.DecodeString(resObj.Data.Certificate)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return cert, nil
@@ -257,18 +259,18 @@ func (c *Client) Revoke(ctx context.Context, cert *x509.Certificate) error {
 		},
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	return nil
@@ -277,32 +279,32 @@ func (c *Client) Revoke(ctx context.Context, cert *x509.Certificate) error {
 func (c *Client) EnablePKI(ctx context.Context) error {
 	req, err := c.newRequest(ctx, http.MethodPost, path.Join("v1/sys/mounts", c.mountPath), map[string]any{"type": "pki"})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	req, err = c.newRequest(ctx, http.MethodPost, path.Join("v1/sys/mounts", c.mountPath, "tune"), map[string]any{"max_lease_ttl": "8760h"})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	res, err = c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	return nil
@@ -311,24 +313,24 @@ func (c *Client) EnablePKI(ctx context.Context) error {
 func (c *Client) SetCA(ctx context.Context, cert *x509.Certificate, privateKey crypto.PrivateKey) error {
 	pemBundle := new(bytes.Buffer)
 	if err := pem.Encode(pemBundle, &pem.Block{Bytes: cert.Raw, Type: "CERTIFICATE"}); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	switch v := privateKey.(type) {
 	case *rsa.PrivateKey:
 		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if err := pem.Encode(pemBundle, &pem.Block{Bytes: b, Type: "RSA PRIVATE KEY"}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(v)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if err := pem.Encode(pemBundle, &pem.Block{Bytes: b, Type: "EC PRIVATE KEY"}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -341,18 +343,18 @@ func (c *Client) SetCA(ctx context.Context, cert *x509.Certificate, privateKey c
 		},
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 	io.Copy(io.Discard, res.Body)
 
@@ -401,7 +403,7 @@ type Role struct {
 func (c *Client) SetRole(ctx context.Context, name string, role *Role) error {
 	body := new(bytes.Buffer)
 	if err := json.NewEncoder(body).Encode(role); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	req, err := c.newRequestWithRawBody(
 		ctx,
@@ -410,19 +412,19 @@ func (c *Client) SetRole(ctx context.Context, name string, role *Role) error {
 		body,
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", ErrOperationNotPermitted)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 	return nil
 }
@@ -438,18 +440,18 @@ func (c *Client) GenerateRoot(ctx context.Context, commonName string) error {
 		},
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
 	case http.StatusForbidden:
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(ErrOperationNotPermitted)
 	}
 
 	return nil
@@ -460,7 +462,7 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body map[s
 	if body != nil {
 		b := new(bytes.Buffer)
 		if err := json.NewEncoder(b).Encode(body); err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		bodyBytes = b
 	}
@@ -473,7 +475,7 @@ func (c *Client) newRequestWithRawBody(ctx context.Context, method, path string,
 	u.Path = path
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	req.Header.Set("X-Vault-Token", c.token)
 	return req, nil

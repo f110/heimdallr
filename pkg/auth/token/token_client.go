@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 const (
@@ -40,7 +40,7 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure 
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return "", xerrors.Errorf(": %v")
+		return "", xerrors.WithStack(err)
 	}
 	v := &url.Values{}
 	v.Set("challenge", c.challenge(verifier))
@@ -48,16 +48,16 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure 
 	u.RawQuery = v.Encode()
 	u.Path = u.Path + "/authorize"
 	if err := OpenBrowser(u.String(), overrideOpenURLCommand); err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", err
 	}
 
 	code, err := c.getCode()
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", err
 	}
 	token, err := c.exchangeToken(endpoint, code, verifier, insecure)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", err
 	}
 
 	return token, nil
@@ -69,7 +69,7 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure boo
 	v.Set("code_verifier", codeVerifier)
 	req, err := http.NewRequest(http.MethodGet, endpoint+"/exchange?"+v.Encode(), nil)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	dialer := &net.Dialer{Resolver: c.resolver}
 	client := &http.Client{
@@ -82,15 +82,15 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure boo
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return "", xerrors.Errorf("localproxy: failure exchange token: Code=%d", res.StatusCode)
+		return "", xerrors.NewfWithStack("localproxy: failure exchange token: Code=%d", res.StatusCode)
 	}
 
 	exchange := &ExchangeResponse{}
 	if err := json.NewDecoder(res.Body).Decode(exchange); err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	return exchange.AccessToken, nil
@@ -99,7 +99,7 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure boo
 func (c *Client) getCode() (string, error) {
 	u, err := url.Parse(ClientRedirectUrl)
 	if err != nil {
-		return "", xerrors.Errorf(": %v", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	result := make(chan string)

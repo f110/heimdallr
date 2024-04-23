@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -36,12 +36,12 @@ type Relay struct {
 func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.Conn) (*Relay, error) {
 	hostname, err := netutil.GetHostname()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	addr := l.Addr().(*net.TCPAddr)
 
@@ -50,11 +50,11 @@ func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.C
 	}
 	csr, privateKey, err := cert.CreatePrivateKeyAndCertificateRequest(subject, []string{hostname})
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	c, err := client.NewServerCert(csr)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		Certificates: []tls.Certificate{

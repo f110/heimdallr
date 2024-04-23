@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -98,7 +98,7 @@ func New(conf *configv2.Config, cluster database.ClusterDatabase, authProxy *aut
 func (s *Server) Start() error {
 	l, err := net.Listen("tcp", s.Config.AccessProxy.HTTP.Bind)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		MinVersion:     tls.VersionTLS12,
@@ -110,23 +110,23 @@ func (s *Server) Start() error {
 	})
 
 	if err := http2.ConfigureServer(s.server, nil); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	if err := s.clusterDatabase.Join(context.Background()); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	logger.Log.Info("Start Server", zap.String("listen", s.Config.AccessProxy.HTTP.Bind))
 
 	if s.Config.AccessProxy.HTTP.BindHttp != "" {
 		l, err := net.Listen("tcp", s.Config.AccessProxy.HTTP.BindHttp)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.AccessProxy.HTTP.BindHttp))
 		go s.server.Serve(l)
 	}
-	return s.server.Serve(listener)
+	return xerrors.WithStack(s.server.Serve(listener))
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
@@ -136,5 +136,5 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	s.clusterDatabase.Leave(ctx)
 	logger.Log.Info("Shutdown Server")
-	return s.server.Shutdown(ctx)
+	return xerrors.WithStack(s.server.Shutdown(ctx))
 }

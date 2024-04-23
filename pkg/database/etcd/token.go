@@ -8,8 +8,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -29,15 +29,15 @@ func NewTemporaryToken(client *clientv3.Client) *TemporaryToken {
 func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database.Token, error) {
 	res, err := t.client.Get(ctx, fmt.Sprintf("token/%s", token))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if res.Count == 0 {
-		return nil, database.ErrTokenNotFound
+		return nil, xerrors.WithStack(database.ErrTokenNotFound)
 	}
 
 	tk := &database.Token{}
 	if err := yaml.Unmarshal(res.Kvs[0].Value, tk); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	return tk, nil
 }
@@ -45,7 +45,7 @@ func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database
 func (t *TemporaryToken) NewCode(ctx context.Context, userId, challenge, challengeMethod string) (*database.Code, error) {
 	code, err := newCode()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	c := &database.Code{
 		Code:            code,
@@ -57,16 +57,16 @@ func (t *TemporaryToken) NewCode(ctx context.Context, userId, challenge, challen
 
 	b, err := yaml.Marshal(c)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	lease, err := t.client.Grant(ctx, int64(database.CodeExpiration.Seconds()))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	_, err = t.client.Put(ctx, fmt.Sprintf("code/%s", code), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return c, nil
@@ -75,14 +75,14 @@ func (t *TemporaryToken) NewCode(ctx context.Context, userId, challenge, challen
 func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier string) (*database.Token, error) {
 	res, err := t.client.Get(ctx, fmt.Sprintf("code/%s", code))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if res.Count == 0 {
-		return nil, xerrors.New("etcd: code not found")
+		return nil, xerrors.NewWithStack("etcd: code not found")
 	}
 	c := &database.Code{}
 	if err := yaml.Unmarshal(res.Kvs[0].Value, c); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if !c.Verify(codeVerifier) {
 		logger.Log.Debug("code verifier", zap.String("code_verifier", codeVerifier))
@@ -91,24 +91,24 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 
 	_, err = t.client.Delete(ctx, fmt.Sprintf("code/%s", code))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	s, err := newCode()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	token := &database.Token{Token: s, UserId: c.UserId, IssuedAt: time.Now()}
 	b, err := yaml.Marshal(token)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	lease, err := t.client.Grant(ctx, int64(database.TokenExpiration.Seconds()))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	_, err = t.client.Put(ctx, fmt.Sprintf("token/%s", s), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	return token, nil
 }
@@ -116,13 +116,13 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 func (t *TemporaryToken) AllCodes(ctx context.Context) ([]*database.Code, error) {
 	res, err := t.client.Get(ctx, "code/", clientv3.WithPrefix())
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	codes := make([]*database.Code, 0, res.Count)
 	for _, v := range res.Kvs {
 		c := &database.Code{}
 		if err := yaml.Unmarshal(v.Value, c); err != nil {
-			return nil, xerrors.Errorf(": $v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		codes = append(codes, c)
 	}
@@ -133,7 +133,7 @@ func (t *TemporaryToken) AllCodes(ctx context.Context) ([]*database.Code, error)
 func (t *TemporaryToken) DeleteCode(ctx context.Context, code string) error {
 	_, err := t.client.Delete(ctx, fmt.Sprintf("code/%s", code))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -142,14 +142,14 @@ func (t *TemporaryToken) DeleteCode(ctx context.Context, code string) error {
 func (t *TemporaryToken) AllTokens(ctx context.Context) ([]*database.Token, error) {
 	res, err := t.client.Get(ctx, "token/", clientv3.WithPrefix())
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	tokens := make([]*database.Token, 0, res.Count)
 	for _, v := range res.Kvs {
 		tk := &database.Token{}
 		if err := yaml.Unmarshal(v.Value, tk); err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		tokens = append(tokens, tk)
 	}
@@ -160,7 +160,7 @@ func (t *TemporaryToken) AllTokens(ctx context.Context) ([]*database.Token, erro
 func (t *TemporaryToken) DeleteToken(ctx context.Context, token string) error {
 	_, err := t.client.Delete(ctx, fmt.Sprintf("token/%s", token))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil

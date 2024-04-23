@@ -20,7 +20,7 @@ go_library(
         "//pkg/rpc/rpcserver",
         "//vendor/go.etcd.io/etcd/client/v3:client",
         "//vendor/go.f110.dev/protoc-ddl/probe",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/connectivity",
     ],

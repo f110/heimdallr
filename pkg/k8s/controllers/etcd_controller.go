@@ -21,8 +21,8 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/etcdutl/v3/snapshot"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	corev1 "k8s.io/api/core/v1"
@@ -181,7 +181,7 @@ func (ec *EtcdController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 func (ec *EtcdController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	c, err := ec.clusterLister.Get(namespace, name)
@@ -189,7 +189,7 @@ func (ec *EtcdController) GetObject(key string) (interface{}, error) {
 		ec.Log(nil).Debug("EtcdCluster is not found", zap.String("key", key))
 		return nil, nil
 	} else if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return c, nil
@@ -215,7 +215,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		c.Status.Phase = etcdv1alpha2.EtcdClusterPhaseInitializing
 		updatedEC, err := ec.client.UpdateStatusEtcdCluster(ctx, c, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		c = updatedEC
 	}
@@ -223,19 +223,19 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	cluster := NewEtcdCluster(c, ec.clusterDomain, ec.Log(ctx), ec.etcdClientMockOpt)
 	cluster.Init(ec.secretLister)
 	if err := ec.setupCA(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := ec.setupServerCert(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := ec.setupClientCert(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := cluster.GetOwnedPods(ec.podLister, ec.pvcLister); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := ec.ensureServiceAccount(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	var handler internalStateHandleFunc
@@ -258,12 +258,12 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	case InternalStateRunning:
 		handler = ec.stateRunning
 	default:
-		return xerrors.Errorf("Unknown internal state: %s", cluster.CurrentInternalState())
+		return xerrors.NewfWithStack("Unknown internal state: %s", cluster.CurrentInternalState())
 	}
 
 	if handler != nil {
 		if err := handler(ctx, cluster); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -321,17 +321,17 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		)
 		p, err := ec.coreClient.CoreV1().Pods(v.Namespace).Update(ctx, v, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		p.ObjectMeta.DeepCopyInto(&v.ObjectMeta)
 	}
 
 	if err := ec.ensureService(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := ec.checkClusterStatus(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	ec.updateStatus(ctx, cluster)
@@ -361,7 +361,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		ec.Log(ctx).Debug("Update EtcdCluster")
 		_, err := ec.client.UpdateStatusEtcdCluster(ctx, cluster.EtcdCluster, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -375,11 +375,11 @@ func (ec *EtcdController) Finalize(_ context.Context, _ interface{}) error {
 func (ec *EtcdController) stateCreatingFirstMember(ctx context.Context, cluster *EtcdCluster) error {
 	if cluster.Status.Restored != nil && !cluster.Status.Restored.Completed {
 		if err := ec.createNewClusterWithBackup(ctx, cluster); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	} else {
 		if err := ec.createNewCluster(ctx, cluster); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -392,7 +392,7 @@ func (ec *EtcdController) createNewCluster(ctx context.Context, cluster *EtcdClu
 	if members[0].Pod.CreationTimestamp.IsZero() {
 		ec.Log(ctx).Debug("Create first member", zap.String("name", members[0].Pod.Name))
 		if err := ec.startMember(ctx, cluster, members[0]); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "FirstMemberCreated", "The first member has been created")
 	} else {
@@ -412,7 +412,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 
 		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0].Pod, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
@@ -429,7 +429,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 	}
 	if readyReceiver {
 		if err := ec.sendBackupToContainer(ctx, cluster, members[0].Pod, cluster.Status.Restored.Path); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 
 		return nil
@@ -467,7 +467,7 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 
 	if targetMember != nil {
 		if err := ec.startMember(ctx, cluster, targetMember); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -508,7 +508,7 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 		// At this time, we will transition to CreatingMembers
 		// if we delete the member which is needs repair.
 		if err := ec.deleteMember(ctx, cluster, targetMember); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -517,7 +517,7 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 
 func (ec *EtcdController) stateRunning(ctx context.Context, cluster *EtcdCluster) error {
 	if err := ec.setupDefragmentJob(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -542,7 +542,7 @@ func (ec *EtcdController) statePreparingUpdate(ctx context.Context, cluster *Etc
 		defer cancelFunc()
 
 		if err := ec.startMember(ctx, cluster, temporaryMember); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "CreatedTemporaryMember", "The temporary member has been created")
 	} else if !cluster.IsPodReady(temporaryMember.Pod) {
@@ -611,7 +611,7 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 		}
 
 		if err := ec.updateMember(ctx, cluster, targetMember); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	} else {
 		ec.Log(ctx).Debug("Waiting update", zap.String("name", targetMember.Pod.Name))
@@ -623,7 +623,7 @@ func (ec *EtcdController) stateUpdatingMember(ctx context.Context, cluster *Etcd
 func (ec *EtcdController) stateTeardownUpdating(ctx context.Context, cluster *EtcdCluster) error {
 	if v := cluster.TemporaryMember(); v != nil {
 		if err := ec.deleteMember(ctx, cluster, v); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -646,7 +646,7 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 	for _, v := range members {
 		ec.Log(ctx).Debug("Delete pod", zap.String("name", v.Name))
 		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(ctx, v.Name, metav1.DeleteOptions{}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -661,14 +661,14 @@ func (ec *EtcdController) sendBackupToContainer(ctx context.Context, cluster *Et
 		defer forwarder.Close()
 	}
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	endpoint := fmt.Sprintf("%s:%d", pod.Status.PodIP, 2900)
 	if ec.runOutsideCluster {
 		forwarder, localPort, err := ec.portForward(ctx, pod, 2900)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		defer forwarder.Close()
 
@@ -677,13 +677,13 @@ func (ec *EtcdController) sendBackupToContainer(ctx context.Context, cluster *Et
 
 	conn, err := net.Dial("tcp", endpoint)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if _, err := io.Copy(conn, backupFile); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := conn.Close(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -692,12 +692,12 @@ func (ec *EtcdController) sendBackupToContainer(ctx context.Context, cluster *Et
 func (ec *EtcdController) setupCA(ctx context.Context, cluster *EtcdCluster) error {
 	caSecret, err := cluster.CA()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if caSecret.CreationTimestamp.IsZero() {
 		caSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, caSecret, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		cluster.SetCASecret(caSecret)
 	}
@@ -708,12 +708,12 @@ func (ec *EtcdController) setupCA(ctx context.Context, cluster *EtcdCluster) err
 func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdCluster) error {
 	serverCertSecret, err := cluster.ServerCertSecret()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if serverCertSecret.CreationTimestamp.IsZero() {
 		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, serverCertSecret, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		cluster.SetServerCertSecret(serverCertSecret)
 	}
@@ -721,12 +721,12 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 	if cluster.ShouldUpdateServerCertificate(serverCertSecret.Data[serverCertSecretCertName]) {
 		serverCertSecret, err = cluster.ServerCertSecret()
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 
 		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(ctx, serverCertSecret, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		cluster.SetServerCertSecret(serverCertSecret)
 	}
@@ -737,12 +737,12 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdCluster) error {
 	clientCertSecret, err := cluster.ClientCertSecret()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if clientCertSecret.CreationTimestamp.IsZero() {
 		clientCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, clientCertSecret, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		cluster.SetClientCertSecret(clientCertSecret)
 	}
@@ -756,7 +756,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 	if member.PersistentVolumeClaim != nil && member.PersistentVolumeClaim.CreationTimestamp.IsZero() {
 		_, err := ec.coreClient.CoreV1().PersistentVolumeClaims(cluster.Namespace).Create(ctx, member.PersistentVolumeClaim, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -764,7 +764,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 		cluster.SetAnnotationForPod(member.Pod)
 		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, resetPod(member.Pod), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -780,7 +780,7 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 		defer forwarder.Close()
 	}
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	defer func() {
 		if eClient != nil {
@@ -790,7 +790,7 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 	err = eClient.WithTimeout(ctx, 3*time.Second, func(ctx context.Context) error {
 		mList, err := eClient.MemberList(ctx)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		var memberStatus *etcdserverpb.Member
@@ -808,19 +808,19 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 		if memberStatus != nil {
 			_, err = eClient.MemberRemove(ctx, memberStatus.ID)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			ec.Log(ctx).Debug("Remove the member from cluster", zap.String("name", memberStatus.Name), zap.Strings("peerURLs", memberStatus.PeerURLs))
 		}
 
 		if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if forwarder != nil {
@@ -828,7 +828,7 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 	}
 
 	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(ctx, member.Pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -839,7 +839,7 @@ func (ec *EtcdController) updateMember(ctx context.Context, cluster *EtcdCluster
 
 	if !member.Pod.CreationTimestamp.IsZero() && cluster.ShouldUpdate(member.Pod) {
 		if err := ec.deleteMember(ctx, cluster, member); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -848,10 +848,10 @@ func (ec *EtcdController) updateMember(ctx context.Context, cluster *EtcdCluster
 
 func (ec *EtcdController) ensureService(ctx context.Context, cluster *EtcdCluster) error {
 	if err := ec.ensureDiscoveryService(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := ec.ensureClientService(ctx, cluster); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -863,14 +863,14 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if cluster.Spec.DefragmentSchedule == "" {
 		if found {
 			err = ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Delete(ctx, cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			return nil
 		}
@@ -882,13 +882,13 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
 			_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Update(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	} else {
 		_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Create(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -902,18 +902,18 @@ func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *Etc
 
 		sa, err = ec.coreClient.CoreV1().ServiceAccounts(cluster.Namespace).Create(ctx, sa, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		_, err = ec.coreClient.RbacV1().Roles(cluster.Namespace).Create(ctx, cluster.EtcdRole(), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		_, err = ec.coreClient.RbacV1().RoleBindings(cluster.Namespace).Create(ctx, cluster.EtcdRoleBinding(), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -924,10 +924,10 @@ func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *E
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -938,10 +938,10 @@ func (ec *EtcdController) ensureClientService(ctx context.Context, cluster *Etcd
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(ctx, cluster.ClientService(), metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -1193,7 +1193,7 @@ func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) er
 		defer forwarder.Close()
 	}
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	defer func() {
 		if client != nil {
@@ -1203,38 +1203,38 @@ func (ec *EtcdController) doBackup(ctx context.Context, cluster *EtcdCluster) er
 
 	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer os.Remove(tmpFile.Name())
 
 	data, err := client.Snapshot(ctx)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	dataSize, err := io.Copy(tmpFile, data)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := tmpFile.Sync(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := data.Close(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	sm := snapshot.NewV3(logger.Log)
 	dbStatus, err := sm.Status(tmpFile.Name())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	backupStatus.EtcdRevision = dbStatus.Revision
 
 	f, err := os.Open(tmpFile.Name())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := ec.storeBackupFile(ctx, cluster, backupStatus, f, dataSize, now); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	backupStatus.Succeeded = true
@@ -1251,7 +1251,7 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 			defer forwarder.Close()
 		}
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
 		path := spec.Path
@@ -1261,7 +1261,7 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		backupStatus.Path = filepath.Join(path, filename)
 		_, err = mc.PutObject(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
@@ -1273,32 +1273,32 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		}
 		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b, ok := credential.Data[spec.CredentialSelector.ServiceAccountJSONKey]
 		if !ok {
-			return xerrors.Errorf("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
+			return xerrors.NewfWithStack("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
 		}
 
 		client, err := storage.NewClient(ctx, option.WithCredentialsJSON(b))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
 		obj := client.Bucket(spec.Bucket).Object(filepath.Join(spec.Path, filename))
 		w := obj.NewWriter(ctx)
 		if _, err := io.Copy(w, data); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if err := w.Close(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		backupStatus.Path = filepath.Join(spec.Path, filename)
 
 		return nil
 	default:
-		return xerrors.New("Not configured a storage")
+		return xerrors.NewWithStack("Not configured a storage")
 	}
 }
 
@@ -1317,13 +1317,13 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 			defer forwarder.Close()
 		}
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: spec.Path + "/", Recursive: false})
 		backupFiles := make([]string, 0)
 		for obj := range listCh {
 			if obj.Err != nil {
-				return xerrors.Errorf(": %w", obj.Err)
+				return xerrors.WithStack(err)
 			}
 			if strings.HasPrefix(obj.Key, filepath.Join(spec.Path, cluster.Name)) {
 				backupFiles = append(backupFiles, obj.Key)
@@ -1338,7 +1338,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		for _, v := range purgeTargets {
 			if err := mc.RemoveObject(ctx, spec.Bucket, v, minio.RemoveObjectOptions{}); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 
@@ -1351,15 +1351,15 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		}
 		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b, ok := credential.Data[spec.CredentialSelector.ServiceAccountJSONKey]
 		if !ok {
-			return xerrors.Errorf("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
+			return xerrors.NewfWithStack("%s is not found", spec.CredentialSelector.ServiceAccountJSONKey)
 		}
 		client, err := storage.NewClient(ctx, option.WithCredentialsJSON(b))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		bh := client.Bucket(spec.Bucket)
 
@@ -1367,11 +1367,11 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		iter := bh.Objects(ctx, &storage.Query{Prefix: spec.Path})
 		for {
 			attr, err := iter.Next()
-			if err == iterator.Done {
+			if errors.Is(err, iterator.Done) {
 				break
 			}
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			backupFiles = append(backupFiles, attr.Name)
 		}
@@ -1385,13 +1385,13 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		for _, v := range purgeTargets {
 			ec.Log(ctx).Debug("Delete backup file", zap.String("target", v))
 			if err := bh.Object(v).Delete(ctx); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 
 		return nil
 	default:
-		return xerrors.New("Not configured a storage")
+		return xerrors.NewWithStack("Not configured a storage")
 	}
 }
 
@@ -1402,18 +1402,18 @@ func (ec *EtcdController) getBackupFile(ctx context.Context, cluster *EtcdCluste
 
 		mc, forwarder, err := ec.minioClient(ctx, spec)
 		if err != nil {
-			return nil, forwarder, xerrors.Errorf(": %w", err)
+			return nil, forwarder, err
 		}
 
 		obj, err := mc.GetObject(ctx, spec.Bucket, path, minio.GetObjectOptions{})
 		if err != nil {
-			return nil, forwarder, xerrors.Errorf(": %w", err)
+			return nil, forwarder, xerrors.WithStack(err)
 		}
 		if stat, err := obj.Stat(); err != nil {
-			return nil, forwarder, xerrors.Errorf(": %w", err)
+			return nil, forwarder, xerrors.WithStack(err)
 		} else {
 			if stat.Size == 0 {
-				return nil, forwarder, xerrors.Errorf("backup file is empty")
+				return nil, forwarder, xerrors.NewWithStack("backup file is empty")
 			}
 		}
 
@@ -1426,7 +1426,7 @@ func (ec *EtcdController) getBackupFile(ctx context.Context, cluster *EtcdCluste
 func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
 	svc, err := ec.serviceLister.Services(spec.ServiceSelector.Namespace).Get(spec.ServiceSelector.Name)
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, xerrors.WithStack(err)
 	}
 
 	instanceEndpoint := fmt.Sprintf("%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
@@ -1435,7 +1435,7 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 		selector := labels.SelectorFromSet(svc.Spec.Selector)
 		pods, err := ec.podLister.List(selector)
 		if err != nil {
-			return nil, nil, xerrors.Errorf(": %w", err)
+			return nil, nil, xerrors.WithStack(err)
 		}
 		var targetPod *corev1.Pod
 		for _, v := range pods {
@@ -1450,7 +1450,7 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 
 		f, port, err := ec.portForward(ctx, targetPod, int(svc.Spec.Ports[0].Port))
 		if err != nil {
-			return nil, nil, xerrors.Errorf(": %w", err)
+			return nil, nil, err
 		}
 		forwarder = f
 
@@ -1459,13 +1459,13 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 
 	credential, err := ec.secretLister.Secrets(spec.CredentialSelector.Namespace).Get(spec.CredentialSelector.Name)
 	if err != nil {
-		return nil, forwarder, xerrors.Errorf(": %w", err)
+		return nil, forwarder, xerrors.WithStack(err)
 	}
 
 	creds := credentials.NewStaticV4(string(credential.Data[spec.CredentialSelector.AccessKeyIDKey]), string(credential.Data[spec.CredentialSelector.SecretAccessKeyKey]), "")
 	mc, err := minio.New(instanceEndpoint, &minio.Options{Creds: creds, Secure: spec.Secure, Transport: ec.transport})
 	if err != nil {
-		return nil, forwarder, xerrors.Errorf(": %w", err)
+		return nil, forwarder, xerrors.WithStack(err)
 	}
 
 	return mc, forwarder, nil
@@ -1491,7 +1491,7 @@ func (ec *EtcdController) etcdClient(ctx context.Context, cluster *EtcdCluster) 
 			if cluster.IsPodReady(v.Pod) {
 				f, port, err := ec.portForward(ctx, v.Pod, EtcdClientPort)
 				if err != nil {
-					return nil, nil, xerrors.Errorf(": %w", err)
+					return nil, nil, err
 				}
 				forwarder = f
 
@@ -1504,7 +1504,7 @@ func (ec *EtcdController) etcdClient(ctx context.Context, cluster *EtcdCluster) 
 
 	client, err := cluster.Client(endpoints)
 	if err != nil {
-		return nil, forwarder, xerrors.Errorf(": %w", err)
+		return nil, forwarder, err
 	}
 
 	return &etcdv3Client{Client: client}, forwarder, nil
@@ -1514,14 +1514,14 @@ func (ec *EtcdController) portForward(ctx context.Context, pod *corev1.Pod, port
 	req := ec.coreClient.CoreV1().RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
 	if err != nil {
-		return nil, 0, xerrors.Errorf(": %w", err)
+		return nil, 0, xerrors.WithStack(err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
 
 	readyCh := make(chan struct{})
 	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
 	if err != nil {
-		return nil, 0, xerrors.Errorf(": %w", err)
+		return nil, 0, xerrors.WithStack(err)
 	}
 	go func() {
 		err := pf.ForwardPorts()
@@ -1542,7 +1542,7 @@ func (ec *EtcdController) portForward(ctx context.Context, pod *corev1.Pod, port
 
 	ports, err := pf.GetPorts()
 	if err != nil {
-		return nil, 0, xerrors.Errorf(": %w", err)
+		return nil, 0, xerrors.WithStack(err)
 	}
 
 	return pf, ports[0].Local, nil

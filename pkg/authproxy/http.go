@@ -13,9 +13,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-github/v41/github"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/auth/authn"
@@ -392,7 +392,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 		token, err := claim.SignedString(p.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {
 			logger.Log.Warn("Failed sign jwt", zap.Error(err))
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		req.Header.Set(TokenHeaderName, token)

@@ -14,7 +14,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/sigs.k8s.io/yaml",
     ],
 )

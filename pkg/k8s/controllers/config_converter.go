@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
@@ -76,7 +76,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 			if v.Spec.Socket.ServiceSelector != nil {
 				svc, err := findService(serviceLister, v.Spec.Socket.ServiceSelector, v.Namespace)
 				if err != nil {
-					return nil, xerrors.Errorf(": %w", err)
+					return nil, err
 				}
 				for _, p := range svc.Spec.Ports {
 					if p.Name == v.Spec.Socket.ServiceSelector.Port {
@@ -115,7 +115,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 	})
 	proxyBinary, err := yaml.Marshal(proxies)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return proxyBinary, nil
@@ -201,7 +201,7 @@ func (ConfigConverter) Role(backends []*proxyv1alpha2.Backend, roleList []*proxy
 	})
 	roleBinary, err := yaml.Marshal(roles)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return roleBinary, nil
@@ -220,7 +220,7 @@ func (ConfigConverter) RPCPermission(permissions []*proxyv1alpha2.RpcPermission)
 	})
 	rpcPermissionBinary, err := yaml.Marshal(rpcPermissions)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return rpcPermissionBinary, nil

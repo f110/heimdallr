@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 var (

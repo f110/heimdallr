@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/xerrors"
-
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
@@ -15,7 +13,7 @@ import (
 func info() error {
 	uc, err := userconfig.New()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	c, err := uc.GetCertificate()

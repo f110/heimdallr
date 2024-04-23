@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
-
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/authproxy"
 	"go.f110.dev/heimdallr/pkg/cmd"
@@ -61,7 +59,7 @@ Retry:
 			tokenClient := token.NewClient(resolver)
 			t, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 			accessToken = t
 			if err := uc.SetToken(accessToken); err != nil {

@@ -765,8 +765,8 @@ go.etcd.io/etcd/server/v3 v3.5.13 h1:V6KG+yMfMSqWt+lGnhFpP5z5dRUj1BDRJ5k1fQ9DFok
 go.etcd.io/etcd/server/v3 v3.5.13/go.mod h1:K/8nbsGupHqmr5MkgaZpLlH1QdX1pcNQLAkODy44XcQ=
 go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2 h1:AHqwiVBem0i/BeWlxtuH8iUCkow7vMoNi9B9Qmgru0U=
 go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2/go.mod h1:+L3lCQcV1EkT4qZQo9Hjybk35LEMtleeuinfIVqHo/Y=
-go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f h1:Bn/J0laqPSXLWpEsbzMm8gGJ3Wwcvw6aGBUgNimx1Kw=
-go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f/go.mod h1:cES3zXhfCuKnA7lnN4m3sivaMsBU/IlIl7yVw1VaN28=
+go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238 h1:OXAru2A2i1uT4s3PJxBWrfDpcPIKVOYBSKMmUj+oTpU=
+go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238/go.mod h1:cES3zXhfCuKnA7lnN4m3sivaMsBU/IlIl7yVw1VaN28=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.2/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=

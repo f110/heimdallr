@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -155,7 +155,7 @@ func NewConnThroughRelay(ctx context.Context, conn *tls.Conn) (*ConnThroughRelay
 	id := make([]byte, 4)
 	i, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	binary.BigEndian.PutUint32(id, uint32(i.Int64()))
 
@@ -430,7 +430,7 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 	if !ok {
 		c, err := s.dialUpstreamViaRelay(ctx, name)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, err
 		}
 		return c, nil
 	}
@@ -438,7 +438,7 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 	id := make([]byte, 4)
 	i, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt32))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	binary.BigEndian.PutUint32(id, uint32(i.Int64()))
 
@@ -453,9 +453,9 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 
 	select {
 	case <-time.After(5 * time.Second):
-		return nil, xerrors.New("connector: time out")
+		return nil, xerrors.NewWithStack("connector: time out")
 	case <-ctx.Done():
-		return nil, xerrors.New("connector: canceled")
+		return nil, xerrors.NewWithStack("connector: canceled")
 	case su := <-ch:
 		r, w := io.Pipe()
 		c := NewConn(conn, su.streamId, r, su.remoteAddr)
@@ -470,7 +470,7 @@ func (s *Server) DialUpstream(ctx context.Context, name string) (net.Conn, error
 func (s *Server) dialUpstreamViaRelay(ctx context.Context, name string) (net.Conn, error) {
 	conn, err := s.Pool.GetConn(name)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	return NewConnThroughRelay(ctx, conn)
 }
@@ -478,11 +478,11 @@ func (s *Server) dialUpstreamViaRelay(ctx context.Context, name string) (net.Con
 func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Writer, dialId uint32) (uint32, *net.TCPAddr, error) {
 	b, ok := s.Config.AccessProxy.GetBackend(name)
 	if !ok {
-		return 0, nil, xerrors.New("connector: backend not found")
+		return 0, nil, xerrors.NewWithStack("connector: backend not found")
 	}
 	conn, ok := s.getUpstreamConn(b.Name)
 	if !ok {
-		return 0, nil, xerrors.New("connector: backend not connected")
+		return 0, nil, xerrors.NewWithStack("connector: backend not connected")
 	}
 
 	id := make([]byte, 4)
@@ -499,9 +499,9 @@ func (s *Server) DialUpstreamForRelay(ctx context.Context, name string, w io.Wri
 
 	select {
 	case <-time.After(5 * time.Second):
-		return 0, nil, xerrors.New("connector: time out")
+		return 0, nil, xerrors.NewWithStack("connector: time out")
 	case <-ctx.Done():
-		return 0, nil, xerrors.New("connector: canceled")
+		return 0, nil, xerrors.NewWithStack("connector: canceled")
 	case su := <-ch:
 		s.mu.Lock()
 		s.serveStreams[su.streamId] = w

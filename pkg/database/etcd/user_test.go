@@ -128,7 +128,7 @@ func TestUserDatabase_Delete(t *testing.T) {
 	waitNotify(t, notify)
 
 	_, err = u.Get("test@example")
-	require.Equal(t, database.ErrUserNotFound, err)
+	require.ErrorIs(t, err, database.ErrUserNotFound)
 }
 
 func TestUserDatabase_Close(t *testing.T) {

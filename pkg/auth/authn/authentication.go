@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -75,7 +76,7 @@ func (a *authentication) Authenticate(ctx context.Context, req *http.Request) (*
 	}
 
 	user, sess, err := a.findUser(ctx, req)
-	if err == ErrUserNotFound {
+	if errors.Is(err, ErrUserNotFound) {
 		u, s, rErr := a.findRootUser(req)
 		if rErr != nil {
 			return nil, nil, err

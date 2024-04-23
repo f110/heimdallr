@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 var (

@@ -8,51 +8,51 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 )
 
 func containerReleaseCmd(repository, sha256File, tag string, override bool) error {
 	if tag == "" || sha256File == "" {
-		return xerrors.New("tag and sha256 is mandatory")
+		return xerrors.NewWithStack("tag and sha256 is mandatory")
 	}
 	b, err := os.ReadFile(sha256File)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	sha256 := string(b)
 
 	repo, err := name.NewRepository(repository)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if !override {
 		images, err := remote.List(repo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		for _, v := range images {
 			if v == tag {
-				return xerrors.Errorf("Container tag %s is already exists", v)
+				return xerrors.NewfWithStack("Container tag %s is already exists", v)
 			}
 		}
 	}
 
 	ref, err := name.ParseReference(fmt.Sprintf("%s@%s", repository, sha256))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	desc, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	t, err := name.NewTag(fmt.Sprintf("%s:%s", repository, tag))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := remote.Tag(t, desc, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	return nil
 }

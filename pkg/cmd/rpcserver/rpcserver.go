@@ -10,7 +10,7 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/protoc-ddl/probe"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 
@@ -82,12 +82,12 @@ func New() *mainProcess {
 func (m *mainProcess) init() (fsm.State, error) {
 	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 	m.Config = conf
 	m.configReloader, err = configutil.NewReloader(conf)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 
 	switch {
@@ -102,7 +102,7 @@ func (m *mainProcess) init() (fsm.State, error) {
 
 func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.Config.Logger); err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, err
 	}
 
 	switch m.datastoreType {
@@ -112,33 +112,33 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 		client, err := m.Config.Datastore.GetEtcdClient(m.Config.Logger)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 		go m.watchGRPCConnState(client.ActiveConnection())
 		m.etcdClient = client
 
 		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 		m.caDatabase = etcd.NewCA(client)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(ctx, client)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
-				return fsm.UnknownState, xerrors.Errorf(": %v", err)
+				return fsm.UnknownState, err
 			}
 		}
 	case datastoreTypeMySQL:
 		m.datastoreType = datastoreTypeMySQL
 		conn, err := sql.Open("mysql", m.Config.Datastore.DSN.FormatDSN())
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.WithStack(err)
 		}
 		m.conn = conn
 
@@ -147,7 +147,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 		m.caDatabase = mysql.NewCA(repository)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
@@ -161,7 +161,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if m.Config.CertificateAuthority != nil {
 		ca, err := cert.NewCertificateAuthority(m.caDatabase, m.Config.CertificateAuthority)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 		m.ca = ca
 	}
@@ -190,7 +190,7 @@ func (m *mainProcess) start() (fsm.State, error) {
 	if m.datastoreType == datastoreTypeEtcd {
 		c, err := etcd.NewCompactor(m.etcdClient)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 
 		go func() {

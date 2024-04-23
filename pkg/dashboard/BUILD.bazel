@@ -16,8 +16,8 @@ go_library(
         "//tmpl/dashboard",
         "//vendor/github.com/golang-jwt/jwt/v4:jwt",
         "//vendor/github.com/julienschmidt/httprouter",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
     ],
 )

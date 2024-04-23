@@ -14,6 +14,6 @@ go_library(
         "//pkg/authproxy",
         "//pkg/cmd",
         "//pkg/config/userconfig",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
     ],
 )

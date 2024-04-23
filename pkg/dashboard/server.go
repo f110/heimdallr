@@ -17,8 +17,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/julienschmidt/httprouter"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/auth/authn"
@@ -45,27 +45,27 @@ type Server struct {
 func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) (*Server, error) {
 	req, err := http.NewRequest(http.MethodGet, config.Dashboard.PublicKeyUrl, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	res.Body.Close()
 	block, _ := pem.Decode(b)
 	if block == nil {
-		return nil, xerrors.New("failed parse public key")
+		return nil, xerrors.NewWithStack("failed parse public key")
 	}
 	if block.Type != "PUBLIC KEY" {
-		return nil, xerrors.Errorf("unexpected type: %s", block.Type)
+		return nil, xerrors.NewWithStack("failed parse public key")
 	}
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	s := &Server{

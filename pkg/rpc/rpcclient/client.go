@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/keepalive"
@@ -70,19 +70,19 @@ func NewWithStaticToken(conn *grpc.ClientConn) (*Client, error) {
 
 	uc, err := userconfig.New()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	t, err := uc.GetToken()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", nil)
+		return nil, err
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), rpc.TokenMetadataKey, t)
 	_, err = adminClient.Ping(ctx, &rpc.RequestPing{}, grpc.WaitForReady(true))
 	if err != nil {
 		endpoint, err := extractEndpointFromError(err)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, err
 		}
 		tokenClient := token.NewClient(net.DefaultResolver)
 		newToken, err := tokenClient.RequestToken(endpoint, "", false)
@@ -136,12 +136,12 @@ func (c *Client) Alive() bool {
 
 func (c *Client) AddUser(id, role string) error {
 	_, err := c.adminClient.UserAdd(c.md, &rpc.RequestUserAdd{Id: id, Role: role, Type: rpc.UserType_NORMAL})
-	return err
+	return xerrors.WithStack(err)
 }
 
 func (c *Client) DeleteUser(id string, role string) error {
 	_, err := c.adminClient.UserDel(c.md, &rpc.RequestUserDel{Id: id, Role: role})
-	return err
+	return xerrors.WithStack(err)
 }
 
 func (c *Client) ListAllUser() ([]*rpc.UserItem, error) {
@@ -151,7 +151,7 @@ func (c *Client) ListAllUser() ([]*rpc.UserItem, error) {
 func (c *Client) ListUser(role string) ([]*rpc.UserItem, error) {
 	res, err := c.adminClient.UserList(c.md, &rpc.RequestUserList{Role: role})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -160,7 +160,7 @@ func (c *Client) ListUser(role string) ([]*rpc.UserItem, error) {
 func (c *Client) ListServiceAccount() ([]*rpc.UserItem, error) {
 	res, err := c.adminClient.UserList(c.md, &rpc.RequestUserList{ServiceAccount: true})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -168,13 +168,13 @@ func (c *Client) ListServiceAccount() ([]*rpc.UserItem, error) {
 
 func (c *Client) NewServiceAccount(id, comment string) error {
 	_, err := c.adminClient.UserAdd(c.md, &rpc.RequestUserAdd{Id: id, Type: rpc.UserType_SERVICE_ACCOUNT, Comment: comment})
-	return err
+	return xerrors.WithStack(err)
 }
 
 func (c *Client) GetUser(id string, withToken bool) (*rpc.UserItem, error) {
 	res, err := c.adminClient.UserGet(c.md, &rpc.RequestUserGet{Id: id, WithTokens: withToken})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.User, nil
@@ -182,13 +182,13 @@ func (c *Client) GetUser(id string, withToken bool) (*rpc.UserItem, error) {
 
 func (c *Client) UpdateUser(id string, user *rpc.UserItem) error {
 	_, err := c.adminClient.UserEdit(c.md, &rpc.RequestUserEdit{Id: id, User: user})
-	return err
+	return xerrors.WithStack(err)
 }
 
 func (c *Client) UserBecomeMaintainer(id, role string) error {
 	_, err := c.adminClient.BecomeMaintainer(c.md, &rpc.RequestBecomeMaintainer{Id: id, Role: role})
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func (c *Client) UserBecomeMaintainer(id, role string) error {
 func (c *Client) ToggleAdmin(id string) error {
 	_, err := c.adminClient.ToggleAdmin(c.md, &rpc.RequestToggleAdmin{Id: id})
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -206,7 +206,7 @@ func (c *Client) ToggleAdmin(id string) error {
 func (c *Client) NewToken(name, userId string) (*rpc.AccessTokenItem, error) {
 	res, err := c.adminClient.TokenNew(c.md, &rpc.RequestTokenNew{Name: name, UserId: userId})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Item, nil
@@ -215,7 +215,7 @@ func (c *Client) NewToken(name, userId string) (*rpc.AccessTokenItem, error) {
 func (c *Client) ClusterMemberList() ([]*rpc.ClusterMember, error) {
 	res, err := c.clusterClient.MemberList(c.md, &rpc.RequestMemberList{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -224,7 +224,7 @@ func (c *Client) ClusterMemberList() ([]*rpc.ClusterMember, error) {
 func (c *Client) ListConnectedAgent() ([]*rpc.Agent, error) {
 	res, err := c.clusterClient.AgentList(c.md, &rpc.RequestAgentList{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -233,7 +233,7 @@ func (c *Client) ListConnectedAgent() ([]*rpc.Agent, error) {
 func (c *Client) ListRole() ([]*rpc.RoleItem, error) {
 	res, err := c.adminClient.RoleList(c.md, &rpc.RequestRoleList{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -242,7 +242,7 @@ func (c *Client) ListRole() ([]*rpc.RoleItem, error) {
 func (c *Client) ListAllBackend() ([]*rpc.BackendItem, error) {
 	res, err := c.adminClient.BackendList(c.md, &rpc.RequestBackendList{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -251,7 +251,7 @@ func (c *Client) ListAllBackend() ([]*rpc.BackendItem, error) {
 func (c *Client) ListAgentBackend() ([]*rpc.BackendItem, error) {
 	res, err := c.adminClient.BackendList(c.md, &rpc.RequestBackendList{Agent: true})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -265,7 +265,7 @@ func (c *Client) ListCert(opts ...RequestOpt) ([]*rpc.CertItem, error) {
 
 	res, err := c.caClient.GetSignedList(c.md, req)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -274,7 +274,7 @@ func (c *Client) ListCert(opts ...RequestOpt) ([]*rpc.CertItem, error) {
 func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
 	res, err := c.caClient.GetRevokedList(c.md, &rpc.RequestGetRevokedList{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil
@@ -283,7 +283,7 @@ func (c *Client) ListRevokedCert() ([]*rpc.CertItem, error) {
 func (c *Client) NewCert(commonName, keyType string, keyBits int, password, comment string) error {
 	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{CommonName: commonName, KeyType: keyType, KeyBits: int32(keyBits), Password: password, Comment: comment})
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -297,7 +297,7 @@ func (c *Client) NewCertByCSR(csr string, opts ...RequestOpt) (*rpc.CertItem, er
 
 	res, err := c.caClient.NewClientCert(c.md, req)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Certificate, nil
@@ -306,7 +306,7 @@ func (c *Client) NewCertByCSR(csr string, opts ...RequestOpt) (*rpc.CertItem, er
 func (c *Client) NewAgentCert(commonName, comment string) error {
 	_, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, CommonName: commonName, Comment: comment})
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -315,7 +315,7 @@ func (c *Client) NewAgentCert(commonName, comment string) error {
 func (c *Client) NewAgentCertByCSR(csr string, commonName string) ([]byte, error) {
 	res, err := c.caClient.NewClientCert(c.md, &rpc.RequestNewClientCert{Agent: true, Csr: csr, CommonName: commonName})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 	if res.Certificate != nil {
 		return res.Certificate.Certificate, nil
@@ -327,7 +327,7 @@ func (c *Client) NewAgentCertByCSR(csr string, commonName string) ([]byte, error
 func (c *Client) NewServerCert(csr []byte) ([]byte, error) {
 	res, err := c.caClient.NewServerCert(c.md, &rpc.RequestNewServerCert{SigningRequest: csr})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Certificate, nil
@@ -336,7 +336,7 @@ func (c *Client) NewServerCert(csr []byte) ([]byte, error) {
 func (c *Client) RevokeCert(serialNumber *big.Int) error {
 	_, err := c.caClient.Revoke(c.md, &rpc.CARequestRevoke{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -345,7 +345,7 @@ func (c *Client) RevokeCert(serialNumber *big.Int) error {
 func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
 	res, err := c.caClient.Get(c.md, &rpc.CARequestGet{SerialNumber: serialNumber.Bytes()})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Item, nil
@@ -354,7 +354,7 @@ func (c *Client) GetCert(serialNumber *big.Int) (*rpc.CertItem, error) {
 func (c *Client) GetBackends() ([]*rpc.BackendItem, error) {
 	res, err := c.userClient.GetBackends(c.md, &rpc.RequestGetBackends{})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return res.Items, nil

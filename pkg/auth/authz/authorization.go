@@ -2,11 +2,12 @@ package authz
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -67,7 +68,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 	}
 	for _, r := range user.Roles {
 		role, err := a.Config.AuthorizationEngine.GetRole(r)
-		if err == configv2.ErrRoleNotFound {
+		if errors.Is(err, configv2.ErrRoleNotFound) {
 			continue
 		}
 		if err != nil {

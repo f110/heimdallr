@@ -27,8 +27,8 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/server/v3/embed"
 	"go.f110.dev/protoc-ddl/probe"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
@@ -375,7 +375,7 @@ func (m *mainProcess) startEmbedEtcd() error {
 
 	e, err := embed.StartEtcd(c)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	m.etcd = e
 
@@ -384,7 +384,7 @@ func (m *mainProcess) startEmbedEtcd() error {
 		logger.Log.Info("Start embed etcd", zap.String("url", c.ListenClientUrls[0].String()))
 	case <-time.After(10 * time.Second):
 		logger.Log.Error("Failed start embed etcd")
-		return xerrors.New("failed start embed etcd")
+		return xerrors.NewWithStack("failed start embed etcd")
 	}
 
 	return nil
@@ -393,7 +393,7 @@ func (m *mainProcess) startEmbedEtcd() error {
 func (m *mainProcess) startVault() error {
 	vaultPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	r, w := io.Pipe()
 	vaultCmd := exec.CommandContext(
@@ -405,7 +405,7 @@ func (m *mainProcess) startVault() error {
 	)
 	vaultCmd.Stdout = w
 	if err := vaultCmd.Start(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	m.vault = vaultCmd
 	logger.Log.Debug("Start Vault", zap.Int("pid", vaultCmd.Process.Pid), zap.Int("port", vaultPort))
@@ -425,11 +425,11 @@ func (m *mainProcess) startVault() error {
 	m.config.CertificateAuthority.Vault.Token = rootToken
 	vaultClient, err := vault.NewClient(m.config.CertificateAuthority.Vault.Addr, rootToken, m.config.CertificateAuthority.Vault.MountPath, "")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if err := vaultClient.EnablePKI(context.TODO()); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	logger.Log.Debug("Enable PKI Engine", zap.String("path", "pki/"))
 
@@ -438,32 +438,32 @@ func (m *mainProcess) startVault() error {
 	if _, err := os.Stat(filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt")); os.IsNotExist(err) {
 		crt, key, err := cert.CreateCertificateAuthority("Heimdallr with Vault", "", "", "", "rsa")
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		pemBundle := new(bytes.Buffer)
 		if err := pem.Encode(pemBundle, &pem.Block{Bytes: crt.Raw, Type: "CERTIFICATE"}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b, err := x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if err := pem.Encode(pemBundle, &pem.Block{Bytes: b, Type: "RSA PRIVATE KEY"}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if err := os.WriteFile(
 			filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt"),
 			pemBundle.Bytes(),
 			0400,
 		); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		caCert = crt
 		privateKey = key.(*rsa.PrivateKey)
 	} else {
 		buf, err := os.ReadFile(filepath.Join(m.config.CertificateAuthority.Vault.Dir, "vault_ca.crt"))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		for {
@@ -475,13 +475,13 @@ func (m *mainProcess) startVault() error {
 			case "CERTIFICATE":
 				crt, err := x509.ParseCertificate(b.Bytes)
 				if err != nil {
-					return xerrors.Errorf(": %w", err)
+					return xerrors.WithStack(err)
 				}
 				caCert = crt
 			case "RSA PRIVATE KEY":
 				key, err := x509.ParsePKCS8PrivateKey(b.Bytes)
 				if err != nil {
-					return xerrors.Errorf(": %w", err)
+					return xerrors.WithStack(err)
 				}
 				privateKey = key.(*rsa.PrivateKey)
 			}
@@ -490,15 +490,15 @@ func (m *mainProcess) startVault() error {
 	}
 
 	if err := vaultClient.SetCA(context.Background(), caCert, privateKey); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	m.config.CertificateAuthority.CertPool, err = vaultClient.GetCertPool(context.Background())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	m.config.CertificateAuthority.Certificate, err = vaultClient.GetCACertificate(context.Background())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	err = vaultClient.SetRole(context.Background(), m.config.CertificateAuthority.Vault.Role, &vault.Role{
 		AllowedDomains:   []string{rpc.ServerHostname},
@@ -510,7 +510,7 @@ func (m *mainProcess) startVault() error {
 		ClientFlag:       true,
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -518,18 +518,18 @@ func (m *mainProcess) startVault() error {
 
 func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.config.Logger); err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 
 	if m.config.Datastore.DatastoreEtcd != nil && m.config.Datastore.DatastoreEtcd.Embed {
 		if err := m.startEmbedEtcd(); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 	}
 
 	if m.VaultBin != "" && m.config.CertificateAuthority.Vault != nil {
 		if err := m.startVault(); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 	}
 
@@ -541,7 +541,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 		go m.watchGRPCConnState(client.ActiveConnection())
 
@@ -549,25 +549,25 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 		caDatabase = etcd.NewCA(client)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client)
 			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
 			if err != nil {
-				return fsm.UnknownState, xerrors.Errorf(": %w", err)
+				return fsm.UnknownState, err
 			}
 		}
 	case datastoreTypeMySQL:
 		conn, err := m.config.Datastore.GetMySQLConn()
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 
 		repository := dao.NewRepository(conn)
@@ -575,7 +575,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 		caDatabase = mysql.NewCA(repository)
 		m.clusterDatabase, err = mysql.NewCluster(repository)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
@@ -587,7 +587,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if m.config.CertificateAuthority != nil {
 		ca, err := cert.NewCertificateAuthority(caDatabase, m.config.CertificateAuthority)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, err
 		}
 		m.ca = ca
 	}
@@ -601,7 +601,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 				m.config.AccessProxy.ServerNameHost,
 			)
 			if err != nil {
-				return fsm.UnknownState, xerrors.Errorf(": %w", err)
+				return fsm.UnknownState, err
 			}
 			m.sessionStore = s
 		case configv2.SessionTypeMemcached:
@@ -629,7 +629,7 @@ func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
 		)),
 	)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.rpcServerConn = conn
 
@@ -639,7 +639,7 @@ func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
 
 	m.revokedCert, err = rpcclient.NewRevokedCertificateWatcher(conn, m.config.AccessProxy.Credential.InternalToken)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, err
 	}
 
 	auth.Init(m.config, m.sessionStore, m.userDatabase, m.tokenDatabase, m.revokedCert)
@@ -689,7 +689,7 @@ func (m *mainProcess) startRPCServer() (fsm.State, error) {
 		if m.datastoreType == datastoreTypeEtcd {
 			c, err := etcd.NewCompactor(m.etcdClient)
 			if err != nil {
-				return fsm.UnknownState, xerrors.Errorf(": %v", err)
+				return fsm.UnknownState, err
 			}
 			go c.Start(context.Background())
 		}
@@ -715,10 +715,10 @@ func (m *mainProcess) run() (fsm.State, error) {
 		}()
 
 		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.Bind, time.Second); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.BindInternalApi, time.Second); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 	}
 
@@ -735,7 +735,7 @@ func (m *mainProcess) run() (fsm.State, error) {
 		}()
 
 		if err := netutil.WaitListen(m.config.Dashboard.Bind, 5*time.Second); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %v", err)
+			return fsm.UnknownState, err
 		}
 	}
 

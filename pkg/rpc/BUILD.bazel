@@ -30,7 +30,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/codes",
         "//vendor/google.golang.org/grpc/status",

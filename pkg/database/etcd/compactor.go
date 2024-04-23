@@ -6,8 +6,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -27,7 +27,7 @@ type Compactor struct {
 func NewCompactor(client *clientv3.Client) (*Compactor, error) {
 	res, err := client.Get(context.Background(), compactKey)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	rev := int64(0)
@@ -66,7 +66,7 @@ func (c *Compactor) compact() error {
 		clientv3.OpGet(compactKey),
 	).Commit()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	currentRev := res.Header.Revision
@@ -81,7 +81,7 @@ func (c *Compactor) compact() error {
 	}
 
 	if _, err := c.client.Compact(context.Background(), c.rev); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	logger.Log.Info("Finish Compaction", zap.Int64("Revision", c.rev))
 
