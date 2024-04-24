@@ -13,8 +13,8 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v41/github"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -119,7 +119,7 @@ func (c *GitHubController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 func (c *GitHubController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	backend, err := c.backendLister.Get(namespace, name)
@@ -127,7 +127,7 @@ func (c *GitHubController) GetObject(key string) (interface{}, error) {
 		c.Log(nil).Debug("Backend is not found", zap.String("key", key))
 		return nil, nil
 	} else if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	var webhookConf *proxyv1alpha2.WebhookConfiguration
@@ -172,7 +172,7 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 
 		ghClient, err := c.newGithubClient(s.WebhookConfiguration, backend.Namespace)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 
 		updatedB := backend.DeepCopy()
@@ -189,14 +189,14 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 
 			found, err := c.checkConfigured(ctx, ghClient, updatedB, owner, repo)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 			if found {
 				continue
 			}
 
 			if err := c.setWebHook(ctx, ghClient, updatedB, owner, repo); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 		}
 
@@ -216,7 +216,7 @@ func (c *GitHubController) Reconcile(ctx context.Context, obj interface{}) error
 				return nil
 			})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -243,7 +243,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 			return nil
 		})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		return nil
 	}
@@ -263,7 +263,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 
 		ghClient, err := c.newGithubClient(p.WebhookConfiguration, backend.Namespace)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 
 		for _, v := range p.WebhookConfiguration.GitHub.Repositories {
@@ -325,7 +325,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 		return nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -334,7 +334,7 @@ func (c *GitHubController) Finalize(ctx context.Context, obj interface{}) error 
 func (c *GitHubController) checkConfigured(ctx context.Context, client *github.Client, backend *proxyv1alpha2.Backend, owner, repo string) (bool, error) {
 	hooks, _, err := client.Repositories.ListHooks(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
-		return false, xerrors.Errorf(": %w", err)
+		return false, xerrors.WithStack(err)
 	}
 
 	for _, h := range hooks {
@@ -429,22 +429,22 @@ func (c *GitHubController) newGithubClient(conf *proxyv1alpha2.WebhookConfigurat
 	secret, err := c.secretLister.Secrets(secretNamespace).Get(conf.GitHub.CredentialSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	appId, err := strconv.ParseInt(string(secret.Data[conf.GitHub.AppIdKey]), 10, 64)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	installationId, err := strconv.ParseInt(string(secret.Data[conf.GitHub.InstallationIdKey]), 10, 64)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	rt, err := ghinstallation.New(c.transport, appId, installationId, secret.Data[conf.GitHub.PrivateKeyKey])
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return github.NewClient(&http.Client{Transport: rt}), nil

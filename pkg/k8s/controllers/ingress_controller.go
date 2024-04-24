@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,12 +120,12 @@ func (ic *IngressController) ConvertToKeys() controllerbase.ObjectToKeyConverter
 func (ic *IngressController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	ingress, err := ic.ingressLister.Ingresses(namespace).Get(name)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if ingress.Spec.IngressClassName == nil {
 		return nil, nil
@@ -195,11 +195,11 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		if err != nil && apierrors.IsNotFound(err) {
 			_, err = ic.proxyClient.CreateBackend(ctx, b, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			continue
 		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		updatedB := backend.DeepCopy()
@@ -207,7 +207,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 		if !reflect.DeepEqual(updatedB, backend) {
 			_, err = ic.proxyClient.UpdateBackend(ctx, updatedB, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -235,7 +235,7 @@ func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) erro
 		return nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 const (

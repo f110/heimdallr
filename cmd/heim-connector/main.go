@@ -11,7 +11,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
 
 	"go.f110.dev/heimdallr/pkg/cert"
@@ -32,29 +32,29 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 		subject := pkix.Name{CommonName: name}
 		csr, key, err := cert.CreatePrivateKeyAndCertificateRequest(subject, []string{})
 		if err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, err
 		}
 
 		b, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, xerrors.WithStack(err)
 		}
 		buf := new(bytes.Buffer)
 		if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, xerrors.WithStack(err)
 		}
 		if err := os.WriteFile(privateKeyPath, buf.Bytes(), 0400); err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, xerrors.WithStack(err)
 		}
 
 		f, err := os.CreateTemp("", "csr")
 		if err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, xerrors.WithStack(err)
 		}
 		f.Write(csr)
 		f.Close()
 		fmt.Fprintf(os.Stderr, "Create CSR: %s\n", f.Name())
-		return nil, nil, nil, xerrors.New("Send CSR to the administrator")
+		return nil, nil, nil, xerrors.NewWithStack("Send CSR to the administrator")
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -62,7 +62,7 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 
 	_, err = os.Stat(certFilePath)
 	if os.IsNotExist(err) {
-		return nil, nil, nil, xerrors.New("certificate not found. please pass a cert path to --certificate")
+		return nil, nil, nil, xerrors.NewWithStack("certificate not found. please pass a cert path to --certificate")
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -70,44 +70,44 @@ func useCertificateAndPrivateKey(name, certFilePath, privateKeyPath, caCertPath 
 
 	b, err := os.ReadFile(privateKeyPath)
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf(": %v", err)
+		return nil, nil, nil, xerrors.WithStack(err)
 	}
 	block, _ := pem.Decode(b)
 	if block.Type != "EC PRIVATE KEY" {
-		return nil, nil, nil, xerrors.New("invalid private key")
+		return nil, nil, nil, xerrors.NewWithStack("invalid private key")
 	}
 	privateKey, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf(": %v", err)
+		return nil, nil, nil, xerrors.WithStack(err)
 	}
 
 	b, err = os.ReadFile(certFilePath)
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf(": %v", err)
+		return nil, nil, nil, xerrors.WithStack(err)
 	}
 	block, _ = pem.Decode(b)
 	if block.Type != "CERTIFICATE" {
-		return nil, nil, nil, xerrors.New("invalid certificate")
+		return nil, nil, nil, xerrors.NewWithStack("invalid certificate")
 	}
 	certificate, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, nil, nil, xerrors.Errorf(": %v", err)
+		return nil, nil, nil, xerrors.WithStack(err)
 	}
 
 	var caCertificates []*x509.Certificate
 	if caCertPath != "" {
 		b, err = os.ReadFile(caCertPath)
 		if err != nil {
-			return nil, nil, nil, xerrors.Errorf(": %v", err)
+			return nil, nil, nil, xerrors.WithStack(err)
 		}
 		for {
 			block, rest := pem.Decode(b)
 			if block.Type != "CERTIFICATE" {
-				return nil, nil, nil, xerrors.Errorf(": %v", err)
+				return nil, nil, nil, xerrors.NewWithStack("invalid certificate")
 			}
 			caCertificate, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return nil, nil, nil, xerrors.Errorf(": %v", err)
+				return nil, nil, nil, xerrors.WithStack(err)
 			}
 			caCertificates = append(caCertificates, caCertificate)
 
@@ -145,7 +145,7 @@ func agent(args []string) error {
 	fs.BoolVar(&debug, "debug", debug, "Show debug log")
 	fs.BoolVarP(&v, "version", "v", v, "Show version")
 	if err := fs.Parse(args); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	logLevel := "info"
 	if debug {
@@ -169,17 +169,17 @@ func agent(args []string) error {
 	} else if credential != "" {
 		b, err := os.ReadFile(credential)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		privateKey, c, caC, err := pkcs12.DecodeChain(b, connector.DefaultCertificatePassword)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		myCert = c
 		caCerts = caC
 		privKey = privateKey
 	} else {
-		return xerrors.New("privatekey or credential is required")
+		return xerrors.NewWithStack("privatekey or credential is required")
 	}
 
 	err = logger.Init(&configv2.Logger{
@@ -187,12 +187,12 @@ func agent(args []string) error {
 		Encoding: "console",
 	})
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 
 	agent := connector.NewAgent(myCert, privKey, caCerts, backend)
 	if err := agent.Connect(host, serverName); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	return agent.Serve()
 }

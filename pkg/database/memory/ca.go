@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 )
@@ -49,7 +49,7 @@ func (c *CA) GetSignedCertificate(_ context.Context, serial *big.Int) ([]*databa
 			}
 		}
 
-		return nil, xerrors.New("memory: certificate not found")
+		return nil, xerrors.NewWithStack("memory: certificate not found")
 	}
 
 	return c.signedCertificates, nil
@@ -66,7 +66,7 @@ func (c *CA) GetRevokedCertificate(_ context.Context, serial *big.Int) ([]*datab
 			}
 		}
 
-		return nil, xerrors.New("memory: the revoked certificate not found")
+		return nil, xerrors.NewWithStack("memory: the revoked certificate not found")
 	}
 
 	return c.revokedCertificates, nil
@@ -111,12 +111,12 @@ func (c *CA) NewSerialNumber(_ context.Context) (*big.Int, error) {
 Retry:
 	for {
 		if retry == 3 {
-			return nil, xerrors.New("memory: can not generate new serial number")
+			return nil, xerrors.NewWithStack("memory: can not generate new serial number")
 		}
 
 		s, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		serial = s
 

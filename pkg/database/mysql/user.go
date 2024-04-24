@@ -8,7 +8,7 @@ import (
 	"errors"
 	"io"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/database/mysql/dao"
@@ -38,14 +38,14 @@ func (u *UserDatabase) Get(id string, _ ...database.UserDatabaseOption) (*databa
 	user, err := u.dao.User.SelectIdentity(context.TODO(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, database.ErrUserNotFound
+			return nil, xerrors.WithStack(database.ErrUserNotFound)
 		}
 
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	roles, err := u.dao.RoleBinding.ListUser(context.TODO(), user.Id)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	r := make([]string, 0)
@@ -70,11 +70,11 @@ func (u *UserDatabase) Get(id string, _ ...database.UserDatabaseOption) (*databa
 func (u *UserDatabase) GetAll() ([]*database.User, error) {
 	users, err := u.dao.User.ListAll(context.TODO())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	roles, err := u.dao.RoleBinding.ListAll(context.TODO())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	roleMap := make(map[int32][]*entity.RoleBinding)
@@ -112,10 +112,10 @@ func (u *UserDatabase) GetAll() ([]*database.User, error) {
 func (u *UserDatabase) GetIdentityByLoginName(ctx context.Context, loginName string) (string, error) {
 	users, err := u.dao.User.ListIdentityByLoginName(ctx, loginName)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 	if len(users) == 0 {
-		return "", database.ErrUserNotFound
+		return "", xerrors.WithStack(database.ErrUserNotFound)
 	}
 
 	user := users[0]
@@ -125,7 +125,7 @@ func (u *UserDatabase) GetIdentityByLoginName(ctx context.Context, loginName str
 func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	users, err := u.GetAll()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	result := make([]*database.User, 0, len(users))
@@ -141,7 +141,7 @@ func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 func (u *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
 	at, err := u.dao.AccessToken.SelectAccessToken(context.TODO(), value)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return &database.AccessToken{
@@ -156,11 +156,11 @@ func (u *UserDatabase) GetAccessToken(value string) (*database.AccessToken, erro
 func (u *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
 	user, err := u.dao.User.SelectIdentity(context.TODO(), id)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	tokens, err := u.dao.AccessToken.ListByUser(context.TODO(), user.Id)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	result := make([]*database.AccessToken, len(tokens))
@@ -187,7 +187,7 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 			Comment:  user.Comment,
 		})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		existUser = created
 	} else {
@@ -195,13 +195,13 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 		existUser.Type = user.Type
 		existUser.Comment = user.Comment
 		if err := u.dao.User.Update(ctx, existUser); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	roles, err := u.dao.RoleBinding.ListUser(ctx, existUser.Id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	currentRole := make(map[string]*entity.RoleBinding)
 	for _, v := range roles {
@@ -219,7 +219,7 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	for r, v := range currentRole {
 		if _, ok := modifiedRole[r]; !ok {
 			if err := u.dao.RoleBinding.Delete(ctx, v.Id); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -227,7 +227,7 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	for r, v := range modifiedRole {
 		if _, ok := currentRole[r]; !ok {
 			if _, err := u.dao.RoleBinding.Create(ctx, v); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -236,7 +236,7 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 		if c, ok := currentRole[r]; ok && c.Maintainer != v.Maintainer {
 			c.Maintainer = v.Maintainer
 			if err := u.dao.RoleBinding.Update(ctx, c); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -247,11 +247,11 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 func (u *UserDatabase) SetAccessToken(ctx context.Context, token *database.AccessToken) error {
 	user, err := u.dao.User.SelectIdentity(ctx, token.UserId)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	issuer, err := u.dao.User.SelectIdentity(ctx, token.Issuer)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	_, err = u.dao.AccessToken.Create(ctx, &entity.AccessToken{
@@ -261,7 +261,7 @@ func (u *UserDatabase) SetAccessToken(ctx context.Context, token *database.Acces
 		IssuerId: issuer.Id,
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -270,11 +270,11 @@ func (u *UserDatabase) SetAccessToken(ctx context.Context, token *database.Acces
 func (u *UserDatabase) Delete(ctx context.Context, id string) error {
 	user, err := u.dao.User.SelectIdentity(ctx, id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	err = u.dao.User.Delete(ctx, user.Id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -283,7 +283,7 @@ func (u *UserDatabase) Delete(ctx context.Context, id string) error {
 func (u *UserDatabase) SetState(ctx context.Context, unique string) (string, error) {
 	buf := make([]byte, 10)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-		return "", xerrors.Errorf("database: failure generate state: %v", err)
+		return "", xerrors.WithMessage(err, "database: failure generate state")
 	}
 	stateString := base64.StdEncoding.EncodeToString(buf)
 
@@ -292,7 +292,7 @@ func (u *UserDatabase) SetState(ctx context.Context, unique string) (string, err
 		Unique: unique,
 	})
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	return stateString[:len(stateString)-2], nil
@@ -301,7 +301,7 @@ func (u *UserDatabase) SetState(ctx context.Context, unique string) (string, err
 func (u *UserDatabase) GetState(ctx context.Context, state string) (string, error) {
 	s, err := u.dao.UserState.SelectState(ctx, state)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	return s.Unique, nil
@@ -310,11 +310,11 @@ func (u *UserDatabase) GetState(ctx context.Context, state string) (string, erro
 func (u *UserDatabase) DeleteState(ctx context.Context, state string) error {
 	s, err := u.dao.UserState.SelectState(ctx, state)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	err = u.dao.UserState.Delete(ctx, s.Id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil

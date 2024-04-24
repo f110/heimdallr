@@ -52,7 +52,7 @@ func TestTemporaryToken_IssueToken(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "test@example.com", got.UserId)
 		_, err = token.FindToken(context.Background(), "unknown")
-		assert.Equal(t, database.ErrTokenNotFound, err)
+		assert.ErrorIs(t, err, database.ErrTokenNotFound)
 
 		tokens, err := token.AllTokens(context.Background())
 		require.NoError(t, err)

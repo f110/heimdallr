@@ -11,7 +11,7 @@ import (
 	"math/big"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -48,7 +48,7 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) ([]*data
 	}
 	res, err := c.client.Get(ctx, key, opt...)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if res.Count == 0 {
 		return nil, nil
@@ -58,7 +58,7 @@ func (c *CA) GetSignedCertificate(ctx context.Context, serial *big.Int) ([]*data
 	for _, v := range res.Kvs {
 		signedCertificate, err := database.ParseSignedCertificate(v.Value)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		signedCertificates = append(signedCertificates, signedCertificate)
 	}
@@ -76,7 +76,7 @@ func (c *CA) GetRevokedCertificate(ctx context.Context, serial *big.Int) ([]*dat
 	}
 	res, err := c.client.Get(ctx, key, opt...)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if res.Count == 0 {
 		return nil, nil
@@ -86,7 +86,7 @@ func (c *CA) GetRevokedCertificate(ctx context.Context, serial *big.Int) ([]*dat
 	for _, v := range res.Kvs {
 		revokedCertificate := &database.RevokedCertificate{}
 		if err := gob.NewDecoder(bytes.NewReader(v.Value)).Decode(revokedCertificate); err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		revokedCertificates = append(revokedCertificates, revokedCertificate)
 	}
@@ -98,7 +98,7 @@ func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.Re
 	buf := new(bytes.Buffer)
 	err := gob.NewEncoder(buf).Encode(certificate)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	key := fmt.Sprintf("ca/revoke/%x", certificate.SerialNumber)
@@ -107,7 +107,7 @@ func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.Re
 		Then(clientv3.OpPut(key, buf.String())).
 		Commit()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if !res.Succeeded {
 		return xerrors.New("etcd: failed revoke certificate")
@@ -115,7 +115,7 @@ func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.Re
 
 	_, err = c.client.Delete(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.SerialNumber))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -124,11 +124,11 @@ func (c *CA) SetRevokedCertificate(ctx context.Context, certificate *database.Re
 func (c *CA) SetSignedCertificate(ctx context.Context, certificate *database.SignedCertificate) error {
 	buf, err := certificate.Marshal()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	_, err = c.client.Put(ctx, fmt.Sprintf("ca/signed_cert/%x", certificate.Certificate.SerialNumber), string(buf))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -144,7 +144,7 @@ func (c *CA) NewSerialNumber(ctx context.Context) (*big.Int, error) {
 
 		s, err := cert.NewSerialNumber()
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		serial = s
 

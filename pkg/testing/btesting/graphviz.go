@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 type graphvizFormatter struct {
@@ -40,11 +40,11 @@ func (f *graphvizFormatter) Out(name string) error {
 
 	dir, err := os.Getwd()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	out, err := os.Create(filepath.Join(dir, strings.ToLower(name)+".dot"))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	fmt.Fprintf(out, "digraph %s {\n", name)
 	fmt.Fprintln(out, "    graph [rankdir = LR];")

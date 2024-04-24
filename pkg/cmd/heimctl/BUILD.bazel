@@ -25,7 +25,7 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//pkg/version",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",

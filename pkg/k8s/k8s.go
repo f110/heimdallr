@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsClientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +32,7 @@ import (
 func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
 	f, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	crd := make([]*apiextensionsv1.CustomResourceDefinition, 0)
@@ -47,7 +47,7 @@ func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, 
 			break
 		}
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		obj, _, err := codecs.UniversalDeserializer().Decode(ext.Raw, nil, nil)
 		if err != nil {
@@ -66,7 +66,7 @@ func ReadCRDFile(fileName string) ([]*apiextensionsv1.CustomResourceDefinition, 
 func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinition, timeout time.Duration) error {
 	apiextensionsClient, err := apiextensionsClientset.NewForConfig(config)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	createdCRD := make(map[string]struct{})
@@ -75,7 +75,7 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 		if apierrors.IsNotFound(err) {
 			_, err = apiextensionsClient.CustomResourceDefinitions().Create(context.TODO(), v, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			createdCRD[v.Name] = struct{}{}
 		}
@@ -96,7 +96,7 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 		return false, nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -105,12 +105,12 @@ func EnsureCRD(config *rest.Config, crd []*apiextensionsv1.CustomResourceDefinit
 func ApplyManifestFromString(cfg *rest.Config, manifest []byte, fieldManager string) error {
 	objs, err := LoadUnstructuredFromString(manifest)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	err = Objects(objs).Apply(cfg, fieldManager)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourc
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	t := time.NewTicker(1 * time.Second)
@@ -140,7 +140,7 @@ func WaitForReadyWebhook(cfg *rest.Config, crds []*apiextensionsv1.CustomResourc
 				if err != nil && apierrors.IsNotFound(err) {
 					continue
 				} else if err != nil {
-					return xerrors.Errorf(": %w", err)
+					return xerrors.WithStack(err)
 				}
 				if len(ep.Subsets) == 0 {
 					continue
@@ -177,7 +177,7 @@ func LoadUnstructuredFromString(manifest []byte) ([]*unstructured.Unstructured, 
 			if err == io.EOF {
 				break
 			}
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		if len(ext.Raw) == 0 {
 			continue
@@ -185,7 +185,7 @@ func LoadUnstructuredFromString(manifest []byte) ([]*unstructured.Unstructured, 
 
 		obj, _, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		objs = append(objs, obj.(*unstructured.Unstructured))
 	}
@@ -215,11 +215,11 @@ func (k Objects) SelectCustomResourceDefinitions() ([]*apiextensionsv1.CustomRes
 func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
 	disClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	_, apiResourcesList, err := disClient.ServerGroupsAndResources()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	for _, obj := range k {
@@ -235,7 +235,7 @@ func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
 		conf.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 		client, err := rest.RESTClientFor(&conf)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		var apiResource *metav1.APIResource
@@ -291,7 +291,7 @@ func (k Objects) Apply(cfg *rest.Config, fieldManager string) error {
 			return true, nil
 		})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 

@@ -10,7 +10,6 @@ go_library(
         "//pkg/cmd/reverseproxy",
         "//pkg/version",
         "//vendor/github.com/spf13/pflag",
-        "//vendor/golang.org/x/xerrors",
     ],
 )
 

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -19,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -782,7 +782,7 @@ func (f *ingressControllerTestRunner) Run(t *testing.T, ing *networkingv1.Ingres
 func IsError(t *testing.T, actual, expect error) {
 	if actual == nil {
 		t.Errorf("Expect occurred error but not")
-	} else if !xerrors.Is(actual, expect) {
+	} else if !errors.Is(actual, expect) {
 		t.Logf("%+v", actual)
 		t.Errorf("%q is not %q error", actual, expect)
 	}

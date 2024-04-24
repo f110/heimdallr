@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -17,13 +17,13 @@ func ReadConfig(filename string) (*configv2.Config, error) {
 func ReadConfigV2(filename string) (*configv2.Config, error) {
 	a, err := filepath.Abs(filename)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 	dir := filepath.Dir(a)
 
 	b, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	conf := &configv2.Config{
@@ -52,7 +52,7 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 		},
 	}
 	if err := yaml.Unmarshal(b, conf); err != nil {
-		return nil, xerrors.Errorf("config: file parse error: %v", err)
+		return nil, xerrors.WithMessage(err, "config: file parse error")
 	}
 	if conf.AccessProxy != nil {
 		if err := conf.AccessProxy.Load(dir); err != nil {

@@ -12,8 +12,8 @@ import (
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
 	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -40,8 +40,8 @@ import (
 )
 
 var (
-	ErrEtcdClusterIsNotReady = errors.New("EtcdCluster is not ready yet")
-	ErrRPCServerIsNotReady   = errors.New("rpc server is not ready")
+	ErrEtcdClusterIsNotReady = xerrors.New("EtcdCluster is not ready yet")
+	ErrRPCServerIsNotReady   = xerrors.New("rpc server is not ready")
 )
 
 var certManagerGroupVersionOrder = []string{"v1", "v1beta1", "v1alpha3", "v1alpha2"}
@@ -223,7 +223,7 @@ func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 func (c *ProxyController) subordinateResourceKeys(m metav1.Object) ([]string, error) {
 	ret, err := c.searchParentProxy(m)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	keys := make([]string, len(ret))
@@ -241,7 +241,7 @@ func (c *ProxyController) subordinateResourceKeys(m metav1.Object) ([]string, er
 func (c *ProxyController) dependentProxyKeys(role *proxyv1alpha2.Role) ([]string, error) {
 	proxies, err := c.proxyLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	target := make(map[string]*proxyv1alpha2.Proxy)
@@ -309,11 +309,11 @@ func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResour
 func (c *ProxyController) GetObject(key string) (interface{}, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	p, err := c.proxyLister.Get(namespace, name)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return p, nil
@@ -338,7 +338,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		c.Log(ctx).Debug("Update Proxy.Status.Phase")
 		updateProxy, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, proxy, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		proxy = updateProxy
 	}
@@ -349,17 +349,17 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if proxy.Spec.BackendSelector.LabelSelector.Size() != 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.BackendSelector.LabelSelector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b, err := c.backendLister.List(proxy.Spec.BackendSelector.Namespace, selector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		backends = append(backends, b...)
 	}
 	defaultBackends, err := c.backendLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if len(defaultBackends) > 0 {
 		backends = append(backends, defaultBackends...)
@@ -369,17 +369,17 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if proxy.Spec.RoleSelector.LabelSelector.Size() != 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		r, err := c.roleLister.List(proxy.Spec.RoleSelector.Namespace, selector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		roles = append(roles, r...)
 	}
 	defaultRoles, err := c.roleLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if len(defaultRoles) > 0 {
 		roles = append(roles, defaultRoles...)
@@ -392,17 +392,17 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if proxy.Spec.RpcPermissionSelector.LabelSelector.Size() != 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		list, err := c.rpcPermissionLister.List(proxy.Spec.RpcPermissionSelector.Namespace, selector)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		rpcPermissions = append(rpcPermissions, list...)
 	}
 	defaultRpcPermissions, err := c.rpcPermissionLister.List(metav1.NamespaceAll, defaultResourceSelector)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	rpcPermissions = append(rpcPermissions, defaultRpcPermissions...)
 
@@ -412,7 +412,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 	bindings, err := c.roleBindingLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	roleBindings := RoleBindings(bindings).Select(func(binding *proxyv1alpha2.RoleBinding) bool {
 		_, ok := rolesMap[fmt.Sprintf("%s/%s", binding.RoleRef.Namespace, binding.RoleRef.Name)]
@@ -430,12 +430,12 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		CertManagerVersion:  c.certManagerVersion,
 	})
 	if ec, err := c.ownedEtcdCluster(lp); err != nil && !apierrors.IsNotFound(err) {
-		return xerrors.Errorf(": %w", err)
+		return err
 	} else if ec != nil {
 		lp.Datastore = ec
 	}
 	if err := lp.Init(c.secretLister); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := c.preCheck(lp); err != nil {
@@ -447,14 +447,14 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
 			_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := c.prepare(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	newP := lp.Object.DeepCopy()
@@ -468,29 +468,29 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 		c.Log(ctx).Debug("Update Proxy")
 		_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	rpcReady, err := c.reconcileRPCServer(ctx, lp)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if !rpcReady {
-		return xerrors.Errorf(": %w", controllerbase.WrapRetryError(ErrRPCServerIsNotReady))
+		return controllerbase.WrapRetryError(xerrors.WithStack(ErrRPCServerIsNotReady))
 	}
 
 	if err := c.reconcileProxyProcess(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := c.reconcileDashboard(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := c.finishReconcile(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -507,7 +507,7 @@ func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha2.Et
 func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
 	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -518,7 +518,7 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 	for _, secret := range secrets {
 		if secret.Known() {
 			if err := c.removeOwnerReferenceFromSecret(ctx, lp, secret.Name); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 
 			continue
@@ -528,34 +528,34 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 		if err != nil && apierrors.IsNotFound(err) {
 			secret, err := secret.Create()
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 
 			_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(ctx, secret, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	serverCert := lp.Certificate()
 	if err := c.createOrUpdateCertificate(ctx, lp, serverCert); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	_, err := c.secretLister.Secrets(lp.Object.Namespace).Get(lp.CertificateSecretName())
 	if err != nil {
-		return controllerbase.WrapRetryError(xerrors.Errorf(": %w", err))
+		return controllerbase.WrapRetryError(xerrors.WithStack(err))
 	}
 
 	if err := c.reconcileFundamentalResources(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := c.reconcileEtcdCluster(ctx, lp); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -568,7 +568,7 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 
 	s, err := c.secretLister.Secrets(lp.Namespace).Get(secretName)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	found := false
 	newRef := make([]metav1.OwnerReference, 0)
@@ -586,7 +586,7 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 	s.SetOwnerReferences(newRef)
 	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(ctx, s, metav1.UpdateOptions{})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -600,7 +600,7 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 			lp.ControlObject(backend)
 			_, err = c.clientset.ProxyV1alpha2.CreateBackend(ctx, backend, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -612,7 +612,7 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 			lp.ControlObject(role)
 			_, err = c.clientset.ProxyV1alpha2.CreateRole(ctx, role, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -624,7 +624,7 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 			lp.ControlObject(rb)
 			_, err = c.clientset.ProxyV1alpha2.CreateRoleBinding(ctx, rb, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -636,7 +636,7 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 			lp.ControlObject(rpcPermission)
 			_, err = c.clientset.ProxyV1alpha2.CreateRpcPermission(ctx, rpcPermission, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -652,17 +652,17 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 		if apierrors.IsNotFound(err) {
 			cluster, err = c.clientset.EtcdV1alpha2.CreateEtcdCluster(ctx, newC, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
-			return controllerbase.WrapRetryError(ErrEtcdClusterIsNotReady)
+			return controllerbase.WrapRetryError(xerrors.WithStack(ErrEtcdClusterIsNotReady))
 		}
 
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if !cluster.Status.Ready {
-		return controllerbase.WrapRetryError(ErrEtcdClusterIsNotReady)
+		return controllerbase.WrapRetryError(xerrors.WithStack(ErrEtcdClusterIsNotReady))
 	}
 
 	var podMonitor *monitoringv1.PodMonitor
@@ -672,12 +672,12 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 			if apierrors.IsNotFound(err) {
 				_, err = c.thirdPartyClientSet.CoreosComV1.CreatePodMonitor(ctx, newPM, metav1.CreateOptions{})
 				if err != nil {
-					return xerrors.Errorf(": %w", err)
+					return xerrors.WithStack(err)
 				}
 				return nil
 			}
 
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -685,7 +685,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 		cluster.Spec = newC.Spec
 		_, err = c.clientset.EtcdV1alpha2.UpdateEtcdCluster(ctx, cluster, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -695,7 +695,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 			podMonitor.Labels = newPM.Labels
 			_, err = c.thirdPartyClientSet.CoreosComV1.UpdatePodMonitor(ctx, podMonitor, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -706,11 +706,11 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 func (c *ProxyController) reconcileRPCServer(ctx context.Context, lp *HeimdallrProxy) (bool, error) {
 	objs, err := lp.IdealRPCServer()
 	if err != nil {
-		return false, xerrors.Errorf(": %w", err)
+		return false, err
 	}
 
 	if err := c.reconcileProcess(ctx, lp, objs); err != nil {
-		return false, xerrors.Errorf(": %w", err)
+		return false, err
 	}
 	lp.RPCServer = objs
 
@@ -724,12 +724,12 @@ func (c *ProxyController) reconcileRPCServer(ctx context.Context, lp *HeimdallrP
 func (c *ProxyController) reconcileDashboard(ctx context.Context, lp *HeimdallrProxy) error {
 	objs, err := lp.IdealDashboard()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	err = c.reconcileProcess(ctx, lp, objs)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	lp.DashboardServer = objs
 
@@ -739,17 +739,17 @@ func (c *ProxyController) reconcileDashboard(ctx context.Context, lp *HeimdallrP
 func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *HeimdallrProxy) error {
 	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	pcs, err := lp.IdealProxyProcess()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	err = c.reconcileProcess(ctx, lp, pcs)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	lp.ProxyServer = pcs
 
@@ -797,7 +797,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 				return err
 			})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 
@@ -814,7 +814,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 			c.Log(ctx).Info("Skip updating Ingress")
 			continue
 		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		updatedI := ingress.DeepCopy()
@@ -833,7 +833,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		if !reflect.DeepEqual(updatedI.Status, ingress.Status) {
 			_, err = c.client.NetworkingV1().Ingresses(updatedI.Namespace).UpdateStatus(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -882,7 +882,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 				return err
 			})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -903,7 +903,7 @@ func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProx
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
 		_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -935,13 +935,13 @@ func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
 func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrProxy, p *process) error {
 	if p.Deployment != nil {
 		if err := c.createOrUpdateDeployment(ctx, lp, p.Deployment); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
 	if p.PodDisruptionBudget != nil {
 		if err := c.createOrUpdatePodDisruptionBudget(ctx, lp, p.PodDisruptionBudget); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -951,7 +951,7 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 		}
 
 		if err := c.createOrUpdateService(ctx, lp, svc); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -961,13 +961,13 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 		}
 
 		if err := c.createOrUpdateConfigMap(ctx, lp, v); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
 	if p.Certificate != nil {
 		if err := c.createOrUpdateCertificate(ctx, lp, p.Certificate); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -978,7 +978,7 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 			}
 
 			if err := c.createOrUpdateServiceMonitor(ctx, lp, v); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 		}
 	}
@@ -993,13 +993,13 @@ func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *Heim
 
 		newD, err := c.client.AppsV1().Deployments(deployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		deployment.Status = newD.Status
 		return nil
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	newD := d.DeepCopy()
@@ -1007,7 +1007,7 @@ func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *Heim
 	if !reflect.DeepEqual(newD.Spec, d.Spec) {
 		_, err = c.client.AppsV1().Deployments(newD.Namespace).Update(ctx, newD, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 	deployment.Status = d.Status
@@ -1022,12 +1022,12 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context,
 
 		_, err = c.client.PolicyV1().PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	newPDB := p.DeepCopy()
@@ -1035,7 +1035,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context,
 	if !reflect.DeepEqual(newPDB.Spec, pdb.Spec) {
 		_, err = c.client.PolicyV1().PodDisruptionBudgets(newPDB.Namespace).Update(ctx, newPDB, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -1049,12 +1049,12 @@ func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *Heimdal
 
 		_, err = c.client.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	newS := s.DeepCopy()
@@ -1065,7 +1065,7 @@ func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *Heimdal
 	if !c.equalService(newS, s) {
 		_, err = c.client.CoreV1().Services(newS.Namespace).Update(ctx, newS, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -1079,12 +1079,12 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 
 		_, err = c.client.CoreV1().ConfigMaps(configMap.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	newCM := cm.DeepCopy()
@@ -1094,7 +1094,7 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 		c.Log(ctx).Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
 		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(ctx, newCM, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -1110,12 +1110,12 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 
 			_, err = c.thirdPartyClientSet.CertManagerIoV1.CreateCertificate(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
 			return nil
 		} else if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		newCRT := crt.DeepCopy()
@@ -1124,7 +1124,7 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
 			_, err = c.thirdPartyClientSet.CertManagerIoV1.UpdateCertificate(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	}
@@ -1139,12 +1139,12 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 
 		_, err = c.thirdPartyClientSet.CoreosComV1.CreateServiceMonitor(ctx, serviceMonitor, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	} else if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	newSM := sm.DeepCopy()
@@ -1154,7 +1154,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 	if !reflect.DeepEqual(newSM.Spec, sm.Spec) || !reflect.DeepEqual(newSM.ObjectMeta, sm.ObjectMeta) {
 		_, err = c.thirdPartyClientSet.CoreosComV1.UpdateServiceMonitor(ctx, newSM, metav1.UpdateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -1164,7 +1164,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha2.Proxy, error) {
 	ret, err := c.proxyLister.List(metav1.NamespaceAll, labels.Everything())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	targets := make([]*proxyv1alpha2.Proxy, 0)

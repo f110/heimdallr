@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/netutil"
 )
@@ -25,7 +25,7 @@ type MockServer struct {
 func NewMockServer() (*MockServer, error) {
 	port, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &MockServer{Port: port}, nil
@@ -66,7 +66,7 @@ type MockTCPServer struct {
 func NewMockTCPServer() (*MockTCPServer, error) {
 	port, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &MockTCPServer{Port: port, activeConn: make(map[string]net.Conn)}, nil
@@ -75,7 +75,7 @@ func NewMockTCPServer() (*MockTCPServer, error) {
 func (s *MockTCPServer) Start() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	s.listener = lis

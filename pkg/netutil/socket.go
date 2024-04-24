@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 func WaitListen(addr string, timeout time.Duration) error {

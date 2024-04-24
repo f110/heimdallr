@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 )
@@ -29,7 +29,7 @@ func NewTokenDatabase() *TokenDatabase {
 func (t *TokenDatabase) SetUser(userId string) (*database.Token, error) {
 	code, err := t.NewCode(nil, userId, "", "")
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 
 	return t.IssueToken(nil, code.Code, "")
@@ -38,7 +38,7 @@ func (t *TokenDatabase) SetUser(userId string) (*database.Token, error) {
 func (t *TokenDatabase) NewCode(_ context.Context, userId, _, _ string) (*database.Code, error) {
 	s, err := newCode()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	code := &database.Code{Code: s, UserId: userId}
 
@@ -56,7 +56,7 @@ func (t *TokenDatabase) IssueToken(_ context.Context, code, _ string) (*database
 
 	s, err := newCode()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	token := &database.Token{Token: s}
 	if v != nil {
@@ -88,7 +88,7 @@ func (t *TokenDatabase) FindToken(_ context.Context, token string) (*database.To
 
 	v, ok := t.tokens[token]
 	if !ok {
-		return nil, database.ErrTokenNotFound
+		return nil, xerrors.WithStack(database.ErrTokenNotFound)
 	}
 	return v, nil
 }
@@ -124,7 +124,7 @@ func (t *TokenDatabase) DeleteToken(_ context.Context, token string) error {
 func newCode() (string, error) {
 	buf := make([]byte, 16)
 	if _, err := rand.Read(buf); err != nil {
-		return "", err
+		return "", xerrors.WithStack(err)
 	}
 	return hex.EncodeToString(buf), nil
 }

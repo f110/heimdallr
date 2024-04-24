@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"golang.org/x/xerrors"
-
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
@@ -13,7 +11,7 @@ import (
 func memberList(c *rpcclient.Client) error {
 	memberList, err := c.ClusterMemberList()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 	for i, v := range memberList {
 		fmt.Printf("[%d] %s\n", i+1, v)

@@ -2,11 +2,10 @@ package etcd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -25,7 +24,7 @@ var _ database.ClusterDatabase = &ClusterDatabase{}
 func NewClusterDatabase(_ context.Context, client *clientv3.Client) (*ClusterDatabase, error) {
 	hostname, err := netutil.GetHostname()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return &ClusterDatabase{client: client, id: hostname}, nil
@@ -37,24 +36,24 @@ func (d *ClusterDatabase) Id() string {
 
 func (d *ClusterDatabase) Join(ctx context.Context) error {
 	if d.cancel != nil {
-		return errors.New("etcd: already joined")
+		return xerrors.NewWithStack("etcd: already joined")
 	}
 
 	lease, err := d.client.Grant(ctx, 30)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	member := &database.Member{
 		Id: d.id,
 	}
 	b, err := yaml.Marshal(member)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	_, err = d.client.Put(ctx, fmt.Sprintf("cluster/%s", d.Id()), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	kaCtx, cancelFunc := context.WithCancel(context.Background())
 	go func() {
@@ -87,7 +86,7 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 func (d *ClusterDatabase) Leave(ctx context.Context) error {
 	_, err := d.client.Delete(ctx, fmt.Sprintf("cluster/%s", d.Id()))
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if d.cancel != nil {
 		d.cancel()
@@ -107,7 +106,7 @@ func (d *ClusterDatabase) MemberList(ctx context.Context) ([]*database.Member, e
 	for i, v := range res.Kvs {
 		member := &database.Member{}
 		if err := yaml.Unmarshal(v.Value, member); err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		members[i] = member
 	}

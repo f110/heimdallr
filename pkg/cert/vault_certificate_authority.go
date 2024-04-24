@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"software.sslmate.com/src/go-pkcs12"
 
 	"go.f110.dev/heimdallr/pkg/cert/vault"
@@ -27,7 +27,7 @@ type vaultCertificateAuthority struct {
 func newVaultCertificateAuthority(db database.CertificateAuthority, conf *configv2.CertificateAuthorityVault) (*vaultCertificateAuthority, error) {
 	c, err := vault.NewClient(conf.Addr, conf.Token, conf.MountPath, conf.Role)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &vaultCertificateAuthority{db: db, client: c}, nil
@@ -41,7 +41,7 @@ func (ca *vaultCertificateAuthority) SignCertificateRequest(
 ) (*database.SignedCertificate, error) {
 	signedCert, err := ca.SignCertificateRequestWithoutRecord(ctx, csr)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	obj := &database.SignedCertificate{
@@ -53,7 +53,7 @@ func (ca *vaultCertificateAuthority) SignCertificateRequest(
 	}
 	err = ca.db.SetSignedCertificate(ctx, obj)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return obj, nil
@@ -62,11 +62,11 @@ func (ca *vaultCertificateAuthority) SignCertificateRequest(
 func (ca *vaultCertificateAuthority) SignCertificateRequestWithoutRecord(ctx context.Context, csr *x509.CertificateRequest) (*x509.Certificate, error) {
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Bytes: csr.Raw, Type: "CERTIFICATE REQUEST"}); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	signedCert, err := ca.client.Sign(ctx, csr)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return signedCert, nil
@@ -75,7 +75,7 @@ func (ca *vaultCertificateAuthority) SignCertificateRequestWithoutRecord(ctx con
 func (ca *vaultCertificateAuthority) Revoke(ctx context.Context, cert *database.SignedCertificate) error {
 	err := ca.client.Revoke(ctx, cert.Certificate)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	err = ca.db.SetRevokedCertificate(ctx, &database.RevokedCertificate{
@@ -88,7 +88,7 @@ func (ca *vaultCertificateAuthority) Revoke(ctx context.Context, cert *database.
 		Device:       cert.Device,
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -118,15 +118,15 @@ func (ca *vaultCertificateAuthority) newClientCertificate(
 ) (*database.SignedCertificate, error) {
 	cert, privateKey, err := ca.client.GenerateCertificate(ctx, name, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	caCert, err := ca.client.GetCACertificate(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	data, err := pkcs12.Encode(rand.Reader, privateKey, cert, []*x509.Certificate{caCert}, password)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	signed := &database.SignedCertificate{
@@ -139,7 +139,7 @@ func (ca *vaultCertificateAuthority) newClientCertificate(
 	}
 	err = ca.db.SetSignedCertificate(ctx, signed)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return signed, nil
@@ -148,7 +148,7 @@ func (ca *vaultCertificateAuthority) newClientCertificate(
 func (ca *vaultCertificateAuthority) NewServerCertificate(commonName string) (*x509.Certificate, crypto.PrivateKey, error) {
 	cert, privateKey, err := ca.client.GenerateCertificate(context.TODO(), commonName, []string{commonName})
 	if err != nil {
-		return nil, nil, xerrors.Errorf(": %w", err)
+		return nil, nil, err
 	}
 
 	return cert, privateKey, nil
@@ -157,7 +157,7 @@ func (ca *vaultCertificateAuthority) NewServerCertificate(commonName string) (*x
 func (ca *vaultCertificateAuthority) GetSignedCertificates(ctx context.Context) ([]*database.SignedCertificate, error) {
 	certificates, err := ca.db.GetSignedCertificate(ctx, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return certificates, nil
@@ -169,10 +169,10 @@ func (ca *vaultCertificateAuthority) GetSignedCertificate(
 ) (*database.SignedCertificate, error) {
 	certificates, err := ca.db.GetSignedCertificate(ctx, serial)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if len(certificates) == 0 {
-		return nil, xerrors.Errorf(": %w", ErrCertificateNotFound)
+		return nil, xerrors.WithStack(ErrCertificateNotFound)
 	}
 	if len(certificates) > 1 {
 		logger.Log.Warn("Found multiple certificates. probably database is broken.")

@@ -15,8 +15,8 @@ go_library(
         "//pkg/database",
         "//pkg/logger",
         "//vendor/github.com/julienschmidt/httprouter",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
         "//vendor/golang.org/x/net/http2",
-        "//vendor/golang.org/x/xerrors",
     ],
 )

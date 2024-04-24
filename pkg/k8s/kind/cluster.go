@@ -17,7 +17,8 @@ import (
 
 	minioclient "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
+	"go.uber.org/zap"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +34,7 @@ import (
 	"go.f110.dev/heimdallr/manifest/certmanager"
 	"go.f110.dev/heimdallr/manifest/minio"
 	"go.f110.dev/heimdallr/pkg/k8s"
+	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 
@@ -100,7 +102,7 @@ func (c *Cluster) IsExist(name string) (bool, error) {
 	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "clusters")
 	buf, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, xerrors.Errorf(": %w", err)
+		return false, xerrors.WithStack(err)
 	}
 	s := bufio.NewScanner(bytes.NewReader(buf))
 	for s.Scan() {
@@ -116,13 +118,13 @@ func (c *Cluster) IsExist(name string) (bool, error) {
 func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 	kindConfFile, err := os.CreateTemp("", "kind.config.yaml")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	defer os.Remove(kindConfFile.Name())
 
 	imageHash, ok := NodeImageHash[clusterVersion]
 	if !ok {
-		return xerrors.Errorf("Not supported k8s version: %s", clusterVersion)
+		return xerrors.NewfWithStack("Not supported k8s version: %s", clusterVersion)
 	}
 	image := fmt.Sprintf("kindest/node:%s@sha256:%s", clusterVersion, imageHash)
 
@@ -140,10 +142,10 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 			configv1alpha4.Node{Role: configv1alpha4.WorkerRole, Image: image})
 	}
 	if buf, err := goyaml.Marshal(clusterConf); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	} else {
 		if _, err := kindConfFile.Write(buf); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -178,7 +180,7 @@ func (c *Cluster) KubeConfig() string {
 func (c *Cluster) Delete() error {
 	found, err := c.IsExist(c.name)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if !found {
 		return nil
@@ -254,14 +256,14 @@ func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
 
 func (c *Cluster) RESTConfig() (*rest.Config, error) {
 	if exist, err := c.IsExist(c.name); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	} else if !exist {
-		return nil, xerrors.New("The cluster is not created yet")
+		return nil, xerrors.NewWithStack("The cluster is not created yet")
 	}
 	if c.kubeConfig == "" {
 		kubeConf, err := os.CreateTemp("", "kubeconfig")
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		cmd := exec.CommandContext(
 			context.TODO(),
@@ -270,7 +272,7 @@ func (c *Cluster) RESTConfig() (*rest.Config, error) {
 			"--name", c.name,
 		)
 		if err := cmd.Run(); err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		c.kubeConfig = kubeConf.Name()
 		defer func() {
@@ -281,7 +283,7 @@ func (c *Cluster) RESTConfig() (*rest.Config, error) {
 
 	cfg, err := clientcmd.LoadFromFile(c.kubeConfig)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	clientConfig := clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{})
 	restCfg, err := clientConfig.ClientConfig()
@@ -299,7 +301,7 @@ func (c *Cluster) Clientset() (kubernetes.Interface, error) {
 
 	restCfg, err := c.RESTConfig()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	cs, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
@@ -313,7 +315,7 @@ func (c *Cluster) Clientset() (kubernetes.Interface, error) {
 func (c *Cluster) WaitReady(ctx context.Context) error {
 	client, err := c.Clientset()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return poll.PollImmediate(ctx, 1*time.Second, 3*time.Minute, func(ctx2 context.Context) (done bool, err error) {
@@ -343,15 +345,15 @@ func (c *Cluster) WaitReady(ctx context.Context) error {
 func (c *Cluster) Apply(f, fieldManager string) error {
 	buf, err := os.ReadFile(f)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	cfg, err := c.RESTConfig()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if err := k8s.ApplyManifestFromString(cfg, buf, fieldManager); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -395,29 +397,29 @@ func readImageManifest(image *ContainerImageFile) error {
 func InstallCertManager(cfg *rest.Config, fieldManager string) error {
 	cm, err := certmanager.Data.ReadFile("cert-manager.yaml")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	objs, err := k8s.LoadUnstructuredFromString(cm)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	err = k8s.Objects(objs).Apply(cfg, fieldManager)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	crds, err := k8s.Objects(objs).SelectCustomResourceDefinitions()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	ci, err := certmanager.Data.ReadFile("cluster-issuer.yaml")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := k8s.ApplyManifestFromString(cfg, ci, fieldManager); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -436,25 +438,25 @@ func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 	}
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if _, err := client.CoreV1().Secrets(secret.Namespace).Get(context.Background(), secret.Name, metav1.GetOptions{}); apierrors.IsNotFound(err) {
 		_, err = client.CoreV1().Secrets(secret.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	m, err := minio.Data.ReadFile("minio.yaml")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := k8s.ApplyManifestFromString(cfg, m, fieldManager); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := createMinIOBucket(cfg); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -463,7 +465,7 @@ func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 func createMinIOBucket(cfg *rest.Config) error {
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	err = poll.PollImmediate(context.TODO(), 10*time.Second, 3*time.Minute, func(ctx context.Context) (bool, error) {
@@ -502,7 +504,7 @@ func createMinIOBucket(cfg *rest.Config) error {
 		return true, nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -512,7 +514,7 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 	selector := labels.SelectorFromSet(svc.Spec.Selector)
 	podList, err := client.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 	var pod *corev1.Pod
 	for i, v := range podList.Items {
@@ -522,33 +524,33 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 		}
 	}
 	if pod == nil {
-		return nil, errors.New("all pods are not running yet")
+		return nil, xerrors.NewWithStack("all pods are not running yet")
 	}
 
 	req := client.CoreV1().RESTClient().Post().Resource("pods").Namespace(svc.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(cfg)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
 
 	readyCh := make(chan struct{})
 	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	go func() {
 		err := pf.ForwardPorts()
 		if err != nil {
-			log.Print(err)
+			logger.Log.Info("ForwardPorts returns an error", zap.Error(err))
 		}
 	}()
 
 	select {
 	case <-readyCh:
 	case <-time.After(5 * time.Second):
-		return nil, errors.New("timed out")
+		return nil, xerrors.NewWithStack("timed out")
 	}
 
 	return pf, nil

@@ -12,7 +12,7 @@ go_library(
         "//pkg/logger",
         "//pkg/version",
         "//vendor/github.com/spf13/pflag",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/software.sslmate.com/src/go-pkcs12",
     ],
 )

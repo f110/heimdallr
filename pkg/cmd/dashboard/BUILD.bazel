@@ -14,7 +14,7 @@ go_library(
         "//pkg/rpc",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2:go-grpc-middleware",
         "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",

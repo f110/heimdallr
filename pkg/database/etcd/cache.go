@@ -8,8 +8,8 @@ import (
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -43,7 +43,7 @@ func (c *Cache) All() ([]*mvccpb.KeyValue, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if c.cancel == nil {
-		return nil, database.ErrClosed
+		return nil, xerrors.WithStack(database.ErrClosed)
 	}
 
 	return c.cache, nil
@@ -103,7 +103,7 @@ func (c *Cache) WaitForSync(ctx context.Context) error {
 		}
 		return nil
 	case <-ctx.Done():
-		return xerrors.Errorf(": %w", ctx.Err())
+		return xerrors.WithStack(ctx.Err())
 	}
 }
 
@@ -122,7 +122,7 @@ func (c *Cache) watch(ctx context.Context) error {
 	for {
 		res, err := c.client.Get(wCtx, c.prefix, clientv3.WithPrefix())
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		c.mu.Lock()
 		c.cache = append(c.initData, res.Kvs...)
@@ -136,7 +136,7 @@ func (c *Cache) watch(ctx context.Context) error {
 			return nil
 		}
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 }
@@ -182,7 +182,7 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 
 			c.sendNotify()
 		case <-ctx.Done():
-			return ctx.Err()
+			return xerrors.WithStack(ctx.Err())
 		}
 	}
 }

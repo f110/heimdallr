@@ -14,7 +14,7 @@ go_library(
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/software.sslmate.com/src/go-pkcs12",
     ],
 )

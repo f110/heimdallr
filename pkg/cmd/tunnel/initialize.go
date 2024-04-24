@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
@@ -16,7 +16,7 @@ import (
 func initializeTunnel(force bool) error {
 	uc, err := userconfig.New()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if !force {
 		if v, err := uc.GetCertificate(); err == nil && v != nil {
@@ -27,7 +27,7 @@ func initializeTunnel(force bool) error {
 
 	csr, err := uc.GetCSR()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	fmt.Println("Please regist following CSR to your dashboard")
@@ -42,23 +42,23 @@ func initializeTunnel(force bool) error {
 func loadCertificate(p string) error {
 	uc, err := userconfig.New()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	buf, err := os.ReadFile(p)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	block, _ := pem.Decode(buf)
 	if block.Type != "CERTIFICATE" {
-		return xerrors.New("is not certificate")
+		return xerrors.NewWithStack("is not certificate")
 	}
 	c, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := uc.SetCertificate(c); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	fmt.Println("Loading certificate was succeeded")

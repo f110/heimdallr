@@ -11,8 +11,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v41/github"
+	"go.f110.dev/xerrors"
 	"golang.org/x/oauth2"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/githubutil"
@@ -35,22 +35,22 @@ func githubRelease(opt *githubOpt) error {
 	if v := os.Getenv("GITHUB_APP_ID_FILE"); v != "" {
 		buf, err := os.ReadFile(v)
 		if err != nil {
-			return err
+			return xerrors.WithStack(err)
 		}
 		appId, err := strconv.ParseInt(string(buf), 10, 64)
 		if err != nil {
-			return err
+			return xerrors.WithStack(err)
 		}
 		opt.GitHubAppId = appId
 	}
 	if v := os.Getenv("GITHUB_INSTALLATION_ID_FILE"); v != "" {
 		buf, err := os.ReadFile(v)
 		if err != nil {
-			return err
+			return xerrors.WithStack(err)
 		}
 		installationId, err := strconv.ParseInt(string(buf), 10, 64)
 		if err != nil {
-			return err
+			return xerrors.WithStack(err)
 		}
 		opt.GitHubAppInstallationId = installationId
 	}
@@ -61,7 +61,7 @@ func githubRelease(opt *githubOpt) error {
 	if opt.GitHubAppId == 0 || opt.GitHubAppInstallationId == 0 || opt.GitHubAppPrivateKeyFile == "" {
 		token := os.Getenv("GITHUB_APITOKEN")
 		if token == "" {
-			return xerrors.New("GITHUB_APITOKEN is mandatory")
+			return xerrors.NewWithStack("GITHUB_APITOKEN is mandatory")
 		}
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
@@ -70,7 +70,7 @@ func githubRelease(opt *githubOpt) error {
 	} else {
 		ghApp, err := githubutil.NewApp(opt.GitHubAppId, opt.GitHubAppInstallationId, opt.GitHubAppPrivateKeyFile)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		t := githubutil.NewTransportWithApp(http.DefaultTransport, ghApp)
 		httpClient = &http.Client{Transport: t}
@@ -78,11 +78,11 @@ func githubRelease(opt *githubOpt) error {
 	client := github.NewClient(httpClient)
 
 	if !strings.Contains(opt.GithubRepo, "/") {
-		return xerrors.Errorf("invalid repo name: %s", opt.GithubRepo)
+		return xerrors.NewfWithStack("invalid repo name: %s", opt.GithubRepo)
 	}
 	ver, err := semver.NewVersion(opt.Version)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	preRelease := false
 	if ver.Prerelease() != "" {
@@ -93,7 +93,7 @@ func githubRelease(opt *githubOpt) error {
 	if _, err := os.Lstat(opt.BodyFile); !os.IsNotExist(err) {
 		b, err := os.ReadFile(opt.BodyFile)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		body = string(b)
 	}
@@ -103,7 +103,7 @@ func githubRelease(opt *githubOpt) error {
 
 	release, res, err := client.Repositories.GetReleaseByTag(context.Background(), owner, repo, opt.Version)
 	if err != nil && res == nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	// Create new release or Update the release
@@ -116,16 +116,16 @@ func githubRelease(opt *githubOpt) error {
 			release.Body = github.String(body)
 			release, res, err = client.Repositories.EditRelease(context.Background(), owner, repo, release.GetID(), release)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 	} else {
 		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From, true)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if branch == nil {
-			return xerrors.Errorf("branch(%s) is not found", opt.From)
+			return xerrors.NewfWithStack("branch(%s) is not found", opt.From)
 		}
 		fmt.Printf("Get commit hash %s\n", branch.Commit.GetSHA())
 
@@ -136,7 +136,7 @@ func githubRelease(opt *githubOpt) error {
 			Prerelease:      github.Bool(preRelease),
 		})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		fmt.Printf("Created release id=%d TagName=%s\n", r.GetID(), r.GetTagName())
 		release = r
@@ -149,7 +149,7 @@ func githubRelease(opt *githubOpt) error {
 		}
 		f, err := os.Open(v)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		filename := filepath.Base(f.Name())
@@ -160,7 +160,7 @@ func githubRelease(opt *githubOpt) error {
 
 		assets, _, err := client.Repositories.UploadReleaseAsset(context.Background(), owner, repo, release.GetID(), &github.UploadOptions{Name: filename}, f)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if assets == nil {
 			fmt.Fprintf(os.Stderr, "Failed upload an asset")

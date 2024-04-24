@@ -17,7 +17,7 @@ go_library(
         "//vendor/github.com/fatih/color",
         "//vendor/github.com/peterh/liner",
         "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
     ],
 )
 

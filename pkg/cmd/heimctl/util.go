@@ -18,7 +18,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/cmd"
@@ -71,38 +71,38 @@ func webhookCert() *cmd.Command {
 		Short: "Generating the server certificate for Admission webhook server",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			if _, err := os.Stat(certificateFile); err == nil {
-				return xerrors.Errorf("%s is exist", certificateFile)
+				return xerrors.NewfWithStack("%s is exist", certificateFile)
 			}
 			if _, err := os.Stat(privateKeyFile); err == nil {
-				return xerrors.Errorf("%s is exist", privateKeyFile)
+				return xerrors.NewfWithStack("%s is exist", privateKeyFile)
 			}
 
 			b, err := os.ReadFile(caCertificateFile)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			block, _ := pem.Decode(b)
 			caCert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			b, err = os.ReadFile(caPrivateKeyFile)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			block, _ = pem.Decode(b)
 			caPrivateKey, err := x509.ParseECPrivateKey(block.Bytes)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 
 			privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
 			template := &x509.Certificate{
@@ -120,25 +120,25 @@ func webhookCert() *cmd.Command {
 			}
 			certByte, err := x509.CreateCertificate(rand.Reader, template, caCert, &privKey.PublicKey, caPrivateKey)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			buf := new(bytes.Buffer)
 			if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: certByte}); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := os.WriteFile(certificateFile, buf.Bytes(), 0644); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			buf.Reset()
 			b, err = x509.MarshalECPrivateKey(privKey)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := os.WriteFile(privateKeyFile, buf.Bytes(), 0644); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 
 			return nil
@@ -161,10 +161,10 @@ func webhookCACert() *cmd.Command {
 		Short: "Generate the CA certificate for Admission webhook server",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			if _, err := os.Stat(certificateFile); err == nil {
-				return xerrors.Errorf("%s is exist", certificateFile)
+				return xerrors.NewfWithStack("%s is exist", certificateFile)
 			}
 			if _, err := os.Stat(privateKeyFile); err == nil {
-				return xerrors.Errorf("%s is exist", privateKeyFile)
+				return xerrors.NewfWithStack("%s is exist", privateKeyFile)
 			}
 
 			caCert, privKey, err := cert.CreateCertificateAuthority("heimdallr-operator CA", "", "", "", "ecdsa")
@@ -173,21 +173,21 @@ func webhookCACert() *cmd.Command {
 			}
 			buf := new(bytes.Buffer)
 			if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := os.WriteFile(certificateFile, buf.Bytes(), 0644); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			buf.Reset()
 			b, err := x509.MarshalECPrivateKey(privKey.(*ecdsa.PrivateKey))
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if err := os.WriteFile(privateKeyFile, buf.Bytes(), 0644); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			return nil
 		},

@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/auth/authz"
@@ -105,7 +105,7 @@ func (e *messageError) Clone() MessageError {
 func ParseMessageError(v url.Values) (MessageError, error) {
 	i, err := strconv.Atoi(v.Get("code"))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	msg := v.Get("msg")
 	v.Del("code")
@@ -255,7 +255,7 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 	}
 	if err != nil {
 		logger.Log.Error("Unhandled error", zap.Error(err))
-		return xerrors.Errorf(": %v", err)
+		return err
 	}
 
 	err = authz.AuthorizationSocket(ctx, backend, user)
@@ -283,7 +283,7 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 	}
 	if err != nil {
 		st.sendMessage(SocketErrorServerUnavailable)
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	st.backendConn = conn
@@ -328,7 +328,7 @@ func (st *Stream) readBackend() error {
 			if isClosedNetwork(err) {
 				return nil
 			} else {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 		}
 
@@ -348,10 +348,10 @@ func (st *Stream) readConn() error {
 			return nil
 		}
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if n != 5 {
-			return xerrors.New("authproxy: invalid header")
+			return xerrors.NewWithStack("authproxy: invalid header")
 		}
 
 		bodySize := int(binary.BigEndian.Uint32(header[1:5]))
@@ -360,7 +360,7 @@ func (st *Stream) readConn() error {
 		}
 		n, err = io.ReadAtLeast(r, readBuffer, bodySize)
 		if n != bodySize {
-			return xerrors.Errorf("authproxy: invalid body size")
+			return xerrors.NewWithStack("authproxy: invalid body size")
 		}
 
 		switch header[0] {
@@ -484,10 +484,10 @@ func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token stri
 		},
 	)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if err := conn.Handshake(); err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	c.conn = conn
 	v := &url.Values{}
@@ -503,10 +503,10 @@ func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token stri
 	header := make([]byte, 5)
 	n, err := c.conn.Read(header)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	if n != 5 {
-		return xerrors.New("localproxy: invalid header")
+		return xerrors.NewWithStack("localproxy: invalid header")
 	}
 	switch header[0] {
 	case TypeOpenSuccess:
@@ -516,14 +516,14 @@ func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token stri
 		buf := make([]byte, bodySize)
 		n, err := c.conn.Read(buf)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if n != int(bodySize) {
-			return xerrors.New("localproxy: invalid bodysize")
+			return xerrors.NewWithStack("localproxy: invalid bodysize")
 		}
 		e, err := parseMessage(buf)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 		switch e.Code() {
 		case SocketErrorCodeRequestAuth:
@@ -534,7 +534,7 @@ func (c *Client) Dial(host, port string, clientCert *tls.Certificate, token stri
 		}
 	}
 
-	return xerrors.New("localproxy: unhandled error")
+	return xerrors.NewWithStack("localproxy: unhandled error")
 }
 
 func (c *Client) Pipe(ctx context.Context) error {
@@ -579,7 +579,7 @@ func (c *Client) Pipe(ctx context.Context) error {
 		}
 		n, err = io.ReadAtLeast(r, buf, bodySize)
 		if n != bodySize {
-			return xerrors.Errorf("localproxy: invalid body size")
+			return xerrors.NewWithStack("localproxy: invalid body size")
 		}
 
 		switch header[0] {
@@ -590,7 +590,7 @@ func (c *Client) Pipe(ctx context.Context) error {
 		case TypeMessage:
 			e, err := parseMessage(buf[:bodySize])
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return err
 			}
 			return e
 		case TypePing:
@@ -598,7 +598,7 @@ func (c *Client) Pipe(ctx context.Context) error {
 			h[0] = TypePong
 			c.conn.SetWriteDeadline(time.Now().Add(2 * HeartbeatInterval))
 			if _, err := c.conn.Write(h); err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			c.conn.SetReadDeadline(time.Now().Add(2 * HeartbeatInterval))
 		}
@@ -608,7 +608,7 @@ func (c *Client) Pipe(ctx context.Context) error {
 func parseMessage(buf []byte) (MessageError, error) {
 	v, err := url.ParseQuery(string(buf))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	return ParseMessageError(v)
 }

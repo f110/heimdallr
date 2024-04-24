@@ -23,7 +23,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -327,7 +327,7 @@ func (a *Agent) Post(m *btesting.Matcher, u, body string) bool {
 
 func (a *Agent) FollowRedirect(m *btesting.Matcher) error {
 	if a.lastResponse == nil {
-		return xerrors.New("Agent does not have any response. Probably, test suite's bug.")
+		return xerrors.NewWithStack("Agent does not have any response. Probably, test suite's bug.")
 	}
 	u, err := a.lastResponse.Location()
 	if err != nil {

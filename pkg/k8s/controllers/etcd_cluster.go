@@ -24,8 +24,8 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -196,12 +196,12 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 
 	r, err := labels.NewRequirement(etcd.LabelNameClusterName, selection.Equals, []string{c.Name})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	pods, err := podLister.Pods(c.Namespace).List(labels.NewSelector().Add(*r))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	owned := make([]*corev1.Pod, 0)
 	for _, v := range pods {
@@ -221,7 +221,7 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 
 	pvcs, err := pvcLister.PersistentVolumeClaims(c.Namespace).List(labels.Everything())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	myPVC := make(map[string]*corev1.PersistentVolumeClaim, 0)
 	for _, v := range pvcs {
@@ -247,11 +247,11 @@ func (c *EtcdCluster) CA() (*corev1.Secret, error) {
 
 	caCert, privateKey, err := cert.CreateCertificateAuthority(fmt.Sprintf("%s-ca", c.Name), "", "", "", "ecdsa")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	marshaledPrivateKey, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	caCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
@@ -270,7 +270,7 @@ func (c *EtcdCluster) CA() (*corev1.Secret, error) {
 func (c *EtcdCluster) ServerCert() (Certificate, error) {
 	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
-		return Certificate{}, xerrors.Errorf(": %w", err)
+		return Certificate{}, err
 	}
 
 	serverCert, serverPrivateKey, err := cert.GenerateMutualTLSCertificate(
@@ -279,11 +279,11 @@ func (c *EtcdCluster) ServerCert() (Certificate, error) {
 		[]string{"127.0.0.1"},
 	)
 	if err != nil {
-		return Certificate{}, xerrors.Errorf(": %w", err)
+		return Certificate{}, err
 	}
 	marshaledPrivateKey, err := x509.MarshalECPrivateKey(serverPrivateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return Certificate{}, xerrors.Errorf(": %w", err)
+		return Certificate{}, xerrors.WithStack(err)
 	}
 	serverCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
@@ -314,7 +314,7 @@ func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
 
 	serverCert, err := c.ServerCert()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	c.serverCertSecret = &serverCert
 
@@ -343,7 +343,7 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 
 	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	clientCert, clientPrivateKey, err := cert.GenerateMutualTLSCertificate(
@@ -354,11 +354,11 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 		nil,
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	marshaledPrivateKey, err := x509.MarshalECPrivateKey(clientPrivateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	clientCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
@@ -930,7 +930,7 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 
 	caCertPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	certPool := x509.NewCertPool()
 	certPool.AddCert(caCertPair.Cert)
@@ -950,7 +950,7 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 	}
 	client, err := clientv3.New(cfg)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return client, nil
@@ -959,13 +959,13 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 func (c *EtcdCluster) GetMetrics(addr string) ([]*dto.MetricFamily, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/metrics", addr), nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	req.Header.Set("Accept", string(expfmt.FmtProtoDelim))
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	d := expfmt.NewDecoder(res.Body, expfmt.FmtProtoDelim)
 
@@ -977,7 +977,7 @@ func (c *EtcdCluster) GetMetrics(addr string) ([]*dto.MetricFamily, error) {
 			break
 		}
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		metrics = append(metrics, mf)
 	}
@@ -1325,13 +1325,13 @@ func (c *EtcdCluster) parseCASecret(s *corev1.Secret) (*certAndKey, error) {
 
 	caCert, err := x509.ParseCertificate(caCertPem.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	privateKeyPem, _ := pem.Decode(s.Data[caSecretPrivateKeyName])
 	caPrivateKey, err := x509.ParseECPrivateKey(privateKeyPem.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return &certAndKey{Cert: caCert, PrivateKey: caPrivateKey}, nil
@@ -1399,7 +1399,7 @@ func NewCertificate(secret *corev1.Secret, source tls.Certificate) (Certificate,
 	case *ecdsa.PrivateKey:
 		v, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
-			return Certificate{}, xerrors.Errorf(": %w", err)
+			return Certificate{}, xerrors.WithStack(err)
 		}
 		privateKey = v
 	case *rsa.PrivateKey:

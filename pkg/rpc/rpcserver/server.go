@@ -15,8 +15,8 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
@@ -100,12 +100,12 @@ func (s *Server) Start() error {
 	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", rpc.ServerHostname))
 	serverCert, privKey, err := s.ca.NewServerCertificate(rpc.ServerHostname)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	l, err := net.Listen("tcp", s.Config.RPCServer.Bind)
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 
 	tlsCert := tls.Certificate{

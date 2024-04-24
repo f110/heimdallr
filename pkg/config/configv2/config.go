@@ -25,9 +25,9 @@ import (
 	"github.com/go-sql-driver/mysql"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/namespace"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/xerrors"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert/vault"
@@ -363,7 +363,7 @@ func (idp *IdentityProvider) Load(dir string) error {
 	if idp.ClientSecretFile != "" {
 		b, err := os.ReadFile(absPath(idp.ClientSecretFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		b = bytes.TrimRight(b, "\n")
 		idp.ClientSecret = string(b)
@@ -377,18 +377,18 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		if ca.Local.CertFile != "" {
 			b, err := os.ReadFile(absPath(ca.Local.CertFile, dir))
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			block, _ := pem.Decode(b)
 			cert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			ca.Certificate = cert
 
 			ca.CertPool, err = x509.SystemCertPool()
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			ca.CertPool.AddCert(cert)
 		}
@@ -396,26 +396,26 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		if ca.Local.KeyFile != "" {
 			b, err := os.ReadFile(absPath(ca.Local.KeyFile, dir))
 			if err != nil {
-				return xerrors.Errorf(": %v", err)
+				return xerrors.WithStack(err)
 			}
 			block, _ := pem.Decode(b)
 			switch block.Type {
 			case "EC PRIVATE KEY":
 				privateKey, err := x509.ParseECPrivateKey(block.Bytes)
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				ca.Local.PrivateKey = privateKey
 			case "RSA PRIVATE KEY":
 				privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				ca.Local.PrivateKey = privateKey
 			case "PRIVATE KEY":
 				privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				ca.Local.PrivateKey = privateKey
 			}
@@ -430,7 +430,7 @@ func (ca *CertificateAuthority) Load(dir string) error {
 	}
 	if ca.Vault != nil {
 		if v, err := filepath.Abs(dir); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		} else {
 			ca.Vault.Dir = v
 		}
@@ -441,15 +441,15 @@ func (ca *CertificateAuthority) Load(dir string) error {
 		if ca.Vault.Addr != "" {
 			c, err := vault.NewClient(ca.Vault.Addr, ca.Vault.Token, ca.Vault.MountPath, ca.Vault.Role)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 			caCert, err := c.GetCACertificate(context.TODO())
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 			certPool, err := c.GetCertPool(context.TODO())
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 
 			ca.CertPool = certPool
@@ -465,7 +465,7 @@ func (s *Session) Load(dir string) error {
 	case SessionTypeSecureCookie:
 		b, err := os.ReadFile(absPath(s.KeyFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		b = bytes.TrimRight(b, "\n")
 		keys := bytes.Split(b, []byte("\n"))
@@ -560,13 +560,13 @@ func (g *AccessProxy) GetAllBackends() []*Backend {
 func (g *AccessProxy) Load(dir string) error {
 	if g.HTTP.Certificate != nil {
 		if err := g.HTTP.Certificate.Load(dir); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
 	if g.Credential != nil {
 		if err := g.Credential.Load(dir); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -576,10 +576,10 @@ func (g *AccessProxy) Load(dir string) error {
 
 		b, err := os.ReadFile(g.ProxyFile)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if err := yaml.Unmarshal(b, &backends); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -593,7 +593,7 @@ func (g *AccessProxy) Load(dir string) error {
 
 	if g.HTTP.Session != nil {
 		if err := g.HTTP.Session.Load(dir); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 	}
 
@@ -644,7 +644,7 @@ func (c *Certificate) Load(dir string) error {
 
 		c.ReloadCertificate()
 		if _, err := c.GetCertificate(nil); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 	}
 
@@ -656,7 +656,7 @@ func (c *Certificate) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, 
 	defer c.mu.RUnlock()
 
 	if c.certificate == nil {
-		return nil, xerrors.New("config: certificate not loaded yet")
+		return nil, xerrors.NewWithStack("config: certificate not loaded yet")
 	}
 
 	return c.certificate, nil
@@ -665,7 +665,7 @@ func (c *Certificate) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, 
 func (c *Certificate) ReloadCertificate() error {
 	cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	c.mu.Lock()
@@ -679,14 +679,14 @@ func (g *AccessProxy) ReloadConfig() error {
 	backends := make([]*Backend, 0)
 	b, err := os.ReadFile(g.ProxyFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := yaml.Unmarshal(b, &backends); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if err := g.Setup(backends); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -696,21 +696,21 @@ func (c *Credential) Load(dir string) error {
 	if c.GithubWebHookSecretFile != "" {
 		b, err := os.ReadFile(absPath(c.GithubWebHookSecretFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		c.GithubWebhookSecret = b
 	}
 	if c.InternalTokenFile != "" {
 		b, err := os.ReadFile(absPath(c.InternalTokenFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		c.InternalToken = string(b)
 	}
 	if c.SigningPrivateKeyFile != "" {
 		privateKey, err := readPrivateKey(absPath(c.SigningPrivateKeyFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return err
 		}
 		c.SigningPrivateKey = privateKey
 		c.SigningPublicKey = privateKey.PublicKey
@@ -727,10 +727,10 @@ func (a *AuthorizationEngine) Load(dir string) error {
 
 		b, err := os.ReadFile(a.RoleFile)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if err := yaml.Unmarshal(b, &roles); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 	}
 	if a.RPCPermissionFile != "" {
@@ -738,10 +738,10 @@ func (a *AuthorizationEngine) Load(dir string) error {
 
 		b, err := os.ReadFile(a.RPCPermissionFile)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		if err := yaml.Unmarshal(b, &rpcPermissions); err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -781,23 +781,23 @@ func (a *AuthorizationEngine) ReloadConfig() error {
 	roles := make([]*Role, 0)
 	b, err := os.ReadFile(a.RoleFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := yaml.Unmarshal(b, &roles); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	rpcPermissions := make([]*RPCPermission, 0)
 	b, err = os.ReadFile(a.RPCPermissionFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := yaml.Unmarshal(b, &rpcPermissions); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	if err := a.Setup(roles, rpcPermissions); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -844,7 +844,7 @@ func (d *Datastore) Load(dir string) error {
 		if strings.HasPrefix(d.DatastoreEtcd.RawUrl, "mysql://") {
 			cfg, err := mysql.ParseDSN(d.DatastoreEtcd.RawUrl[8:])
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			cfg.ParseTime = true
 			cfg.Loc = time.Local
@@ -875,12 +875,12 @@ func (d *Datastore) Load(dir string) error {
 	if d.CACertFile != "" {
 		b, err := os.ReadFile(absPath(d.CACertFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		block, _ := pem.Decode(b)
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		d.CertPool = x509.NewCertPool()
 		d.CertPool.AddCert(cert)
@@ -888,12 +888,15 @@ func (d *Datastore) Load(dir string) error {
 	if d.CertFile != "" && d.KeyFile != "" {
 		b, err := os.ReadFile(absPath(d.CertFile, dir))
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		k, err := os.ReadFile(absPath(d.KeyFile, dir))
+		if err != nil {
+			return xerrors.WithStack(err)
+		}
 		c, err := tls.X509KeyPair(b, k)
 		if err != nil {
-			return xerrors.Errorf(": %v", err)
+			return xerrors.WithStack(err)
 		}
 		d.Certificate = c
 	}
@@ -908,30 +911,30 @@ func (d *Datastore) Load(dir string) error {
 				// first time
 				l, err := net.Listen("tcp", ":0")
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				addr := l.Addr().(*net.TCPAddr)
 				if err := l.Close(); err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 
 				u := &url.URL{Scheme: "http", Host: fmt.Sprintf("localhost:%d", addr.Port)}
 				if err := os.MkdirAll(filepath.Join(d.DataDir), 0700); err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				err = os.WriteFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename), []byte(u.String()), 0600)
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				d.EtcdUrl = u
 			} else {
 				b, err := os.ReadFile(filepath.Join(d.DataDir, EmbedEtcdUrlFilename))
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				u, err := url.Parse(string(b))
 				if err != nil {
-					return xerrors.Errorf(": %v", err)
+					return xerrors.WithStack(err)
 				}
 				d.EtcdUrl = u
 			}
@@ -943,7 +946,7 @@ func (d *Datastore) Load(dir string) error {
 		}
 	case "etcds":
 		if d.CertPool == nil {
-			return xerrors.New("ca_cert_file, cert_file and key_file are a mandatory value")
+			return xerrors.NewWithStack("ca_cert_file, cert_file and key_file are a mandatory value")
 		}
 
 		u := new(url.URL)
@@ -987,7 +990,7 @@ func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) 
 		TLS:         tlsConfig,
 	})
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	client.KV = namespace.NewKV(client.KV, d.Namespace)
@@ -1000,7 +1003,7 @@ func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) 
 func (d *Datastore) GetMySQLConn() (*sql.DB, error) {
 	conn, err := sql.Open("mysql", d.DSN.FormatDSN())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	return conn, nil
 }
@@ -1015,7 +1018,7 @@ func (b *Backend) inflate() error {
 		agent := false
 		for _, v := range b.HTTP {
 			if v.Path[0] != '/' {
-				return xerrors.Errorf("Path must start with a slash: %s", b.Name)
+				return xerrors.NewfWithStack("Path must start with a slash: %s", b.Name)
 			}
 
 			selector.Add(v)
@@ -1031,7 +1034,7 @@ func (b *Backend) inflate() error {
 			}
 			u, err := url.Parse(upstream)
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			v.Url = u
 
@@ -1058,7 +1061,7 @@ func (b *Backend) inflate() error {
 	if b.Socket != nil {
 		u, err := url.Parse(b.Socket.Upstream)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b.Socket.Url = u
 		if b.Socket.Agent {
@@ -1196,29 +1199,29 @@ func absPath(path, dir string) string {
 func readPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	block, _ := pem.Decode(b)
 	switch block.Type {
 	case "EC PRIVATE KEY":
 		privateKey, err := x509.ParseECPrivateKey(block.Bytes)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 		return privateKey, nil
 	case "PRIVATE KEY":
 		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, xerrors.Errorf(": %v", err)
+			return nil, xerrors.WithStack(err)
 		}
 
 		switch v := privateKey.(type) {
 		case *ecdsa.PrivateKey:
 			return v, nil
 		default:
-			return nil, xerrors.New("config: invalid private key type")
+			return nil, xerrors.NewfWithStack("config: invalid private key type")
 		}
 	default:
-		return nil, xerrors.Errorf("config: Unknown Type: %s", block.Type)
+		return nil, xerrors.NewfWithStack("config: Unknown Type: %s", block.Type)
 	}
 }

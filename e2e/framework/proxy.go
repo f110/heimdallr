@@ -29,7 +29,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-cmp/cmp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -90,24 +90,24 @@ type Connector struct {
 func NewConnector(name string, m *btesting.MockServer, proxyCACert *x509.Certificate) (*Connector, error) {
 	dir, err := os.MkdirTemp("", "")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	csr, privateKey, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: name}, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	b, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	err = cert.PemEncode(filepath.Join(dir, "agent.key"), "EC PRIVATE KEY", b, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	err = cert.PemEncode(filepath.Join(dir, "ca.crt"), "CERTIFICATE", proxyCACert.Raw, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &Connector{name: name, target: m, privateKey: privateKey, csr: csr, dir: dir}, nil
@@ -120,11 +120,11 @@ func (c *Connector) Start(client *rpcclient.ClientWithUserToken, host, serverNam
 
 	cer, err := client.NewAgentCertByCSR(string(c.csr), c.name)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	err = cert.PemEncode(filepath.Join(c.dir, "agent.crt"), "CERTIFICATE", cer, nil)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	c.cmd = exec.Command(*connectorBinaryPath,
@@ -143,7 +143,7 @@ func (c *Connector) Start(client *rpcclient.ClientWithUserToken, host, serverNam
 	}
 	err = c.cmd.Start()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	c.running = true
 	time.Sleep(1 * time.Second)
@@ -153,7 +153,7 @@ func (c *Connector) Start(client *rpcclient.ClientWithUserToken, host, serverNam
 
 func (c *Connector) Stop() error {
 	if err := os.RemoveAll(c.dir); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	c.dir = ""
 
@@ -165,7 +165,7 @@ func (c *Connector) Stop() error {
 		close(doneCh)
 	}()
 	if err := c.cmd.Process.Signal(os.Interrupt); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	select {
@@ -238,40 +238,40 @@ type Proxy struct {
 func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "data"), 0700); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, err := x509.MarshalECPrivateKey(signReqKey)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "privatekey.pem"), "EC PRIVATE KEY", b, nil); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, err
 	}
 	b, err = x509.MarshalPKIXPublicKey(signReqKey.Public())
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "publickey.pem"), "PUBLIC KEY", b, nil); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("heimdallr proxy e2e", "test", "e2e", "jp", "ecdsa")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	b, err = x509.MarshalECPrivateKey(caPrivateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "ca.crt"), "CERTIFICATE", caCert.Raw, nil); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "ca.key"), "EC PRIVATE KEY", b, nil); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	internalToken := make([]byte, 32)
 	for i := range internalToken {
@@ -279,7 +279,7 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	}
 	f, err := os.Create(filepath.Join(dir, "internal_token"))
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	f.Write(internalToken)
 	f.Close()
@@ -287,7 +287,7 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	blockKey := session.GenerateRandomKey(16)
 	f, err = os.Create(filepath.Join(dir, "cookie_secret"))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	f.WriteString(hex.EncodeToString(hashKey))
 	f.WriteString("\n")
@@ -296,33 +296,33 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 
 	sessionStore, err := session.NewSecureCookieStore([]byte(hex.EncodeToString(hashKey)), []byte(hex.EncodeToString(blockKey)), "e2e.f110.dev")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	if err := os.WriteFile(filepath.Join(dir, "identityprovider"), []byte("identityprovider"), 0644); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	proxyPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	internalPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	rpcPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	dashboardPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	idp, err := NewIdentityProvider(fmt.Sprintf("https://e2e.f110.dev:%d/auth/callback", proxyPort))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	// The vault server will use two ports.
@@ -332,7 +332,7 @@ func NewProxy(t *testing.T, conds ...ProxyCond) (*Proxy, error) {
 	// So, we can't use the neighboring port of the vault.
 	vaultPort, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	vaultRootToken := make([]byte, 32)
 	for i := range vaultRootToken {
@@ -455,17 +455,17 @@ func (p *Proxy) DashboardBackend() *configv2.Backend {
 func (p *Proxy) Cleanup() error {
 	for _, v := range p.connectors {
 		if err := v.Stop(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
 	if err := p.stop(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	for _, v := range p.runningMockServers {
 		if err := v.Stop(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -488,11 +488,11 @@ func (p *Proxy) ClearConf() bool {
 
 func (p *Proxy) Reload() error {
 	if err := p.buildConfig(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if changed, err := p.isChangedConfig(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	} else if !changed {
 		return nil
 	}
@@ -503,13 +503,13 @@ func (p *Proxy) Reload() error {
 	if p.running {
 		for _, v := range p.runningMockServers {
 			if err := v.Stop(); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 		}
 		p.runningMockServers = nil
 
 		if err := p.stop(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -525,19 +525,19 @@ func (p *Proxy) Reload() error {
 		)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", p.dir))
 		if err := cmd.Start(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		p.vaultCmd = cmd
 		if err := netutil.WaitListen(fmt.Sprintf(":%d", p.vaultPort), 10*time.Second); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 
 		vaultClient, err := vault.NewClient(fmt.Sprintf("http://127.0.0.1:%d", p.vaultPort), p.vaultRootToken, "pki", "")
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		if err := vaultClient.EnablePKI(ctx); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		err = vaultClient.SetRole(ctx, vaultRoleName, &vault.Role{
 			AllowedDomains:   []string{rpc.ServerHostname},
@@ -552,30 +552,30 @@ func (p *Proxy) Reload() error {
 			KeyBits:          256,
 		})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		if err := vaultClient.SetCA(ctx, p.CA, p.caPrivateKey); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
 	for _, v := range p.mockServers {
 		if err := v.Start(); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		p.runningMockServers = append(p.runningMockServers, v)
 	}
 
 	if err := p.start(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := p.setupRPCClient(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := p.syncUsers(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	for _, v := range p.connectors {
@@ -583,7 +583,7 @@ func (p *Proxy) Reload() error {
 			log.Print("Start connector")
 		}
 		if err := v.Start(p.rpcClient, fmt.Sprintf("127.0.0.1:%d", p.proxyPort), p.DomainHost); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -593,7 +593,7 @@ func (p *Proxy) Reload() error {
 func (p *Proxy) setupRPCClient() error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	caPool.AddCert(p.CA)
 
@@ -606,7 +606,7 @@ func (p *Proxy) setupRPCClient() error {
 		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
@@ -618,7 +618,7 @@ func (p *Proxy) setupRPCClient() error {
 	})
 	token, err := claim.SignedString(p.signPrivateKey)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	p.rpcClient = rpcclient.NewClientWithUserToken(conn).WithToken(token)
@@ -628,7 +628,7 @@ func (p *Proxy) setupRPCClient() error {
 func (p *Proxy) syncUsers() error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	caPool.AddCert(p.CA)
 
@@ -641,7 +641,7 @@ func (p *Proxy) syncUsers() error {
 		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
@@ -653,13 +653,13 @@ func (p *Proxy) syncUsers() error {
 	})
 	token, err := claim.SignedString(p.signPrivateKey)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	client := rpcclient.NewClientWithUserToken(conn).WithToken(token)
 	users, err := client.ListAllUser()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	for _, user := range users {
@@ -668,7 +668,7 @@ func (p *Proxy) syncUsers() error {
 		}
 		for _, r := range user.Roles {
 			if err := client.DeleteUser(user.Id, r); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 		}
 	}
@@ -676,7 +676,7 @@ func (p *Proxy) syncUsers() error {
 	for _, user := range p.users {
 		for _, r := range user.Roles {
 			if err := client.AddUser(user.Id, r); err != nil {
-				return xerrors.Errorf(": %w", err)
+				return err
 			}
 		}
 	}
@@ -720,11 +720,11 @@ func (p *Proxy) isChangedConfig() (bool, error) {
 
 func (p *Proxy) start() error {
 	if err := p.setup(p.dir); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if err := p.startProcess(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return p.waitForStart()
@@ -738,7 +738,7 @@ func (p *Proxy) startProcess() error {
 	}
 	err := p.proxyCmd.Start()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	p.running = true
 	//p.t.Logf("Start process :%d rpc :%d", p.proxyPort, p.rpcPort)
@@ -757,7 +757,7 @@ func (p *Proxy) stop() error {
 		}()
 
 		if err := p.proxyCmd.Process.Signal(os.Interrupt); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
@@ -816,17 +816,17 @@ func (p *Proxy) setup(dir string) error {
 	}
 	c, privateKey, err := cert.GenerateServerCertificate(p.CA, p.caPrivateKey, hosts)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	b, err := x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "tls.key"), "EC PRIVATE KEY", b, nil); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := cert.PemEncode(filepath.Join(dir, "tls.crt"), "CERTIFICATE", c.Raw, nil); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -850,31 +850,31 @@ func (p *Proxy) buildConfig() error {
 	}
 	b, err := yaml.Marshal(proxy)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	p.proxyConfBuf = b
 	if err := os.WriteFile(filepath.Join(p.dir, "proxies.yaml"), b, 0644); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	role := p.roles
 	b, err = yaml.Marshal(role)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	p.roleConfBuf = b
 	if err := os.WriteFile(filepath.Join(p.dir, "roles.yaml"), b, 0644); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	rpcPermission := p.rpcPermissions
 	b, err = yaml.Marshal(rpcPermission)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	p.rpcPermissionConfBuf = b
 	if err := os.WriteFile(filepath.Join(p.dir, "rpc_permissions.yaml"), b, 0644); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	conf := &configv2.Config{
@@ -951,11 +951,11 @@ func (p *Proxy) buildConfig() error {
 
 	b, err = yaml.Marshal(conf)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	p.configBuf = b
 	if err := os.WriteFile(filepath.Join(p.dir, "config.yaml"), b, 0644); err != nil {
-		return err
+		return xerrors.WithStack(err)
 	}
 
 	return nil

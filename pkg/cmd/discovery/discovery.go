@@ -3,6 +3,7 @@ package discovery
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,8 +15,8 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -75,31 +76,31 @@ func (m *mainProcess) Flags(fs *pflag.FlagSet) {
 func (m *mainProcess) init() (fsm.State, error) {
 	// At this time, already parsed command line arguments.
 	if err := logger.InitByFlags(); err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 
 	kubeconfigPath := ""
 	if m.dev {
 		h, err := os.UserHomeDir()
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.WithStack(err)
 		}
 		kubeconfigPath = filepath.Join(h, ".kube", "config")
 	}
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 
 	coreClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.sharedInformerFactory = informers.NewSharedInformerFactoryWithOptions(coreClient, 0, informers.WithNamespace(m.namespace))
 
 	s, err := dns.NewSidecar(fmt.Sprintf(":%d", m.port), m.sharedInformerFactory, m.namespace, m.clusterDomain, m.ttl)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 	m.dnsServer = s
 
@@ -109,7 +110,7 @@ func (m *mainProcess) init() (fsm.State, error) {
 
 		logger.Log.Info("Listen pprof and probe", zap.Int("port", 8080))
 		err := http.ListenAndServe(":8080", nil)
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Log.Warn("Failed listen", zap.Error(err))
 		}
 	}()
@@ -122,7 +123,7 @@ func (m *mainProcess) start() (fsm.State, error) {
 	if _, err := os.Stat(m.readyFile); !os.IsNotExist(err) {
 		logger.Log.Info("Delete readiness file before start DNS server", zap.String("path", m.readyFile))
 		if err := os.Remove(m.readyFile); err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.WithStack(err)
 		}
 	}
 
@@ -167,7 +168,7 @@ Wait:
 		logger.Log.Debug("Create file", zap.String("path", m.readyFile))
 		_, err := os.Create(m.readyFile)
 		if err != nil {
-			return fsm.UnknownState, xerrors.Errorf(": %w", err)
+			return fsm.UnknownState, xerrors.WithStack(err)
 		}
 	}
 
@@ -208,7 +209,7 @@ Wait:
 			process = etcdProcess
 			break Wait
 		case <-timeout:
-			return fsm.UnknownState, xerrors.Errorf("etcd process is not found")
+			return fsm.UnknownState, xerrors.NewWithStack("etcd process is not found")
 		}
 	}
 	go func() {
@@ -232,7 +233,7 @@ func (m *mainProcess) shutdown() (fsm.State, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := m.dnsServer.Shutdown(ctx); err != nil {
 		cancel()
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 	cancel()
 

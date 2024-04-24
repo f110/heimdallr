@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -45,44 +45,44 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig, 
 	kubeConfig = getKubeConfig(kubeConfig)
 	kindCluster, err := kind.NewCluster(kindPath, name, kubeConfig)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	exists, err := kindCluster.IsExist(name)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	if !exists {
 		if err := kindCluster.Create(k8sVersion, workerNum); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 3*time.Minute)
-		if err := kindCluster.WaitReady(ctx); err != nil {
-			return xerrors.Errorf(": %w", err)
-		}
 		cancelFunc()
+		if err := kindCluster.WaitReady(ctx); err != nil {
+			return err
+		}
 		log.Printf("Complete creating cluster")
 	}
 
 	restCfg, err := kindCluster.RESTConfig()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	log.Print("Install cert-manager")
 	if err := kind.InstallCertManager(restCfg, "heimdev"); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	log.Print("Install minio")
 	if err := kind.InstallMinIO(restCfg, "heimdev"); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	crds, err := k8s.ReadCRDFile(crdFile)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if err := k8s.EnsureCRD(restCfg, crds, 3*time.Minute); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -92,16 +92,16 @@ func deleteCluster(kindPath, name, kubeConfig string) error {
 	kubeConfig = getKubeConfig(kubeConfig)
 	kindCluster, err := kind.NewCluster(kindPath, name, kubeConfig)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if exists, err := kindCluster.IsExist(name); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	} else if !exists {
 		return nil
 	}
 
 	if err := kindCluster.Delete(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -110,12 +110,12 @@ func deleteCluster(kindPath, name, kubeConfig string) error {
 func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, namespace string) error {
 	kindCluster, err := kind.NewCluster(kindPath, name, "")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if exist, err := kindCluster.IsExist(name); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	} else if !exist {
-		return xerrors.New("Cluster does not exist. You create the cluster first.")
+		return xerrors.NewWithStack("Cluster does not exist. You create the cluster first.")
 	}
 
 	containerImages := []*kind.ContainerImageFile{
@@ -131,46 +131,46 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 		},
 	}
 	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	log.Printf("Apply manifest: %s", manifestFile)
 	if err := kindCluster.Apply(manifestFile, "heimdev"); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	client, err := kindCluster.Clientset()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	pods, err := client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	for _, v := range pods.Items {
 		log.Printf("Delete Pod: %s", v.Name)
 		err := client.CoreV1().Pods(namespace).Delete(context.Background(), v.Name, metav1.DeleteOptions{})
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	if err := waitForReadyPod(ctx, client, namespace, "heimdallr-operator"); err != nil {
 		cancel()
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	cancel()
 
 	pods, err = client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if len(pods.Items) < 1 {
-		return xerrors.New("could not found controller pod")
+		return xerrors.NewWithStack("could not found controller pod")
 	}
 	if err := tailLog(context.Background(), client, namespace, pods.Items[0].Name); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -179,22 +179,22 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 func logOperator(kindPath, name, namespace string) error {
 	kindCluster, err := kind.NewCluster(kindPath, name, "")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	client, err := kindCluster.Clientset()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	pods, err := client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if len(pods.Items) < 1 {
-		return xerrors.New("could not found controller pod")
+		return xerrors.NewWithStack("could not found controller pod")
 	}
 	if err := tailLog(context.Background(), client, "heimdallr", pods.Items[0].Name); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -203,12 +203,12 @@ func logOperator(kindPath, name, namespace string) error {
 func loadImages(kindPath, name string, images []string) error {
 	kindCluster, err := kind.NewCluster(kindPath, name, "")
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	if exist, err := kindCluster.IsExist(name); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	} else if !exist {
-		return xerrors.New("Cluster does not exist. You create the cluster first.")
+		return xerrors.NewWithStack("Cluster does not exist. You create the cluster first.")
 	}
 
 	containerImages := make([]*kind.ContainerImageFile, 0)
@@ -222,7 +222,7 @@ func loadImages(kindPath, name string, images []string) error {
 		})
 	}
 	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -236,7 +236,7 @@ func waitForReadyPod(ctx context.Context, client kubernetes.Interface, namespace
 		case <-ticker.C:
 			deploy, err := client.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 			if err != nil {
-				return xerrors.Errorf(": %w", err)
+				return xerrors.WithStack(err)
 			}
 			if deploy.Status.ObservedGeneration != deploy.Generation {
 				continue
@@ -257,12 +257,12 @@ func tailLog(ctx context.Context, client kubernetes.Interface, namespace, name s
 	req := client.CoreV1().Pods(namespace).GetLogs(name, &corev1.PodLogOptions{Follow: true})
 	s, err := req.Stream(ctx)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	_, err = io.Copy(os.Stdout, s)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -319,7 +319,7 @@ func Cluster(rootCmd *cmd.Command) {
 		Short: "Run the operator",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
 			if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" && runtime.GOOS != "linux" {
-				return xerrors.New("run-operator is only support to run under Bazel on Linux")
+				return xerrors.NewWithStack("run-operator is only support to run under Bazel on Linux")
 			}
 			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
 		},

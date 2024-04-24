@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"reflect"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -41,7 +41,7 @@ func V1Alpha1ProxyToV1Alpha2Proxy(in runtime.Object) (runtime.Object, error) {
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
 		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
-		return nil, xerrors.New("unexpected input data type")
+		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.Proxy{}
@@ -306,7 +306,7 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 	if before.Spec.Upstream != "" {
 		u, err := url.Parse(before.Spec.Upstream)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		if u.Scheme == "tcp" {
 			socket = true

@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -47,7 +47,7 @@ func NewAgent(cert *x509.Certificate, privateKey crypto.PrivateKey, caCert []*x5
 func (a *Agent) Connect(host, serverName string) error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	for _, v := range a.caCerts {
 		caPool.AddCert(v)
@@ -64,7 +64,7 @@ func (a *Agent) Connect(host, serverName string) error {
 		NextProtos: []string{ProtocolName},
 	})
 	if err != nil {
-		return xerrors.Errorf(": %v", err)
+		return xerrors.WithStack(err)
 	}
 	a.conn = conn
 

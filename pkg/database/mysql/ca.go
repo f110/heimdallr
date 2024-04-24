@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -39,18 +39,18 @@ func (ca *CA) GetSignedCertificate(ctx context.Context, serialNumber *big.Int) (
 	if serialNumber == nil {
 		c, err := ca.dao.SignedCertificate.ListAll(ctx)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		certs = c
 	} else {
 		sn, err := ca.dao.SerialNumber.SelectSerialNumber(ctx, serialNumber.Bytes())
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 
 		c, err := ca.dao.SignedCertificate.ListSerialNumber(ctx, sn.Id)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		certs = c
 	}
@@ -59,7 +59,7 @@ func (ca *CA) GetSignedCertificate(ctx context.Context, serialNumber *big.Int) (
 	for i, v := range certs {
 		c, err := x509.ParseCertificate(v.Certificate)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 
 		result[i] = &database.SignedCertificate{
@@ -79,13 +79,13 @@ func (ca *CA) GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) 
 	if serialNumber == nil {
 		c, err := ca.dao.RevokedCertificate.ListAll(ctx)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		certs = c
 	} else {
 		c, err := ca.dao.RevokedCertificate.ListSerialNumber(ctx, serialNumber.Bytes())
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		certs = c
 	}
@@ -112,7 +112,7 @@ func (ca *CA) GetRevokedCertificate(ctx context.Context, serialNumber *big.Int) 
 func (ca *CA) SetSignedCertificate(ctx context.Context, certificate *database.SignedCertificate) error {
 	sn, err := ca.dao.SerialNumber.SelectSerialNumber(ctx, certificate.Certificate.SerialNumber.Bytes())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	v := &entity.SignedCertificate{
@@ -125,7 +125,7 @@ func (ca *CA) SetSignedCertificate(ctx context.Context, certificate *database.Si
 	}
 	_, err = ca.dao.SignedCertificate.Create(ctx, v)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -134,11 +134,11 @@ func (ca *CA) SetSignedCertificate(ctx context.Context, certificate *database.Si
 func (ca *CA) SetRevokedCertificate(ctx context.Context, certificate *database.RevokedCertificate) error {
 	sn, err := ca.dao.SerialNumber.SelectSerialNumber(ctx, certificate.SerialNumber.Bytes())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	certs, err := ca.dao.SignedCertificate.ListSerialNumber(ctx, sn.Id)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if len(certs) != 1 {
 		return sql.ErrNoRows
@@ -157,17 +157,17 @@ func (ca *CA) SetRevokedCertificate(ctx context.Context, certificate *database.R
 	err = ca.dao.RevokedCertificate.Tx(ctx, func(tx *sql.Tx) error {
 		_, err = ca.dao.RevokedCertificate.Create(ctx, v, dao.WithTx(tx))
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		if err := ca.dao.SignedCertificate.Delete(ctx, cert.Id, dao.WithTx(tx)); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
@@ -191,12 +191,12 @@ func (ca *CA) NewSerialNumber(ctx context.Context) (*big.Int, error) {
 	retry := 0
 	for {
 		if retry == 3 {
-			return nil, xerrors.New("mysql: can't generate new serial number")
+			return nil, xerrors.NewWithStack("mysql: can't generate new serial number")
 		}
 
 		s, err := cert.NewSerialNumber()
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, err
 		}
 		serial = s
 		_, err = ca.dao.SerialNumber.Create(ctx, &entity.SerialNumber{SerialNumber: s.Bytes()})

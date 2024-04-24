@@ -9,8 +9,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -103,7 +103,7 @@ func (e *EtcdClient) Close() error {
 	defer e.PortForwarder.Close()
 	err := e.Client.Close()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -112,40 +112,40 @@ func (e *EtcdClient) Close() error {
 func NewEtcdClient(coreClient kubernetes.Interface, cfg *rest.Config, ec *etcdv1alpha2.EtcdCluster) (*EtcdClient, error) {
 	certSecret, err := coreClient.CoreV1().Secrets(ec.Namespace).Get(context.TODO(), ec.Status.ClientCertSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, _ := pem.Decode(certSecret.Data["client.crt"])
 	if b.Type != "CERTIFICATE" {
-		return nil, xerrors.New("invalid client certificate")
+		return nil, xerrors.NewWithStack("invalid client certificate")
 	}
 	clientCert, err := x509.ParseCertificate(b.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, _ = pem.Decode(certSecret.Data["client.key"])
 	clientKey, err := x509.ParseECPrivateKey(b.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	b, _ = pem.Decode(certSecret.Data["ca.crt"])
 	clientCACert, err := x509.ParseCertificate(b.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	caPool := x509.NewCertPool()
 	caPool.AddCert(clientCACert)
 
 	svc, err := coreClient.CoreV1().Services(ec.Namespace).Get(context.TODO(), fmt.Sprintf("%s-client", ec.Name), metav1.GetOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	forwarder, err := PortForward(context.TODO(), cfg, coreClient, svc, "https")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	ports, err := forwarder.GetPorts()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	port := ports[0].Local
 
@@ -168,7 +168,7 @@ func NewEtcdClient(coreClient kubernetes.Interface, cfg *rest.Config, ec *etcdv1
 	}
 	client, err := clientv3.New(clientCfg)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return &EtcdClient{Client: client, PortForwarder: forwarder}, nil

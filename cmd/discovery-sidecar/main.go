@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd/discovery"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -33,7 +33,7 @@ func dnsSidecar(args []string) error {
 	process.Flags(fs)
 	logger.Flags(fs)
 	if err := fs.Parse(args); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	process.SignalHandling(os.Interrupt, syscall.SIGTERM)
 	if err := process.Loop(); err != nil {

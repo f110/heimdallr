@@ -12,8 +12,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -39,15 +39,15 @@ func DeployTestService(coreClient kubernetes.Interface, client *client.Set, prox
 	deployment, service, backend := makeTestService(proxy, name)
 	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	backend, err = client.ProxyV1alpha2.CreateBackend(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return backend, nil
@@ -57,17 +57,17 @@ func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client *clie
 	deployment, service, backend := makeTestService(proxy, name)
 	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	backend.Spec.DisableAuthn = true
 	backend, err = client.ProxyV1alpha2.CreateBackend(context.TODO(), backend, metav1.CreateOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return backend, nil
@@ -148,7 +148,7 @@ type RPCClient struct {
 func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 	users, err := rpcClient.ListAllUser()
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	found := false
 	for _, v := range users {
@@ -159,7 +159,7 @@ func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 	}
 	if !found {
 		if err := rpcClient.AddUser(id, role); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -169,11 +169,11 @@ func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) {
 	csr, privKey, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: id}, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	signedCert, err := rpcClient.NewCertByCSR(string(csr), rpcclient.CommonName(id))
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	clientCert := tls.Certificate{Certificate: [][]byte{signedCert.Certificate}, PrivateKey: privKey}
 
@@ -183,12 +183,12 @@ func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) 
 func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy, id string) (*RPCClient, error) {
 	rpcService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-rpcserver", proxy.Name), metav1.GetOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	forwarder, err := PortForward(context.Background(), cfg, coreClient, rpcService, "h2")
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	// Not need checking return value of GetPorts.
@@ -196,17 +196,17 @@ func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *pro
 
 	caPool, err := CACertPool(coreClient, proxy)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	token, err := CreateJwtToken(coreClient, proxy, id)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	rpcClient, err := NewRPCClient(ports[0].Local, caPool, token)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return &RPCClient{ClientWithUserToken: rpcClient, forwarder: forwarder}, nil
@@ -222,7 +222,7 @@ func NewRPCClient(port uint16, caPool *x509.CertPool, token string) (*rpcclient.
 		grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return rpcclient.NewClientWithUserToken(conn).WithToken(token), nil
@@ -231,13 +231,13 @@ func NewRPCClient(port uint16, caPool *x509.CertPool, token string) (*rpcclient.
 func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy, id string) (string, error) {
 	signPrivKeyS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.SigningPrivateKeySecretName, metav1.GetOptions{})
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	b, _ := pem.Decode(signPrivKeyS.Data["privkey.pem"])
 	privKey, err := x509.ParseECPrivateKey(b.Bytes)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
 		Id:        id,
@@ -247,7 +247,7 @@ func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy,
 
 	token, err := claim.SignedString(privKey)
 	if err != nil {
-		return "", xerrors.Errorf(": %w", err)
+		return "", xerrors.WithStack(err)
 	}
 
 	return token, nil
@@ -256,13 +256,13 @@ func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy,
 func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x509.CertPool, error) {
 	caS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.CASecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	b, _ := pem.Decode(caS.Data["ca.crt"])
 	caCert, err := x509.ParseCertificate(b.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	caPool := x509.NewCertPool()
 	caPool.AddCert(caCert)
@@ -273,12 +273,12 @@ func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x
 func ProxyCertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x509.CertPool, error) {
 	caCertS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-cert", proxy.Name), metav1.GetOptions{})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	pemB, _ := pem.Decode(caCertS.Data["ca.crt"])
 	proxyCACert, err := x509.ParseCertificate(pemB.Bytes)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	proxyCertPool := x509.NewCertPool()
 	proxyCertPool.AddCert(proxyCACert)
@@ -295,13 +295,13 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 		}
 	}
 	if port == -1 {
-		return nil, xerrors.Errorf("%s is not found", portName)
+		return nil, xerrors.NewfWithStack("%s is not found", portName)
 	}
 
 	selector := labels.SelectorFromSet(svc.Spec.Selector)
 	podList, err := coreClient.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	var pod *corev1.Pod
 	for i, v := range podList.Items {
@@ -317,14 +317,14 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 	req := coreClient.CoreV1().RESTClient().Post().Resource("pods").Namespace(svc.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(cfg)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
 
 	readyCh := make(chan struct{})
 	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, ctx.Done(), readyCh, nil, nil)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	go func() {
 		err := pf.ForwardPorts()
@@ -339,15 +339,15 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 	select {
 	case <-readyCh:
 	case <-time.After(5 * time.Second):
-		return nil, xerrors.New("timeout")
+		return nil, xerrors.NewWithStack("timeout")
 	}
 
 	ports, err := pf.GetPorts()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if len(ports) != 1 {
-		return nil, xerrors.New("GetPorts returns zero or more than two ports. This is a suspicious behavior.")
+		return nil, xerrors.NewWithStack("GetPorts returns zero or more than two ports. This is a suspicious behavior.")
 	}
 
 	return pf, nil

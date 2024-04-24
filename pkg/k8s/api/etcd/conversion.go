@@ -3,8 +3,8 @@ package etcd
 import (
 	"reflect"
 
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -36,7 +36,7 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
 		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
-		return nil, xerrors.New("unexpected input data type")
+		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &etcdv1alpha1.EtcdCluster{}
@@ -157,7 +157,7 @@ func V1Alpha2EtcdClusterToV1Alpha1EtcdCluster(in runtime.Object) (runtime.Object
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
 		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
-		return nil, xerrors.New("unexpected input data type")
+		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &etcdv1alpha2.EtcdCluster{}

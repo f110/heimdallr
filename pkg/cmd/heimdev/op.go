@@ -21,7 +21,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 )
@@ -31,26 +31,26 @@ func openIDProvider(port int, signingPrivateKey string) error {
 	if _, err := os.Stat(signingPrivateKey); os.IsNotExist(err) {
 		newPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		f, err := os.Create(signingPrivateKey)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		buf := x509.MarshalPKCS1PrivateKey(newPrivateKey)
 		if err := pem.Encode(f, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: buf}); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		privateKey = newPrivateKey
 	} else {
 		buf, err := os.ReadFile(signingPrivateKey)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		b, _ := pem.Decode(buf)
 		loadedPrivateKey, err := x509.ParsePKCS1PrivateKey(b.Bytes)
 		if err != nil {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		privateKey = loadedPrivateKey
 	}
@@ -66,7 +66,7 @@ func openIDProvider(port int, signingPrivateKey string) error {
 
 	p, err := op.NewProvider(&op.Config{CryptoKey: sha256.Sum256([]byte("test"))}, st, op.StaticIssuer(fmt.Sprintf("http://127.0.0.1:%d/", port)), op.WithAllowInsecure())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	router := p.HttpHandler().(*mux.Router)
 	router.Methods(http.MethodGet).Path("/login").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -157,7 +157,7 @@ func (a *providerStorage) CreateAuthRequest(_ context.Context, req *oidc.AuthReq
 
 func (a *providerStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequest, error) {
 	if v := a.authRequests[id]; v == nil {
-		return nil, xerrors.Errorf("not found")
+		return nil, xerrors.NewWithStack("not found")
 	} else {
 		return v, nil
 	}
@@ -170,12 +170,12 @@ func (a *providerStorage) AuthRequestByCode(ctx context.Context, code string) (o
 		}
 	}
 
-	return nil, xerrors.Errorf("code is not found")
+	return nil, xerrors.NewWithStack("code is not found")
 }
 
 func (a *providerStorage) SaveAuthCode(ctx context.Context, id, code string) error {
 	if v := a.authRequests[id]; v == nil {
-		return xerrors.Errorf("auth request id is not found")
+		return xerrors.NewWithStack("auth request id is not found")
 	} else {
 		v.Code = code
 	}
@@ -259,7 +259,7 @@ func (a *providerStorage) GetClientByClientID(ctx context.Context, clientID stri
 		}
 	}
 
-	return nil, xerrors.Errorf("client %s is not found", clientID)
+	return nil, xerrors.NewfWithStack("client %s is not found", clientID)
 }
 
 func (a *providerStorage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error {
@@ -270,7 +270,7 @@ func (a *providerStorage) AuthorizeClientIDSecret(ctx context.Context, clientID,
 		}
 	}
 
-	return xerrors.Errorf("%s is not found", clientID)
+	return xerrors.NewfWithStack("%s is not found", clientID)
 }
 
 func (a *providerStorage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {

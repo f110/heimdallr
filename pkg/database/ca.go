@@ -10,6 +10,8 @@ import (
 	"encoding/gob"
 	"math/big"
 	"time"
+
+	"go.f110.dev/xerrors"
 )
 
 const (
@@ -50,7 +52,7 @@ type SignedCertificate struct {
 func ParseSignedCertificate(b []byte) (*SignedCertificate, error) {
 	signedCertificate := &SignedCertificate{}
 	if err := gob.NewDecoder(bytes.NewReader(b)).Decode(signedCertificate); err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 
 	return signedCertificate, nil
@@ -66,7 +68,7 @@ func (s *SignedCertificate) Marshal() ([]byte, error) {
 	dc.PublicKeyAlgorithm = 0
 	n.Certificate = dc
 	if err := gob.NewEncoder(buf).Encode(n); err != nil {
-		return nil, err
+		return nil, xerrors.WithStack(err)
 	}
 	return buf.Bytes(), nil
 }

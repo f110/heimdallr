@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/miekg/dns"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -188,7 +188,7 @@ func (s *Sidecar) deletePod(obj interface{}) {
 func (s *Sidecar) load() error {
 	pods, err := s.podInformer.Lister().Pods(s.namespace).List(labels.Everything())
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	for _, v := range pods {
 		if len(v.Status.PodIPs) == 0 {
@@ -209,16 +209,16 @@ func (s *Sidecar) load() error {
 
 func (s *Sidecar) Start() error {
 	if !cache.WaitForCacheSync(context.Background().Done(), s.podInformer.Informer().HasSynced) {
-		return xerrors.Errorf("can not sync cache")
+		return xerrors.NewWithStack("can not sync cache")
 	}
 
 	if err := s.load(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
-	return s.s.ListenAndServe()
+	return xerrors.WithStack(s.s.ListenAndServe())
 }
 
 func (s *Sidecar) Shutdown(ctx context.Context) error {
-	return s.s.ShutdownContext(ctx)
+	return xerrors.WithStack(s.s.ShutdownContext(ctx))
 }

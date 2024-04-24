@@ -7,7 +7,7 @@ import (
 	"io"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/database"
 )
@@ -40,7 +40,7 @@ func (u *UserDatabase) Get(id string, _ ...database.UserDatabaseOption) (*databa
 
 	v, ok := u.data[id]
 	if !ok {
-		return nil, xerrors.New("memory: user not found")
+		return nil, xerrors.NewWithStack("memory: user not found")
 	}
 	return v, nil
 }
@@ -67,7 +67,7 @@ func (u *UserDatabase) GetIdentityByLoginName(_ context.Context, loginName strin
 		}
 	}
 
-	return "", database.ErrUserNotFound
+	return "", xerrors.WithStack(database.ErrUserNotFound)
 }
 
 func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
@@ -107,7 +107,7 @@ func (u *UserDatabase) GetAccessToken(value string) (*database.AccessToken, erro
 		return v, nil
 	}
 
-	return nil, database.ErrAccessTokenNotFound
+	return nil, xerrors.WithStack(database.ErrAccessTokenNotFound)
 }
 
 func (u *UserDatabase) Set(_ctx context.Context, user *database.User) error {
@@ -137,7 +137,7 @@ func (u *UserDatabase) Delete(_ctx context.Context, id string) error {
 func (u *UserDatabase) SetState(_ context.Context, unique string) (string, error) {
 	buf := make([]byte, 10)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-		return "", xerrors.Errorf("database: failure generate state: %v", err)
+		return "", xerrors.WithMessage(err, "database: failure generate state")
 	}
 	t := base64.StdEncoding.EncodeToString(buf)
 	stateString := t[:len(t)-2]
@@ -154,7 +154,7 @@ func (u *UserDatabase) GetState(_ context.Context, state string) (string, error)
 	unique, ok := u.state[state]
 	u.mu.Unlock()
 	if !ok {
-		return "", xerrors.New("database: state not found")
+		return "", xerrors.NewWithStack("database: state not found")
 	}
 
 	return unique, nil

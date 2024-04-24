@@ -20,7 +20,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/netutil"
 )
@@ -52,12 +52,12 @@ type IdentityProvider struct {
 func NewIdentityProvider(redirectURL string) (*IdentityProvider, error) {
 	port, err := netutil.FindUnusedPort()
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	idp := &IdentityProvider{
@@ -81,7 +81,7 @@ func NewIdentityProvider(redirectURL string) (*IdentityProvider, error) {
 		op.WithAllowInsecure(),
 	)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	router := p.Handler.(*chi.Mux)
@@ -113,7 +113,7 @@ func NewIdentityProvider(redirectURL string) (*IdentityProvider, error) {
 	}
 	l, err := net.Listen("tcp", idp.Server.Addr)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 	go idp.Server.Serve(l)
 
@@ -212,7 +212,7 @@ func (p *providerStorage) CreateAuthRequest(_ context.Context, req *oidc.AuthReq
 
 func (p *providerStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequest, error) {
 	if v := p.authRequests[id]; v == nil {
-		return nil, xerrors.Errorf("not found")
+		return nil, xerrors.NewWithStack("not found")
 	} else {
 		return v, nil
 	}
@@ -225,12 +225,12 @@ func (p *providerStorage) AuthRequestByCode(_ context.Context, code string) (op.
 		}
 	}
 
-	return nil, xerrors.Errorf("code is not found")
+	return nil, xerrors.NewWithStack("code is not found")
 }
 
 func (p *providerStorage) SaveAuthCode(_ context.Context, id string, code string) error {
 	if v := p.authRequests[id]; v == nil {
-		return xerrors.Errorf("auth request id is not found")
+		return xerrors.NewWithStack("auth request id is not found")
 	} else {
 		v.Code = code
 	}
@@ -313,7 +313,7 @@ func (p *providerStorage) GetClientByClientID(_ context.Context, clientID string
 		}
 	}
 
-	return nil, xerrors.Errorf("client is not found")
+	return nil, xerrors.NewWithStack("client is not found")
 }
 
 func (p *providerStorage) AuthorizeClientIDSecret(_ context.Context, clientID, clientSecret string) error {
@@ -324,7 +324,7 @@ func (p *providerStorage) AuthorizeClientIDSecret(_ context.Context, clientID, c
 		}
 	}
 
-	return xerrors.Errorf("client is not found")
+	return xerrors.NewWithStack("client is not found")
 }
 
 func (p *providerStorage) SetUserinfoFromScopes(

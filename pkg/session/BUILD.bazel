@@ -12,7 +12,7 @@ go_library(
     deps = [
         "//pkg/config/configv2",
         "//vendor/github.com/bradfitz/gomemcache/memcache",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
     ],
 )
 

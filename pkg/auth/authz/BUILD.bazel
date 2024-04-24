@@ -10,8 +10,8 @@ go_library(
         "//pkg/database",
         "//pkg/logger",
         "//pkg/session",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/go.uber.org/zap",
-        "//vendor/golang.org/x/xerrors",
         "//vendor/google.golang.org/grpc",
     ],
 )

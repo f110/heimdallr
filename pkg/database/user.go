@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"sigs.k8s.io/yaml"
 )
 
@@ -94,7 +94,7 @@ func (u *User) ServiceAccount() bool {
 func UnmarshalUser(kv *mvccpb.KeyValue) (*User, error) {
 	user := &User{}
 	if err := yaml.Unmarshal(kv.Value, user); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	user.Version = kv.Version
 	user.Setup()
@@ -105,7 +105,7 @@ func UnmarshalUser(kv *mvccpb.KeyValue) (*User, error) {
 func MarshalUser(user *User) ([]byte, error) {
 	b, err := yaml.Marshal(user)
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	return b, nil

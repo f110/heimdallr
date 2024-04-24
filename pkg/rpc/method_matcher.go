@@ -3,7 +3,7 @@ package rpc
 import (
 	"strings"
 
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 type MethodMatcher struct {
@@ -28,7 +28,7 @@ func NewMethodMatcher() *MethodMatcher {
 
 func (m MethodMatcher) Add(method string) error {
 	if m.freeze {
-		return xerrors.New("rpc: can not added new method because matcher is freezing")
+		return xerrors.NewWithStack("rpc: can not added new method because matcher is freezing")
 	}
 
 	s := strings.Split(m.normalize(method), ".")

@@ -11,7 +11,7 @@ go_library(
     deps = [
         "//vendor/github.com/mattn/go-shellwords",
         "//vendor/github.com/spf13/pflag",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
     ],
 )
 

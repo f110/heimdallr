@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -60,7 +61,7 @@ func New() *mainProcess {
 func (m *mainProcess) init() (fsm.State, error) {
 	conf, err := configutil.ReadConfig(m.ConfFile)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 	m.config = conf
 
@@ -69,7 +70,7 @@ func (m *mainProcess) init() (fsm.State, error) {
 
 func (m *mainProcess) setup() (fsm.State, error) {
 	if err := logger.Init(m.config.Logger); err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 
 	return stateOpenConnection, nil
@@ -88,7 +89,7 @@ func (m *mainProcess) openConnection() (fsm.State, error) {
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(retry.UnaryClientInterceptor())),
 	)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %v", err)
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.rpcServerConn = conn
 
@@ -98,11 +99,11 @@ func (m *mainProcess) openConnection() (fsm.State, error) {
 func (m *mainProcess) start() (fsm.State, error) {
 	dashboardServer, err := dashboard.NewServer(m.config, m.rpcServerConn)
 	if err != nil {
-		return fsm.UnknownState, xerrors.Errorf(": %w", err)
+		return fsm.UnknownState, err
 	}
 
 	m.dashboard = dashboardServer
-	if err := m.dashboard.Start(); err != nil && err != http.ErrServerClosed {
+	if err := m.dashboard.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 

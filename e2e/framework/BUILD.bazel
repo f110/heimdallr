@@ -32,7 +32,7 @@ go_library(
         "//vendor/github.com/stretchr/testify/assert",
         "//vendor/github.com/zitadel/oidc/v3/pkg/oidc",
         "//vendor/github.com/zitadel/oidc/v3/pkg/op",
-        "//vendor/golang.org/x/xerrors",
+        "//vendor/go.f110.dev/xerrors",
         "//vendor/google.golang.org/grpc",
         "//vendor/google.golang.org/grpc/credentials",
         "//vendor/google.golang.org/grpc/keepalive",

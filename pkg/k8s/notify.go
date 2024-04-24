@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 )
 
 type VolumeWatcher struct {
@@ -17,10 +17,10 @@ type VolumeWatcher struct {
 func NewVolumeWatcher(mountPath string, fn func()) (*VolumeWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 	if err := watcher.Add(filepath.Join(mountPath, ".")); err != nil {
-		return nil, xerrors.Errorf(": %v", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	w := &VolumeWatcher{watcher: watcher, mountPath: mountPath, fn: fn}
@@ -70,7 +70,7 @@ func CanWatchVolume(path string) bool {
 
 func FindMountPath(path string) (string, error) {
 	if path[0] != '/' {
-		return "", xerrors.New("k8s: path doesn't starting /")
+		return "", xerrors.NewWithStack("k8s: path doesn't starting /")
 	}
 
 	p := path
@@ -80,7 +80,7 @@ func FindMountPath(path string) (string, error) {
 		}
 		s := filepath.Dir(p)
 		if s == p {
-			return "", xerrors.New("k8s: can not detect mount path")
+			return "", xerrors.NewWithStack("k8s: can not detect mount path")
 		}
 		p = s
 	}

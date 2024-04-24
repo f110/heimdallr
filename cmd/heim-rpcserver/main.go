@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"golang.org/x/xerrors"
 
 	"go.f110.dev/heimdallr/pkg/cmd/rpcserver"
 	"go.f110.dev/heimdallr/pkg/version"
@@ -37,7 +36,7 @@ func rpcServer(args []string) error {
 	process.ConfFile = confFile
 	go process.SignalHandling(syscall.SIGTERM, syscall.SIGINT)
 	if err := process.Loop(); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	return nil
