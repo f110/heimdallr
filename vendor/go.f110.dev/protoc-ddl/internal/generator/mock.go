@@ -9,15 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"github.com/pingcap/parser/ast"
+	"github.com/pingcap/tidb/pkg/parser/ast"
+	"google.golang.org/protobuf/types/descriptorpb"
 
 	"go.f110.dev/protoc-ddl/internal/schema"
 )
 
 type GoDAOMockGenerator struct{}
 
-func (g GoDAOMockGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptor.FileOptions, messages *schema.Messages, daoPath string) {
+func (g GoDAOMockGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptorpb.FileOptions, messages *schema.Messages, daoPath string) {
 	src := newBuffer()
 
 	entityPackageName := fileOpt.GetGoPackage()
@@ -55,15 +55,17 @@ func (g GoDAOMockGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptor.File
 		src.Write("}")
 		src.LineBreak()
 
-		src.WriteFunc(s.Tx(g.tx), s.PrimaryKeySelect(g.primaryKeySelect), g.mockPrimaryKeySelect(entityPackageAlias, m))
+		src.WriteFunc(s.Tx(g.tx))
+		src.WriteFunc(s.PrimaryKeySelect(g.primaryKeySelect), g.mockPrimaryKeySelect(entityPackageAlias, m))
+		if len(m.PrimaryKeys) == 1 {
+			src.WriteFunc(s.PrimaryKeyMultiSelect(g.primaryKeyMultiSelect), g.mockPrimaryKeyMultiSelect(entityPackageAlias, m))
+		}
 
 		for _, v := range selectFuncs {
-			src.WriteString(v.String())
-			src.LineBreak()
+			src.WriteFunc(v)
 
 			f := g.mockSelectQuery(entityPackageAlias, m, v)
-			src.WriteString(f.String())
-			src.LineBreak()
+			src.WriteFunc(f)
 		}
 
 		src.WriteFunc(s.Create(g.create), s.Delete(g.delete), s.Update(g.update))
@@ -99,10 +101,19 @@ func (GoDAOMockGenerator) primaryKeySelect(entityName string, m *schema.Message,
 		a = append(a, "\""+schema.ToLowerCamel(v.Name)+"\":"+schema.ToLowerCamel(v.Name))
 	}
 
-	src.Buffer.WriteString("v, err := d.Call(\"Select\",map[string]interface{}{")
-	src.Buffer.WriteString(strings.Join(a, ","))
+	src.WriteString("v, err := d.Call(\"Select\",map[string]interface{}{")
+	src.WriteString(strings.Join(a, ","))
 	src.Write("})")
 	src.Writef("return v.(*%s.%s), err", entityName, m.Descriptor.GetName())
+
+	return src.String()
+}
+
+func (GoDAOMockGenerator) primaryKeyMultiSelect(entityName string, m *schema.Message, _, _, _ []string) string {
+	src := newBuffer()
+
+	src.Writef("v, err := d.Call(\"SelectMulti\",map[string]interface{}{\"%s\":%s})", schema.ToLowerCamel(m.PrimaryKeys[0].Name), schema.ToLowerCamel(m.PrimaryKeys[0].Name))
+	src.Writef("return v.([]*%s.%s), err", entityName, m.Descriptor.GetName())
 
 	return src.String()
 }
@@ -115,16 +126,34 @@ func (GoDAOMockGenerator) mockPrimaryKeySelect(entityName string, m *schema.Mess
 	}
 	funcArgs = append(funcArgs, &field{Name: "value", Type: entityName + "." + m.Descriptor.GetName(), Pointer: true})
 
-	src.Buffer.WriteString("d.Register(\"Select\", map[string]interface{}{")
+	src.WriteString("d.Register(\"Select\", map[string]interface{}{")
 	args := make([]string, 0)
 	for _, v := range funcArgs[:len(funcArgs)-1] {
 		args = append(args, "\""+v.Name+"\":"+v.Name)
 	}
-	src.Buffer.WriteString(strings.Join(args, ","))
-	src.Buffer.WriteString("}, value, nil)")
+	src.WriteString(strings.Join(args, ","))
+	src.WriteString("}, value, nil)")
 
 	return &goFunc{
 		Name:     "RegisterSelect",
+		Receiver: &field{Name: "d", Type: m.Descriptor.GetName(), Pointer: true},
+		Args:     funcArgs,
+		Body:     src.String(),
+	}
+}
+
+func (GoDAOMockGenerator) mockPrimaryKeyMultiSelect(entityName string, m *schema.Message) *goFunc {
+	funcArgs := make([]*field, 0)
+	funcArgs = append(funcArgs,
+		&field{Name: schema.ToLowerCamel(m.PrimaryKeys[0].Name), Type: "[]" + GoDataTypeMap[m.PrimaryKeys[0].Type]},
+		&field{Name: "value", Type: "[]*" + entityName + "." + m.Descriptor.GetName()},
+	)
+
+	src := newBuffer()
+	src.Writef("d.Register(\"SelectMulti\",map[string]interface{}{\"%s\":%s},value,nil)", schema.ToLowerCamel(m.PrimaryKeys[0].Name), schema.ToLowerCamel(m.PrimaryKeys[0].Name))
+
+	return &goFunc{
+		Name:     "RegisterSelectMulti",
 		Receiver: &field{Name: "d", Type: m.Descriptor.GetName(), Pointer: true},
 		Args:     funcArgs,
 		Body:     src.String(),

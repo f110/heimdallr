@@ -1,46 +1,46 @@
 syntax = "proto3";
 package dev.f110.ddl;
-option go_package = "go.f110.dev/protoc-ddl;ddl";
+option  go_package = "go.f110.dev/protoc-ddl;ddl";
 
 import "google/protobuf/descriptor.proto";
 
 message IndexOption {
-    string          name    = 1;
-    repeated string columns = 2;
-    bool            unique  = 3;
+  string          name    = 1;
+  repeated string columns = 2;
+  bool            unique  = 3;
 }
 
 message ColumnOptions {
-    bool   sequence = 1;
-    bool   null     = 2;
-    string default  = 3;
-    int32  size     = 4;
-    string type     = 5;
-    bool   unique   = 6;
+  bool sequence  = 1;
+  bool null      = 2;
+  string default = 3;
+  int32  size    = 4;
+  string type    = 5;
+  bool   unique  = 6;
 }
 
 message TableOptions {
-    string               table_name     = 1;
-    repeated string      primary_key    = 2;
-    repeated IndexOption indexes        = 3;
-    string               engine         = 4;
-    bool                 with_timestamp = 5;
+  string               table_name     = 1;
+  repeated string      primary_key    = 2;
+  repeated IndexOption indexes        = 3;
+  string               engine         = 4;
+  bool                 with_timestamp = 5;
 }
 
 message QueryOption {
-    string name  = 1;
-    string query = 2;
+  string name  = 1;
+  string query = 2;
 }
 
 message DAOOptions {
-    repeated QueryOption queries = 1;
+  repeated QueryOption queries = 1;
 }
 
 extend google.protobuf.MessageOptions {
-    TableOptions table = 60000;
-    DAOOptions   dao   = 60001;
+  TableOptions table = 60000;
+  DAOOptions   dao   = 60001;
 }
 
 extend google.protobuf.FieldOptions {
-    ColumnOptions column = 60000;
+  ColumnOptions column = 60000;
 }

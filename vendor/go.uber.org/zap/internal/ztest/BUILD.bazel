@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "ztest",
+    srcs = [
+        "clock.go",
+        "doc.go",
+        "timeout.go",
+        "writer.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/go.uber.org/zap/internal/ztest",
+    importpath = "go.uber.org/zap/internal/ztest",
+    visibility = ["//vendor/go.uber.org/zap:__subpackages__"],
+)

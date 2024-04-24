@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "duration",
+    srcs = ["duration.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/tidb/pkg/parser/duration",
+    importpath = "github.com/pingcap/tidb/pkg/parser/duration",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/pingcap/errors"],
+)

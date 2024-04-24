@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/schemalex/schemalex"
-	"golang.org/x/xerrors"
+	"go.f110.dev/xerrors"
 
 	"go.f110.dev/protoc-ddl/internal/generator"
 	"go.f110.dev/protoc-ddl/internal/schema"
@@ -56,7 +56,7 @@ func NewMigration(schemaFile, driver, dsn string) (*Migration, error) {
 	case "mysql":
 		cfg, err := mysql.ParseDSN(dsn)
 		if err != nil {
-			return nil, xerrors.Errorf(": %w", err)
+			return nil, xerrors.WithStack(err)
 		}
 		cfg.MultiStatements = true
 		cfg.ParseTime = true
@@ -66,24 +66,24 @@ func NewMigration(schemaFile, driver, dsn string) (*Migration, error) {
 
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 
 	buf := new(bytes.Buffer)
 	switch driver {
 	case "mysql":
-		generator.MySQLGenerator{}.Generate(buf, schema.NewMessages([]*schema.Message{SchemaVersionTable}))
+		generator.MySQLGenerator{}.Generate(buf, schema.NewMessages([]*schema.Message{SchemaVersionTable}, nil))
 	}
 
 	sch, err := ioutil.ReadFile(schemaFile)
 	if err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, xerrors.WithStack(err)
 	}
 	h := sha256.Sum256(sch)
 
 	m := &Migration{schema: string(sch), versionTableSchema: buf.String(), schemaHash: hex.EncodeToString(h[:]), dsn: dsn, db: db}
 	if err := m.plan(); err != nil {
-		return nil, xerrors.Errorf(": %w", err)
+		return nil, err
 	}
 
 	return m, nil
@@ -96,7 +96,7 @@ func (m *Migration) Execute(ctx context.Context, execute bool) error {
 
 	if !m.checkSchemaVersionTable(ctx) {
 		if err := m.createSchemaVersionTable(ctx); err != nil {
-			return xerrors.Errorf(": %w", err)
+			return err
 		}
 	}
 
@@ -104,7 +104,7 @@ func (m *Migration) Execute(ctx context.Context, execute bool) error {
 		if err == ErrMigrated {
 			return nil
 		}
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 
 	for m.diff.Next() {
@@ -112,12 +112,12 @@ func (m *Migration) Execute(ctx context.Context, execute bool) error {
 		_, err := m.db.ExecContext(ctx, m.diff.Query())
 		if err != nil {
 			m.failure()
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	if err := m.finishMigration(ctx, time.Now()); err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (m *Migration) plan() error {
 
 	d, err := NewDiff(targetDB, m.schema)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return err
 	}
 	m.diff = d
 
@@ -156,7 +156,7 @@ func (m *Migration) createSchemaVersionTable(ctx context.Context) error {
 	log.Printf("Create schema version table: %s", m.versionTableSchema)
 	_, err := m.db.ExecContext(ctx, m.versionTableSchema)
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -174,22 +174,22 @@ func (m *Migration) getLock(ctx context.Context) error {
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
 		if !ok {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 		if mysqlErr.Number != 1062 {
-			return xerrors.Errorf(": %w", err)
+			return xerrors.WithStack(err)
 		}
 	}
 
 	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	row := tx.QueryRowContext(ctx, fmt.Sprintf("SELECT `finished_at` FROM `%s` WHERE `sha256` = ? FOR UPDATE", SchemaVersionTable.TableName), m.schemaHash)
 	var finishedAt *time.Time
 	if err := row.Scan(&finishedAt); err != nil {
 		tx.Rollback()
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if finishedAt != nil && !finishedAt.IsZero() {
 		tx.Rollback()
@@ -220,23 +220,23 @@ func (m *Migration) finishMigration(ctx context.Context, now time.Time) error {
 	if err != nil {
 		m.lock.Rollback()
 		m.lock = nil
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	n, err := result.RowsAffected()
 	if err != nil {
 		m.lock.Rollback()
 		m.lock = nil
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 	if n != 1 {
 		m.lock.Rollback()
 		m.lock = nil
-		return xerrors.Errorf("migrate: Failed update schema version table: %w", err)
+		return xerrors.WithMessagef(err, "migrate: Failed update schema version table")
 	}
 
 	if err := m.lock.Commit(); err != nil {
 		m.lock = nil
-		return xerrors.Errorf(": %w", err)
+		return xerrors.WithStack(err)
 	}
 
 	m.lock = nil

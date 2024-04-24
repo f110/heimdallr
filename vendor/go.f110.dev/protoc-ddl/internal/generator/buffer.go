@@ -29,6 +29,9 @@ func (b *Buffer) LineBreak() {
 
 func (b *Buffer) WriteFunc(funcs ...*goFunc) {
 	for _, v := range funcs {
+		if v == nil {
+			continue
+		}
 		b.Write(v.String())
 		b.LineBreak()
 	}

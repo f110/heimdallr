@@ -58,12 +58,15 @@ github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd/v22 v22.5.0
 ## explicit; go 1.12
 github.com/coreos/go-systemd/v22/journal
+# github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
+## explicit
+github.com/cznic/mathutil
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/deckarep/golang-set v0.0.0-20170826194844-b3af78e1d186
-## explicit
-github.com/deckarep/golang-set
+# github.com/deckarep/golang-set/v2 v2.6.0
+## explicit; go 1.18
+github.com/deckarep/golang-set/v2
 # github.com/docker/cli v20.10.7+incompatible
 ## explicit
 github.com/docker/cli/cli/config
@@ -131,8 +134,8 @@ github.com/go-openapi/jsonreference/internal
 # github.com/go-openapi/swag v0.22.3
 ## explicit; go 1.18
 github.com/go-openapi/swag
-# github.com/go-sql-driver/mysql v1.5.0
-## explicit; go 1.10
+# github.com/go-sql-driver/mysql v1.7.1
+## explicit; go 1.13
 github.com/go-sql-driver/mysql
 # github.com/gogo/protobuf v1.3.2
 ## explicit; go 1.15
@@ -152,7 +155,6 @@ github.com/golang/protobuf/descriptor
 github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
-github.com/golang/protobuf/protoc-gen-go/plugin
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
@@ -391,25 +393,30 @@ github.com/opencontainers/runc/libcontainer/user
 # github.com/peterh/liner v1.2.1
 ## explicit
 github.com/peterh/liner
-# github.com/pingcap/errors v0.11.4
-## explicit
+# github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63
+## explicit; go 1.14
 github.com/pingcap/errors
-# github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9
+# github.com/pingcap/failpoint v0.0.0-20220801062533-2eaa32854a6c
 ## explicit; go 1.13
+github.com/pingcap/failpoint
+# github.com/pingcap/log v1.1.0
+## explicit; go 1.16
 github.com/pingcap/log
-# github.com/pingcap/parser v0.0.0-20200623164729-3a18f1e5dceb
-## explicit; go 1.13
-github.com/pingcap/parser
-github.com/pingcap/parser/ast
-github.com/pingcap/parser/auth
-github.com/pingcap/parser/charset
-github.com/pingcap/parser/format
-github.com/pingcap/parser/model
-github.com/pingcap/parser/mysql
-github.com/pingcap/parser/opcode
-github.com/pingcap/parser/terror
-github.com/pingcap/parser/test_driver
-github.com/pingcap/parser/types
+# github.com/pingcap/tidb/pkg/parser v0.0.0-20240223105127-2c46b8e00418
+## explicit; go 1.19
+github.com/pingcap/tidb/pkg/parser
+github.com/pingcap/tidb/pkg/parser/ast
+github.com/pingcap/tidb/pkg/parser/auth
+github.com/pingcap/tidb/pkg/parser/charset
+github.com/pingcap/tidb/pkg/parser/duration
+github.com/pingcap/tidb/pkg/parser/format
+github.com/pingcap/tidb/pkg/parser/model
+github.com/pingcap/tidb/pkg/parser/mysql
+github.com/pingcap/tidb/pkg/parser/opcode
+github.com/pingcap/tidb/pkg/parser/terror
+github.com/pingcap/tidb/pkg/parser/test_driver
+github.com/pingcap/tidb/pkg/parser/tidb
+github.com/pingcap/tidb/pkg/parser/types
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -438,6 +445,9 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec
+## explicit; go 1.12
+github.com/remyoudompheng/bigfft
 # github.com/rivo/uniseg v0.2.0
 ## explicit; go 1.12
 github.com/rivo/uniseg
@@ -593,15 +603,15 @@ go.etcd.io/etcd/server/v3/proxy/grpcproxy/adapter
 go.etcd.io/etcd/server/v3/verify
 go.etcd.io/etcd/server/v3/wal
 go.etcd.io/etcd/server/v3/wal/walpb
-# go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
-## explicit; go 1.14
+# go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2
+## explicit; go 1.22.0
 go.f110.dev/protoc-ddl
 go.f110.dev/protoc-ddl/internal/generator
 go.f110.dev/protoc-ddl/internal/migrate
 go.f110.dev/protoc-ddl/internal/schema
 go.f110.dev/protoc-ddl/probe
-# go.f110.dev/xerrors v0.0.0-20220906140306-802337d743ab
-## explicit; go 1.19
+# go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f
+## explicit; go 1.22.0
 go.f110.dev/xerrors
 # go.opencensus.io v0.24.0
 ## explicit; go 1.13
@@ -680,6 +690,9 @@ go.opentelemetry.io/proto/otlp/collector/trace/v1
 go.opentelemetry.io/proto/otlp/common/v1
 go.opentelemetry.io/proto/otlp/resource/v1
 go.opentelemetry.io/proto/otlp/trace/v1
+# go.uber.org/atomic v1.11.0
+## explicit; go 1.18
+go.uber.org/atomic
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr
@@ -693,8 +706,10 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/internal/pool
 go.uber.org/zap/internal/stacktrace
+go.uber.org/zap/internal/ztest
 go.uber.org/zap/zapcore
 go.uber.org/zap/zapgrpc
+go.uber.org/zap/zaptest
 # golang.org/x/crypto v0.22.0
 ## explicit; go 1.18
 golang.org/x/crypto/argon2
@@ -717,6 +732,10 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
+# golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
+## explicit; go 1.20
+golang.org/x/exp/constraints
+golang.org/x/exp/slices
 # golang.org/x/net v0.23.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
