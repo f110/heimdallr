@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "failpoint",
+    srcs = [
+        "failpoint.go",
+        "failpoints.go",
+        "http.go",
+        "marker.go",
+        "terms.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/failpoint",
+    importpath = "github.com/pingcap/failpoint",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/pingcap/errors"],
+)

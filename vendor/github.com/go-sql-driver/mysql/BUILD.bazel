@@ -3,6 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "mysql",
     srcs = [
+        "atomic_bool.go",
+        "atomic_bool_go118.go",
         "auth.go",
         "buffer.go",
         "collations.go",
@@ -17,8 +19,6 @@ go_library(
         "fields.go",
         "infile.go",
         "nulltime.go",
-        "nulltime_go113.go",
-        "nulltime_legacy.go",
         "packets.go",
         "result.go",
         "rows.go",

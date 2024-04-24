@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "parser",
+    srcs = [
+        "digester.go",
+        "generate.go",
+        "hintparser.go",
+        "hintparserimpl.go",
+        "keywords.go",
+        "lexer.go",
+        "misc.go",
+        "parser.go",
+        "yy_parser.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/tidb/pkg/parser",
+    importpath = "github.com/pingcap/tidb/pkg/parser",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/pingcap/errors",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/ast",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/auth",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/charset",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/duration",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/model",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/mysql",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/opcode",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/terror",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/tidb",
+        "//vendor/github.com/pingcap/tidb/pkg/parser/types",
+    ],
+)

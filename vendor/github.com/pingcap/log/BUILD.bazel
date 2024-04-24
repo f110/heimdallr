@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "global.go",
         "log.go",
+        "zap_test_logger.go",
         "zap_text_core.go",
         "zap_text_encoder.go",
     ],
@@ -16,6 +17,7 @@ go_library(
         "//vendor/go.uber.org/zap",
         "//vendor/go.uber.org/zap/buffer",
         "//vendor/go.uber.org/zap/zapcore",
+        "//vendor/go.uber.org/zap/zaptest",
         "//vendor/gopkg.in/natefinch/lumberjack.v2:lumberjack_v2",
     ],
 )

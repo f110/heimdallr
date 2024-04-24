@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mathutil",
+    srcs = [
+        "binarylog.go",
+        "bits.go",
+        "envelope.go",
+        "int.go",
+        "mathutil.go",
+        "permute.go",
+        "poly.go",
+        "primes.go",
+        "rat.go",
+        "rnd.go",
+        "tables.go",
+        "test_deps.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/cznic/mathutil",
+    importpath = "github.com/cznic/mathutil",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/remyoudompheng/bigfft"],
+)

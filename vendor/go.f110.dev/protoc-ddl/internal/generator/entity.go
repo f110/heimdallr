@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"google.golang.org/protobuf/types/descriptorpb"
 
 	"go.f110.dev/protoc-ddl/internal/schema"
 )
@@ -44,7 +44,7 @@ var (
 var importPackages = []string{"time", "bytes", "sync"}
 var thirdPartyPackages = []string{"go.f110.dev/protoc-ddl"}
 
-func (GoEntityGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptor.FileOptions, messages *schema.Messages) {
+func (GoEntityGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptorpb.FileOptions, messages *schema.Messages) {
 	src := new(bytes.Buffer)
 
 	packageName := fileOpt.GetGoPackage()
@@ -67,24 +67,63 @@ func (GoEntityGenerator) Generate(buf *bytes.Buffer, fileOpt *descriptor.FileOpt
 	src.WriteString("var _ = time.Time{}\n")
 	src.WriteString("var _ = bytes.Buffer{}\n")
 	src.WriteRune('\n')
-	src.WriteString("type Column struct {\n")
-	src.WriteString("Name string\n")
-	src.WriteString("Value interface{}\n")
-	src.WriteString("}\n")
-	src.WriteRune('\n')
+
+	messages.EachEnum(func(e *schema.Enum) {
+		src.WriteString(fmt.Sprintf("type %s uint32\n", e.Descriptor.GetName()))
+		src.WriteRune('\n')
+		src.WriteString("const (\n")
+		for _, v := range e.Values {
+			src.WriteString(fmt.Sprintf("%s %s = %d\n", v.Name, e.Descriptor.GetName(), v.Value))
+		}
+		src.WriteString(")\n")
+	})
 
 	messages.Each(func(m *schema.Message) {
+		comment := m.Comment
+		if m.Deprecated {
+			if comment == "" {
+				comment = "Deprecated."
+			} else {
+				comment = "Deprecated: " + comment
+			}
+		}
+		if comment != "" {
+			s := bufio.NewScanner(strings.NewReader(comment))
+			for s.Scan() {
+				src.WriteString(fmt.Sprintf("// %s\n", strings.TrimSpace(s.Text())))
+			}
+		}
 		src.WriteString(fmt.Sprintf("type %s struct {\n", m.Descriptor.GetName()))
 		m.Fields.Each(func(f *schema.Field) {
 			null := ""
 			if f.Null {
 				null = "*"
 			}
-			src.WriteString(fmt.Sprintf("%s %s%s\n", schema.ToCamel(f.Name), null, GoDataTypeMap[f.Type]))
+			fieldComment := f.Comment
+			if f.Deprecated {
+				if fieldComment == "" {
+					fieldComment = "Deprecated."
+				} else {
+					fieldComment = "Deprecated: " + fieldComment
+				}
+			}
+			if fieldComment != "" {
+				s := bufio.NewScanner(strings.NewReader(fieldComment))
+				for s.Scan() {
+					src.WriteString(fmt.Sprintf("// %s\n", strings.TrimSpace(s.Text())))
+				}
+			}
+			typ := GoDataTypeMap[f.Type]
+			if f.OriginalType != "" {
+				if e := messages.FindEnum(f.OriginalType); e != nil {
+					typ = e.Descriptor.GetName()
+				}
+			}
+			src.WriteString(fmt.Sprintf("%s %s%s\n", schema.ToCamel(f.Name), null, typ))
 		})
 		src.WriteRune('\n')
 		for _, v := range m.Descriptor.Field {
-			if v.GetType() == descriptor.FieldDescriptorProto_TYPE_MESSAGE && v.GetTypeName() != schema.TimestampType {
+			if v.GetType() == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE && v.GetTypeName() != schema.TimestampType {
 				s := strings.Split(v.GetTypeName(), ".")
 				src.WriteString(fmt.Sprintf("%s *%s\n", schema.ToCamel(v.GetName()), s[len(s)-1]))
 			}

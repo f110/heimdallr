@@ -1,0 +1,7 @@
+BasedOnStyle: Google
+---
+Language: Proto
+ColumnLimit: 0
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AllowShortEnumsOnASingleLine: false

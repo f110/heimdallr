@@ -1,6 +1,6 @@
 module go.f110.dev/heimdallr
 
-go 1.21
+go 1.22.0
 
 toolchain go1.22.2
 
@@ -15,7 +15,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-logr/zapr v1.3.0
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.1.4
@@ -44,8 +44,8 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.13
 	go.etcd.io/etcd/etcdutl/v3 v3.5.13
 	go.etcd.io/etcd/server/v3 v3.5.13
-	go.f110.dev/protoc-ddl v0.0.0-20201210115038-eee28d3afbdd
-	go.f110.dev/xerrors v0.0.0-20220906140306-802337d743ab
+	go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2
+	go.f110.dev/xerrors v0.0.0-20240224082246-4c2cd39fbb8f
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.19.0
@@ -80,8 +80,9 @@ require (
 	github.com/containerd/continuity v0.2.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/deckarep/golang-set v0.0.0-20170826194844-b3af78e1d186 // indirect
+	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/docker/cli v20.10.7+incompatible // indirect
 	github.com/docker/docker v17.12.1-ce+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
@@ -133,12 +134,14 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
-	github.com/pingcap/errors v0.11.4 // indirect
-	github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9 // indirect
-	github.com/pingcap/parser v0.0.0-20200623164729-3a18f1e5dceb // indirect
+	github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63 // indirect
+	github.com/pingcap/failpoint v0.0.0-20220801062533-2eaa32854a6c // indirect
+	github.com/pingcap/log v1.1.0 // indirect
+	github.com/pingcap/tidb/pkg/parser v0.0.0-20240223105127-2c46b8e00418 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rs/cors v1.10.1 // indirect
 	github.com/rs/xid v1.4.0 // indirect
@@ -164,8 +167,10 @@ require (
 	go.opentelemetry.io/otel/sdk v1.25.0 // indirect
 	go.opentelemetry.io/otel/trace v1.25.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
