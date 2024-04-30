@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mutate",
+    srcs = [
+        "doc.go",
+        "image.go",
+        "index.go",
+        "mutate.go",
+        "rebase.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-containerregistry/pkg/v1/mutate",
+    importpath = "github.com/google/go-containerregistry/pkg/v1/mutate",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/go-containerregistry/internal/gzip",
+        "//vendor/github.com/google/go-containerregistry/pkg/logs",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1:pkg",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/empty",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/match",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/partial",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/stream",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/tarball",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/types",
+    ],
+)

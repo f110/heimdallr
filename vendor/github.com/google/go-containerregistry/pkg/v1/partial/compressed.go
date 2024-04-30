@@ -17,9 +17,13 @@ package partial
 import (
 	"io"
 
+	"github.com/google/go-containerregistry/internal/and"
+	"github.com/google/go-containerregistry/internal/compression"
+	"github.com/google/go-containerregistry/internal/gzip"
+	"github.com/google/go-containerregistry/internal/zstd"
+	comp "github.com/google/go-containerregistry/pkg/compression"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
 // CompressedLayer represents the bare minimum interface a natively
@@ -45,11 +49,32 @@ type compressedLayerExtender struct {
 
 // Uncompressed implements v1.Layer
 func (cle *compressedLayerExtender) Uncompressed() (io.ReadCloser, error) {
-	r, err := cle.Compressed()
+	rc, err := cle.Compressed()
 	if err != nil {
 		return nil, err
 	}
-	return v1util.GunzipReadCloser(r)
+
+	// Often, the "compressed" bytes are not actually-compressed.
+	// Peek at the first two bytes to determine whether it's correct to
+	// wrap this with gzip.UnzipReadCloser or zstd.UnzipReadCloser.
+	cp, pr, err := compression.PeekCompression(rc)
+	if err != nil {
+		return nil, err
+	}
+
+	prc := &and.ReadCloser{
+		Reader:    pr,
+		CloseFunc: rc.Close,
+	}
+
+	switch cp {
+	case comp.GZip:
+		return gzip.UnzipReadCloser(prc)
+	case comp.ZStd:
+		return zstd.UnzipReadCloser(prc)
+	default:
+		return prc, nil
+	}
 }
 
 // DiffID implements v1.Layer

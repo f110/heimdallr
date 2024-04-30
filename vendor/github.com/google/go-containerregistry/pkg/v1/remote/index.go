@@ -16,9 +16,11 @@ package remote
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"sync"
 
+	"github.com/google/go-containerregistry/internal/verify"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -32,7 +34,9 @@ var acceptableIndexMediaTypes = []types.MediaType{
 
 // remoteIndex accesses an index from a remote registry
 type remoteIndex struct {
-	fetcher
+	fetcher      fetcher
+	ref          name.Reference
+	ctx          context.Context
 	manifestLock sync.Mutex // Protects manifest
 	manifest     []byte
 	mediaType    types.MediaType
@@ -74,7 +78,7 @@ func (r *remoteIndex) RawManifest() ([]byte, error) {
 	// NOTE(jonjohnsonjr): We should never get here because the public entrypoints
 	// do type-checking via remote.Descriptor. I've left this here for tests that
 	// directly instantiate a remoteIndex.
-	manifest, desc, err := r.fetchManifest(r.Ref, acceptableIndexMediaTypes)
+	manifest, desc, err := r.fetcher.fetchManifest(r.ctx, r.ref, acceptableIndexMediaTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +126,31 @@ func (r *remoteIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
 	return desc.ImageIndex()
 }
 
+// Workaround for #819.
+func (r *remoteIndex) Layer(h v1.Hash) (v1.Layer, error) {
+	index, err := r.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, childDesc := range index.Manifests {
+		if h == childDesc.Digest {
+			l, err := partial.CompressedToLayer(&remoteLayer{
+				fetcher: r.fetcher,
+				ctx:     r.ctx,
+				digest:  h,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return &MountableLayer{
+				Layer:     l,
+				Reference: r.ref.Context().Digest(h.String()),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("layer not found: %s", h)
+}
+
 func (r *remoteIndex) imageByPlatform(platform v1.Platform) (v1.Image, error) {
 	desc, err := r.childByPlatform(platform)
 	if err != nil {
@@ -135,10 +164,12 @@ func (r *remoteIndex) imageByPlatform(platform v1.Platform) (v1.Image, error) {
 // This naively matches the first manifest with matching platform attributes.
 //
 // We should probably use this instead:
-//	 github.com/containerd/containerd/platforms
+//
+//	github.com/containerd/containerd/platforms
 //
 // But first we'd need to migrate to:
-//   github.com/opencontainers/image-spec/specs-go/v1
+//
+//	github.com/opencontainers/image-spec/specs-go/v1
 func (r *remoteIndex) childByPlatform(platform v1.Platform) (*Descriptor, error) {
 	index, err := r.IndexManifest()
 	if err != nil {
@@ -155,7 +186,7 @@ func (r *remoteIndex) childByPlatform(platform v1.Platform) (*Descriptor, error)
 			return r.childDescriptor(childDesc, platform)
 		}
 	}
-	return nil, fmt.Errorf("no child with platform %s/%s in index %s", platform.OS, platform.Architecture, r.Ref)
+	return nil, fmt.Errorf("no child with platform %+v in index %s", platform, r.ref)
 }
 
 func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
@@ -168,22 +199,41 @@ func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
 			return r.childDescriptor(childDesc, defaultPlatform)
 		}
 	}
-	return nil, fmt.Errorf("no child with digest %s in index %s", h, r.Ref)
+	return nil, fmt.Errorf("no child with digest %s in index %s", h, r.ref)
 }
 
 // Convert one of this index's child's v1.Descriptor into a remote.Descriptor, with the given platform option.
 func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform) (*Descriptor, error) {
-	ref := r.Ref.Context().Digest(child.Digest.String())
-	manifest, _, err := r.fetchManifest(ref, []types.MediaType{child.MediaType})
-	if err != nil {
-		return nil, err
+	ref := r.ref.Context().Digest(child.Digest.String())
+	var (
+		manifest []byte
+		err      error
+	)
+	if child.Data != nil {
+		if err := verify.Descriptor(child); err != nil {
+			return nil, err
+		}
+		manifest = child.Data
+	} else {
+		manifest, _, err = r.fetcher.fetchManifest(r.ctx, ref, []types.MediaType{child.MediaType})
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	if child.MediaType.IsImage() {
+		mf, _ := v1.ParseManifest(bytes.NewReader(manifest))
+		// Failing to parse as a manifest should just be ignored.
+		// The manifest might not be valid, and that's okay.
+		if mf != nil && !mf.Config.MediaType.IsConfig() {
+			child.ArtifactType = string(mf.Config.MediaType)
+		}
+	}
+
 	return &Descriptor{
-		fetcher: fetcher{
-			Ref:     ref,
-			Client:  r.Client,
-			context: r.context,
-		},
+		ref:        ref,
+		ctx:        r.ctx,
+		fetcher:    r.fetcher,
 		Manifest:   manifest,
 		Descriptor: child,
 		platform:   platform,

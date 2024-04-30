@@ -34,6 +34,11 @@ func (ml *MountableLayer) Descriptor() (*v1.Descriptor, error) {
 	return partial.Descriptor(ml.Layer)
 }
 
+// Exists is a hack. See partial.Exists.
+func (ml *MountableLayer) Exists() (bool, error) {
+	return partial.Exists(ml.Layer)
+}
+
 // mountableImage wraps the v1.Layer references returned by the embedded v1.Image
 // in MountableLayer's so that remote.Write might attempt to mount them from their
 // source repository.
@@ -87,4 +92,17 @@ func (mi *mountableImage) LayerByDiffID(d v1.Hash) (v1.Layer, error) {
 // See partial.Descriptor.
 func (mi *mountableImage) Descriptor() (*v1.Descriptor, error) {
 	return partial.Descriptor(mi.Image)
+}
+
+// ConfigLayer retains the original reference so that it can be mounted.
+// See partial.ConfigLayer.
+func (mi *mountableImage) ConfigLayer() (v1.Layer, error) {
+	l, err := partial.ConfigLayer(mi.Image)
+	if err != nil {
+		return nil, err
+	}
+	return &MountableLayer{
+		Layer:     l,
+		Reference: mi.Reference,
+	}, nil
 }

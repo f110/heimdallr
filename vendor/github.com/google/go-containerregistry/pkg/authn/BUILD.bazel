@@ -17,8 +17,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/docker/cli/cli/config",
+        "//vendor/github.com/docker/cli/cli/config/configfile",
         "//vendor/github.com/docker/cli/cli/config/types",
-        "//vendor/github.com/google/go-containerregistry/pkg/logs",
         "//vendor/github.com/google/go-containerregistry/pkg/name",
+        "//vendor/github.com/mitchellh/go-homedir",
     ],
 )

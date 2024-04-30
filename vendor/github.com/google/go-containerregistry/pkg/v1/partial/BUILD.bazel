@@ -6,6 +6,7 @@ go_library(
         "compressed.go",
         "doc.go",
         "image.go",
+        "index.go",
         "uncompressed.go",
         "with.go",
     ],
@@ -13,8 +14,13 @@ go_library(
     importpath = "github.com/google/go-containerregistry/pkg/v1/partial",
     visibility = ["//visibility:public"],
     deps = [
+        "//vendor/github.com/google/go-containerregistry/internal/and",
+        "//vendor/github.com/google/go-containerregistry/internal/compression",
+        "//vendor/github.com/google/go-containerregistry/internal/gzip",
+        "//vendor/github.com/google/go-containerregistry/internal/zstd",
+        "//vendor/github.com/google/go-containerregistry/pkg/compression",
         "//vendor/github.com/google/go-containerregistry/pkg/v1:pkg",
+        "//vendor/github.com/google/go-containerregistry/pkg/v1/match",
         "//vendor/github.com/google/go-containerregistry/pkg/v1/types",
-        "//vendor/github.com/google/go-containerregistry/pkg/v1/v1util",
     ],
 )
