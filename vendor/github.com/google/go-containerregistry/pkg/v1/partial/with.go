@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -67,12 +66,12 @@ func (cl *configLayer) DiffID() (v1.Hash, error) {
 
 // Uncompressed implements v1.Layer
 func (cl *configLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewBuffer(cl.content)), nil
+	return io.NopCloser(bytes.NewBuffer(cl.content)), nil
 }
 
 // Compressed implements v1.Layer
 func (cl *configLayer) Compressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewBuffer(cl.content)), nil
+	return io.NopCloser(bytes.NewBuffer(cl.content)), nil
 }
 
 // Size implements v1.Layer
@@ -88,9 +87,22 @@ func (cl *configLayer) MediaType() (types.MediaType, error) {
 
 var _ v1.Layer = (*configLayer)(nil)
 
+// withConfigLayer allows partial image implementations to provide a layer
+// for their config file.
+type withConfigLayer interface {
+	ConfigLayer() (v1.Layer, error)
+}
+
 // ConfigLayer implements v1.Layer from the raw config bytes.
 // This is so that clients (e.g. remote) can access the config as a blob.
+//
+// Images that want to return a specific layer implementation can implement
+// withConfigLayer.
 func ConfigLayer(i WithRawConfigFile) (v1.Layer, error) {
+	if wcl, ok := unwrap(i).(withConfigLayer); ok {
+		return wcl.ConfigLayer()
+	}
+
 	h, err := ConfigName(i)
 	if err != nil {
 		return nil, err
@@ -297,31 +309,8 @@ type Describable interface {
 // UncompressedToImage.
 func Descriptor(d Describable) (*v1.Descriptor, error) {
 	// If Describable implements Descriptor itself, return that.
-	if wd, ok := d.(withDescriptor); ok {
+	if wd, ok := unwrap(d).(withDescriptor); ok {
 		return wd.Descriptor()
-	}
-
-	// Otherwise, try to unwrap any partial implementations to see
-	// if the wrapped struct implements Descriptor.
-	if ule, ok := d.(*uncompressedLayerExtender); ok {
-		if wd, ok := ule.UncompressedLayer.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if cle, ok := d.(*compressedLayerExtender); ok {
-		if wd, ok := cle.CompressedLayer.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if uie, ok := d.(*uncompressedImageExtender); ok {
-		if wd, ok := uie.UncompressedImageCore.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
-	}
-	if cie, ok := d.(*compressedImageExtender); ok {
-		if wd, ok := cie.CompressedImageCore.(withDescriptor); ok {
-			return wd.Descriptor()
-		}
 	}
 
 	// If all else fails, compute the descriptor from the individual methods.
@@ -339,8 +328,26 @@ func Descriptor(d Describable) (*v1.Descriptor, error) {
 	if desc.MediaType, err = d.MediaType(); err != nil {
 		return nil, err
 	}
+	if wat, ok := d.(withArtifactType); ok {
+		if desc.ArtifactType, err = wat.ArtifactType(); err != nil {
+			return nil, err
+		}
+	} else {
+		if wrm, ok := d.(WithRawManifest); ok && desc.MediaType.IsImage() {
+			mf, _ := Manifest(wrm)
+			// Failing to parse as a manifest should just be ignored.
+			// The manifest might not be valid, and that's okay.
+			if mf != nil && !mf.Config.MediaType.IsConfig() {
+				desc.ArtifactType = string(mf.Config.MediaType)
+			}
+		}
+	}
 
 	return &desc, nil
+}
+
+type withArtifactType interface {
+	ArtifactType() (string, error)
 }
 
 type withUncompressedSize interface {
@@ -354,21 +361,8 @@ type withUncompressedSize interface {
 // for streaming layers.
 func UncompressedSize(l v1.Layer) (int64, error) {
 	// If the layer implements UncompressedSize itself, return that.
-	if wus, ok := l.(withUncompressedSize); ok {
+	if wus, ok := unwrap(l).(withUncompressedSize); ok {
 		return wus.UncompressedSize()
-	}
-
-	// Otherwise, try to unwrap any partial implementations to see
-	// if the wrapped struct implements UncompressedSize.
-	if ule, ok := l.(*uncompressedLayerExtender); ok {
-		if wus, ok := ule.UncompressedLayer.(withUncompressedSize); ok {
-			return wus.UncompressedSize()
-		}
-	}
-	if cle, ok := l.(*compressedLayerExtender); ok {
-		if wus, ok := cle.CompressedLayer.(withUncompressedSize); ok {
-			return wus.UncompressedSize()
-		}
 	}
 
 	// The layer doesn't implement UncompressedSize, we need to compute it.
@@ -378,5 +372,65 @@ func UncompressedSize(l v1.Layer) (int64, error) {
 	}
 	defer rc.Close()
 
-	return io.Copy(ioutil.Discard, rc)
+	return io.Copy(io.Discard, rc)
+}
+
+type withExists interface {
+	Exists() (bool, error)
+}
+
+// Exists checks to see if a layer exists. This is a hack to work around the
+// mistakes of the partial package. Don't use this.
+func Exists(l v1.Layer) (bool, error) {
+	// If the layer implements Exists itself, return that.
+	if we, ok := unwrap(l).(withExists); ok {
+		return we.Exists()
+	}
+
+	// The layer doesn't implement Exists, so we hope that calling Compressed()
+	// is enough to trigger an error if the layer does not exist.
+	rc, err := l.Compressed()
+	if err != nil {
+		return false, err
+	}
+	defer rc.Close()
+
+	// We may want to try actually reading a single byte, but if we need to do
+	// that, we should just fix this hack.
+	return true, nil
+}
+
+// Recursively unwrap our wrappers so that we can check for the original implementation.
+// We might want to expose this?
+func unwrap(i any) any {
+	if ule, ok := i.(*uncompressedLayerExtender); ok {
+		return unwrap(ule.UncompressedLayer)
+	}
+	if cle, ok := i.(*compressedLayerExtender); ok {
+		return unwrap(cle.CompressedLayer)
+	}
+	if uie, ok := i.(*uncompressedImageExtender); ok {
+		return unwrap(uie.UncompressedImageCore)
+	}
+	if cie, ok := i.(*compressedImageExtender); ok {
+		return unwrap(cie.CompressedImageCore)
+	}
+	return i
+}
+
+// ArtifactType returns the artifact type for the given manifest.
+//
+// If the manifest reports its own artifact type, that's returned, otherwise
+// the manifest is parsed and, if successful, its config.mediaType is returned.
+func ArtifactType(w WithManifest) (string, error) {
+	if wat, ok := w.(withArtifactType); ok {
+		return wat.ArtifactType()
+	}
+	mf, _ := w.Manifest()
+	// Failing to parse as a manifest should just be ignored.
+	// The manifest might not be valid, and that's okay.
+	if mf != nil && !mf.Config.MediaType.IsConfig() {
+		return string(mf.Config.MediaType), nil
+	}
+	return "", nil
 }

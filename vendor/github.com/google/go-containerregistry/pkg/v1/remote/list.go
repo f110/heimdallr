@@ -26,93 +26,75 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
 
-type tags struct {
+// ListWithContext calls List with the given context.
+//
+// Deprecated: Use List and WithContext. This will be removed in a future release.
+func ListWithContext(ctx context.Context, repo name.Repository, options ...Option) ([]string, error) {
+	return List(repo, append(options, WithContext(ctx))...)
+}
+
+// List calls /tags/list for the given repository, returning the list of tags
+// in the "tags" property.
+func List(repo name.Repository, options ...Option) ([]string, error) {
+	o, err := makeOptions(options...)
+	if err != nil {
+		return nil, err
+	}
+	return newPuller(o).List(o.context, repo)
+}
+
+type Tags struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
+	Next string   `json:"next,omitempty"`
 }
 
-// List wraps ListWithContext using the background context.
-func List(repo name.Repository, options ...Option) ([]string, error) {
-	return ListWithContext(context.Background(), repo, options...)
-}
+func (f *fetcher) listPage(ctx context.Context, repo name.Repository, next string, pageSize int) (*Tags, error) {
+	if next == "" {
+		uri := &url.URL{
+			Scheme: repo.Scheme(),
+			Host:   repo.RegistryStr(),
+			Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
+		}
+		if pageSize > 0 {
+			uri.RawQuery = fmt.Sprintf("n=%d", pageSize)
+		}
+		next = uri.String()
+	}
 
-// ListWithContext calls /tags/list for the given repository, returning the list of tags
-// in the "tags" property.
-func ListWithContext(ctx context.Context, repo name.Repository, options ...Option) ([]string, error) {
-	o, err := makeOptions(repo, options...)
+	req, err := http.NewRequestWithContext(ctx, "GET", next, nil)
 	if err != nil {
 		return nil, err
 	}
-	scopes := []string{repo.Scope(transport.PullScope)}
-	tr, err := transport.New(repo.Registry, o.auth, o.transport, scopes)
+
+	resp, err := f.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	uri := &url.URL{
-		Scheme: repo.Registry.Scheme(),
-		Host:   repo.Registry.RegistryStr(),
-		Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
-		// ECR returns an error if n > 1000:
-		// https://github.com/google/go-containerregistry/issues/681
-		RawQuery: "n=1000",
+	if err := transport.CheckError(resp, http.StatusOK); err != nil {
+		return nil, err
 	}
 
-	// This is lazy, but I want to make sure List(..., WithContext(ctx)) works
-	// without calling makeOptions() twice (which can have side effects).
-	// This means ListWithContext(ctx, ..., WithContext(ctx2)) prefers ctx2.
-	if o.context != context.Background() {
-		ctx = o.context
+	parsed := Tags{}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
 	}
 
-	client := http.Client{Transport: tr}
-	tagList := []string{}
-	parsed := tags{}
-
-	// get responses until there is no next page
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-
-		req, err := http.NewRequest("GET", uri.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		req = req.WithContext(ctx)
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := transport.CheckError(resp, http.StatusOK); err != nil {
-			return nil, err
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-			return nil, err
-		}
-
-		if err := resp.Body.Close(); err != nil {
-			return nil, err
-		}
-
-		tagList = append(tagList, parsed.Tags...)
-
-		uri, err = getNextPageURL(resp)
-		if err != nil {
-			return nil, err
-		}
-		// no next page
-		if uri == nil {
-			break
-		}
+	if err := resp.Body.Close(); err != nil {
+		return nil, err
 	}
 
-	return tagList, nil
+	uri, err := getNextPageURL(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if uri != nil {
+		parsed.Next = uri.String()
+	}
+
+	return &parsed, nil
 }
 
 // getNextPageURL checks if there is a Link header in a http.Response which
@@ -143,4 +125,28 @@ func getNextPageURL(resp *http.Response) (*url.URL, error) {
 	}
 	linkURL = resp.Request.URL.ResolveReference(linkURL)
 	return linkURL, nil
+}
+
+type Lister struct {
+	f        *fetcher
+	repo     name.Repository
+	pageSize int
+
+	page *Tags
+	err  error
+
+	needMore bool
+}
+
+func (l *Lister) Next(ctx context.Context) (*Tags, error) {
+	if l.needMore {
+		l.page, l.err = l.f.listPage(ctx, l.repo, l.page.Next, l.pageSize)
+	} else {
+		l.needMore = true
+	}
+	return l.page, l.err
+}
+
+func (l *Lister) HasNext() bool {
+	return l.page != nil && (!l.needMore || l.page.Next != "")
 }

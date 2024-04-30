@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "match",
+    srcs = ["match.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-containerregistry/pkg/v1/match",
+    importpath = "github.com/google/go-containerregistry/pkg/v1/match",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/go-containerregistry/pkg/v1:pkg",
+        "//vendor/github.com/opencontainers/image-spec/specs-go/v1:specs-go",
+    ],
+)

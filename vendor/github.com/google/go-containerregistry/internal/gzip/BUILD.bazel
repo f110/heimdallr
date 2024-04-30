@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "gzip",
+    srcs = ["zip.go"],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/google/go-containerregistry/internal/gzip",
+    importpath = "github.com/google/go-containerregistry/internal/gzip",
+    visibility = ["//vendor/github.com/google/go-containerregistry:__subpackages__"],
+    deps = ["//vendor/github.com/google/go-containerregistry/internal/and"],
+)

@@ -15,8 +15,9 @@
 package transport
 
 import (
-	"fmt"
+	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,7 +26,25 @@ import (
 // New returns a new RoundTripper based on the provided RoundTripper that has been
 // setup to authenticate with the remote registry "reg", in the capacity
 // laid out by the specified scopes.
+//
+// Deprecated: Use NewWithContext.
 func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
+	return NewWithContext(context.Background(), reg, auth, t, scopes)
+}
+
+// NewWithContext returns a new RoundTripper based on the provided RoundTripper that has been
+// set up to authenticate with the remote registry "reg", in the capacity
+// laid out by the specified scopes.
+// In case the RoundTripper is already of the type Wrapper it assumes
+// authentication was already done prior to this call, so it just returns
+// the provided RoundTripper without further action
+func NewWithContext(ctx context.Context, reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scopes []string) (http.RoundTripper, error) {
+	// When the transport provided is of the type Wrapper this function assumes that the caller already
+	// executed the necessary login and check.
+	switch t.(type) {
+	case *Wrapper:
+		return t, nil
+	}
 	// The handshake:
 	//  1. Use "t" to ping() the registry for the authentication challenge.
 	//
@@ -40,52 +59,51 @@ func New(reg name.Registry, auth authn.Authenticator, t http.RoundTripper, scope
 
 	// First we ping the registry to determine the parameters of the authentication handshake
 	// (if one is even necessary).
-	pr, err := ping(reg, t)
+	pr, err := Ping(ctx, reg, t)
 	if err != nil {
 		return nil, err
 	}
 
-	// Wrap the given transport in transports that use an appropriate scheme,
-	// (based on the ping response) and set the user agent.
-	t = &useragentTransport{
-		inner: &schemeTransport{
-			scheme:   pr.scheme,
-			registry: reg,
-			inner:    t,
-		},
+	// Wrap t with a useragent transport unless we already have one.
+	if _, ok := t.(*userAgentTransport); !ok {
+		t = NewUserAgent(t, "")
 	}
 
-	switch pr.challenge.Canonical() {
-	case anonymous:
-		return t, nil
-	case basic:
-		return &basicTransport{inner: t, auth: auth, target: reg.RegistryStr()}, nil
-	case bearer:
-		// We require the realm, which tells us where to send our Basic auth to turn it into Bearer auth.
-		realm, ok := pr.parameters["realm"]
-		if !ok {
-			return nil, fmt.Errorf("malformed www-authenticate, missing realm: %v", pr.parameters)
-		}
-		service, ok := pr.parameters["service"]
-		if !ok {
-			// If the service parameter is not specified, then default it to the registry
-			// with which we are talking.
-			service = reg.String()
-		}
-		bt := &bearerTransport{
-			inner:    t,
-			basic:    auth,
-			realm:    realm,
-			registry: reg,
-			service:  service,
-			scopes:   scopes,
-			scheme:   pr.scheme,
-		}
-		if err := bt.refresh(); err != nil {
-			return nil, err
-		}
-		return bt, nil
-	default:
-		return nil, fmt.Errorf("unrecognized challenge: %s", pr.challenge)
+	scheme := "https"
+	if pr.Insecure {
+		scheme = "http"
 	}
+
+	// Wrap t in a transport that selects the appropriate scheme based on the ping response.
+	t = &schemeTransport{
+		scheme:   scheme,
+		registry: reg,
+		inner:    t,
+	}
+
+	if strings.ToLower(pr.Scheme) != "bearer" {
+		return &Wrapper{&basicTransport{inner: t, auth: auth, target: reg.RegistryStr()}}, nil
+	}
+
+	bt, err := fromChallenge(reg, auth, t, pr)
+	if err != nil {
+		return nil, err
+	}
+	bt.scopes = scopes
+
+	if err := bt.refresh(ctx); err != nil {
+		return nil, err
+	}
+	return &Wrapper{bt}, nil
+}
+
+// Wrapper results in *not* wrapping supplied transport with additional logic such as retries, useragent and debug logging
+// Consumers are opt-ing into providing their own transport without any additional wrapping.
+type Wrapper struct {
+	inner http.RoundTripper
+}
+
+// RoundTrip delegates to the inner RoundTripper
+func (w *Wrapper) RoundTrip(in *http.Request) (*http.Response, error) {
+	return w.inner.RoundTrip(in)
 }
