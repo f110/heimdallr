@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	cloud.google.com/go/storage v1.36.0
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/bazelbuild/buildtools v0.0.0-20220907133145-b9bfff5d7f91
+	github.com/bazelbuild/buildtools v0.0.0-20240422193413-1429e15ae755
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/fatih/color v1.12.0
