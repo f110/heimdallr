@@ -22,7 +22,6 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-github/v41 v41.0.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2 v2.0.0-20220308023801-e4a6915ea237
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2.0.20201002093600-73cf2ae9d891
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
