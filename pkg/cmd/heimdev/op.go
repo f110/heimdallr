@@ -17,8 +17,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-jose/go-jose/v4"
-	"github.com/gorilla/mux"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"go.f110.dev/xerrors"
@@ -68,8 +68,8 @@ func openIDProvider(port int, signingPrivateKey string) error {
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
-	router := p.HttpHandler().(*mux.Router)
-	router.Methods(http.MethodGet).Path("/login").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router := p.Handler.(*chi.Mux)
+	router.MethodFunc(http.MethodGet, "/login", func(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, `<html><body><form action="/login" method="POST">`)
 		fmt.Fprintf(w, "<input type=\"hidden\" name=\"id\" value=%q>", req.URL.Query().Get("id"))
 		io.WriteString(w, `
@@ -78,7 +78,7 @@ func openIDProvider(port int, signingPrivateKey string) error {
 </form>
 </body></html>`)
 	})
-	router.Methods(http.MethodPost).Path("/login").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router.MethodFunc(http.MethodPost, "/login", func(w http.ResponseWriter, req *http.Request) {
 		if err := req.ParseForm(); err != nil {
 			log.Println(err)
 			return
