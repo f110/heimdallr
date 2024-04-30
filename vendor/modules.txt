@@ -1466,7 +1466,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# software.sslmate.com/src/go-pkcs12 v0.0.0-20210415151418-c5206de65a78
-## explicit; go 1.15
+# software.sslmate.com/src/go-pkcs12 v0.4.0
+## explicit; go 1.19
 software.sslmate.com/src/go-pkcs12
 software.sslmate.com/src/go-pkcs12/internal/rc2
