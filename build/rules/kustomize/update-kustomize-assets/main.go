@@ -17,7 +17,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/bazelbuild/buildtools/build"
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v41/github"
 	"github.com/spf13/pflag"
 	"go.f110.dev/xerrors"
 )
