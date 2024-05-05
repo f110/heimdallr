@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/google/go-github/v32/github",
+        "//vendor/github.com/google/go-github/v41/github",
         "//vendor/go.f110.dev/xerrors",
     ],
 )
