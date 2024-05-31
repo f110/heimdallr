@@ -1,3 +1,5 @@
+load("//:RELEASE.bzl", "VERSION")
+load("//build/rules:tools.bzl", "cleanup_manifest")
 load("//build/rules/kustomize:def.bzl", "kustomization")
 
 kustomization(
@@ -12,9 +14,6 @@ kustomization(
     ],
     visibility = ["//visibility:public"],
 )
-
-load("//build/rules:tools.bzl", "cleanup_manifest")
-load("//:RELEASE.bzl", "VERSION")
 
 cleanup_manifest(
     name = "all-in-one",

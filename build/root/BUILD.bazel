@@ -1,10 +1,13 @@
+load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
+load("//build/rules:release.bzl", "github_release", "template_string")
+load("//build/rules/go:vendor.bzl", "go_vendor")
+load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
+
 filegroup(
     name = "all",
     srcs = ["RELEASE.bzl"],
     visibility = ["//visibility:public"],
 )
-
-load("//build/rules/go:vendor.bzl", "go_vendor")
 
 # gazelle:proto disable_global
 # gazelle:prefix go.f110.dev/heimdallr
@@ -20,10 +23,6 @@ go_vendor(
         "//patch:prometheus-operator-fix-typo.patch",
     ],
 )
-
-load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
-load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
-load("//build/rules:release.bzl", "github_release", "template_string")
 
 template_string(
     name = "release_message",
