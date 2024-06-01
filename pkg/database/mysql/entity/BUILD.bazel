@@ -1,3 +1,4 @@
+load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_entity", "sql_schema", "vendor_ddl")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
@@ -22,8 +23,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = ["//vendor/go.f110.dev/protoc-ddl"],
 )
-
-load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_entity", "sql_schema", "vendor_ddl")
 
 sql_schema(
     name = "schema",

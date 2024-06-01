@@ -1,4 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("//:RELEASE.bzl", "PLATFORMS")
+load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 
 go_library(
     name = "heim-connector_lib",
@@ -22,9 +24,6 @@ go_binary(
     embed = [":heim-connector_lib"],
     visibility = ["//visibility:public"],
 )
-
-load("//build/rules/go:util.bzl", "multiplatform_go_binary")
-load("//:RELEASE.bzl", "PLATFORMS")
 
 multiplatform_go_binary(
     embed = [":heim-connector_lib"],

@@ -1,3 +1,5 @@
+load("//:RELEASE.bzl", "VERSION")
+
 sh_binary(
     name = "run",
     srcs = ["//cmd/heimdev"],
@@ -16,8 +18,6 @@ sh_binary(
         "@kind//:file",
     ],
 )
-
-load("//:RELEASE.bzl", "VERSION")
 
 sh_binary(
     name = "load",
