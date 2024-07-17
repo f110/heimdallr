@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -36,7 +37,10 @@ func NewInternal(conf *configv2.Config, child ...ChildServer) *Internal {
 
 func (s *Internal) Start() error {
 	logger.Log.Info("Start Internal server", zap.String("listen", s.Config.AccessProxy.HTTP.BindInternalApi))
-	return xerrors.WithStack(s.server.ListenAndServe())
+	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return xerrors.WithStack(s.server.ListenAndServe())
+	}
+	return nil
 }
 
 func (s *Internal) Shutdown(ctx context.Context) error {
