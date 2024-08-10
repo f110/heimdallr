@@ -100,15 +100,15 @@ rules_pkg_dependencies()
 http_file(
     name = "grpc_health_probe_amd64",
     downloaded_file_path = "grpc_health_probe",
-    sha256 = "4292590ff17b0d6bab0f9755158dba76fe6c2d995dcba6ce51bf944d318165b9",
-    urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.22/grpc_health_probe-linux-amd64"],
+    sha256 = "4b818d540683b1b97256c84714a51a095e54f19792b3d7f02ac78814be645a96",
+    urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.28/grpc_health_probe-linux-amd64"],
 )
 
 http_file(
     name = "grpc_health_probe_arm64",
     downloaded_file_path = "grpc_health_probe",
-    sha256 = "627010fc34487e4d6af34189bb352417cd54dd86f9cf1e0da34ccf1c00883ee8",
-    urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.22/grpc_health_probe-linux-arm64"],
+    sha256 = "1b1c1d02f68c439585901ac54bf79688350c35d1e5168a93b1a811e30b1f5124",
+    urls = ["https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.28/grpc_health_probe-linux-arm64"],
 )
 
 load("//build/rules/kustomize:def.bzl", "kustomize_binary")
