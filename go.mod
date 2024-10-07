@@ -9,7 +9,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/fatih/color v1.12.0
-	github.com/fsnotify/fsnotify v1.6.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-logr/zapr v1.3.0
