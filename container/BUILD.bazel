@@ -35,7 +35,6 @@ pkg_tar(
     name = "bin_rpcserver_amd64",
     files = {
         "//cmd/heim-rpcserver:linux_amd64": "/usr/local/bin/heim-rpcserver",
-        "@grpc_health_probe_amd64//file": "/usr/local/bin/grpc_health_probe",
     },
     mode = "0755",
 )
@@ -44,7 +43,6 @@ pkg_tar(
     name = "bin_rpcserver_arm64",
     files = {
         "//cmd/heim-rpcserver:linux_arm64": "/usr/local/bin/heim-rpcserver",
-        "@grpc_health_probe_arm64//file": "/usr/local/bin/grpc_health_probe",
     },
     mode = "0755",
 )
