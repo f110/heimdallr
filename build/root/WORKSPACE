@@ -122,7 +122,7 @@ load("//build/rules/kind:def.bzl", "kind_binary")
 
 kind_binary(
     name = "kind",
-    version = "0.22.0",
+    version = "0.26.0",
 )
 
 load("//build/rules/vault:def.bzl", "vault_binary")
