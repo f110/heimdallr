@@ -1,4 +1,44 @@
 KIND_ASSETS = {
+    "0.26.0": {
+        "linux": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.26.0/kind-linux-amd64",
+            "d445b44c28297bc23fd67e51cc24bb294ae7b977712be2d4d312883d0835829b",
+        ),
+        "darwin": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.26.0/kind-darwin-amd64",
+            "a2c30525db86a7807ad4bba0094437406518f41d8a2882e6ea659d94099adcc4",
+        ),
+    },
+    "0.25.0": {
+        "linux": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.25.0/kind-linux-amd64",
+            "b22ff7e5c02b8011e82cc3223d069d178b9e1543f1deb21e936d11764780a3d8",
+        ),
+        "darwin": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.25.0/kind-darwin-amd64",
+            "180404ae1c0de8d333583d2958cdfac5338ec3e32cd765a158cfd6d09eb8cd7d",
+        ),
+    },
+    "0.24.0": {
+        "linux": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.24.0/kind-linux-amd64",
+            "b89aada5a39d620da3fcd16435b7f28d858927dd53f92cbac77686b0588b600d",
+        ),
+        "darwin": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.24.0/kind-darwin-amd64",
+            "8e34f2edc7efc5c7c160487251848a954cd60ccd52b56a3fc360eaab33543fc0",
+        ),
+    },
+    "0.23.0": {
+        "linux": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.23.0/kind-linux-amd64",
+            "1d86e3069ffbe3da9f1a918618aecbc778e00c75f838882d0dfa2d363bc4a68c",
+        ),
+        "darwin": (
+            "https://github.com/kubernetes-sigs/kind/releases/download/v0.23.0/kind-darwin-amd64",
+            "68ec87c1e1ea2a708df883f4b94091150d19552d7b344e80ca59f449b301c2a0",
+        ),
+    },
     "0.22.0": {
         "linux": (
             "https://github.com/kubernetes-sigs/kind/releases/download/v0.22.0/kind-linux-amd64",
