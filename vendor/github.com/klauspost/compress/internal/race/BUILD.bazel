@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "race",
+    srcs = [
+        "norace.go",
+        "race.go",
+    ],
+    importmap = "go.f110.dev/heimdallr/vendor/github.com/klauspost/compress/internal/race",
+    importpath = "github.com/klauspost/compress/internal/race",
+    visibility = ["//vendor/github.com/klauspost/compress:__subpackages__"],
+)
