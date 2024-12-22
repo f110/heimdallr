@@ -7,6 +7,7 @@ go_library(
         "codec.go",
         "grpc.go",
         "header.go",
+        "health.go",
         "interceptor.go",
         "key.go",
         "lease.go",

@@ -195,7 +195,7 @@ func PersistentData(object interface{}) {
 	e.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					"storage": resource.MustParse("1Gi"),
 				},

@@ -6,6 +6,7 @@ go_library(
         "clockwork.go",
         "context.go",
         "ticker.go",
+        "timer.go",
     ],
     importmap = "go.f110.dev/heimdallr/vendor/github.com/jonboulle/clockwork",
     importpath = "github.com/jonboulle/clockwork",

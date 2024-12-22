@@ -19,6 +19,7 @@ go_library(
         "//vendor/k8s.io/apimachinery/pkg/runtime/serializer",
         "//vendor/k8s.io/apimachinery/pkg/util/httpstream",
         "//vendor/k8s.io/apimachinery/pkg/util/net",
+        "//vendor/k8s.io/apimachinery/pkg/util/proxy",
         "//vendor/k8s.io/apimachinery/pkg/util/runtime",
         "//vendor/k8s.io/apimachinery/third_party/forked/golang/netutil",
         "//vendor/k8s.io/klog/v2:klog",
