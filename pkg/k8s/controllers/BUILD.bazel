@@ -30,7 +30,6 @@ go_library(
         "//pkg/k8s/thirdpartyclient",
         "//pkg/logger",
         "//pkg/netutil",
-        "//pkg/rpc",
         "//pkg/version",
         "//vendor/cloud.google.com/go/storage",
         "//vendor/github.com/bradleyfalzon/ghinstallation/v2:ghinstallation",

@@ -298,6 +298,16 @@ func ExecProbe(command ...string) *corev1.Probe {
 	}
 }
 
+func GRPCProbe(port int) *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			GRPC: &corev1.GRPCAction{
+				Port: int32(port),
+			},
+		},
+	}
+}
+
 func Volume(vol *VolumeSource) Trait {
 	return func(object interface{}) {
 		if vol == nil {

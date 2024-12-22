@@ -42,7 +42,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/netutil"
-	"go.f110.dev/heimdallr/pkg/rpc"
 )
 
 const (
@@ -1298,20 +1297,8 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		k8sfactory.Name("rpcserver"),
 		k8sfactory.Image(fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()), []string{rpcServerCommand}),
 		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
-		k8sfactory.LivenessProbe(k8sfactory.ExecProbe(
-			"/usr/local/bin/grpc_health_probe",
-			fmt.Sprintf("-addr=:%d", rpcServerPort),
-			"-tls",
-			fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-			fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
-		)),
-		k8sfactory.ReadinessProbe(k8sfactory.ExecProbe(
-			"/usr/local/bin/grpc_health_probe",
-			fmt.Sprintf("-addr=:%d", rpcServerPort),
-			"-tls",
-			fmt.Sprintf("-tls-ca-cert=%s/%s", caCertMountPath, caCertificateFilename),
-			fmt.Sprintf("-tls-server-name=%s", rpc.ServerHostname),
-		)),
+		k8sfactory.LivenessProbe(k8sfactory.GRPCProbe(rpcServerPort)),
+		k8sfactory.ReadinessProbe(k8sfactory.GRPCProbe(rpcServerPort)),
 		k8sfactory.Port("https", corev1.ProtocolTCP, rpcServerPort),
 		k8sfactory.Port("metrics", corev1.ProtocolTCP, rpcMetricsServerPort),
 		k8sfactory.Requests(resources.Requests),
