@@ -939,12 +939,12 @@ message RemoteWriteSpec {
 }
 
 message Rule {
-  optional string                                  record      = 1 [(dev.f110.kubeproto.field) = { go_name: "Record", api_field_name: "record", inline: false }];
-  optional string                                  alert       = 2 [(dev.f110.kubeproto.field) = { go_name: "Alert", api_field_name: "alert", inline: false }];
-  .k8s.io.apimachinery.pkg.util.intstr.IntOrString expr        = 3 [(dev.f110.kubeproto.field) = { go_name: "Expr", api_field_name: "expr", inline: false }];
+  optional string                                  record     = 1 [(dev.f110.kubeproto.field) = { go_name: "Record", api_field_name: "record", inline: false }];
+  optional string                                  alert      = 2 [(dev.f110.kubeproto.field) = { go_name: "Alert", api_field_name: "alert", inline: false }];
+  .k8s.io.apimachinery.pkg.util.intstr.IntOrString expr       = 3 [(dev.f110.kubeproto.field) = { go_name: "Expr", api_field_name: "expr", inline: false }];
 optional string for = 4 [(dev.f110.kubeproto.field) = {go_name: "For", api_field_name: "for", inline: false}];
-map<string, string>                                labels      = 5 [(dev.f110.kubeproto.field) = { go_name: "Labels", api_field_name: "labels", inline: false }];
-map<string, string>                                annotations = 6 [(dev.f110.kubeproto.field) = { go_name: "Annotations", api_field_name: "annotations", inline: false }];
+map<string, string>                                labels                                     = 5 [(dev.f110.kubeproto.field) = { go_name: "Labels", api_field_name: "labels", inline: false }];
+map<string, string>                                annotations                                = 6 [(dev.f110.kubeproto.field) = { go_name: "Annotations", api_field_name: "annotations", inline: false }];
 }
 
 message RuleGroup {
