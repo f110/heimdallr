@@ -771,8 +771,10 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 			Provider:         r.Spec.IdentityProvider.Provider,
 			ClientId:         r.Spec.IdentityProvider.ClientId,
 			ClientSecretFile: fmt.Sprintf("%s/%s", identityProviderSecretPath, r.Spec.IdentityProvider.ClientSecretRef.Key),
-			ExtraScopes:      []string{"email"},
+			ExtraScopes:      append([]string{"email"}, r.Spec.IdentityProvider.ExtraScopes...),
 			RedirectUrl:      r.Spec.IdentityProvider.RedirectUrl,
+			Issuer:           r.Spec.IdentityProvider.Issuer,
+			Domain:           r.Spec.IdentityProvider.Domain,
 		},
 		Datastore: &configv2.Datastore{
 			DatastoreEtcd: &configv2.DatastoreEtcd{

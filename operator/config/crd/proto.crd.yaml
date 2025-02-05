@@ -2351,12 +2351,21 @@ spec:
                     required:
                     - name
                     type: object
+                  domain:
+                    type: string
+                  extraScopes:
+                    items:
+                      type: string
+                    type: array
+                  issuer:
+                    type: string
                   provider:
                     type: string
                   redirectUrl:
                     type: string
                 required:
                 - provider
+                - extraScopes
                 type: object
               issuerRef:
                 properties:

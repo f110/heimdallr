@@ -881,6 +881,9 @@ type IdentityProviderSpec struct {
 	ClientId        string          `json:"clientId,omitempty"`
 	ClientSecretRef *SecretSelector `json:"clientSecretRef,omitempty"`
 	RedirectUrl     string          `json:"redirectUrl,omitempty"`
+	Domain          string          `json:"domain,omitempty"`
+	Issuer          string          `json:"issuer,omitempty"`
+	ExtraScopes     []string        `json:"extraScopes"`
 }
 
 func (in *IdentityProviderSpec) DeepCopyInto(out *IdentityProviderSpec) {
@@ -889,6 +892,11 @@ func (in *IdentityProviderSpec) DeepCopyInto(out *IdentityProviderSpec) {
 		in, out := &in.ClientSecretRef, &out.ClientSecretRef
 		*out = new(SecretSelector)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.ExtraScopes != nil {
+		t := make([]string, len(in.ExtraScopes))
+		copy(t, in.ExtraScopes)
+		out.ExtraScopes = t
 	}
 }
 

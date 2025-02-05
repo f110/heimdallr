@@ -134,6 +134,9 @@ message IdentityProviderSpec {
   optional string         client_id         = 2;
   optional SecretSelector client_secret_ref = 3;
   optional string         redirect_url      = 4;
+  optional string         domain            = 5;
+  optional string         issuer            = 6;
+  repeated string         extra_scopes      = 7;
 }
 
 message SessionSpec {
