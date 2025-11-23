@@ -667,6 +667,11 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 		return true
 	}
 
+	if time.Now().Add(90 * 24 * time.Hour).After(podCert.NotAfter) {
+		c.log.Debug("The expiration date of the certificate is approaching", zap.Time("not_after", podCert.NotAfter))
+		return true
+	}
+
 	expectDNSName := c.DNSNames()
 	if len(podCert.DNSNames) != len(expectDNSName) {
 		c.log.Debug("cert doesn't have enough DNSNames")
@@ -678,6 +683,22 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 			c.log.Debug("Unexpected DNSName", zap.String("expect", expectDNSName[i]), zap.String("got", v))
 			return true
 		}
+	}
+
+	return false
+}
+
+func (c *EtcdCluster) ShouldUpdateClientCertificate(certPem []byte) bool {
+	b, _ := pem.Decode(certPem)
+	clientCert, err := x509.ParseCertificate(b.Bytes)
+	if err != nil {
+		c.log.Warn("Could not parse the certificate")
+		return true
+	}
+
+	if time.Now().Add(90 * 24 * time.Hour).After(clientCert.NotAfter) {
+		c.log.Debug("The expiration date of the certificate is approaching", zap.Time("not_after", clientCert.NotAfter))
+		return true
 	}
 
 	return false
