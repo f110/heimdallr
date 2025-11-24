@@ -13,11 +13,6 @@ import (
 var _ = time.Time{}
 var _ = bytes.Buffer{}
 
-type Column struct {
-	Name  string
-	Value interface{}
-}
-
 type User struct {
 	Id        int32
 	Identity  string

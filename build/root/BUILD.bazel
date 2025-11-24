@@ -1,7 +1,10 @@
+load("@gazelle//:def.bzl", "gazelle")
 load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
 load("//build/rules:release.bzl", "github_release", "template_string")
 load("//build/rules/go:vendor.bzl", "go_vendor")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
+
+gazelle(name = "gazelle")
 
 filegroup(
     name = "all",

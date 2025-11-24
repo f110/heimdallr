@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@rules_go//go:def.bzl", "go_test")
 load("//:RELEASE.bzl", "VERSION")
 
 K8S_CLUSTER_VERSION = "v1.32.0"
@@ -48,8 +48,8 @@ go_test(
         "//pkg/k8s/kind",
         "//pkg/logger",
         "//pkg/testing/btesting",
-        "//vendor/go.etcd.io/etcd/client/v3:client",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/client-go/rest",
+        "@io_etcd_go_etcd_client_v3//:client",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_client_go//rest",
     ],
 )

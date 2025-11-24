@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "configutil",
@@ -12,9 +12,9 @@ go_library(
         "//pkg/config/configv2",
         "//pkg/k8s",
         "//pkg/logger",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/go.uber.org/zap",
-        "//vendor/sigs.k8s.io/yaml",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@io_k8s_sigs_yaml//:yaml",
+        "@org_uber_go_zap//:zap",
     ],
 )
 
@@ -25,7 +25,7 @@ go_test(
     embed = [":configutil"],
     deps = [
         "//pkg/config/configv2",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "database",
@@ -13,9 +13,9 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/go.etcd.io/etcd/api/v3/mvccpb",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/sigs.k8s.io/yaml",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@io_etcd_go_etcd_api_v3//mvccpb",
+        "@io_k8s_sigs_yaml//:yaml",
     ],
 )
 
@@ -28,7 +28,7 @@ go_test(
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/database/memory",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

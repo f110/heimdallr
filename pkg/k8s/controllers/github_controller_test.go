@@ -14,8 +14,8 @@ import (
 
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
@@ -32,8 +32,9 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
 			transport,
 		)
 		require.NoError(t, err)
@@ -79,8 +80,9 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
 			transport,
 		)
 		require.NoError(t, err)
@@ -127,8 +129,9 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
 			transport,
 		)
 		require.NoError(t, err)

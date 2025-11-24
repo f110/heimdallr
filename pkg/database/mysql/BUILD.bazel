@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "mysql",
@@ -17,6 +17,6 @@ go_library(
         "//pkg/database/mysql/dao",
         "//pkg/database/mysql/entity",
         "//pkg/netutil",
-        "//vendor/go.f110.dev/xerrors",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )

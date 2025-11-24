@@ -1,8 +1,8 @@
 package etcdv1alpha2
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -13,7 +13,7 @@ var (
 	GroupVersion       = metav1.GroupVersion{Group: GroupName, Version: "v1alpha2"}
 	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme        = SchemeBuilder.AddToScheme
-	SchemaGroupVersion = schema.GroupVersion{Group: "etcd.f110.dev", Version: "v1alpha2"}
+	SchemaGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha2"}
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
@@ -408,42 +408,6 @@ func (in *BackupStatusHistory) DeepCopy() *BackupStatusHistory {
 		return nil
 	}
 	out := new(BackupStatusHistory)
-	in.DeepCopyInto(out)
-	return out
-}
-
-type LabelsEntry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (in *LabelsEntry) DeepCopyInto(out *LabelsEntry) {
-	*out = *in
-}
-
-func (in *LabelsEntry) DeepCopy() *LabelsEntry {
-	if in == nil {
-		return nil
-	}
-	out := new(LabelsEntry)
-	in.DeepCopyInto(out)
-	return out
-}
-
-type AnnotationsEntry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (in *AnnotationsEntry) DeepCopyInto(out *AnnotationsEntry) {
-	*out = *in
-}
-
-func (in *AnnotationsEntry) DeepCopy() *AnnotationsEntry {
-	if in == nil {
-		return nil
-	}
-	out := new(AnnotationsEntry)
 	in.DeepCopyInto(out)
 	return out
 }

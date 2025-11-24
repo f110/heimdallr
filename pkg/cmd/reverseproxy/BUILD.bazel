@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "reverseproxy",
@@ -30,18 +30,18 @@ go_library(
         "//pkg/server/internalapi",
         "//pkg/server/token",
         "//pkg/session",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2:zap",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2:go-grpc-middleware",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
-        "//vendor/go.etcd.io/etcd/client/v3:client",
-        "//vendor/go.etcd.io/etcd/server/v3/embed",
-        "//vendor/go.f110.dev/protoc-ddl/probe",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/go.uber.org/zap",
-        "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/connectivity",
-        "//vendor/google.golang.org/grpc/credentials",
-        "//vendor/google.golang.org/grpc/keepalive",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_providers_zap_v2//:zap",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//:go-grpc-middleware",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/logging",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/retry",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@dev_f110_protoc_ddl//probe",
+        "@io_etcd_go_etcd_client_v3//:client",
+        "@io_etcd_go_etcd_server_v3//embed",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//connectivity",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//keepalive",
+        "@org_uber_go_zap//:zap",
     ],
 )

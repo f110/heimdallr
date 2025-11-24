@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "create-dummy-users_lib",
@@ -7,10 +7,10 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/rpc/rpcclient",
-        "//vendor/github.com/spf13/pflag",
-        "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/credentials",
-        "//vendor/google.golang.org/grpc/keepalive",
+        "@com_github_spf13_pflag//:pflag",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//keepalive",
     ],
 )
 

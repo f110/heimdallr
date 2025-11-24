@@ -1,5 +1,5 @@
 load("@dev_f110_kubeproto//bazel:def.bzl", "kubeproto_go_api")
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build/rules:vendor.bzl", "vendor_kubeproto")
 
@@ -31,10 +31,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/api/core/v1:core",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+        "//pkg/k8s/thirdpartyapi/cert-manager/metav1",
+        "@dev_f110_kubeproto//go/apis/corev1",
+        "@dev_f110_kubeproto//go/apis/metav1",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
     ],
 )

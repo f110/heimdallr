@@ -211,7 +211,7 @@ func TestServicesViaServer(t *testing.T) {
 		ServerName: rpc.ServerHostname,
 		RootCAs:    caPool,
 	})
-	conn, err := grpc.Dial(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(transCreds))
+	conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", port), grpc.WithTransportCredentials(transCreds))
 	require.NoError(t, err)
 
 	md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: "internal-token"})

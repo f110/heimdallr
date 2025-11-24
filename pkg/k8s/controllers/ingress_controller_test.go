@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
@@ -23,12 +23,13 @@ func TestIngressController(t *testing.T) {
 		controller := NewIngressController(
 			runner.CoreSharedInformerFactory,
 			runner.SharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
 		)
 
 		ingClass, ing, svc, svcWeb := ingressControllerFixtures()
-		runner.RegisterFixtures(ingClass, ing, svc, svcWeb)
+		runner.RegisterFixtures(ingClass, svc, svcWeb)
 
 		err := runner.Reconcile(controller, ing)
 		require.NoError(t, err)

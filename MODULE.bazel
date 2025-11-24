@@ -1,0 +1,146 @@
+bazel_dep(name = "rules_go", version = "0.46.0")
+bazel_dep(name = "gazelle", version = "0.38.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.1")
+bazel_dep(name = "rules_oci", version = "1.7.2")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "33.1")
+bazel_dep(name = "bazel_lib", version = "3.0.0")
+bazel_dep(name = "protoc_ddl", version = "0.0.0", repo_name = "dev_f110_protoc_ddl")
+bazel_dep(name = "dev_f110_kubeproto")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.24.11")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+go_deps.gazelle_override(
+    build_file_generation = "clean",
+    path = "github.com/pingcap/tidb/pkg/parser",
+)
+go_deps.gazelle_override(
+    build_file_generation = "clean",
+    path = "go.f110.dev/xerrors",
+)
+go_deps.gazelle_override(
+    build_file_generation = "clean",
+    path = "github.com/jetstack/cert-manager",
+)
+go_deps.gazelle_override(
+    build_extra_args = ["-proto=disable"],
+    build_file_generation = "clean",
+    path = "github.com/grpc-ecosystem/grpc-gateway",
+)
+go_deps.gazelle_override(
+    build_extra_args = ["-proto=disable"],
+    path = "go.etcd.io/etcd/api/v3",
+)
+go_deps.gazelle_override(
+    build_extra_args = ["-proto=disable"],
+    path = "go.etcd.io/etcd/server/v3",
+)
+go_deps.gazelle_override(
+    build_extra_args = ["-proto=disable"],
+    path = "go.etcd.io/etcd/raft/v3",
+)
+use_repo(
+    go_deps,
+    "com_github_bazelbuild_buildtools",
+    "com_github_bradfitz_gomemcache",
+    "com_github_bradleyfalzon_ghinstallation_v2",
+    "com_github_fatih_color",
+    "com_github_fsnotify_fsnotify",
+    "com_github_go_chi_chi_v5",
+    "com_github_go_jose_go_jose_v4",
+    "com_github_go_logr_zapr",
+    "com_github_go_sql_driver_mysql",
+    "com_github_golang_jwt_jwt_v4",
+    "com_github_google_go_cmp",
+    "com_github_google_go_containerregistry",
+    "com_github_google_go_github_v41",
+    "com_github_google_uuid",
+    "com_github_grpc_ecosystem_go_grpc_middleware_providers_zap_v2",
+    "com_github_grpc_ecosystem_go_grpc_middleware_v2",
+    "com_github_grpc_ecosystem_go_grpc_prometheus",
+    "com_github_jarcoal_httpmock",
+    "com_github_jetstack_cert_manager",
+    "com_github_julienschmidt_httprouter",
+    "com_github_masterminds_semver_v3",
+    "com_github_mattn_go_shellwords",
+    "com_github_miekg_dns",
+    "com_github_minio_minio_go_v7",
+    "com_github_peterh_liner",
+    "com_github_prometheus_client_golang",
+    "com_github_prometheus_client_model",
+    "com_github_prometheus_common",
+    "com_github_prometheus_operator_prometheus_operator_pkg_apis_monitoring",
+    "com_github_spf13_pflag",
+    "com_github_stretchr_testify",
+    "com_github_zitadel_oidc_v3",
+    "com_google_cloud_go_storage",
+    "com_sslmate_software_src_go_pkcs12",
+    "dev_f110_go_xerrors",
+    "in_gopkg_yaml_v2",
+    "io_etcd_go_etcd_api_v3",
+    "io_etcd_go_etcd_client_v3",
+    "io_etcd_go_etcd_etcdutl_v3",
+    "io_etcd_go_etcd_server_v3",
+    "io_k8s_api",
+    "io_k8s_apiextensions_apiserver",
+    "io_k8s_apimachinery",
+    "io_k8s_client_go",
+    "io_k8s_gengo",
+    "io_k8s_klog_v2",
+    "io_k8s_sigs_kind",
+    "io_k8s_sigs_yaml",
+    "io_nhooyr_websocket",
+    "org_golang_google_api",
+    "org_golang_google_grpc",
+    "org_golang_google_protobuf",
+    "org_golang_x_net",
+    "org_golang_x_oauth2",
+    "org_uber_go_zap",
+)
+
+git_override(
+    module_name = "protoc_ddl",
+    commit = "0d4d02686e470e43f95d395ac204121103b03f66",
+    patch_strip = 1,
+    patches = ["//patch:protoc-ddl.patch"],
+    remote = "https://github.com/f110/protoc-ddl",
+)
+
+git_override(
+    module_name = "dev_f110_kubeproto",
+    commit = "89ad05f87b7d335dd1887c4c978a894d62ca2ef3",
+    remote = "https://github.com/f110/kubeproto",
+)
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "com_google_distroless_base_amd64",
+    digest = "sha256:2fc6702c4a81d196ef1f5a7561b9ab74f243d8633af15aaf7ac0632650fe07b7",  # latest-amd64
+    image = "gcr.io/distroless/base-debian12",
+)
+oci.pull(
+    name = "com_google_distroless_base_arm64",
+    digest = "sha256:a12a6de828bd0d0fb5f7ad49a161284efc0846b9204beab73ed75100cd1ce51e",  # latest-arm64
+    image = "gcr.io/distroless/base-debian12",
+)
+use_repo(oci, "com_google_distroless_base_amd64", "com_google_distroless_base_arm64")
+
+kustomize_ext = use_extension("//build/rules/kustomize:module.bzl", "kustomize_extension")
+kustomize_ext.download(version = "v4.5.4")
+use_repo(kustomize_ext, "kustomize")
+
+kind_ext = use_extension("//build/rules/kind:module.bzl", "kind_extension")
+kind_ext.download(version = "0.26.0")
+use_repo(kind_ext, "kind")
+
+vault_ext = use_extension("//build/rules/vault:module.bzl", "vault_extension")
+vault_ext.download(
+    latest = "1.11.4",
+    oldapi = "1.10.7",
+)
+
+use_repo(vault_ext, "vault_110", "vault_latest")

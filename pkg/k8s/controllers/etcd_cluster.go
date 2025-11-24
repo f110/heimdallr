@@ -24,15 +24,16 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/heimdallr/pkg/varptr"
+	"go.f110.dev/kubeproto/go/apis/batchv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/rbacv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	listers "k8s.io/client-go/listers/core/v1"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
@@ -127,13 +128,13 @@ func NewEtcdCluster(c *etcdv1alpha2.EtcdCluster, clusterDomain string, log *zap.
 	}
 }
 
-func (c *EtcdCluster) Init(secretLister listers.SecretLister) {
-	caSecret, err := secretLister.Secrets(c.Namespace).Get(c.CASecretName())
+func (c *EtcdCluster) Init(secretLister *k8sclient.CoreV1SecretLister) {
+	caSecret, err := secretLister.Get(c.Namespace, c.CASecretName())
 	if err == nil {
 		c.caSecret = caSecret
 	}
 
-	certS, err := secretLister.Secrets(c.Namespace).Get(c.ServerCertSecretName())
+	certS, err := secretLister.Get(c.Namespace, c.ServerCertSecretName())
 	if err == nil {
 		tlsKeyPair, err := tls.X509KeyPair(certS.Data[serverCertSecretCertName], certS.Data[serverCertSecretPrivateKeyName])
 		if err != nil {
@@ -147,7 +148,7 @@ func (c *EtcdCluster) Init(secretLister listers.SecretLister) {
 		c.serverCertSecret = &serverCert
 	}
 
-	clientS, err := secretLister.Secrets(c.Namespace).Get(c.ClientCertSecretName())
+	clientS, err := secretLister.Get(c.Namespace, c.ClientCertSecretName())
 	if err == nil {
 		c.clientCertSecret = clientS
 	}
@@ -189,7 +190,7 @@ func (c *EtcdCluster) SetClientCertSecret(cert *corev1.Secret) {
 	c.clientCertSecret = cert
 }
 
-func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister listers.PersistentVolumeClaimLister) error {
+func (c *EtcdCluster) GetOwnedPods(podLister *k8sclient.CoreV1PodLister, pvcLister *k8sclient.CoreV1PersistentVolumeClaimLister) error {
 	if c.UID == "" {
 		return nil
 	}
@@ -199,7 +200,7 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 		return xerrors.WithStack(err)
 	}
 
-	pods, err := podLister.Pods(c.Namespace).List(labels.NewSelector().Add(*r))
+	pods, err := podLister.List(c.Namespace, labels.NewSelector().Add(*r))
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
@@ -219,7 +220,7 @@ func (c *EtcdCluster) GetOwnedPods(podLister listers.PodLister, pvcLister lister
 	}
 	c.ownedPods = owned
 
-	pvcs, err := pvcLister.PersistentVolumeClaims(c.Namespace).List(labels.Everything())
+	pvcs, err := pvcLister.List(c.Namespace, labels.Everything())
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
@@ -487,7 +488,7 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 			}
 
 			result = append(result, &EtcdMember{Pod: v, PersistentVolumeClaim: pvc, OldVersion: oldVersion})
-			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodRunning {
+			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodPhaseRunning {
 				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.pod.%s:%d", v.Name, strings.Replace(v.Status.PodIP, ".", "-", -1), c.Namespace, c.ClusterDomain, EtcdPeerPort))
 			}
 		}
@@ -686,14 +687,14 @@ func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 	onceRunning := metav1.HasAnnotation(pod.ObjectMeta, etcd.PodAnnotationKeyRunningAt)
 	// If the Pod has never been running once, There is no need to repair it.
 	// But there is need to repair if the age of Pod exceeds 5 minutes
-	if !onceRunning && pod.CreationTimestamp.After(time.Now().Add(-5*time.Minute)) && pod.Status.Phase != corev1.PodFailed {
+	if !onceRunning && pod.CreationTimestamp.After(varptr.Ptr(metav1.NewTime(time.Now().Add(-5*time.Minute)))) && pod.Status.Phase != corev1.PodPhaseFailed {
 		return false
 	}
 
 	switch pod.Status.Phase {
-	case corev1.PodFailed, corev1.PodSucceeded:
+	case corev1.PodPhaseFailed, corev1.PodPhaseSucceeded:
 		return true
-	case corev1.PodRunning:
+	case corev1.PodPhaseRunning:
 		needRepair := false
 		for _, cont := range pod.Status.ContainerStatuses {
 			if !cont.Ready {
@@ -807,7 +808,7 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 			if len(c.ownedPods) > c.Spec.Members/2+1 {
 				numOfRunningPods := 0
 				for _, p := range c.ownedPods {
-					if p.Status.Phase != corev1.PodRunning {
+					if p.Status.Phase != corev1.PodPhaseRunning {
 						continue
 					}
 					numOfRunningPods++
@@ -986,7 +987,7 @@ func (c *EtcdCluster) GetMetrics(addr string) ([]*dto.MetricFamily, error) {
 }
 
 func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
-	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate()))
+	metav1.SetMetadataAnnotation(&pod.ObjectMeta, etcd.AnnotationKeyServerCertificate, string(c.serverCertSecret.MarshalCertificate()))
 }
 
 func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClusters []string) *corev1.Pod {
@@ -1163,7 +1164,7 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 	sidecarContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("sidecar"),
 		k8sfactory.Image(fmt.Sprintf("ghcr.io/f110/heimdallr/discovery-sidecar:%s", version.Version), nil),
-		k8sfactory.PullPolicy(corev1.PullIfNotPresent),
+		k8sfactory.PullPolicy(corev1.PullPolicyIfNotPresent),
 		k8sfactory.Args(sidecarArgs...),
 		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(8080, "/liveness")),
 		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(8080, "/readiness")),
@@ -1201,7 +1202,7 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 				100,
 				k8sfactory.MatchExpression(metav1.LabelSelectorRequirement{
 					Key:      etcd.LabelNameClusterName,
-					Operator: metav1.LabelSelectorOpIn,
+					Operator: metav1.LabelSelectorOperatorIn,
 					Values:   []string{c.Name},
 				}),
 				"kubernetes.io/hostname",
@@ -1338,7 +1339,7 @@ func (c *EtcdCluster) parseCASecret(s *corev1.Secret) (*certAndKey, error) {
 }
 
 func (c *EtcdCluster) IsPodReady(pod *corev1.Pod) bool {
-	if pod.Status.Phase != corev1.PodRunning {
+	if pod.Status.Phase != corev1.PodPhaseRunning {
 		return false
 	}
 	for _, v := range pod.Status.ContainerStatuses {
@@ -1369,10 +1370,10 @@ func (c *EtcdCluster) newEtcdMember(pod *corev1.Pod) *EtcdMember {
 					Labels:      l,
 					Annotations: tmpl.ObjectMeta.Annotations,
 					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(c.EtcdCluster, etcdv1alpha2.SchemaGroupVersion.WithKind("EtcdCluster")),
+						metav1.NewControllerRef(c.EtcdCluster.ObjectMeta, etcdv1alpha2.SchemaGroupVersion.WithKind("EtcdCluster")),
 					},
 				},
-				Spec: tmpl.Spec,
+				Spec: &tmpl.Spec,
 			}
 		}
 	}

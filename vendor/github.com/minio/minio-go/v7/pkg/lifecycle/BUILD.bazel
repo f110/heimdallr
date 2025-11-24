@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "lifecycle",
-    srcs = ["lifecycle.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v7/pkg/lifecycle",
-    importpath = "github.com/minio/minio-go/v7/pkg/lifecycle",
-    visibility = ["//visibility:public"],
-)

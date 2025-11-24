@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "logger",
@@ -12,11 +12,11 @@ go_library(
     deps = [
         "//pkg/cmd",
         "//pkg/config/configv2",
-        "//vendor/github.com/go-logr/zapr",
-        "//vendor/github.com/spf13/pflag",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/go.uber.org/zap",
-        "//vendor/go.uber.org/zap/zapcore",
-        "//vendor/k8s.io/klog/v2:klog",
+        "@com_github_go_logr_zapr//:zapr",
+        "@com_github_spf13_pflag//:pflag",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@io_k8s_klog_v2//:klog",
+        "@org_uber_go_zap//:zap",
+        "@org_uber_go_zap//zapcore",
     ],
 )

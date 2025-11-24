@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_context")
+load("@rules_go//go:def.bzl", "go_context")
 load("@bazel_skylib//lib:shell.bzl", "shell")
 
 def _go_vendor_impl(ctx):
@@ -47,10 +47,10 @@ _go_vendor = rule(
             cfg = "host",
         ),
         "_go_context_data": attr.label(
-            default = "@io_bazel_rules_go//:go_context_data",
+            default = "@rules_go//:go_context_data",
         ),
     },
-    toolchains = ["@io_bazel_rules_go//go:toolchain"],
+    toolchains = ["@rules_go//go:toolchain"],
 )
 
 def go_vendor(name, **kwargs):

@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "defaults",
-    srcs = ["image.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/sigs.k8s.io/kind/pkg/apis/config/defaults",
-    importpath = "sigs.k8s.io/kind/pkg/apis/config/defaults",
-    visibility = ["//visibility:public"],
-)

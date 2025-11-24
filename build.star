@@ -8,7 +8,7 @@ job(
         "//...",
     ],
     platforms = [
-        "@io_bazel_rules_go//go/toolchain:linux_amd64",
+        "@rules_go//go/toolchain:linux_amd64",
     ],
     cpu_limit = "2000m",
     memory_limit = "8096Mi",
@@ -23,7 +23,7 @@ job(
         "//:github_release",
     ],
     platforms = [
-        "@io_bazel_rules_go//go/toolchain:linux_amd64",
+        "@rules_go//go/toolchain:linux_amd64",
     ],
     event = ["release"],
     secrets = [

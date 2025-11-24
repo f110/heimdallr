@@ -1,17 +1,18 @@
 package k8sfactory
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/heimdallr/pkg/varptr"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 )
 
 func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {
 	var p *corev1.Pod
 	if base == nil {
-		p = &corev1.Pod{}
+		p = &corev1.Pod{Spec: &corev1.PodSpec{}, Status: &corev1.PodStatus{}}
 	} else {
 		p = base.DeepCopy()
 	}
@@ -35,21 +36,21 @@ func Ready(v interface{}) {
 	if !ok {
 		return
 	}
-	p.Status.Phase = corev1.PodRunning
+	p.Status.Phase = corev1.PodPhaseRunning
 	containerStatus := make([]corev1.ContainerStatus, 0)
 	for _, v := range p.Spec.Containers {
 		containerStatus = append(containerStatus, corev1.ContainerStatus{
 			Name:    v.Name,
 			Ready:   true,
 			Image:   v.Image,
-			Started: pointer.BoolPtr(true),
+			Started: true,
 		})
 	}
 	p.Status.ContainerStatuses = containerStatus
 	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
-		Type:               corev1.PodReady,
-		Status:             corev1.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
+		Type:               corev1.PodConditionTypeReady,
+		Status:             corev1.ConditionStatusTrue,
+		LastTransitionTime: varptr.Ptr(metav1.Now()),
 	})
 }
 
@@ -61,11 +62,11 @@ func NotReady(v interface{}) {
 		return
 	}
 
-	p.Status.Phase = corev1.PodRunning
+	p.Status.Phase = corev1.PodPhaseRunning
 	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
-		Type:               corev1.PodReady,
-		Status:             corev1.ConditionFalse,
-		LastTransitionTime: metav1.Now(),
+		Type:               corev1.PodConditionTypeReady,
+		Status:             corev1.ConditionStatusFalse,
+		LastTransitionTime: varptr.Ptr(metav1.Now()),
 	})
 	containerStatus := make([]corev1.ContainerStatus, 0)
 	for _, v := range p.Spec.Containers {
@@ -73,7 +74,7 @@ func NotReady(v interface{}) {
 			Name:    v.Name,
 			Image:   v.Image,
 			Ready:   false,
-			Started: pointer.BoolPtr(true),
+			Started: true,
 		})
 	}
 	p.Status.ContainerStatuses = containerStatus
@@ -84,7 +85,7 @@ func PodSucceeded(v interface{}) {
 	if !ok {
 		return
 	}
-	p.Status.Phase = corev1.PodSucceeded
+	p.Status.Phase = corev1.PodPhaseSucceeded
 }
 
 func PodFailed(v interface{}) {
@@ -92,7 +93,7 @@ func PodFailed(v interface{}) {
 	if !ok {
 		return
 	}
-	p.Status.Phase = corev1.PodFailed
+	p.Status.Phase = corev1.PodPhaseFailed
 }
 
 func RestartPolicy(policy corev1.RestartPolicy) Trait {
@@ -128,7 +129,7 @@ func InitContainer(c *corev1.Container) Trait {
 	}
 }
 
-func PreferredInterPodAntiAffinity(weight int32, selector *metav1.LabelSelector, key string) Trait {
+func PreferredInterPodAntiAffinity(weight int, selector *metav1.LabelSelector, key string) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *corev1.Pod:
@@ -174,7 +175,7 @@ func Subdomain(v string) Trait {
 func ShareProcessNamespace(object any) {
 	switch obj := object.(type) {
 	case *corev1.Pod:
-		obj.Spec.ShareProcessNamespace = pointer.Bool(true)
+		obj.Spec.ShareProcessNamespace = true
 	}
 }
 
@@ -302,7 +303,7 @@ func GRPCProbe(port int) *corev1.Probe {
 	return &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			GRPC: &corev1.GRPCAction{
-				Port: int32(port),
+				Port: port,
 			},
 		},
 	}
@@ -348,7 +349,7 @@ func ServiceAccountFactory(base *corev1.ServiceAccount, traits ...Trait) *corev1
 func ServiceFactory(base *corev1.Service, traits ...Trait) *corev1.Service {
 	var s *corev1.Service
 	if base == nil {
-		s = &corev1.Service{}
+		s = &corev1.Service{Spec: &corev1.ServiceSpec{}, Status: &corev1.ServiceStatus{}}
 	} else {
 		s = base.DeepCopy()
 	}
@@ -393,14 +394,14 @@ func LoadBalancerIP(ip string) Trait {
 func TrafficPolicyLocal(object interface{}) {
 	switch obj := object.(type) {
 	case *corev1.Service:
-		obj.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+		obj.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 	}
 }
 
 func IPNone(object interface{}) {
 	switch obj := object.(type) {
 	case *corev1.Service:
-		obj.Spec.ClusterIP = corev1.ClusterIPNone
+		obj.Spec.ClusterIP = "None"
 	}
 }
 
@@ -417,7 +418,7 @@ func Selector(v ...string) Trait {
 	}
 }
 
-func Port(name string, protocol corev1.Protocol, port int32) Trait {
+func Port(name string, protocol corev1.Protocol, port int) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *corev1.Service:
@@ -436,7 +437,7 @@ func Port(name string, protocol corev1.Protocol, port int32) Trait {
 	}
 }
 
-func TargetPort(name string, protocol corev1.Protocol, port int32, targetPort intstr.IntOrString) Trait {
+func TargetPort(name string, protocol corev1.Protocol, port int, targetPort intstr.IntOrString) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *corev1.Service:
@@ -444,7 +445,7 @@ func TargetPort(name string, protocol corev1.Protocol, port int32, targetPort in
 				Name:       name,
 				Protocol:   protocol,
 				Port:       port,
-				TargetPort: targetPort,
+				TargetPort: varptr.Ptr(targetPort),
 			})
 		}
 	}
@@ -511,19 +512,25 @@ func ConfigMapFactory(base *corev1.ConfigMap, traits ...Trait) *corev1.ConfigMap
 	return cm
 }
 
-func Requests(req corev1.ResourceList) Trait {
+func Requests(req map[string]resource.Quantity) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *corev1.Container:
+			if obj.Resources == nil {
+				obj.Resources = &corev1.ResourceRequirements{}
+			}
 			obj.Resources.Requests = req
 		}
 	}
 }
 
-func Limits(lim corev1.ResourceList) Trait {
+func Limits(lim map[string]resource.Quantity) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *corev1.Container:
+			if obj.Resources == nil {
+				obj.Resources = &corev1.ResourceRequirements{}
+			}
 			obj.Resources.Limits = lim
 		}
 	}

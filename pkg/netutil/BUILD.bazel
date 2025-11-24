@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "netutil",
@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/k8s",
-        "//vendor/go.f110.dev/xerrors",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )
 
@@ -21,7 +21,7 @@ go_test(
     embed = [":netutil"],
     deps = [
         "//pkg/k8s",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

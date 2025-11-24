@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "auth",
@@ -16,10 +16,10 @@ go_library(
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/codes",
-        "//vendor/google.golang.org/grpc/status",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
     ],
 )
 
@@ -40,10 +40,10 @@ go_test(
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
-        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
-        "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/metadata",
+        "@com_github_golang_jwt_jwt_v4//:jwt",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//metadata",
     ],
 )

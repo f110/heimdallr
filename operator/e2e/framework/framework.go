@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	certmanagermetav1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -24,6 +24,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
+	certmanagermetav1 "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/metav1"
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
@@ -160,7 +161,7 @@ type Proxy struct {
 
 func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	clientSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: k8smetav1.ObjectMeta{
 			Name:      "e2e-client-secret",
 			Namespace: "default",
 		},
@@ -168,7 +169,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 			"client-secret": []byte("client-secret"),
 		},
 	}
-	_, err := p.coreClient.CoreV1().Secrets(clientSecret.Namespace).Create(context.TODO(), clientSecret, metav1.CreateOptions{})
+	_, err := p.coreClient.CoreV1().Secrets(clientSecret.Namespace).Create(context.TODO(), clientSecret, k8smetav1.CreateOptions{})
 	m.NoError(err)
 
 	proxySpec := proxy.Factory(ProxyBase,
@@ -255,7 +256,7 @@ func (a *Agent) Get(m *btesting.Matcher, backend *proxyv1alpha2.Backend, body io
 	proxyCertPool, err := e2eutil.ProxyCertPool(a.coreClient, a.proxy)
 	m.Must(err)
 
-	proxyService, err := a.coreClient.CoreV1().Services(a.proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s", a.proxy.Name), metav1.GetOptions{})
+	proxyService, err := a.coreClient.CoreV1().Services(a.proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s", a.proxy.Name), k8smetav1.GetOptions{})
 	m.Must(err)
 	forwarder, err := e2eutil.PortForward(context.Background(), a.restConfig, a.coreClient, proxyService, "https")
 	m.Must(err)
@@ -403,7 +404,7 @@ func (c *EtcdCluster) NumOfPods(m *btesting.Matcher, length int) {
 	if c.EtcdCluster == nil {
 		m.Fail("EtcdCluster is not found")
 	}
-	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
+	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), k8smetav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.NoError(err)
 	m.Len(pods.Items, length)
 }
@@ -412,7 +413,7 @@ func (c *EtcdCluster) EqualVersion(m *btesting.Matcher, version string) {
 	if c.EtcdCluster == nil {
 		m.Fail("EtcdCluster is not found")
 	}
-	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
+	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), k8smetav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.NoError(err)
 	if len(pods.Items) == 0 {
 		m.Fail("Pod is not found")
@@ -441,7 +442,7 @@ func (c *EtcdCluster) haveDataVolume(m *btesting.Matcher, source string) {
 	if c.EtcdCluster == nil {
 		m.Fail("etcd cluster is not found")
 	}
-	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
+	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), k8smetav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
 	m.Must(err)
 	found := false
 	for _, pod := range pods.Items {

@@ -6,15 +6,13 @@ import (
 	"reflect"
 	"time"
 
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coreInformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	coreListers "k8s.io/client-go/listers/core/v1"
-	networkinglisters "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -34,47 +32,46 @@ type IngressController struct {
 	*controllerbase.Controller
 
 	ingressInformer          cache.SharedIndexInformer
-	ingressLister            networkinglisters.IngressLister
+	ingressLister            *k8sclient.NetworkingK8sIoV1IngressLister
 	ingressListerSynced      cache.InformerSynced
-	ingressClassLister       networkinglisters.IngressClassLister
+	ingressClassLister       *k8sclient.NetworkingK8sIoV1IngressClassLister
 	ingressClassListerSynced cache.InformerSynced
-	serviceLister            coreListers.ServiceLister
+	serviceLister            *k8sclient.CoreV1ServiceLister
 	serviceListerSynced      cache.InformerSynced
 
 	backendLister       *client.ProxyV1alpha2BackendLister
 	backendListerSynced cache.InformerSynced
 
 	proxyClient *client.ProxyV1alpha2
-	coreClient  kubernetes.Interface
+	coreClient  *k8sclient.Set
 }
 
 func NewIngressController(
-	coreSharedInformerFactory coreInformers.SharedInformerFactory,
+	coreSharedInformerFactory *k8sclient.InformerFactory,
 	sharedInformerFactory *client.InformerFactory,
-	coreClient kubernetes.Interface,
+	coreClient *k8sclient.Set,
 	proxyClient *client.ProxyV1alpha2,
+	k8sClient kubernetes.Interface,
 ) *IngressController {
-	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
-	ingressClassInformer := coreSharedInformerFactory.Networking().V1().IngressClasses()
-	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
-
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
+	networkingv1Informer := k8sclient.NewNetworkingK8sIoV1Informer(coreSharedInformerFactory.Cache(), coreClient.NetworkingK8sIoV1, metav1.NamespaceAll, 30*time.Second)
 	backendInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, metav1.NamespaceAll, 30*time.Second)
 
 	ic := &IngressController{
-		ingressInformer:          ingressInformer.Informer(),
-		ingressLister:            ingressInformer.Lister(),
-		ingressListerSynced:      ingressInformer.Informer().HasSynced,
-		ingressClassLister:       ingressClassInformer.Lister(),
-		ingressClassListerSynced: ingressInformer.Informer().HasSynced,
-		serviceLister:            serviceInformer.Lister(),
-		serviceListerSynced:      serviceInformer.Informer().HasSynced,
+		ingressInformer:          networkingv1Informer.IngressInformer(),
+		ingressLister:            networkingv1Informer.IngressLister(),
+		ingressListerSynced:      networkingv1Informer.IngressInformer().HasSynced,
+		ingressClassLister:       networkingv1Informer.IngressClassLister(),
+		ingressClassListerSynced: networkingv1Informer.IngressClassInformer().HasSynced,
+		serviceLister:            corev1Informer.ServiceLister(),
+		serviceListerSynced:      corev1Informer.ServiceInformer().HasSynced,
 		backendLister:            backendInformer.BackendLister(),
 		backendListerSynced:      backendInformer.BackendInformer().HasSynced,
 		coreClient:               coreClient,
 		proxyClient:              proxyClient,
 	}
 
-	ic.Controller = controllerbase.NewController(ic, coreClient)
+	ic.Controller = controllerbase.NewController(ic, k8sClient)
 	return ic
 }
 
@@ -123,17 +120,17 @@ func (ic *IngressController) GetObject(key string) (interface{}, error) {
 		return nil, xerrors.WithStack(err)
 	}
 
-	ingress, err := ic.ingressLister.Ingresses(namespace).Get(name)
+	ingress, err := ic.ingressLister.Get(namespace, name)
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	if ingress.Spec.IngressClassName == nil {
+	if ingress.Spec.IngressClassName == "" {
 		return nil, nil
 	}
 
-	ingClass, err := ic.ingressClassLister.Get(*ingress.Spec.IngressClassName)
+	ingClass, err := ic.ingressClassLister.Get(ingress.Spec.IngressClassName)
 	if err != nil {
-		ic.Log(nil).Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", *ingress.Spec.IngressClassName))
+		ic.Log(nil).Debug("Failure or not found IngressClass", zap.Error(err), zap.String("name", ingress.Spec.IngressClassName))
 		return nil, nil
 	}
 	if ingClass.Spec.Controller != ingressClassControllerName {
@@ -150,7 +147,7 @@ func (ic *IngressController) UpdateObject(ctx context.Context, obj interface{}) 
 		return nil
 	}
 
-	_, err := ic.coreClient.NetworkingV1().Ingresses(ingress.Namespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	_, err := ic.coreClient.NetworkingK8sIoV1.UpdateIngress(ctx, ingress, metav1.UpdateOptions{})
 	return err
 }
 
@@ -158,7 +155,7 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 	ingress := obj.(*networkingv1.Ingress)
 	ic.Log(ctx).Debug("syncIngress", zap.String("namespace", ingress.Namespace), zap.String("name", ingress.Name))
 
-	ingClass, err := ic.coreClient.NetworkingV1().IngressClasses().Get(ctx, *ingress.Spec.IngressClassName, metav1.GetOptions{})
+	ingClass, err := ic.coreClient.NetworkingK8sIoV1.GetIngressClass(ctx, ingress.Spec.IngressClassName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -219,7 +216,7 @@ func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) erro
 	ingress := obj.(*networkingv1.Ingress)
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		ig, err := ic.ingressLister.Ingresses(ingress.Namespace).Get(ingress.Name)
+		ig, err := ic.ingressLister.Get(ingress.Namespace, ingress.Name)
 		if err != nil {
 			return err
 		}
@@ -227,7 +224,7 @@ func (ic *IngressController) Finalize(ctx context.Context, obj interface{}) erro
 		updatedI := ig.DeepCopy()
 		controllerbase.RemoveFinalizer(&updatedI.ObjectMeta, ingressControllerFinalizerName)
 		if !reflect.DeepEqual(updatedI.Finalizers, ig.Finalizers) {
-			_, err = ic.coreClient.NetworkingV1().Ingresses(updatedI.Namespace).Update(ctx, updatedI, metav1.UpdateOptions{})
+			_, err = ic.coreClient.NetworkingK8sIoV1.UpdateIngress(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}

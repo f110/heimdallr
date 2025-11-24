@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "format",
-    srcs = ["format.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/github.com/pingcap/tidb/pkg/parser/format",
-    importpath = "github.com/pingcap/tidb/pkg/parser/format",
-    visibility = ["//visibility:public"],
-)

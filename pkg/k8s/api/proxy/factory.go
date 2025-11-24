@@ -3,7 +3,7 @@ package proxy
 import (
 	"net/http"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"

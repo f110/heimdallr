@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
@@ -42,8 +42,9 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -73,7 +74,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 
-		pod, err := runner.CoreClient.CoreV1().Pods(e.Namespace).Get(context.TODO(), fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
+		pod, err := runner.CoreClient.CoreV1.GetPod(context.TODO(), e.Namespace, fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.Contains(t, pod.Spec.Containers[0].Args[1], "--initial-cluster-state=new")
@@ -91,8 +92,9 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -106,7 +108,7 @@ func TestEtcdController(t *testing.T) {
 		cluster.registerBasicObjectOfEtcdCluster(runner)
 		member := cluster.AllMembers()[0]
 		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Created, k8sfactory.Ready)
-		runner.RegisterFixtures(e, member.Pod)
+		runner.RegisterFixtures(member.Pod)
 
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
@@ -119,7 +121,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 
-		pods, err := runner.CoreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		pods, err := runner.CoreClient.CoreV1.ListPod(context.TODO(), e.Namespace, metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
 		require.NoError(t, err)
 		assert.Len(t, pods.Items, 2)
 
@@ -152,8 +154,9 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -183,7 +186,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
 
-		pods, err := runner.CoreClient.CoreV1().Pods(e.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
+		pods, err := runner.CoreClient.CoreV1.ListPod(context.TODO(), e.Namespace, metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
 		require.NoError(t, err)
 		require.Len(t, pods.Items, 4)
 
@@ -213,8 +216,9 @@ func TestEtcdController(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
-				runner.CoreClient,
+				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
+				runner.K8sCoreClient,
 				nil,
 				"cluster.local",
 				false,
@@ -260,8 +264,9 @@ func TestEtcdController(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
-				runner.CoreClient,
+				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
+				runner.K8sCoreClient,
 				nil,
 				"cluster.local",
 				false,
@@ -307,8 +312,9 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -326,7 +332,7 @@ func TestEtcdController(t *testing.T) {
 			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 		}
 		tempMemberPod := cluster.newTemporaryMemberPodSpec(defaultEtcdVersion, []string{})
-		runner.RegisterFixtures(tempMemberPod, k8sfactory.PodFactory(tempMemberPod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+		runner.RegisterFixtures(k8sfactory.PodFactory(tempMemberPod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
@@ -346,7 +352,7 @@ func TestEtcdController(t *testing.T) {
 			for _, cs := range pod.Status.ContainerStatuses {
 				if cs.Name == "etcd" {
 					cs.Ready = false
-					cs.State = corev1.ContainerState{
+					cs.State = &corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{
 							ExitCode: 1,
 							Reason:   "Error",
@@ -400,8 +406,9 @@ func TestEtcdController(t *testing.T) {
 				controller, err := NewEtcdController(
 					runner.SharedInformerFactory,
 					runner.CoreSharedInformerFactory,
-					runner.CoreClient,
+					&runner.CoreClient.Set,
 					runner.Client.EtcdV1alpha2,
+					runner.K8sCoreClient,
 					nil,
 					"cluster.local",
 					false,
@@ -411,7 +418,6 @@ func TestEtcdController(t *testing.T) {
 				require.NoError(t, err)
 
 				e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
-				runner.RegisterFixtures(e)
 				cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
 				cluster.registerBasicObjectOfEtcdCluster(runner)
 				for i, v := range cluster.AllMembers() {
@@ -452,8 +458,9 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -537,8 +544,9 @@ func TestEtcdController_Backup(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -617,8 +625,9 @@ func TestEtcdController_Backup(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
-			runner.CoreClient,
+			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
 			nil,
 			"cluster.local",
 			false,
@@ -685,8 +694,9 @@ func TestEtcdController_Restore(t *testing.T) {
 	controller, err := NewEtcdController(
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
-		runner.CoreClient,
+		&runner.CoreClient.Set,
 		runner.Client.EtcdV1alpha2,
+		runner.K8sCoreClient,
 		nil,
 		"cluster.local",
 		false,
@@ -731,7 +741,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	for _, v := range cluster.AllMembers() {
 		v.Pod = k8sfactory.PodFactory(v.Pod, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)))
 
-		v.Pod.Status.Phase = corev1.PodSucceeded
+		v.Pod.Status.Phase = corev1.PodPhaseSucceeded
 		runner.RegisterFixtures(v.Pod)
 	}
 

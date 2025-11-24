@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "operator",
@@ -13,14 +13,14 @@ go_library(
         "//pkg/k8s/thirdpartyclient",
         "//pkg/k8s/webhook",
         "//pkg/logger",
-        "//vendor/github.com/google/uuid",
-        "//vendor/go.uber.org/zap",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/client-go/informers",
-        "//vendor/k8s.io/client-go/kubernetes",
-        "//vendor/k8s.io/client-go/rest",
-        "//vendor/k8s.io/client-go/tools/clientcmd",
-        "//vendor/k8s.io/client-go/tools/leaderelection",
-        "//vendor/k8s.io/client-go/tools/leaderelection/resourcelock",
+        "@com_github_google_uuid//:uuid",
+        "@dev_f110_kubeproto//go/k8sclient",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_client_go//kubernetes",
+        "@io_k8s_client_go//rest",
+        "@io_k8s_client_go//tools/clientcmd",
+        "@io_k8s_client_go//tools/leaderelection",
+        "@io_k8s_client_go//tools/leaderelection/resourcelock",
+        "@org_uber_go_zap//:zap",
     ],
 )

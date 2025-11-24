@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "v1alpha1",
@@ -12,10 +12,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/api/core/v1:core",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
+        "@com_github_jetstack_cert_manager//pkg/apis/meta/v1:meta",
+        "@io_k8s_api//core/v1:core",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
     ],
 )

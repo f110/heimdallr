@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "update-kustomize-assets_lib",
@@ -6,11 +6,11 @@ go_library(
     importpath = "go.f110.dev/heimdallr/build/rules/kustomize/update-kustomize-assets",
     visibility = ["//visibility:private"],
     deps = [
-        "//vendor/github.com/Masterminds/semver/v3:semver",
-        "//vendor/github.com/bazelbuild/buildtools/build",
-        "//vendor/github.com/google/go-github/v41/github",
-        "//vendor/github.com/spf13/pflag",
-        "//vendor/go.f110.dev/xerrors",
+        "@com_github_bazelbuild_buildtools//build",
+        "@com_github_google_go_github_v41//github",
+        "@com_github_masterminds_semver_v3//:semver",
+        "@com_github_spf13_pflag//:pflag",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )
 

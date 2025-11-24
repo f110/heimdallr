@@ -1,0 +1,28 @@
+load("@dev_f110_kubeproto//bazel:def.bzl", "kubeproto_go_api")
+load("@rules_go//go:def.bzl", "go_library")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+kubeproto_go_api(
+    name = "go_api",
+    srcs = ["//operator/proto/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoringv1"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1",
+)
+
+vendor_kubeproto(
+    name = "vendor_go_api",
+    src = ":go_api",
+)
+
+go_library(
+    name = "monitoringv1",
+    srcs = ["go_api.generated.object.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@dev_f110_kubeproto//go/apis/corev1",
+        "@dev_f110_kubeproto//go/apis/metav1",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
+        "@io_k8s_apimachinery//pkg/util/intstr",
+    ],
+)

@@ -1,0 +1,30 @@
+load("@dev_f110_kubeproto//bazel:def.bzl", "kubeproto_go_api")
+load("@rules_go//go:def.bzl", "go_library")
+load("//build/rules:vendor.bzl", "vendor_kubeproto")
+
+kubeproto_go_api(
+    name = "go_api",
+    srcs = ["//operator/proto/github.com/jetstack/cert-manager/pkg/apis/acmev1"],
+    all = True,
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/acmev1",
+)
+
+vendor_kubeproto(
+    name = "vendor_go_api",
+    src = ":go_api",
+)
+
+go_library(
+    name = "acmev1",
+    srcs = ["go_api.generated.object.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/acmev1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/k8s/thirdpartyapi/cert-manager/metav1",
+        "@dev_f110_kubeproto//go/apis/corev1",
+        "@dev_f110_kubeproto//go/apis/metav1",
+        "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1:apiextensions",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
+    ],
+)

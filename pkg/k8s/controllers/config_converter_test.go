@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/k8sclient"
+	"go.f110.dev/kubeproto/go/k8stestingclient"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -153,15 +153,16 @@ func TestConfigConverter_Proxy(t *testing.T) {
 			},
 		},
 	}
-	coreClient := k8sfake.NewSimpleClientset()
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
-	coreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(&corev1.Service{
+	coreClient := k8stestingclient.NewSet()
+	coreSharedInformerFactory := k8sclient.NewInformerFactory(&coreClient.Set, k8sclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
+	serviceInformer := coreSharedInformerFactory.InformerFor(&corev1.Service{})
+	serviceInformer.GetIndexer().Add(&corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-svc",
 			Namespace: metav1.NamespaceDefault,
 			Labels:    map[string]string{"k8s-app": "test"},
 		},
-		Spec: corev1.ServiceSpec{
+		Spec: &corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
 					Name: "http",
@@ -170,11 +171,10 @@ func TestConfigConverter_Proxy(t *testing.T) {
 			},
 		},
 	})
-	serviceLister := coreSharedInformerFactory.Core().V1().Services().Lister()
 
 	for _, tt := range cases {
 		t.Run(tt.Description, func(t *testing.T) {
-			buf, err := ConfigConverter{}.Proxy(tt.Backends, serviceLister)
+			buf, err := ConfigConverter{}.Proxy(tt.Backends, k8sclient.NewCoreV1ServiceLister(serviceInformer.GetIndexer()))
 			require.NoError(t, err)
 
 			got := make([]*configv2.Backend, 0)

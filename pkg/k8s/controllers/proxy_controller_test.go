@@ -5,20 +5,19 @@ import (
 	"fmt"
 	"testing"
 
-	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	listers "k8s.io/client-go/listers/core/v1"
-
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/k8sclient"
+	"gopkg.in/yaml.v2"
 )
 
 func TestProxyController(t *testing.T) {
@@ -100,7 +99,7 @@ func TestProxyController(t *testing.T) {
 		})
 		runner.AssertNoUnexpectedAction(t)
 
-		caSecret, err = runner.CoreClient.CoreV1().Secrets(p.Namespace).Get(context.TODO(), p.Status.CASecretName, metav1.GetOptions{})
+		caSecret, err = runner.CoreClient.CoreV1.GetSecret(context.TODO(), p.Namespace, p.Status.CASecretName, metav1.GetOptions{})
 		require.NoError(t, err)
 		assert.Len(t, caSecret.OwnerReferences, 0)
 	})
@@ -228,7 +227,7 @@ func TestProxyController(t *testing.T) {
 
 		updatedP, err := runner.Client.ProxyV1alpha2.GetProxy(context.Background(), p.Namespace, p.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		proxyConfigMap, err := runner.CoreClient.CoreV1().ConfigMaps(hp.Namespace).Get(context.TODO(), hp.ReverseProxyConfigName(), metav1.GetOptions{})
+		proxyConfigMap, err := runner.CoreClient.CoreV1.GetConfigMap(context.TODO(), hp.Namespace, hp.ReverseProxyConfigName(), metav1.GetOptions{})
 		require.NoError(t, err)
 
 		assert.NotEmpty(t, updatedP.Status.CASecretName)
@@ -275,11 +274,11 @@ func TestProxyController(t *testing.T) {
 			require.NoError(t, err)
 			runner.RegisterFixtures(s)
 		}
-		err := hp.Init(runner.CoreSharedInformerFactory.Core().V1().Secrets().Lister())
+		err := hp.Init(controller.secretLister)
 		require.NoError(t, err)
 		pcs, err := hp.IdealRPCServer()
 		require.NoError(t, err)
-		pcs.Deployment.Status.ReadyReplicas = *pcs.Deployment.Spec.Replicas
+		pcs.Deployment.Status.ReadyReplicas = pcs.Deployment.Spec.Replicas
 		registerFixtureFromProcess(runner, pcs)
 
 		err = runner.Reconcile(controller, p)
@@ -334,9 +333,10 @@ func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyControl
 		context.Background(),
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
-		runner.CoreClient,
+		&runner.CoreClient.Set,
 		&runner.Client.Set,
 		&runner.ThirdPartyClient.Set,
+		runner.K8sCoreClient,
 	)
 	require.NoError(t, err)
 
@@ -496,7 +496,7 @@ func setProxyStatusNumberOf(object interface{}) {
 }
 
 func newHeimdallrProxy(
-	serviceLister listers.ServiceLister,
+	serviceLister *k8sclient.CoreV1ServiceLister,
 	p *proxyv1alpha2.Proxy,
 	backends []*proxyv1alpha2.Backend,
 	roles []*proxyv1alpha2.Role,

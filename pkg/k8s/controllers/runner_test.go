@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -20,19 +19,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/heimdallr/pkg/varptr"
+	"go.f110.dev/kubeproto/go/apis/appsv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
+	"go.f110.dev/kubeproto/go/apis/policyv1"
+	"go.f110.dev/kubeproto/go/apis/rbacv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
+	"go.f110.dev/kubeproto/go/k8stestingclient"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/scale/scheme"
 	core "k8s.io/client-go/testing"
 	k8stesting "k8s.io/client-go/testing"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/gengo/namer"
 	"k8s.io/gengo/types"
 
@@ -93,10 +92,10 @@ type commonTestRunner struct {
 	Actions     []*Action
 
 	client     *testingclient.Set
-	coreClient *k8sfake.Clientset
+	coreClient *k8stestingclient.Set
 
 	sharedInformerFactory     *client.InformerFactory
-	coreSharedInformerFactory kubeinformers.SharedInformerFactory
+	coreSharedInformerFactory *k8sclient.InformerFactory
 	thirdPartyInformerFactory *thirdpartyclient.InformerFactory
 
 	transport *httpmock.MockTransport
@@ -105,14 +104,15 @@ type commonTestRunner struct {
 func newCommonTestRunner(t *testing.T) *commonTestRunner {
 	clientSet := testingclient.NewSet()
 	thirdPartyClientSet := testingthirdpartyclient.NewSet()
-	coreClient := k8sfake.NewSimpleClientset()
+	//coreClient := k8sfake.NewSimpleClientset()
+	coreClient := k8stestingclient.NewSet()
 
 	sharedInformerFactory := client.NewInformerFactory(&clientSet.Set, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+	coreSharedInformerFactory := k8sclient.NewInformerFactory(&coreClient.Set, k8sclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 	thirdPartyInformerFactory := thirdpartyclient.NewInformerFactory(&thirdPartyClientSet.Set, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
 	sharedInformerFactory.Run(context.Background())
-	coreSharedInformerFactory.Start(context.Background().Done())
+	coreSharedInformerFactory.Run(context.Background())
 
 	return &commonTestRunner{
 		t:                         t,
@@ -186,74 +186,68 @@ func (f *commonTestRunner) RegisterEtcdClusterFixture(ec *etcdv1alpha2.EtcdClust
 	f.sharedInformerFactory.InformerFor(ec).GetIndexer().Add(ec)
 }
 
+func (f *commonTestRunner) registerCoreObject(obj kruntime.Object) {
+	f.coreClient.Tracker().Add(obj)
+	f.coreSharedInformerFactory.InformerFor(obj).GetIndexer().Add(obj)
+}
+
 func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
 	for _, v := range p {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Core().V1().Pods().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterSecretFixture(s ...*corev1.Secret) {
 	for _, v := range s {
-		v.CreationTimestamp = metav1.Now()
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Core().V1().Secrets().Informer().GetIndexer().Add(v)
+		v.CreationTimestamp = varptr.Ptr(metav1.Now())
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterDeploymentFixture(d *appsv1.Deployment) {
-	f.coreClient.Tracker().Add(d)
-	f.coreSharedInformerFactory.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
+	f.registerCoreObject(d)
 }
 
 func (f *commonTestRunner) RegisterPodDisruptionBudgetFixture(pdb *policyv1.PodDisruptionBudget) {
-	f.coreClient.Tracker().Add(pdb)
-	f.coreSharedInformerFactory.Policy().V1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
+	f.registerCoreObject(pdb)
 }
 
 func (f *commonTestRunner) RegisterServiceFixture(s ...*corev1.Service) {
 	for _, v := range s {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterServiceAccountFixture(sa ...*corev1.ServiceAccount) {
 	for _, v := range sa {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Core().V1().ServiceAccounts().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterRoleFixture(r ...*rbacv1.Role) {
 	for _, v := range r {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Rbac().V1().Roles().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterRoleBindingFixture(r ...*rbacv1.RoleBinding) {
 	for _, v := range r {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Rbac().V1().RoleBindings().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterConfigMapFixture(c ...*corev1.ConfigMap) {
 	for _, v := range c {
-		f.coreClient.Tracker().Add(v)
-		f.coreSharedInformerFactory.Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
+		f.registerCoreObject(v)
 	}
 }
 
 func (f *commonTestRunner) RegisterIngressFixture(i *networkingv1.Ingress) {
-	f.coreClient.Tracker().Add(i)
-	f.coreSharedInformerFactory.Networking().V1().Ingresses().Informer().GetIndexer().Add(i)
+	f.registerCoreObject(i)
 }
 
 func (f *commonTestRunner) RegisterIngressClassFixture(ic *networkingv1.IngressClass) {
-	f.coreClient.Tracker().Add(ic)
-	f.coreSharedInformerFactory.Networking().V1().IngressClasses().Informer().GetIndexer().Add(ic)
+	f.registerCoreObject(ic)
 }
 
 func (f *commonTestRunner) RegisterCertificateFixture(c ...*certmanagerv1.Certificate) {
@@ -276,13 +270,13 @@ func (f *commonTestRunner) ExpectCreateServiceAccount() {
 }
 
 func (f *commonTestRunner) ExpectCreateRole() {
-	action := core.NewCreateAction(rbacv1.SchemeGroupVersion.WithResource("roles"), "", &rbacv1.Role{})
+	action := core.NewCreateAction(rbacv1.SchemaGroupVersion.WithResource("roles"), "", &rbacv1.Role{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectCreateRoleBinding() {
-	action := core.NewCreateAction(rbacv1.SchemeGroupVersion.WithResource("rolebindings"), "", &rbacv1.RoleBinding{})
+	action := core.NewCreateAction(rbacv1.SchemaGroupVersion.WithResource("rolebindings"), "", &rbacv1.RoleBinding{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -300,25 +294,25 @@ func (f *commonTestRunner) ExpectDeletePod() {
 }
 
 func (f *commonTestRunner) ExpectCreateDeployment() {
-	action := core.NewCreateAction(appsv1.SchemeGroupVersion.WithResource("deployments"), "", &appsv1.Deployment{})
+	action := core.NewCreateAction(appsv1.SchemaGroupVersion.WithResource("deployments"), "", &appsv1.Deployment{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectCreateService() {
-	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("services"), "", &corev1.Service{})
+	action := core.NewCreateAction(corev1.SchemaGroupVersion.WithResource("services"), "", &corev1.Service{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectCreateConfigMap() {
-	action := core.NewCreateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
+	action := core.NewCreateAction(corev1.SchemaGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectCreatePodDisruptionBudget() {
-	action := core.NewCreateAction(policyv1.SchemeGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1.PodDisruptionBudget{})
+	action := core.NewCreateAction(policyv1.SchemaGroupVersion.WithResource("poddisruptionbudgets"), "", &policyv1.PodDisruptionBudget{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -342,13 +336,13 @@ func (f *commonTestRunner) ExpectCreateCertificate() {
 }
 
 func (f *commonTestRunner) ExpectUpdateSecret() {
-	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
+	action := core.NewUpdateAction(corev1.SchemaGroupVersion.WithResource("secrets"), "", &corev1.Secret{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
 
 func (f *commonTestRunner) ExpectUpdateIngress() {
-	action := core.NewUpdateAction(networkingv1.SchemeGroupVersion.WithResource("ingresses"), "", &networkingv1.Ingress{})
+	action := core.NewUpdateAction(networkingv1.SchemaGroupVersion.WithResource("ingresses"), "", &networkingv1.Ingress{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -393,7 +387,7 @@ func (f *commonTestRunner) ExpectUpdateEtcdClusterStatus() {
 }
 
 func (f *commonTestRunner) ExpectUpdateConfigMap() {
-	action := core.NewUpdateAction(corev1.SchemeGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
+	action := core.NewUpdateAction(corev1.SchemaGroupVersion.WithResource("configmaps"), "", &corev1.ConfigMap{})
 
 	f.coreActions = append(f.coreActions, f.expectActionWithCaller(action))
 }
@@ -460,8 +454,8 @@ Match:
 				continue
 			}
 
-			if actualActionObjMeta.GetNamespace() == objMeta.GetNamespace() &&
-				actualActionObjMeta.GetName() == objMeta.GetName() {
+			if actualActionObjMeta.GetObjectMeta().Namespace == objMeta.GetObjectMeta().Namespace &&
+				actualActionObjMeta.GetObjectMeta().Name == objMeta.GetObjectMeta().Name {
 				matchObj = true
 				v.Visited = true
 				break Match
@@ -505,7 +499,7 @@ func (f *commonTestRunner) AssertNoUnexpectedAction(t *testing.T) {
 			key := ""
 			meta, ok := v.Object.(metav1.Object)
 			if ok {
-				key = fmt.Sprintf(" %s/%s", meta.GetNamespace(), meta.GetName())
+				key = fmt.Sprintf(" %s/%s", meta.GetObjectMeta().Namespace, meta.GetObjectMeta().Name)
 			}
 			kind := ""
 			if v.Object != nil {
@@ -600,65 +594,6 @@ func (f *commonTestRunner) actionMatcher() {
 	}
 }
 
-type proxyControllerTestRunner struct {
-	*commonTestRunner
-	t *testing.T
-
-	c *ProxyController
-}
-
-func newProxyControllerTestRunner(t *testing.T) *proxyControllerTestRunner {
-	f := &proxyControllerTestRunner{
-		commonTestRunner: newCommonTestRunner(t),
-		t:                t,
-	}
-
-	f.commonTestRunner.coreClient.Resources = []*metav1.APIResourceList{
-		{
-			GroupVersion: "cert-manager.io/v1",
-			APIResources: []metav1.APIResource{
-				{
-					Kind: "Certificate",
-				},
-			},
-		},
-	}
-
-	c, err := NewProxyController(context.Background(), f.sharedInformerFactory, f.coreSharedInformerFactory, f.coreClient, &f.client.Set, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.c = c
-
-	return f
-}
-
-func (f *proxyControllerTestRunner) Run(t *testing.T, p *proxyv1alpha2.Proxy) {
-	t.Helper()
-
-	key, err := cache.MetaNamespaceKeyFunc(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	syncErr := f.c.ProcessKey(key)
-	f.actionMatcher()
-
-	if syncErr != nil {
-		t.Errorf("Expect to not occurred error: %+v", syncErr)
-	}
-}
-
-func (f *proxyControllerTestRunner) RunExpectError(t *testing.T, p *proxyv1alpha2.Proxy, expectErr error) {
-	key, err := cache.MetaNamespaceKeyFunc(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	syncErr := f.c.ProcessKey(key)
-	f.actionMatcher()
-
-	IsError(t, syncErr, expectErr)
-}
-
 type MockCluster struct {
 	members []*etcdserverpb.Member
 }
@@ -745,47 +680,6 @@ func (m *MockMaintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {
 
 func (m *MockMaintenance) MoveLeader(ctx context.Context, transfereeID uint64) (*clientv3.MoveLeaderResponse, error) {
 	panic("implement me")
-}
-
-type ingressControllerTestRunner struct {
-	*commonTestRunner
-	t *testing.T
-
-	c *IngressController
-}
-
-func newIngressControllerTestRunner(t *testing.T) *ingressControllerTestRunner {
-	f := &ingressControllerTestRunner{
-		commonTestRunner: newCommonTestRunner(t),
-		t:                t,
-	}
-
-	c := NewIngressController(f.coreSharedInformerFactory, f.sharedInformerFactory, f.coreClient, f.client.ProxyV1alpha2)
-	f.c = c
-
-	return f
-}
-
-func (f *ingressControllerTestRunner) Run(t *testing.T, ing *networkingv1.Ingress) {
-	key, err := cache.MetaNamespaceKeyFunc(ing)
-	if err != nil {
-		t.Fatal(err)
-	}
-	syncErr := f.c.ProcessKey(key)
-	f.actionMatcher()
-
-	if syncErr != nil {
-		t.Errorf("Expect to not occurred error: %+v", syncErr)
-	}
-}
-
-func IsError(t *testing.T, actual, expect error) {
-	if actual == nil {
-		t.Errorf("Expect occurred error but not")
-	} else if !errors.Is(actual, expect) {
-		t.Logf("%+v", actual)
-		t.Errorf("%q is not %q error", actual, expect)
-	}
 }
 
 func excludeReadActions(actions []core.Action) []core.Action {

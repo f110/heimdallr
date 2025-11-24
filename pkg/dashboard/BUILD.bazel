@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "dashboard",
@@ -14,10 +14,10 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/template",
         "//tmpl/dashboard",
-        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/julienschmidt/httprouter",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/go.uber.org/zap",
-        "//vendor/google.golang.org/grpc",
+        "@com_github_golang_jwt_jwt_v4//:jwt",
+        "@com_github_julienschmidt_httprouter//:httprouter",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@org_golang_google_grpc//:grpc",
+        "@org_uber_go_zap//:zap",
     ],
 )

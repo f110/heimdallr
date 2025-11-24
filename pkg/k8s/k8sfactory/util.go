@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"path/filepath"
 
-	corev1 "k8s.io/api/core/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 )

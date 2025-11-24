@@ -10,24 +10,19 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
-	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"go.f110.dev/kubeproto/go/apis/appsv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
+	"go.f110.dev/kubeproto/go/apis/policyv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	applisters "k8s.io/client-go/listers/apps/v1"
-	listers "k8s.io/client-go/listers/core/v1"
-	networkinglisters "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -36,6 +31,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 )
 
@@ -49,19 +46,19 @@ var certManagerGroupVersionOrder = []string{"v1", "v1beta1", "v1alpha3", "v1alph
 type ProxyController struct {
 	*controllerbase.Controller
 
-	client                 kubernetes.Interface
-	serviceLister          listers.ServiceLister
+	client                 *k8sclient.Set
+	serviceLister          *k8sclient.CoreV1ServiceLister
 	serviceListerSynced    cache.InformerSynced
-	secretLister           listers.SecretLister
+	secretLister           *k8sclient.CoreV1SecretLister
 	secretListerSynced     cache.InformerSynced
-	configMapLister        listers.ConfigMapLister
+	configMapLister        *k8sclient.CoreV1ConfigMapLister
 	configMapListerSynced  cache.InformerSynced
-	deploymentLister       applisters.DeploymentLister
+	deploymentLister       *k8sclient.AppsV1DeploymentLister
 	deploymentListerSynced cache.InformerSynced
-	ingressLister          networkinglisters.IngressLister
+	ingressLister          *k8sclient.NetworkingK8sIoV1IngressLister
 	ingressListerSynced    cache.InformerSynced
 
-	coreSharedInformer    kubeinformers.SharedInformerFactory
+	coreSharedInformer    *k8sclient.InformerFactory
 	proxyInformer         cache.SharedIndexInformer
 	proxyLister           *client.ProxyV1alpha2ProxyLister
 	backendInformer       cache.SharedIndexInformer
@@ -88,19 +85,18 @@ type ProxyController struct {
 func NewProxyController(
 	ctx context.Context,
 	sharedInformerFactory *client.InformerFactory,
-	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
-	coreClient kubernetes.Interface,
+	coreSharedInformerFactory *k8sclient.InformerFactory,
+	coreClient *k8sclient.Set,
 	clientSet *client.Set,
 	thirdPartyClientSet *thirdpartyclient.Set,
+	k8sClient kubernetes.Interface,
 ) (*ProxyController, error) {
 	proxyInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.ProxyV1alpha2, metav1.NamespaceAll, 30*time.Second)
 	ecInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.EtcdV1alpha2, metav1.NamespaceAll, 30*time.Second)
 
-	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
-	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
-	configMapInformer := coreSharedInformerFactory.Core().V1().ConfigMaps()
-	deploymentInformer := coreSharedInformerFactory.Apps().V1().Deployments()
-	ingressInformer := coreSharedInformerFactory.Networking().V1().Ingresses()
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
+	networkingv1Informer := k8sclient.NewNetworkingK8sIoV1Informer(coreSharedInformerFactory.Cache(), coreClient.NetworkingK8sIoV1, metav1.NamespaceAll, 30*time.Second)
+	appsv1Informer := k8sclient.NewAppsV1Informer(coreSharedInformerFactory.Cache(), coreClient.AppsV1, metav1.NamespaceAll, 30*time.Second)
 
 	c := &ProxyController{
 		client:                 coreClient,
@@ -116,24 +112,24 @@ func NewProxyController(
 		rpcPermissionLister:    proxyInformer.RpcPermissionLister(),
 		ecLister:               ecInformer.EtcdClusterLister(),
 		ecListerSynced:         ecInformer.EtcdClusterInformer().HasSynced,
-		serviceLister:          serviceInformer.Lister(),
-		serviceListerSynced:    serviceInformer.Informer().HasSynced,
-		secretLister:           secretInformer.Lister(),
-		secretListerSynced:     secretInformer.Informer().HasSynced,
-		configMapLister:        configMapInformer.Lister(),
-		configMapListerSynced:  configMapInformer.Informer().HasSynced,
-		deploymentLister:       deploymentInformer.Lister(),
-		deploymentListerSynced: deploymentInformer.Informer().HasSynced,
-		ingressLister:          ingressInformer.Lister(),
-		ingressListerSynced:    ingressInformer.Informer().HasSynced,
+		serviceLister:          corev1Informer.ServiceLister(),
+		serviceListerSynced:    corev1Informer.ServiceInformer().HasSynced,
+		secretLister:           corev1Informer.SecretLister(),
+		secretListerSynced:     corev1Informer.SecretInformer().HasSynced,
+		configMapLister:        corev1Informer.ConfigMapLister(),
+		configMapListerSynced:  corev1Informer.ConfigMapInformer().HasSynced,
+		deploymentLister:       appsv1Informer.DeploymentLister(),
+		deploymentListerSynced: appsv1Informer.DeploymentInformer().HasSynced,
+		ingressLister:          networkingv1Informer.IngressLister(),
+		ingressListerSynced:    networkingv1Informer.IngressInformer().HasSynced,
 		clientset:              clientSet,
 		thirdPartyClientSet:    thirdPartyClientSet,
 		coreSharedInformer:     coreSharedInformerFactory,
 		certManagerVersion:     certManagerGroupVersionOrder[len(certManagerGroupVersionOrder)-1],
 	}
-	c.Controller = controllerbase.NewController(c, coreClient)
+	c.Controller = controllerbase.NewController(c, k8sClient)
 
-	groups, apiList, err := coreClient.Discovery().ServerGroupsAndResources()
+	groups, apiList, err := k8sClient.Discovery().ServerGroupsAndResources()
 	if err != nil {
 		return nil, err
 	}
@@ -200,10 +196,7 @@ func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 			}
 			return []string{key}, nil
 		case *proxyv1alpha2.Backend, *proxyv1alpha2.Role, *proxyv1alpha2.RpcPermission:
-			metaObj, err := meta.Accessor(obj)
-			if err != nil {
-				return nil, err
-			}
+			metaObj := obj.(metav1.Object)
 			return c.subordinateResourceKeys(metaObj)
 		case *proxyv1alpha2.RoleBinding:
 			roleBinding := obj.(*proxyv1alpha2.RoleBinding)
@@ -278,7 +271,7 @@ NextProxy:
 	return keys, nil
 }
 
-func (c *ProxyController) checkCertManagerVersion(groups []*metav1.APIGroup) (string, error) {
+func (c *ProxyController) checkCertManagerVersion(groups []*k8smetav1.APIGroup) (string, error) {
 	for _, v := range groups {
 		if v.Name == certmanager.GroupName {
 			m := make(map[string]struct{})
@@ -297,7 +290,7 @@ func (c *ProxyController) checkCertManagerVersion(groups []*metav1.APIGroup) (st
 	return "", fmt.Errorf("controllers: cert-manager.io or compatible GroupVersion not found")
 }
 
-func (c *ProxyController) discoverPrometheusOperator(apiList []*metav1.APIResourceList) {
+func (c *ProxyController) discoverPrometheusOperator(apiList []*k8smetav1.APIResourceList) {
 	for _, v := range apiList {
 		if v.GroupVersion == "monitoring.coreos.com/v1" {
 			c.enablePrometheusOperator = true
@@ -346,7 +339,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	defaultResourceSelector := labels.Set(map[string]string{"app.kubernetes.io/managed-by": "heimdallr-operator", "app.kubernetes.io/instance": proxy.Name}).AsSelector()
 
 	var backends []*proxyv1alpha2.Backend
-	if proxy.Spec.BackendSelector.LabelSelector.Size() != 0 {
+	if len(proxy.Spec.BackendSelector.LabelSelector.MatchLabels) > 0 || len(proxy.Spec.BackendSelector.LabelSelector.MatchExpressions) > 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.BackendSelector.LabelSelector)
 		if err != nil {
 			return xerrors.WithStack(err)
@@ -366,7 +359,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	var roles []*proxyv1alpha2.Role
-	if proxy.Spec.RoleSelector.LabelSelector.Size() != 0 {
+	if len(proxy.Spec.RoleSelector.LabelSelector.MatchLabels) > 0 || len(proxy.Spec.RoleSelector.LabelSelector.MatchExpressions) > 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RoleSelector.LabelSelector)
 		if err != nil {
 			return xerrors.WithStack(err)
@@ -389,7 +382,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	if proxy.Spec.RpcPermissionSelector == nil {
 		proxy.Spec.RpcPermissionSelector = &proxyv1alpha2.LabelSelector{}
 	}
-	if proxy.Spec.RpcPermissionSelector.LabelSelector.Size() != 0 {
+	if len(proxy.Spec.RpcPermissionSelector.LabelSelector.MatchLabels) > 0 || len(proxy.Spec.RpcPermissionSelector.LabelSelector.MatchExpressions) > 0 {
 		selector, err := metav1.LabelSelectorAsSelector(&proxy.Spec.RpcPermissionSelector.LabelSelector)
 		if err != nil {
 			return xerrors.WithStack(err)
@@ -505,7 +498,7 @@ func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha2.Et
 }
 
 func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
-	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
+	_, err := c.secretLister.Get(lp.Namespace, lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.WithStack(err)
 	}
@@ -524,14 +517,14 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 			continue
 		}
 
-		_, err := c.secretLister.Secrets(lp.Namespace).Get(secret.Name)
+		_, err := c.secretLister.Get(lp.Namespace, secret.Name)
 		if err != nil && apierrors.IsNotFound(err) {
 			secret, err := secret.Create()
 			if err != nil {
 				return err
 			}
 
-			_, err = c.client.CoreV1().Secrets(lp.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+			_, err = c.client.CoreV1.CreateSecret(ctx, secret, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
@@ -545,7 +538,7 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 		return err
 	}
 
-	_, err := c.secretLister.Secrets(lp.Object.Namespace).Get(lp.CertificateSecretName())
+	_, err := c.secretLister.Get(lp.Namespace, lp.CertificateSecretName())
 	if err != nil {
 		return controllerbase.WrapRetryError(xerrors.WithStack(err))
 	}
@@ -566,7 +559,7 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 		return nil
 	}
 
-	s, err := c.secretLister.Secrets(lp.Namespace).Get(secretName)
+	s, err := c.secretLister.Get(lp.Namespace, secretName)
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
@@ -583,8 +576,8 @@ func (c *ProxyController) removeOwnerReferenceFromSecret(ctx context.Context, lp
 	if !found {
 		return nil
 	}
-	s.SetOwnerReferences(newRef)
-	_, err = c.client.CoreV1().Secrets(s.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+	s.OwnerReferences = newRef
+	_, err = c.client.CoreV1.UpdateSecret(ctx, s, metav1.UpdateOptions{})
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
@@ -737,7 +730,7 @@ func (c *ProxyController) reconcileDashboard(ctx context.Context, lp *HeimdallrP
 }
 
 func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *HeimdallrProxy) error {
-	_, err := c.secretLister.Secrets(lp.Namespace).Get(lp.Spec.IdentityProvider.ClientSecretRef.Name)
+	_, err := c.secretLister.Get(lp.Namespace, lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.WithStack(err)
 	}
@@ -809,7 +802,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 			c.Log(ctx).Warn("Could not parse annotation key which contains Ingress name", zap.Error(err))
 			continue
 		}
-		ingress, err := c.ingressLister.Ingresses(ns).Get(name)
+		ingress, err := c.ingressLister.Get(ns, name)
 		if err != nil && apierrors.IsNotFound(err) {
 			c.Log(ctx).Info("Skip updating Ingress")
 			continue
@@ -831,7 +824,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 			Hostname: hostname,
 		})
 		if !reflect.DeepEqual(updatedI.Status, ingress.Status) {
-			_, err = c.client.NetworkingV1().Ingresses(updatedI.Namespace).UpdateStatus(ctx, updatedI, metav1.UpdateOptions{})
+			_, err = c.client.NetworkingK8sIoV1.UpdateStatusIngress(ctx, updatedI, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
@@ -925,7 +918,7 @@ func (c *ProxyController) isReady(lp *HeimdallrProxy) bool {
 }
 
 func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
-	if d.Status.ReadyReplicas < *d.Spec.Replicas {
+	if d.Status.ReadyReplicas < d.Spec.Replicas {
 		return false
 	}
 
@@ -987,11 +980,11 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 }
 
 func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
-	d, err := c.deploymentLister.Deployments(deployment.Namespace).Get(deployment.Name)
+	d, err := c.deploymentLister.Get(deployment.Namespace, deployment.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(deployment)
 
-		newD, err := c.client.AppsV1().Deployments(deployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
+		newD, err := c.client.AppsV1.CreateDeployment(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1005,7 +998,7 @@ func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *Heim
 	newD := d.DeepCopy()
 	newD.Spec = deployment.Spec
 	if !reflect.DeepEqual(newD.Spec, d.Spec) {
-		_, err = c.client.AppsV1().Deployments(newD.Namespace).Update(ctx, newD, metav1.UpdateOptions{})
+		_, err = c.client.AppsV1.UpdateDeployment(ctx, newD, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1016,11 +1009,11 @@ func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *Heim
 }
 
 func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1.PodDisruptionBudget) error {
-	p, err := c.client.PolicyV1().PodDisruptionBudgets(pdb.Namespace).Get(ctx, pdb.Name, metav1.GetOptions{})
+	p, err := c.client.PolicyV1.GetPodDisruptionBudget(ctx, pdb.Namespace, pdb.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(pdb)
 
-		_, err = c.client.PolicyV1().PodDisruptionBudgets(pdb.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
+		_, err = c.client.PolicyV1.CreatePodDisruptionBudget(ctx, pdb, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1033,7 +1026,7 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context,
 	newPDB := p.DeepCopy()
 	newPDB.Spec = pdb.Spec
 	if !reflect.DeepEqual(newPDB.Spec, pdb.Spec) {
-		_, err = c.client.PolicyV1().PodDisruptionBudgets(newPDB.Namespace).Update(ctx, newPDB, metav1.UpdateOptions{})
+		_, err = c.client.PolicyV1.UpdatePodDisruptionBudget(ctx, newPDB, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1043,11 +1036,11 @@ func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context,
 }
 
 func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *HeimdallrProxy, svc *corev1.Service) error {
-	s, err := c.serviceLister.Services(svc.Namespace).Get(svc.Name)
+	s, err := c.serviceLister.Get(svc.Namespace, svc.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(svc)
 
-		_, err = c.client.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+		_, err = c.client.CoreV1.CreateService(ctx, svc, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1063,7 +1056,7 @@ func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *Heimdal
 	newS.Spec.Type = svc.Spec.Type
 	newS.Spec.Ports = svc.Spec.Ports
 	if !c.equalService(newS, s) {
-		_, err = c.client.CoreV1().Services(newS.Namespace).Update(ctx, newS, metav1.UpdateOptions{})
+		_, err = c.client.CoreV1.UpdateService(ctx, newS, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1073,11 +1066,11 @@ func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *Heimdal
 }
 
 func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
-	cm, err := c.configMapLister.ConfigMaps(configMap.Namespace).Get(configMap.Name)
+	cm, err := c.configMapLister.Get(configMap.Namespace, configMap.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(configMap)
 
-		_, err = c.client.CoreV1().ConfigMaps(configMap.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
+		_, err = c.client.CoreV1.CreateConfigMap(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1092,7 +1085,7 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
 		c.Log(ctx).Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
-		_, err = c.client.CoreV1().ConfigMaps(newCM.Namespace).Update(ctx, newCM, metav1.UpdateOptions{})
+		_, err = c.client.CoreV1.UpdateConfigMap(ctx, newCM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1170,9 +1163,9 @@ func (c *ProxyController) searchParentProxy(m metav1.Object) ([]*proxyv1alpha2.P
 	targets := make([]*proxyv1alpha2.Proxy, 0)
 Item:
 	for _, v := range ret {
-		if m.GetLabels() != nil {
+		if m.GetObjectMeta().Labels != nil {
 			for k := range v.Spec.BackendSelector.LabelSelector.MatchLabels {
-				value, ok := m.GetLabels()[k]
+				value, ok := m.GetObjectMeta().Labels[k]
 				if !ok || v.Spec.BackendSelector.LabelSelector.MatchLabels[k] != value {
 					continue Item
 				}
@@ -1207,7 +1200,7 @@ func (c *ProxyController) equalServicePort(left, right []corev1.ServicePort) boo
 		}
 		leftTP := l[key].TargetPort
 		rightTP := r[key].TargetPort
-		if leftTP.IntValue() != rightTP.IntValue() {
+		if leftTP != nil && rightTP != nil && leftTP.IntValue() != rightTP.IntValue() {
 			return false
 		}
 		if l[key].Port != r[key].Port {

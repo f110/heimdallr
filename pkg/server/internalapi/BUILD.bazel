@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "internalapi",
@@ -16,9 +16,9 @@ go_library(
         "//pkg/logger",
         "//pkg/server",
         "//pkg/stat",
-        "//vendor/github.com/julienschmidt/httprouter",
-        "//vendor/github.com/prometheus/client_golang/prometheus",
-        "//vendor/github.com/prometheus/client_golang/prometheus/promhttp",
-        "//vendor/go.uber.org/zap",
+        "@com_github_julienschmidt_httprouter//:httprouter",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promhttp",
+        "@org_uber_go_zap//:zap",
     ],
 )

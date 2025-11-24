@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -54,7 +54,8 @@ type mainProcess struct {
 
 	ctx              context.Context
 	cancel           context.CancelFunc
-	coreClient       *kubernetes.Clientset
+	coreClient       *k8sclient.Set
+	k8sCoreClient    kubernetes.Interface
 	client           *client.Set
 	thirdPartyClient *thirdpartyclient.Set
 	restCfg          *rest.Config
@@ -120,7 +121,11 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	}
 	m.restCfg = cfg
 
-	m.coreClient, err = kubernetes.NewForConfig(cfg)
+	m.k8sCoreClient, err = kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return fsm.UnknownState, err
+	}
+	m.coreClient, err = k8sclient.NewSet(cfg)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
@@ -151,7 +156,7 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 			Name:      m.leaseLockName,
 			Namespace: m.leaseLockNamespace,
 		},
-		Client: m.coreClient.CoordinationV1(),
+		Client: m.k8sCoreClient.CoordinationV1(),
 		LockConfig: resourcelock.ResourceLockConfig{
 			Identity: m.id,
 		},
@@ -190,10 +195,10 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 }
 
 func (m *mainProcess) startWorkers() (fsm.State, error) {
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(m.coreClient, 30*time.Second)
+	coreSharedInformerFactory := k8sclient.NewInformerFactory(m.coreClient, k8sclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 	factory := client.NewInformerFactory(m.client, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
-	c, err := controllers.NewProxyController(m.ctx, factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient)
+	c, err := controllers.NewProxyController(m.ctx, factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient, m.k8sCoreClient)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
@@ -204,6 +209,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 		coreSharedInformerFactory,
 		m.coreClient,
 		m.client.EtcdV1alpha2,
+		m.k8sCoreClient,
 		m.restCfg,
 		m.clusterDomain,
 		m.dev,
@@ -215,13 +221,13 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	}
 	m.e = e
 
-	g, err := controllers.NewGitHubController(factory, coreSharedInformerFactory, m.coreClient, m.client.ProxyV1alpha2, http.DefaultTransport)
+	g, err := controllers.NewGitHubController(factory, coreSharedInformerFactory, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient, http.DefaultTransport)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
 	m.g = g
 
-	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.coreClient, m.client.ProxyV1alpha2)
+	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient)
 	m.ic = ic
 
 	if !m.disableWebhook {
@@ -234,7 +240,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 		}()
 	}
 
-	coreSharedInformerFactory.Start(m.ctx.Done())
+	coreSharedInformerFactory.Run(m.ctx)
 	factory.Run(m.ctx)
 
 	c.Run(m.ctx, m.workers)

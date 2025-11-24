@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "rpctestutil",
@@ -7,6 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/rpc",
-        "//vendor/google.golang.org/grpc",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
