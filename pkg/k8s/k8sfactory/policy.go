@@ -1,7 +1,7 @@
 package k8sfactory
 
 import (
-	policyv1 "k8s.io/api/policy/v1"
+	"go.f110.dev/kubeproto/go/apis/policyv1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -9,7 +9,7 @@ import (
 func PodDisruptionBudgetFactory(base *policyv1.PodDisruptionBudget, traits ...Trait) *policyv1.PodDisruptionBudget {
 	var p *policyv1.PodDisruptionBudget
 	if base == nil {
-		p = &policyv1.PodDisruptionBudget{}
+		p = &policyv1.PodDisruptionBudget{Spec: &policyv1.PodDisruptionBudgetSpec{}, Status: &policyv1.PodDisruptionBudgetStatus{}}
 	} else {
 		p = base.DeepCopy()
 	}

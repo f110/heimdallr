@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "token",
@@ -11,7 +11,7 @@ go_library(
     ],
     importpath = "go.f110.dev/heimdallr/pkg/auth/token",
     visibility = ["//visibility:public"],
-    deps = ["//vendor/go.f110.dev/xerrors"],
+    deps = ["@dev_f110_go_xerrors//:xerrors"],
 )
 
 go_test(
@@ -19,7 +19,7 @@ go_test(
     srcs = ["token_client_test.go"],
     embed = [":token"],
     deps = [
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

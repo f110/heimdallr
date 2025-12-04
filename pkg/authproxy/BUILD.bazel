@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "authproxy",
@@ -20,11 +20,11 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/session",
         "//pkg/stat",
-        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/google/go-github/v41/github",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/go.uber.org/zap",
-        "//vendor/go.uber.org/zap/zapcore",
+        "@com_github_golang_jwt_jwt_v4//:jwt",
+        "@com_github_google_go_github_v41//github",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@org_uber_go_zap//:zap",
+        "@org_uber_go_zap//zapcore",
     ],
 )
 
@@ -47,7 +47,7 @@ go_test(
         "//pkg/netutil",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

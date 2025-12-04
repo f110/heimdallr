@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "btesting",
@@ -14,10 +14,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/netutil",
-        "//vendor/github.com/fatih/color",
-        "//vendor/github.com/peterh/liner",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/go.f110.dev/xerrors",
+        "@com_github_fatih_color//:color",
+        "@com_github_peterh_liner//:liner",
+        "@com_github_stretchr_testify//assert",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )
 
@@ -30,7 +30,7 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":btesting"],
     deps = [
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

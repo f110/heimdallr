@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "cert",
@@ -14,8 +14,8 @@ go_library(
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/software.sslmate.com/src/go-pkcs12",
+        "@com_sslmate_software_src_go_pkcs12//:go-pkcs12",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )
 
@@ -31,8 +31,8 @@ go_test(
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/database/memory",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
-        "//vendor/software.sslmate.com/src/go-pkcs12",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_sslmate_software_src_go_pkcs12//:go-pkcs12",
     ],
 )

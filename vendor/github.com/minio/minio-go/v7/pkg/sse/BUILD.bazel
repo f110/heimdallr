@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "sse",
-    srcs = ["sse.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/github.com/minio/minio-go/v7/pkg/sse",
-    importpath = "github.com/minio/minio-go/v7/pkg/sse",
-    visibility = ["//visibility:public"],
-)

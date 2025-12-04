@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "k8s",
@@ -11,21 +11,21 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/poll",
-        "//vendor/github.com/fsnotify/fsnotify",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1:apiextensions",
-        "//vendor/k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1:apiextensions",
-        "//vendor/k8s.io/apimachinery/pkg/api/errors",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/serializer",
-        "//vendor/k8s.io/apimachinery/pkg/types",
-        "//vendor/k8s.io/apimachinery/pkg/util/yaml",
-        "//vendor/k8s.io/client-go/discovery",
-        "//vendor/k8s.io/client-go/kubernetes",
-        "//vendor/k8s.io/client-go/kubernetes/scheme",
-        "//vendor/k8s.io/client-go/rest",
+        "@com_github_fsnotify_fsnotify//:fsnotify",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1:apiextensions",
+        "@io_k8s_apiextensions_apiserver//pkg/client/clientset/clientset/typed/apiextensions/v1:apiextensions",
+        "@io_k8s_apimachinery//pkg/api/errors",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1/unstructured",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/serializer",
+        "@io_k8s_apimachinery//pkg/types",
+        "@io_k8s_apimachinery//pkg/util/yaml",
+        "@io_k8s_client_go//discovery",
+        "@io_k8s_client_go//kubernetes",
+        "@io_k8s_client_go//kubernetes/scheme",
+        "@io_k8s_client_go//rest",
     ],
 )
 
@@ -38,11 +38,11 @@ go_test(
     ],
     embed = [":k8s"],
     deps = [
-        "//vendor/github.com/fsnotify/fsnotify",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/util/yaml",
+        "@com_github_fsnotify_fsnotify//:fsnotify",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1/unstructured",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/util/yaml",
     ],
 )

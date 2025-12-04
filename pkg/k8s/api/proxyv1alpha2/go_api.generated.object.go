@@ -1,9 +1,9 @@
 package proxyv1alpha2
 
 import (
-	metav1_1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1_1 "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/metav1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -14,7 +14,7 @@ var (
 	GroupVersion       = metav1.GroupVersion{Group: GroupName, Version: "v1alpha2"}
 	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme        = SchemeBuilder.AddToScheme
-	SchemaGroupVersion = schema.GroupVersion{Group: "proxy.f110.dev", Version: "v1alpha2"}
+	SchemaGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha2"}
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
@@ -1144,24 +1144,6 @@ func (in *SecretSelector) DeepCopy() *SecretSelector {
 		return nil
 	}
 	out := new(SecretSelector)
-	in.DeepCopyInto(out)
-	return out
-}
-
-type LabelsEntry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (in *LabelsEntry) DeepCopyInto(out *LabelsEntry) {
-	*out = *in
-}
-
-func (in *LabelsEntry) DeepCopy() *LabelsEntry {
-	if in == nil {
-		return nil
-	}
-	out := new(LabelsEntry)
 	in.DeepCopyInto(out)
 	return out
 }

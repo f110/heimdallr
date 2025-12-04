@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "v1alpha1",
@@ -14,8 +14,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/k8s/api/proxy/v1alpha1",
-        "//vendor/k8s.io/apimachinery/pkg/api/errors",
-        "//vendor/k8s.io/apimachinery/pkg/labels",
-        "//vendor/k8s.io/client-go/tools/cache",
+        "@io_k8s_apimachinery//pkg/api/errors",
+        "@io_k8s_apimachinery//pkg/labels",
+        "@io_k8s_client_go//tools/cache",
     ],
 )

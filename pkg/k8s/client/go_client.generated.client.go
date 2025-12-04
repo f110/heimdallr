@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,26 +52,28 @@ func init() {
 }
 
 type Backend interface {
-	Get(ctx context.Context, resourceName, kindName, namespace, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
-	List(ctx context.Context, resourceName, kindName, namespace string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
-	Create(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
-	Update(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
-	UpdateStatus(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	Get(ctx context.Context, resourceName, namespace, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
+	List(ctx context.Context, resourceName, namespace string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
+	Create(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
+	Update(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateStatus(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error
 	Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error)
-	GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
-	ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
-	CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
-	UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
-	UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	GetClusterScoped(ctx context.Context, resourceName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
+	ListClusterScoped(ctx context.Context, resourceName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error)
+	CreateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	UpdateStatusClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
 	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
 }
+
 type Set struct {
 	EtcdV1alpha1  *EtcdV1alpha1
 	EtcdV1alpha2  *EtcdV1alpha2
 	ProxyV1alpha1 *ProxyV1alpha1
 	ProxyV1alpha2 *ProxyV1alpha2
+	RESTClient    *rest.RESTClient
 }
 
 func NewSet(cfg *rest.Config) (*Set, error) {
@@ -119,6 +122,14 @@ func NewSet(cfg *rest.Config) (*Set, error) {
 		}
 		s.ProxyV1alpha2 = NewProxyV1alpha2Client(&restBackend{client: c})
 	}
+	{
+		conf := *cfg
+		c, err := rest.RESTClientFor(&conf)
+		if err != nil {
+			return nil, err
+		}
+		s.RESTClient = c
+	}
 
 	return s, nil
 }
@@ -127,7 +138,7 @@ type restBackend struct {
 	client *rest.RESTClient
 }
 
-func (r *restBackend) Get(ctx context.Context, resourceName, kindName, namespace, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) Get(ctx context.Context, resourceName, namespace, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
 	return result, r.client.Get().
 		Namespace(namespace).
 		Resource(resourceName).
@@ -137,10 +148,10 @@ func (r *restBackend) Get(ctx context.Context, resourceName, kindName, namespace
 		Into(result)
 }
 
-func (r *restBackend) List(ctx context.Context, resourceName, kindName, namespace string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) List(ctx context.Context, resourceName, namespace string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
 	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	if opts.TimeoutSeconds > 0 {
+		timeout = time.Duration(opts.TimeoutSeconds) * time.Second
 	}
 	return result, r.client.Get().
 		Namespace(namespace).
@@ -151,13 +162,14 @@ func (r *restBackend) List(ctx context.Context, resourceName, kindName, namespac
 		Into(result)
 }
 
-func (r *restBackend) Create(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) Create(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
 	m := obj.(metav1.Object)
 	if m == nil {
 		return nil, errors.New("obj is not implement metav1.Object")
 	}
+	meta := m.GetObjectMeta()
 	return result, r.client.Post().
-		Namespace(m.GetNamespace()).
+		Namespace(meta.Namespace).
 		Resource(resourceName).
 		VersionedParams(&opts, ParameterCodec).
 		Body(obj).
@@ -165,30 +177,32 @@ func (r *restBackend) Create(ctx context.Context, resourceName, kindName string,
 		Into(result)
 }
 
-func (r *restBackend) Update(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) Update(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	m := obj.(metav1.Object)
 	if m == nil {
 		return nil, errors.New("obj is not implement metav1.Object")
 	}
+	meta := m.GetObjectMeta()
 	return result, r.client.Put().
-		Namespace(m.GetNamespace()).
+		Namespace(meta.Namespace).
 		Resource(resourceName).
-		Name(m.GetName()).
+		Name(meta.Name).
 		VersionedParams(&opts, ParameterCodec).
 		Body(obj).
 		Do(ctx).
 		Into(result)
 }
 
-func (r *restBackend) UpdateStatus(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) UpdateStatus(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	m := obj.(metav1.Object)
 	if m == nil {
 		return nil, errors.New("obj is not implement metav1.Object")
 	}
+	meta := m.GetObjectMeta()
 	return result, r.client.Put().
-		Namespace(m.GetNamespace()).
+		Namespace(meta.Namespace).
 		Resource(resourceName).
-		Name(m.GetName()).
+		Name(meta.Name).
 		SubResource("status").
 		VersionedParams(&opts, ParameterCodec).
 		Body(obj).
@@ -208,8 +222,8 @@ func (r *restBackend) Delete(ctx context.Context, gvr schema.GroupVersionResourc
 
 func (r *restBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	if opts.TimeoutSeconds > 0 {
+		timeout = time.Duration(opts.TimeoutSeconds) * time.Second
 	}
 	opts.Watch = true
 	return r.client.Get().
@@ -220,7 +234,7 @@ func (r *restBackend) Watch(ctx context.Context, gvr schema.GroupVersionResource
 		Watch(ctx)
 }
 
-func (r *restBackend) GetClusterScoped(ctx context.Context, resourceName, kindName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) GetClusterScoped(ctx context.Context, resourceName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error) {
 	return result, r.client.Get().
 		Resource(resourceName).
 		Name(name).
@@ -229,10 +243,10 @@ func (r *restBackend) GetClusterScoped(ctx context.Context, resourceName, kindNa
 		Into(result)
 }
 
-func (r *restBackend) ListClusterScoped(ctx context.Context, resourceName, kindName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) ListClusterScoped(ctx context.Context, resourceName string, opts metav1.ListOptions, result runtime.Object) (runtime.Object, error) {
 	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	if opts.TimeoutSeconds > 0 {
+		timeout = time.Duration(opts.TimeoutSeconds) * time.Second
 	}
 	return result, r.client.Get().
 		Resource(resourceName).
@@ -242,7 +256,7 @@ func (r *restBackend) ListClusterScoped(ctx context.Context, resourceName, kindN
 		Into(result)
 }
 
-func (r *restBackend) CreateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) CreateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error) {
 	return result, r.client.Post().
 		Resource(resourceName).
 		VersionedParams(&opts, ParameterCodec).
@@ -251,28 +265,30 @@ func (r *restBackend) CreateClusterScoped(ctx context.Context, resourceName, kin
 		Into(result)
 }
 
-func (r *restBackend) UpdateClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) UpdateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	m := obj.(metav1.Object)
 	if m == nil {
 		return nil, errors.New("obj is not implement metav1.Object")
 	}
+	meta := m.GetObjectMeta()
 	return result, r.client.Put().
 		Resource(resourceName).
-		Name(m.GetName()).
+		Name(meta.Name).
 		VersionedParams(&opts, ParameterCodec).
 		Body(obj).
 		Do(ctx).
 		Into(result)
 }
 
-func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceName, kindName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
+func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error) {
 	m := obj.(metav1.Object)
 	if m == nil {
 		return nil, errors.New("obj is not implement metav1.Object")
 	}
+	meta := m.GetObjectMeta()
 	return result, r.client.Put().
 		Resource(resourceName).
-		Name(m.GetName()).
+		Name(meta.Name).
 		SubResource("status").
 		VersionedParams(&opts, ParameterCodec).
 		Body(obj).
@@ -291,8 +307,8 @@ func (r *restBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupV
 
 func (r *restBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	if opts.TimeoutSeconds > 0 {
+		timeout = time.Duration(opts.TimeoutSeconds) * time.Second
 	}
 	opts.Watch = true
 	return r.client.Get().
@@ -311,7 +327,7 @@ func NewEtcdV1alpha1Client(b Backend) *EtcdV1alpha1 {
 }
 
 func (c *EtcdV1alpha1) GetEtcdCluster(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*etcdv1alpha1.EtcdCluster, error) {
-	result, err := c.backend.Get(ctx, "etcdclusters", "EtcdCluster", namespace, name, opts, &etcdv1alpha1.EtcdCluster{})
+	result, err := c.backend.Get(ctx, "etcdclusters", namespace, name, opts, &etcdv1alpha1.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +335,7 @@ func (c *EtcdV1alpha1) GetEtcdCluster(ctx context.Context, namespace, name strin
 }
 
 func (c *EtcdV1alpha1) CreateEtcdCluster(ctx context.Context, v *etcdv1alpha1.EtcdCluster, opts metav1.CreateOptions) (*etcdv1alpha1.EtcdCluster, error) {
-	result, err := c.backend.Create(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha1.EtcdCluster{})
+	result, err := c.backend.Create(ctx, "etcdclusters", v, opts, &etcdv1alpha1.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +343,7 @@ func (c *EtcdV1alpha1) CreateEtcdCluster(ctx context.Context, v *etcdv1alpha1.Et
 }
 
 func (c *EtcdV1alpha1) UpdateEtcdCluster(ctx context.Context, v *etcdv1alpha1.EtcdCluster, opts metav1.UpdateOptions) (*etcdv1alpha1.EtcdCluster, error) {
-	result, err := c.backend.Update(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha1.EtcdCluster{})
+	result, err := c.backend.Update(ctx, "etcdclusters", v, opts, &etcdv1alpha1.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +351,7 @@ func (c *EtcdV1alpha1) UpdateEtcdCluster(ctx context.Context, v *etcdv1alpha1.Et
 }
 
 func (c *EtcdV1alpha1) UpdateStatusEtcdCluster(ctx context.Context, v *etcdv1alpha1.EtcdCluster, opts metav1.UpdateOptions) (*etcdv1alpha1.EtcdCluster, error) {
-	result, err := c.backend.UpdateStatus(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha1.EtcdCluster{})
+	result, err := c.backend.UpdateStatus(ctx, "etcdclusters", v, opts, &etcdv1alpha1.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +363,7 @@ func (c *EtcdV1alpha1) DeleteEtcdCluster(ctx context.Context, namespace, name st
 }
 
 func (c *EtcdV1alpha1) ListEtcdCluster(ctx context.Context, namespace string, opts metav1.ListOptions) (*etcdv1alpha1.EtcdClusterList, error) {
-	result, err := c.backend.List(ctx, "etcdclusters", "EtcdCluster", namespace, opts, &etcdv1alpha1.EtcdClusterList{})
+	result, err := c.backend.List(ctx, "etcdclusters", namespace, opts, &etcdv1alpha1.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +383,7 @@ func NewEtcdV1alpha2Client(b Backend) *EtcdV1alpha2 {
 }
 
 func (c *EtcdV1alpha2) GetEtcdCluster(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*etcdv1alpha2.EtcdCluster, error) {
-	result, err := c.backend.Get(ctx, "etcdclusters", "EtcdCluster", namespace, name, opts, &etcdv1alpha2.EtcdCluster{})
+	result, err := c.backend.Get(ctx, "etcdclusters", namespace, name, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +391,7 @@ func (c *EtcdV1alpha2) GetEtcdCluster(ctx context.Context, namespace, name strin
 }
 
 func (c *EtcdV1alpha2) CreateEtcdCluster(ctx context.Context, v *etcdv1alpha2.EtcdCluster, opts metav1.CreateOptions) (*etcdv1alpha2.EtcdCluster, error) {
-	result, err := c.backend.Create(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha2.EtcdCluster{})
+	result, err := c.backend.Create(ctx, "etcdclusters", v, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +399,7 @@ func (c *EtcdV1alpha2) CreateEtcdCluster(ctx context.Context, v *etcdv1alpha2.Et
 }
 
 func (c *EtcdV1alpha2) UpdateEtcdCluster(ctx context.Context, v *etcdv1alpha2.EtcdCluster, opts metav1.UpdateOptions) (*etcdv1alpha2.EtcdCluster, error) {
-	result, err := c.backend.Update(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha2.EtcdCluster{})
+	result, err := c.backend.Update(ctx, "etcdclusters", v, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +407,7 @@ func (c *EtcdV1alpha2) UpdateEtcdCluster(ctx context.Context, v *etcdv1alpha2.Et
 }
 
 func (c *EtcdV1alpha2) UpdateStatusEtcdCluster(ctx context.Context, v *etcdv1alpha2.EtcdCluster, opts metav1.UpdateOptions) (*etcdv1alpha2.EtcdCluster, error) {
-	result, err := c.backend.UpdateStatus(ctx, "etcdclusters", "EtcdCluster", v, opts, &etcdv1alpha2.EtcdCluster{})
+	result, err := c.backend.UpdateStatus(ctx, "etcdclusters", v, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +419,7 @@ func (c *EtcdV1alpha2) DeleteEtcdCluster(ctx context.Context, namespace, name st
 }
 
 func (c *EtcdV1alpha2) ListEtcdCluster(ctx context.Context, namespace string, opts metav1.ListOptions) (*etcdv1alpha2.EtcdClusterList, error) {
-	result, err := c.backend.List(ctx, "etcdclusters", "EtcdCluster", namespace, opts, &etcdv1alpha2.EtcdClusterList{})
+	result, err := c.backend.List(ctx, "etcdclusters", namespace, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +439,7 @@ func NewProxyV1alpha1Client(b Backend) *ProxyV1alpha1 {
 }
 
 func (c *ProxyV1alpha1) GetBackend(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha1.Backend, error) {
-	result, err := c.backend.Get(ctx, "backends", "Backend", namespace, name, opts, &proxyv1alpha1.Backend{})
+	result, err := c.backend.Get(ctx, "backends", namespace, name, opts, &proxyv1alpha1.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +447,7 @@ func (c *ProxyV1alpha1) GetBackend(ctx context.Context, namespace, name string, 
 }
 
 func (c *ProxyV1alpha1) CreateBackend(ctx context.Context, v *proxyv1alpha1.Backend, opts metav1.CreateOptions) (*proxyv1alpha1.Backend, error) {
-	result, err := c.backend.Create(ctx, "backends", "Backend", v, opts, &proxyv1alpha1.Backend{})
+	result, err := c.backend.Create(ctx, "backends", v, opts, &proxyv1alpha1.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +455,7 @@ func (c *ProxyV1alpha1) CreateBackend(ctx context.Context, v *proxyv1alpha1.Back
 }
 
 func (c *ProxyV1alpha1) UpdateBackend(ctx context.Context, v *proxyv1alpha1.Backend, opts metav1.UpdateOptions) (*proxyv1alpha1.Backend, error) {
-	result, err := c.backend.Update(ctx, "backends", "Backend", v, opts, &proxyv1alpha1.Backend{})
+	result, err := c.backend.Update(ctx, "backends", v, opts, &proxyv1alpha1.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -447,7 +463,7 @@ func (c *ProxyV1alpha1) UpdateBackend(ctx context.Context, v *proxyv1alpha1.Back
 }
 
 func (c *ProxyV1alpha1) UpdateStatusBackend(ctx context.Context, v *proxyv1alpha1.Backend, opts metav1.UpdateOptions) (*proxyv1alpha1.Backend, error) {
-	result, err := c.backend.UpdateStatus(ctx, "backends", "Backend", v, opts, &proxyv1alpha1.Backend{})
+	result, err := c.backend.UpdateStatus(ctx, "backends", v, opts, &proxyv1alpha1.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +475,7 @@ func (c *ProxyV1alpha1) DeleteBackend(ctx context.Context, namespace, name strin
 }
 
 func (c *ProxyV1alpha1) ListBackend(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha1.BackendList, error) {
-	result, err := c.backend.List(ctx, "backends", "Backend", namespace, opts, &proxyv1alpha1.BackendList{})
+	result, err := c.backend.List(ctx, "backends", namespace, opts, &proxyv1alpha1.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +487,7 @@ func (c *ProxyV1alpha1) WatchBackend(ctx context.Context, namespace string, opts
 }
 
 func (c *ProxyV1alpha1) GetProxy(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha1.Proxy, error) {
-	result, err := c.backend.Get(ctx, "proxies", "Proxy", namespace, name, opts, &proxyv1alpha1.Proxy{})
+	result, err := c.backend.Get(ctx, "proxies", namespace, name, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +495,7 @@ func (c *ProxyV1alpha1) GetProxy(ctx context.Context, namespace, name string, op
 }
 
 func (c *ProxyV1alpha1) CreateProxy(ctx context.Context, v *proxyv1alpha1.Proxy, opts metav1.CreateOptions) (*proxyv1alpha1.Proxy, error) {
-	result, err := c.backend.Create(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha1.Proxy{})
+	result, err := c.backend.Create(ctx, "proxies", v, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +503,7 @@ func (c *ProxyV1alpha1) CreateProxy(ctx context.Context, v *proxyv1alpha1.Proxy,
 }
 
 func (c *ProxyV1alpha1) UpdateProxy(ctx context.Context, v *proxyv1alpha1.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha1.Proxy, error) {
-	result, err := c.backend.Update(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha1.Proxy{})
+	result, err := c.backend.Update(ctx, "proxies", v, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +511,7 @@ func (c *ProxyV1alpha1) UpdateProxy(ctx context.Context, v *proxyv1alpha1.Proxy,
 }
 
 func (c *ProxyV1alpha1) UpdateStatusProxy(ctx context.Context, v *proxyv1alpha1.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha1.Proxy, error) {
-	result, err := c.backend.UpdateStatus(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha1.Proxy{})
+	result, err := c.backend.UpdateStatus(ctx, "proxies", v, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +523,7 @@ func (c *ProxyV1alpha1) DeleteProxy(ctx context.Context, namespace, name string,
 }
 
 func (c *ProxyV1alpha1) ListProxy(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha1.ProxyList, error) {
-	result, err := c.backend.List(ctx, "proxies", "Proxy", namespace, opts, &proxyv1alpha1.ProxyList{})
+	result, err := c.backend.List(ctx, "proxies", namespace, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +535,7 @@ func (c *ProxyV1alpha1) WatchProxy(ctx context.Context, namespace string, opts m
 }
 
 func (c *ProxyV1alpha1) GetRole(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha1.Role, error) {
-	result, err := c.backend.Get(ctx, "roles", "Role", namespace, name, opts, &proxyv1alpha1.Role{})
+	result, err := c.backend.Get(ctx, "roles", namespace, name, opts, &proxyv1alpha1.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -527,7 +543,7 @@ func (c *ProxyV1alpha1) GetRole(ctx context.Context, namespace, name string, opt
 }
 
 func (c *ProxyV1alpha1) CreateRole(ctx context.Context, v *proxyv1alpha1.Role, opts metav1.CreateOptions) (*proxyv1alpha1.Role, error) {
-	result, err := c.backend.Create(ctx, "roles", "Role", v, opts, &proxyv1alpha1.Role{})
+	result, err := c.backend.Create(ctx, "roles", v, opts, &proxyv1alpha1.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -535,7 +551,7 @@ func (c *ProxyV1alpha1) CreateRole(ctx context.Context, v *proxyv1alpha1.Role, o
 }
 
 func (c *ProxyV1alpha1) UpdateRole(ctx context.Context, v *proxyv1alpha1.Role, opts metav1.UpdateOptions) (*proxyv1alpha1.Role, error) {
-	result, err := c.backend.Update(ctx, "roles", "Role", v, opts, &proxyv1alpha1.Role{})
+	result, err := c.backend.Update(ctx, "roles", v, opts, &proxyv1alpha1.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +559,7 @@ func (c *ProxyV1alpha1) UpdateRole(ctx context.Context, v *proxyv1alpha1.Role, o
 }
 
 func (c *ProxyV1alpha1) UpdateStatusRole(ctx context.Context, v *proxyv1alpha1.Role, opts metav1.UpdateOptions) (*proxyv1alpha1.Role, error) {
-	result, err := c.backend.UpdateStatus(ctx, "roles", "Role", v, opts, &proxyv1alpha1.Role{})
+	result, err := c.backend.UpdateStatus(ctx, "roles", v, opts, &proxyv1alpha1.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -555,7 +571,7 @@ func (c *ProxyV1alpha1) DeleteRole(ctx context.Context, namespace, name string, 
 }
 
 func (c *ProxyV1alpha1) ListRole(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha1.RoleList, error) {
-	result, err := c.backend.List(ctx, "roles", "Role", namespace, opts, &proxyv1alpha1.RoleList{})
+	result, err := c.backend.List(ctx, "roles", namespace, opts, &proxyv1alpha1.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -567,7 +583,7 @@ func (c *ProxyV1alpha1) WatchRole(ctx context.Context, namespace string, opts me
 }
 
 func (c *ProxyV1alpha1) GetRoleBinding(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha1.RoleBinding, error) {
-	result, err := c.backend.Get(ctx, "rolebindings", "RoleBinding", namespace, name, opts, &proxyv1alpha1.RoleBinding{})
+	result, err := c.backend.Get(ctx, "rolebindings", namespace, name, opts, &proxyv1alpha1.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +591,7 @@ func (c *ProxyV1alpha1) GetRoleBinding(ctx context.Context, namespace, name stri
 }
 
 func (c *ProxyV1alpha1) CreateRoleBinding(ctx context.Context, v *proxyv1alpha1.RoleBinding, opts metav1.CreateOptions) (*proxyv1alpha1.RoleBinding, error) {
-	result, err := c.backend.Create(ctx, "rolebindings", "RoleBinding", v, opts, &proxyv1alpha1.RoleBinding{})
+	result, err := c.backend.Create(ctx, "rolebindings", v, opts, &proxyv1alpha1.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +599,7 @@ func (c *ProxyV1alpha1) CreateRoleBinding(ctx context.Context, v *proxyv1alpha1.
 }
 
 func (c *ProxyV1alpha1) UpdateRoleBinding(ctx context.Context, v *proxyv1alpha1.RoleBinding, opts metav1.UpdateOptions) (*proxyv1alpha1.RoleBinding, error) {
-	result, err := c.backend.Update(ctx, "rolebindings", "RoleBinding", v, opts, &proxyv1alpha1.RoleBinding{})
+	result, err := c.backend.Update(ctx, "rolebindings", v, opts, &proxyv1alpha1.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +611,7 @@ func (c *ProxyV1alpha1) DeleteRoleBinding(ctx context.Context, namespace, name s
 }
 
 func (c *ProxyV1alpha1) ListRoleBinding(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha1.RoleBindingList, error) {
-	result, err := c.backend.List(ctx, "rolebindings", "RoleBinding", namespace, opts, &proxyv1alpha1.RoleBindingList{})
+	result, err := c.backend.List(ctx, "rolebindings", namespace, opts, &proxyv1alpha1.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +623,7 @@ func (c *ProxyV1alpha1) WatchRoleBinding(ctx context.Context, namespace string, 
 }
 
 func (c *ProxyV1alpha1) GetRpcPermission(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha1.RpcPermission, error) {
-	result, err := c.backend.Get(ctx, "rpcpermissions", "RpcPermission", namespace, name, opts, &proxyv1alpha1.RpcPermission{})
+	result, err := c.backend.Get(ctx, "rpcpermissions", namespace, name, opts, &proxyv1alpha1.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +631,7 @@ func (c *ProxyV1alpha1) GetRpcPermission(ctx context.Context, namespace, name st
 }
 
 func (c *ProxyV1alpha1) CreateRpcPermission(ctx context.Context, v *proxyv1alpha1.RpcPermission, opts metav1.CreateOptions) (*proxyv1alpha1.RpcPermission, error) {
-	result, err := c.backend.Create(ctx, "rpcpermissions", "RpcPermission", v, opts, &proxyv1alpha1.RpcPermission{})
+	result, err := c.backend.Create(ctx, "rpcpermissions", v, opts, &proxyv1alpha1.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +639,7 @@ func (c *ProxyV1alpha1) CreateRpcPermission(ctx context.Context, v *proxyv1alpha
 }
 
 func (c *ProxyV1alpha1) UpdateRpcPermission(ctx context.Context, v *proxyv1alpha1.RpcPermission, opts metav1.UpdateOptions) (*proxyv1alpha1.RpcPermission, error) {
-	result, err := c.backend.Update(ctx, "rpcpermissions", "RpcPermission", v, opts, &proxyv1alpha1.RpcPermission{})
+	result, err := c.backend.Update(ctx, "rpcpermissions", v, opts, &proxyv1alpha1.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -635,7 +651,7 @@ func (c *ProxyV1alpha1) DeleteRpcPermission(ctx context.Context, namespace, name
 }
 
 func (c *ProxyV1alpha1) ListRpcPermission(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha1.RpcPermissionList, error) {
-	result, err := c.backend.List(ctx, "rpcpermissions", "RpcPermission", namespace, opts, &proxyv1alpha1.RpcPermissionList{})
+	result, err := c.backend.List(ctx, "rpcpermissions", namespace, opts, &proxyv1alpha1.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +671,7 @@ func NewProxyV1alpha2Client(b Backend) *ProxyV1alpha2 {
 }
 
 func (c *ProxyV1alpha2) GetBackend(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha2.Backend, error) {
-	result, err := c.backend.Get(ctx, "backends", "Backend", namespace, name, opts, &proxyv1alpha2.Backend{})
+	result, err := c.backend.Get(ctx, "backends", namespace, name, opts, &proxyv1alpha2.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -663,7 +679,7 @@ func (c *ProxyV1alpha2) GetBackend(ctx context.Context, namespace, name string, 
 }
 
 func (c *ProxyV1alpha2) CreateBackend(ctx context.Context, v *proxyv1alpha2.Backend, opts metav1.CreateOptions) (*proxyv1alpha2.Backend, error) {
-	result, err := c.backend.Create(ctx, "backends", "Backend", v, opts, &proxyv1alpha2.Backend{})
+	result, err := c.backend.Create(ctx, "backends", v, opts, &proxyv1alpha2.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -671,7 +687,7 @@ func (c *ProxyV1alpha2) CreateBackend(ctx context.Context, v *proxyv1alpha2.Back
 }
 
 func (c *ProxyV1alpha2) UpdateBackend(ctx context.Context, v *proxyv1alpha2.Backend, opts metav1.UpdateOptions) (*proxyv1alpha2.Backend, error) {
-	result, err := c.backend.Update(ctx, "backends", "Backend", v, opts, &proxyv1alpha2.Backend{})
+	result, err := c.backend.Update(ctx, "backends", v, opts, &proxyv1alpha2.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -679,7 +695,7 @@ func (c *ProxyV1alpha2) UpdateBackend(ctx context.Context, v *proxyv1alpha2.Back
 }
 
 func (c *ProxyV1alpha2) UpdateStatusBackend(ctx context.Context, v *proxyv1alpha2.Backend, opts metav1.UpdateOptions) (*proxyv1alpha2.Backend, error) {
-	result, err := c.backend.UpdateStatus(ctx, "backends", "Backend", v, opts, &proxyv1alpha2.Backend{})
+	result, err := c.backend.UpdateStatus(ctx, "backends", v, opts, &proxyv1alpha2.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -691,7 +707,7 @@ func (c *ProxyV1alpha2) DeleteBackend(ctx context.Context, namespace, name strin
 }
 
 func (c *ProxyV1alpha2) ListBackend(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha2.BackendList, error) {
-	result, err := c.backend.List(ctx, "backends", "Backend", namespace, opts, &proxyv1alpha2.BackendList{})
+	result, err := c.backend.List(ctx, "backends", namespace, opts, &proxyv1alpha2.Backend{})
 	if err != nil {
 		return nil, err
 	}
@@ -703,7 +719,7 @@ func (c *ProxyV1alpha2) WatchBackend(ctx context.Context, namespace string, opts
 }
 
 func (c *ProxyV1alpha2) GetProxy(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha2.Proxy, error) {
-	result, err := c.backend.Get(ctx, "proxies", "Proxy", namespace, name, opts, &proxyv1alpha2.Proxy{})
+	result, err := c.backend.Get(ctx, "proxies", namespace, name, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -711,7 +727,7 @@ func (c *ProxyV1alpha2) GetProxy(ctx context.Context, namespace, name string, op
 }
 
 func (c *ProxyV1alpha2) CreateProxy(ctx context.Context, v *proxyv1alpha2.Proxy, opts metav1.CreateOptions) (*proxyv1alpha2.Proxy, error) {
-	result, err := c.backend.Create(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha2.Proxy{})
+	result, err := c.backend.Create(ctx, "proxies", v, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -719,7 +735,7 @@ func (c *ProxyV1alpha2) CreateProxy(ctx context.Context, v *proxyv1alpha2.Proxy,
 }
 
 func (c *ProxyV1alpha2) UpdateProxy(ctx context.Context, v *proxyv1alpha2.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha2.Proxy, error) {
-	result, err := c.backend.Update(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha2.Proxy{})
+	result, err := c.backend.Update(ctx, "proxies", v, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +743,7 @@ func (c *ProxyV1alpha2) UpdateProxy(ctx context.Context, v *proxyv1alpha2.Proxy,
 }
 
 func (c *ProxyV1alpha2) UpdateStatusProxy(ctx context.Context, v *proxyv1alpha2.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha2.Proxy, error) {
-	result, err := c.backend.UpdateStatus(ctx, "proxies", "Proxy", v, opts, &proxyv1alpha2.Proxy{})
+	result, err := c.backend.UpdateStatus(ctx, "proxies", v, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -739,7 +755,7 @@ func (c *ProxyV1alpha2) DeleteProxy(ctx context.Context, namespace, name string,
 }
 
 func (c *ProxyV1alpha2) ListProxy(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha2.ProxyList, error) {
-	result, err := c.backend.List(ctx, "proxies", "Proxy", namespace, opts, &proxyv1alpha2.ProxyList{})
+	result, err := c.backend.List(ctx, "proxies", namespace, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -751,7 +767,7 @@ func (c *ProxyV1alpha2) WatchProxy(ctx context.Context, namespace string, opts m
 }
 
 func (c *ProxyV1alpha2) GetRole(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha2.Role, error) {
-	result, err := c.backend.Get(ctx, "roles", "Role", namespace, name, opts, &proxyv1alpha2.Role{})
+	result, err := c.backend.Get(ctx, "roles", namespace, name, opts, &proxyv1alpha2.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -759,7 +775,7 @@ func (c *ProxyV1alpha2) GetRole(ctx context.Context, namespace, name string, opt
 }
 
 func (c *ProxyV1alpha2) CreateRole(ctx context.Context, v *proxyv1alpha2.Role, opts metav1.CreateOptions) (*proxyv1alpha2.Role, error) {
-	result, err := c.backend.Create(ctx, "roles", "Role", v, opts, &proxyv1alpha2.Role{})
+	result, err := c.backend.Create(ctx, "roles", v, opts, &proxyv1alpha2.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -767,7 +783,7 @@ func (c *ProxyV1alpha2) CreateRole(ctx context.Context, v *proxyv1alpha2.Role, o
 }
 
 func (c *ProxyV1alpha2) UpdateRole(ctx context.Context, v *proxyv1alpha2.Role, opts metav1.UpdateOptions) (*proxyv1alpha2.Role, error) {
-	result, err := c.backend.Update(ctx, "roles", "Role", v, opts, &proxyv1alpha2.Role{})
+	result, err := c.backend.Update(ctx, "roles", v, opts, &proxyv1alpha2.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -775,7 +791,7 @@ func (c *ProxyV1alpha2) UpdateRole(ctx context.Context, v *proxyv1alpha2.Role, o
 }
 
 func (c *ProxyV1alpha2) UpdateStatusRole(ctx context.Context, v *proxyv1alpha2.Role, opts metav1.UpdateOptions) (*proxyv1alpha2.Role, error) {
-	result, err := c.backend.UpdateStatus(ctx, "roles", "Role", v, opts, &proxyv1alpha2.Role{})
+	result, err := c.backend.UpdateStatus(ctx, "roles", v, opts, &proxyv1alpha2.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -787,7 +803,7 @@ func (c *ProxyV1alpha2) DeleteRole(ctx context.Context, namespace, name string, 
 }
 
 func (c *ProxyV1alpha2) ListRole(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha2.RoleList, error) {
-	result, err := c.backend.List(ctx, "roles", "Role", namespace, opts, &proxyv1alpha2.RoleList{})
+	result, err := c.backend.List(ctx, "roles", namespace, opts, &proxyv1alpha2.Role{})
 	if err != nil {
 		return nil, err
 	}
@@ -799,7 +815,7 @@ func (c *ProxyV1alpha2) WatchRole(ctx context.Context, namespace string, opts me
 }
 
 func (c *ProxyV1alpha2) GetRoleBinding(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha2.RoleBinding, error) {
-	result, err := c.backend.Get(ctx, "rolebindings", "RoleBinding", namespace, name, opts, &proxyv1alpha2.RoleBinding{})
+	result, err := c.backend.Get(ctx, "rolebindings", namespace, name, opts, &proxyv1alpha2.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -807,7 +823,7 @@ func (c *ProxyV1alpha2) GetRoleBinding(ctx context.Context, namespace, name stri
 }
 
 func (c *ProxyV1alpha2) CreateRoleBinding(ctx context.Context, v *proxyv1alpha2.RoleBinding, opts metav1.CreateOptions) (*proxyv1alpha2.RoleBinding, error) {
-	result, err := c.backend.Create(ctx, "rolebindings", "RoleBinding", v, opts, &proxyv1alpha2.RoleBinding{})
+	result, err := c.backend.Create(ctx, "rolebindings", v, opts, &proxyv1alpha2.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -815,7 +831,7 @@ func (c *ProxyV1alpha2) CreateRoleBinding(ctx context.Context, v *proxyv1alpha2.
 }
 
 func (c *ProxyV1alpha2) UpdateRoleBinding(ctx context.Context, v *proxyv1alpha2.RoleBinding, opts metav1.UpdateOptions) (*proxyv1alpha2.RoleBinding, error) {
-	result, err := c.backend.Update(ctx, "rolebindings", "RoleBinding", v, opts, &proxyv1alpha2.RoleBinding{})
+	result, err := c.backend.Update(ctx, "rolebindings", v, opts, &proxyv1alpha2.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -827,7 +843,7 @@ func (c *ProxyV1alpha2) DeleteRoleBinding(ctx context.Context, namespace, name s
 }
 
 func (c *ProxyV1alpha2) ListRoleBinding(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha2.RoleBindingList, error) {
-	result, err := c.backend.List(ctx, "rolebindings", "RoleBinding", namespace, opts, &proxyv1alpha2.RoleBindingList{})
+	result, err := c.backend.List(ctx, "rolebindings", namespace, opts, &proxyv1alpha2.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -839,7 +855,7 @@ func (c *ProxyV1alpha2) WatchRoleBinding(ctx context.Context, namespace string, 
 }
 
 func (c *ProxyV1alpha2) GetRpcPermission(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*proxyv1alpha2.RpcPermission, error) {
-	result, err := c.backend.Get(ctx, "rpcpermissions", "RpcPermission", namespace, name, opts, &proxyv1alpha2.RpcPermission{})
+	result, err := c.backend.Get(ctx, "rpcpermissions", namespace, name, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -847,7 +863,7 @@ func (c *ProxyV1alpha2) GetRpcPermission(ctx context.Context, namespace, name st
 }
 
 func (c *ProxyV1alpha2) CreateRpcPermission(ctx context.Context, v *proxyv1alpha2.RpcPermission, opts metav1.CreateOptions) (*proxyv1alpha2.RpcPermission, error) {
-	result, err := c.backend.Create(ctx, "rpcpermissions", "RpcPermission", v, opts, &proxyv1alpha2.RpcPermission{})
+	result, err := c.backend.Create(ctx, "rpcpermissions", v, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -855,7 +871,7 @@ func (c *ProxyV1alpha2) CreateRpcPermission(ctx context.Context, v *proxyv1alpha
 }
 
 func (c *ProxyV1alpha2) UpdateRpcPermission(ctx context.Context, v *proxyv1alpha2.RpcPermission, opts metav1.UpdateOptions) (*proxyv1alpha2.RpcPermission, error) {
-	result, err := c.backend.Update(ctx, "rpcpermissions", "RpcPermission", v, opts, &proxyv1alpha2.RpcPermission{})
+	result, err := c.backend.Update(ctx, "rpcpermissions", v, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -863,7 +879,7 @@ func (c *ProxyV1alpha2) UpdateRpcPermission(ctx context.Context, v *proxyv1alpha
 }
 
 func (c *ProxyV1alpha2) UpdateStatusRpcPermission(ctx context.Context, v *proxyv1alpha2.RpcPermission, opts metav1.UpdateOptions) (*proxyv1alpha2.RpcPermission, error) {
-	result, err := c.backend.UpdateStatus(ctx, "rpcpermissions", "RpcPermission", v, opts, &proxyv1alpha2.RpcPermission{})
+	result, err := c.backend.UpdateStatus(ctx, "rpcpermissions", v, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -875,7 +891,7 @@ func (c *ProxyV1alpha2) DeleteRpcPermission(ctx context.Context, namespace, name
 }
 
 func (c *ProxyV1alpha2) ListRpcPermission(ctx context.Context, namespace string, opts metav1.ListOptions) (*proxyv1alpha2.RpcPermissionList, error) {
-	result, err := c.backend.List(ctx, "rpcpermissions", "RpcPermission", namespace, opts, &proxyv1alpha2.RpcPermissionList{})
+	result, err := c.backend.List(ctx, "rpcpermissions", namespace, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -1027,10 +1043,10 @@ func (f *EtcdV1alpha1Informer) EtcdClusterInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&etcdv1alpha1.EtcdCluster{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1067,10 +1083,10 @@ func (f *EtcdV1alpha2Informer) EtcdClusterInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&etcdv1alpha2.EtcdCluster{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1107,10 +1123,10 @@ func (f *ProxyV1alpha1Informer) BackendInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha1.Backend{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1129,10 +1145,10 @@ func (f *ProxyV1alpha1Informer) ProxyInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha1.Proxy{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1151,10 +1167,10 @@ func (f *ProxyV1alpha1Informer) RoleInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha1.Role{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1173,10 +1189,10 @@ func (f *ProxyV1alpha1Informer) RoleBindingInformer() cache.SharedIndexInformer 
 	return f.cache.Write(&proxyv1alpha1.RoleBinding{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1195,10 +1211,10 @@ func (f *ProxyV1alpha1Informer) RpcPermissionInformer() cache.SharedIndexInforme
 	return f.cache.Write(&proxyv1alpha1.RpcPermission{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1235,10 +1251,10 @@ func (f *ProxyV1alpha2Informer) BackendInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha2.Backend{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1257,10 +1273,10 @@ func (f *ProxyV1alpha2Informer) ProxyInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha2.Proxy{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1279,10 +1295,10 @@ func (f *ProxyV1alpha2Informer) RoleInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&proxyv1alpha2.Role{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1301,10 +1317,10 @@ func (f *ProxyV1alpha2Informer) RoleBindingInformer() cache.SharedIndexInformer 
 	return f.cache.Write(&proxyv1alpha2.RoleBinding{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},
@@ -1323,10 +1339,10 @@ func (f *ProxyV1alpha2Informer) RpcPermissionInformer() cache.SharedIndexInforme
 	return f.cache.Write(&proxyv1alpha2.RpcPermission{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
 					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
 					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
 				},
 			},

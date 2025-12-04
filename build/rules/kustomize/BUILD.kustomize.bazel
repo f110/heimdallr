@@ -1,4 +1,4 @@
-load("@heimdallr//build/rules/kustomize:def.bzl", "kustomize_toolchain")
+load("@//build/rules/kustomize:def.bzl", "kustomize_toolchain")
 
 sh_binary(
     name = "bin",

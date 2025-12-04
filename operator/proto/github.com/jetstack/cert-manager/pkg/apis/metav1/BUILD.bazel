@@ -1,4 +1,16 @@
+load("@dev_f110_kubeproto//bazel:protobuf.bzl", "gen_protobuf")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+
+gen_protobuf(
+    name = "gen",
+    srcs = ["@com_github_jetstack_cert_manager//pkg/apis/meta/v1:meta"],
+    all = True,
+    api_sub_group = "cert-manager.io",
+    api_version = "v1",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/metav1",
+    proto_package_name = "github.com.jetstack.cert_manager.pkg.apis.metav1",
+    visibility = ["//visibility:public"],
+)
 
 proto_library(
     name = "metav1",

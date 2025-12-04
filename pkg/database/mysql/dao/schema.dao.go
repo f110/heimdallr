@@ -76,6 +76,7 @@ type User struct {
 type UserInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.User, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.User, error)
 	SelectIdentity(ctx context.Context, identity string) (*entity.User, error)
 	ListIdentityByLoginName(ctx context.Context, loginName string, opt ...ListOption) ([]*entity.User, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error)
@@ -109,7 +110,6 @@ func (d *User) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
@@ -122,7 +122,29 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *User) SelectMulti(ctx context.Context, id ...int32) ([]*entity.User, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `user` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.User, 0, len(id))
+	for rows.Next() {
+		r := &entity.User{}
+		if err := rows.Scan(&r.Id, &r.Identity, &r.LoginName, &r.Admin, &r.Type, &r.Comment, &r.LastLogin, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.User, error) {
@@ -138,14 +160,13 @@ func (d *User) SelectIdentity(ctx context.Context, identity string) (*entity.Use
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, opt ...ListOption) ([]*entity.User, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `identity` FROM `user` WHERE `login_name` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -176,14 +197,13 @@ func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, op
 	}
 
 	return res, nil
-
 }
 
 func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `identity`, `login_name`, `admin`, `type`, `comment`, `last_login`, `created_at`, `updated_at` FROM `user`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -213,7 +233,6 @@ func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, 
 	}
 
 	return res, nil
-
 }
 
 func (d *User) Create(ctx context.Context, user *entity.User, opt ...ExecOption) (*entity.User, error) {
@@ -249,7 +268,6 @@ func (d *User) Create(ctx context.Context, user *entity.User, opt ...ExecOption)
 
 	user.ResetMark()
 	return user, nil
-
 }
 
 func (d *User) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -273,7 +291,6 @@ func (d *User) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
-
 }
 
 func (d *User) Update(ctx context.Context, user *entity.User, opt ...ExecOption) error {
@@ -316,7 +333,6 @@ func (d *User) Update(ctx context.Context, user *entity.User, opt ...ExecOption)
 
 	user.ResetMark()
 	return nil
-
 }
 
 type UserState struct {
@@ -326,6 +342,7 @@ type UserState struct {
 type UserStateInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.UserState, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.UserState, error)
 	SelectState(ctx context.Context, state string) (*entity.UserState, error)
 	Create(ctx context.Context, userState *entity.UserState, opt ...ExecOption) (*entity.UserState, error)
 	Update(ctx context.Context, userState *entity.UserState, opt ...ExecOption) error
@@ -357,7 +374,6 @@ func (d *UserState) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, error) {
@@ -370,7 +386,29 @@ func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, er
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *UserState) SelectMulti(ctx context.Context, id ...int32) ([]*entity.UserState, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `user_state` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.UserState, 0, len(id))
+	for rows.Next() {
+		r := &entity.UserState{}
+		if err := rows.Scan(&r.Id, &r.State, &r.Unique, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *UserState) SelectState(ctx context.Context, state string) (*entity.UserState, error) {
@@ -386,7 +424,6 @@ func (d *UserState) SelectState(ctx context.Context, state string) (*entity.User
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *UserState) Create(ctx context.Context, userState *entity.UserState, opt ...ExecOption) (*entity.UserState, error) {
@@ -422,7 +459,6 @@ func (d *UserState) Create(ctx context.Context, userState *entity.UserState, opt
 
 	userState.ResetMark()
 	return userState, nil
-
 }
 
 func (d *UserState) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -446,7 +482,6 @@ func (d *UserState) Delete(ctx context.Context, id int32, opt ...ExecOption) err
 	}
 
 	return nil
-
 }
 
 func (d *UserState) Update(ctx context.Context, userState *entity.UserState, opt ...ExecOption) error {
@@ -489,7 +524,6 @@ func (d *UserState) Update(ctx context.Context, userState *entity.UserState, opt
 
 	userState.ResetMark()
 	return nil
-
 }
 
 type RoleBinding struct {
@@ -501,6 +535,7 @@ type RoleBinding struct {
 type RoleBindingInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.RoleBinding, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.RoleBinding, error)
 	ListUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.RoleBinding, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RoleBinding, error)
 	SelectUserRole(ctx context.Context, userId int32, role string) (*entity.RoleBinding, error)
@@ -535,7 +570,6 @@ func (d *RoleBinding) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding, error) {
@@ -554,14 +588,52 @@ func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *RoleBinding) SelectMulti(ctx context.Context, id ...int32) ([]*entity.RoleBinding, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `role_binding` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.RoleBinding, 0, len(id))
+	for rows.Next() {
+		r := &entity.RoleBinding{}
+		if err := rows.Scan(&r.Id, &r.UserId, &r.Role, &r.Maintainer, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	if len(res) > 0 {
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
+			}
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
+		}
+	}
+	return res, nil
 }
 
 func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.RoleBinding, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `user_id`, `role`, `maintainer`, `created_at`, `updated_at` FROM `role_binding` WHERE `user_id` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -591,25 +663,30 @@ func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOpt
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RoleBinding, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `user_id`, `role`, `maintainer`, `created_at`, `updated_at` FROM `role_binding`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -638,18 +715,23 @@ func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *RoleBinding) SelectUserRole(ctx context.Context, userId int32, role string) (*entity.RoleBinding, error) {
@@ -672,7 +754,6 @@ func (d *RoleBinding) SelectUserRole(ctx context.Context, userId int32, role str
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *RoleBinding) Create(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) (*entity.RoleBinding, error) {
@@ -708,7 +789,6 @@ func (d *RoleBinding) Create(ctx context.Context, roleBinding *entity.RoleBindin
 
 	roleBinding.ResetMark()
 	return roleBinding, nil
-
 }
 
 func (d *RoleBinding) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -732,7 +812,6 @@ func (d *RoleBinding) Delete(ctx context.Context, id int32, opt ...ExecOption) e
 	}
 
 	return nil
-
 }
 
 func (d *RoleBinding) Update(ctx context.Context, roleBinding *entity.RoleBinding, opt ...ExecOption) error {
@@ -775,7 +854,6 @@ func (d *RoleBinding) Update(ctx context.Context, roleBinding *entity.RoleBindin
 
 	roleBinding.ResetMark()
 	return nil
-
 }
 
 type AccessToken struct {
@@ -787,6 +865,7 @@ type AccessToken struct {
 type AccessTokenInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.AccessToken, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.AccessToken, error)
 	SelectAccessToken(ctx context.Context, value string) (*entity.AccessToken, error)
 	ListByUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.AccessToken, error)
 	Create(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) (*entity.AccessToken, error)
@@ -820,7 +899,6 @@ func (d *AccessToken) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken, error) {
@@ -844,7 +922,55 @@ func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *AccessToken) SelectMulti(ctx context.Context, id ...int32) ([]*entity.AccessToken, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `access_token` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.AccessToken, 0, len(id))
+	for rows.Next() {
+		r := &entity.AccessToken{}
+		if err := rows.Scan(&r.Id, &r.Name, &r.Value, &r.UserId, &r.IssuerId, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	if len(res) > 0 {
+		userPrimaryKeys := make([]int32, len(res))
+		issuerPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+			issuerPrimaryKeys[i] = v.IssuerId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
+			}
+		}
+		issuerData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, issuerPrimaryKeys...)
+			for _, v := range rels {
+				issuerData[v.Id] = v
+			}
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
+			v.Issuer = issuerData[v.IssuerId]
+		}
+	}
+	return res, nil
 }
 
 func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*entity.AccessToken, error) {
@@ -871,14 +997,13 @@ func (d *AccessToken) SelectAccessToken(ctx context.Context, value string) (*ent
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListOption) ([]*entity.AccessToken, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `name`, `value`, `user_id`, `issuer_id`, `created_at`, `updated_at` FROM `access_token` WHERE `user_id` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -908,23 +1033,33 @@ func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListO
 		res = append(res, r)
 	}
 	if len(res) > 0 {
+		userPrimaryKeys := make([]int32, len(res))
+		issuerPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+			issuerPrimaryKeys[i] = v.IssuerId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
+			}
+		}
+		issuerData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, issuerPrimaryKeys...)
+			for _, v := range rels {
+				issuerData[v.Id] = v
+			}
+		}
 		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.IssuerId); rel != nil {
-					v.Issuer = rel
-				}
-			}
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
-			}
-
+			v.User = userData[v.UserId]
+			v.Issuer = issuerData[v.IssuerId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *AccessToken) Create(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) (*entity.AccessToken, error) {
@@ -960,7 +1095,6 @@ func (d *AccessToken) Create(ctx context.Context, accessToken *entity.AccessToke
 
 	accessToken.ResetMark()
 	return accessToken, nil
-
 }
 
 func (d *AccessToken) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -984,7 +1118,6 @@ func (d *AccessToken) Delete(ctx context.Context, id int32, opt ...ExecOption) e
 	}
 
 	return nil
-
 }
 
 func (d *AccessToken) Update(ctx context.Context, accessToken *entity.AccessToken, opt ...ExecOption) error {
@@ -1027,7 +1160,6 @@ func (d *AccessToken) Update(ctx context.Context, accessToken *entity.AccessToke
 
 	accessToken.ResetMark()
 	return nil
-
 }
 
 type Token struct {
@@ -1039,6 +1171,7 @@ type Token struct {
 type TokenInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.Token, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.Token, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token, error)
 	ListToken(ctx context.Context, token string, opt ...ListOption) ([]*entity.Token, error)
 	Create(ctx context.Context, token *entity.Token, opt ...ExecOption) (*entity.Token, error)
@@ -1072,7 +1205,6 @@ func (d *Token) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
@@ -1091,14 +1223,52 @@ func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *Token) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Token, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `token` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.Token, 0, len(id))
+	for rows.Next() {
+		r := &entity.Token{}
+		if err := rows.Scan(&r.Id, &r.Token, &r.UserId, &r.IssuedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	if len(res) > 0 {
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
+			}
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
+		}
+	}
+	return res, nil
 }
 
 func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `token`, `user_id`, `issued_at` FROM `token`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -1127,25 +1297,30 @@ func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) ([]*entity.Token, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `token`, `user_id`, `issued_at` FROM `token` WHERE `token` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -1175,18 +1350,23 @@ func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) 
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *Token) Create(ctx context.Context, token *entity.Token, opt ...ExecOption) (*entity.Token, error) {
@@ -1222,7 +1402,6 @@ func (d *Token) Create(ctx context.Context, token *entity.Token, opt ...ExecOpti
 
 	token.ResetMark()
 	return token, nil
-
 }
 
 func (d *Token) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1246,7 +1425,6 @@ func (d *Token) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
-
 }
 
 func (d *Token) Update(ctx context.Context, token *entity.Token, opt ...ExecOption) error {
@@ -1287,7 +1465,6 @@ func (d *Token) Update(ctx context.Context, token *entity.Token, opt ...ExecOpti
 
 	token.ResetMark()
 	return nil
-
 }
 
 type Code struct {
@@ -1299,6 +1476,7 @@ type Code struct {
 type CodeInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.Code, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.Code, error)
 	SelectCode(ctx context.Context, code string) (*entity.Code, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, error)
 	Create(ctx context.Context, code *entity.Code, opt ...ExecOption) (*entity.Code, error)
@@ -1332,7 +1510,6 @@ func (d *Code) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
@@ -1351,7 +1528,45 @@ func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *Code) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Code, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `code` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.Code, 0, len(id))
+	for rows.Next() {
+		r := &entity.Code{}
+		if err := rows.Scan(&r.Id, &r.Code, &r.Challenge, &r.ChallengeMethod, &r.UserId, &r.IssuedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	if len(res) > 0 {
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
+			}
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
+		}
+	}
+	return res, nil
 }
 
 func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error) {
@@ -1373,14 +1588,13 @@ func (d *Code) SelectCode(ctx context.Context, code string) (*entity.Code, error
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `code`, `challenge`, `challenge_method`, `user_id`, `issued_at` FROM `code`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -1409,18 +1623,23 @@ func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, 
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.user.Select(ctx, v.UserId); rel != nil {
-					v.User = rel
-				}
+		userPrimaryKeys := make([]int32, len(res))
+		for i, v := range res {
+			userPrimaryKeys[i] = v.UserId
+		}
+		userData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, userPrimaryKeys...)
+			for _, v := range rels {
+				userData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.User = userData[v.UserId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *Code) Create(ctx context.Context, code *entity.Code, opt ...ExecOption) (*entity.Code, error) {
@@ -1456,7 +1675,6 @@ func (d *Code) Create(ctx context.Context, code *entity.Code, opt ...ExecOption)
 
 	code.ResetMark()
 	return code, nil
-
 }
 
 func (d *Code) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1480,7 +1698,6 @@ func (d *Code) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
-
 }
 
 func (d *Code) Update(ctx context.Context, code *entity.Code, opt ...ExecOption) error {
@@ -1521,7 +1738,6 @@ func (d *Code) Update(ctx context.Context, code *entity.Code, opt ...ExecOption)
 
 	code.ResetMark()
 	return nil
-
 }
 
 type Relay struct {
@@ -1531,6 +1747,7 @@ type Relay struct {
 type RelayInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.Relay, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.Relay, error)
 	ListName(ctx context.Context, name string, opt ...ListOption) ([]*entity.Relay, error)
 	SelectEndpoint(ctx context.Context, name string, addr string) (*entity.Relay, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay, error)
@@ -1564,7 +1781,6 @@ func (d *Relay) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
@@ -1577,14 +1793,36 @@ func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *Relay) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Relay, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `relay` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.Relay, 0, len(id))
+	for rows.Next() {
+		r := &entity.Relay{}
+		if err := rows.Scan(&r.Id, &r.Name, &r.Addr, &r.FromAddr, &r.ConnectedAt, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([]*entity.Relay, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `name`, `addr`, `from_addr`, `connected_at`, `created_at`, `updated_at` FROM `relay` WHERE `name` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -1615,7 +1853,6 @@ func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([
 	}
 
 	return res, nil
-
 }
 
 func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*entity.Relay, error) {
@@ -1632,14 +1869,13 @@ func (d *Relay) SelectEndpoint(ctx context.Context, name string, addr string) (*
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `name`, `addr`, `from_addr`, `connected_at`, `created_at`, `updated_at` FROM `relay`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -1669,7 +1905,6 @@ func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay
 	}
 
 	return res, nil
-
 }
 
 func (d *Relay) Create(ctx context.Context, relay *entity.Relay, opt ...ExecOption) (*entity.Relay, error) {
@@ -1705,7 +1940,6 @@ func (d *Relay) Create(ctx context.Context, relay *entity.Relay, opt ...ExecOpti
 
 	relay.ResetMark()
 	return relay, nil
-
 }
 
 func (d *Relay) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -1729,7 +1963,6 @@ func (d *Relay) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
-
 }
 
 func (d *Relay) Update(ctx context.Context, relay *entity.Relay, opt ...ExecOption) error {
@@ -1772,7 +2005,6 @@ func (d *Relay) Update(ctx context.Context, relay *entity.Relay, opt ...ExecOpti
 
 	relay.ResetMark()
 	return nil
-
 }
 
 type SerialNumber struct {
@@ -1782,6 +2014,7 @@ type SerialNumber struct {
 type SerialNumberInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int64) (*entity.SerialNumber, error)
+	SelectMulti(ctx context.Context, id ...int64) ([]*entity.SerialNumber, error)
 	SelectSerialNumber(ctx context.Context, serialNumber []byte) (*entity.SerialNumber, error)
 	Create(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) (*entity.SerialNumber, error)
 	Update(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) error
@@ -1813,7 +2046,6 @@ func (d *SerialNumber) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error 
 		return err
 	}
 	return nil
-
 }
 
 func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumber, error) {
@@ -1826,7 +2058,29 @@ func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumb
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *SerialNumber) SelectMulti(ctx context.Context, id ...int64) ([]*entity.SerialNumber, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `serial_number` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.SerialNumber, 0, len(id))
+	for rows.Next() {
+		r := &entity.SerialNumber{}
+		if err := rows.Scan(&r.Id, &r.SerialNumber); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *SerialNumber) SelectSerialNumber(ctx context.Context, serialNumber []byte) (*entity.SerialNumber, error) {
@@ -1842,7 +2096,6 @@ func (d *SerialNumber) SelectSerialNumber(ctx context.Context, serialNumber []by
 
 	v.ResetMark()
 	return v, nil
-
 }
 
 func (d *SerialNumber) Create(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) (*entity.SerialNumber, error) {
@@ -1878,7 +2131,6 @@ func (d *SerialNumber) Create(ctx context.Context, serialNumber *entity.SerialNu
 
 	serialNumber.ResetMark()
 	return serialNumber, nil
-
 }
 
 func (d *SerialNumber) Delete(ctx context.Context, id int64, opt ...ExecOption) error {
@@ -1902,7 +2154,6 @@ func (d *SerialNumber) Delete(ctx context.Context, id int64, opt ...ExecOption) 
 	}
 
 	return nil
-
 }
 
 func (d *SerialNumber) Update(ctx context.Context, serialNumber *entity.SerialNumber, opt ...ExecOption) error {
@@ -1943,7 +2194,6 @@ func (d *SerialNumber) Update(ctx context.Context, serialNumber *entity.SerialNu
 
 	serialNumber.ResetMark()
 	return nil
-
 }
 
 type SignedCertificate struct {
@@ -1955,6 +2205,7 @@ type SignedCertificate struct {
 type SignedCertificateInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.SignedCertificate, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.SignedCertificate, error)
 	ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error)
 	Create(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) (*entity.SignedCertificate, error)
@@ -1988,7 +2239,6 @@ func (d *SignedCertificate) Tx(ctx context.Context, fn func(tx *sql.Tx) error) e
 		return err
 	}
 	return nil
-
 }
 
 func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.SignedCertificate, error) {
@@ -2007,14 +2257,52 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *SignedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*entity.SignedCertificate, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `signed_certificate` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.SignedCertificate, 0, len(id))
+	for rows.Next() {
+		r := &entity.SignedCertificate{}
+		if err := rows.Scan(&r.Id, &r.Certificate, &r.SerialNumberId, &r.P12, &r.Agent, &r.Comment, &r.Device, &r.IssuedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	if len(res) > 0 {
+		serialNumberPrimaryKeys := make([]int64, len(res))
+		for i, v := range res {
+			serialNumberPrimaryKeys[i] = v.SerialNumberId
+		}
+		serialNumberData := make(map[int64]*entity.SerialNumber)
+		{
+			rels, _ := d.serialNumber.SelectMulti(ctx, serialNumberPrimaryKeys...)
+			for _, v := range rels {
+				serialNumberData[v.Id] = v
+			}
+		}
+		for _, v := range res {
+			v.SerialNumber = serialNumberData[v.SerialNumberId]
+		}
+	}
+	return res, nil
 }
 
 func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId int64, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `device`, `issued_at` FROM `signed_certificate` WHERE `serial_number_id` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2044,25 +2332,30 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.serialNumber.Select(ctx, v.SerialNumberId); rel != nil {
-					v.SerialNumber = rel
-				}
+		serialNumberPrimaryKeys := make([]int64, len(res))
+		for i, v := range res {
+			serialNumberPrimaryKeys[i] = v.SerialNumberId
+		}
+		serialNumberData := make(map[int64]*entity.SerialNumber)
+		{
+			rels, _ := d.serialNumber.SelectMulti(ctx, serialNumberPrimaryKeys...)
+			for _, v := range rels {
+				serialNumberData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.SerialNumber = serialNumberData[v.SerialNumberId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.SignedCertificate, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `certificate`, `serial_number_id`, `p12`, `agent`, `comment`, `device`, `issued_at` FROM `signed_certificate`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2091,18 +2384,23 @@ func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		for _, v := range res {
-			{
-				if rel, _ := d.serialNumber.Select(ctx, v.SerialNumberId); rel != nil {
-					v.SerialNumber = rel
-				}
+		serialNumberPrimaryKeys := make([]int64, len(res))
+		for i, v := range res {
+			serialNumberPrimaryKeys[i] = v.SerialNumberId
+		}
+		serialNumberData := make(map[int64]*entity.SerialNumber)
+		{
+			rels, _ := d.serialNumber.SelectMulti(ctx, serialNumberPrimaryKeys...)
+			for _, v := range rels {
+				serialNumberData[v.Id] = v
 			}
-
+		}
+		for _, v := range res {
+			v.SerialNumber = serialNumberData[v.SerialNumberId]
 		}
 	}
 
 	return res, nil
-
 }
 
 func (d *SignedCertificate) Create(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) (*entity.SignedCertificate, error) {
@@ -2138,7 +2436,6 @@ func (d *SignedCertificate) Create(ctx context.Context, signedCertificate *entit
 
 	signedCertificate.ResetMark()
 	return signedCertificate, nil
-
 }
 
 func (d *SignedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2162,7 +2459,6 @@ func (d *SignedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOpt
 	}
 
 	return nil
-
 }
 
 func (d *SignedCertificate) Update(ctx context.Context, signedCertificate *entity.SignedCertificate, opt ...ExecOption) error {
@@ -2203,7 +2499,6 @@ func (d *SignedCertificate) Update(ctx context.Context, signedCertificate *entit
 
 	signedCertificate.ResetMark()
 	return nil
-
 }
 
 type RevokedCertificate struct {
@@ -2213,6 +2508,7 @@ type RevokedCertificate struct {
 type RevokedCertificateInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.RevokedCertificate, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.RevokedCertificate, error)
 	ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error)
 	Create(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) (*entity.RevokedCertificate, error)
@@ -2245,7 +2541,6 @@ func (d *RevokedCertificate) Tx(ctx context.Context, fn func(tx *sql.Tx) error) 
 		return err
 	}
 	return nil
-
 }
 
 func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.RevokedCertificate, error) {
@@ -2258,14 +2553,36 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *RevokedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*entity.RevokedCertificate, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `revoked_certificate` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.RevokedCertificate, 0, len(id))
+	for rows.Next() {
+		r := &entity.RevokedCertificate{}
+		if err := rows.Scan(&r.Id, &r.CommonName, &r.SerialNumber, &r.Agent, &r.Comment, &r.RevokedAt, &r.IssuedAt, &r.Device, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber []byte, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `device`, `created_at`, `updated_at` FROM `revoked_certificate` WHERE `serial_number` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2296,14 +2613,13 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 	}
 
 	return res, nil
-
 }
 
 func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.RevokedCertificate, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `common_name`, `serial_number`, `agent`, `comment`, `revoked_at`, `issued_at`, `device`, `created_at`, `updated_at` FROM `revoked_certificate`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2333,7 +2649,6 @@ func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]
 	}
 
 	return res, nil
-
 }
 
 func (d *RevokedCertificate) Create(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) (*entity.RevokedCertificate, error) {
@@ -2369,7 +2684,6 @@ func (d *RevokedCertificate) Create(ctx context.Context, revokedCertificate *ent
 
 	revokedCertificate.ResetMark()
 	return revokedCertificate, nil
-
 }
 
 func (d *RevokedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2393,7 +2707,6 @@ func (d *RevokedCertificate) Delete(ctx context.Context, id int32, opt ...ExecOp
 	}
 
 	return nil
-
 }
 
 func (d *RevokedCertificate) Update(ctx context.Context, revokedCertificate *entity.RevokedCertificate, opt ...ExecOption) error {
@@ -2436,7 +2749,6 @@ func (d *RevokedCertificate) Update(ctx context.Context, revokedCertificate *ent
 
 	revokedCertificate.ResetMark()
 	return nil
-
 }
 
 type Node struct {
@@ -2446,6 +2758,7 @@ type Node struct {
 type NodeInterface interface {
 	Tx(ctx context.Context, fn func(tx *sql.Tx) error) error
 	Select(ctx context.Context, id int32) (*entity.Node, error)
+	SelectMulti(ctx context.Context, id ...int32) ([]*entity.Node, error)
 	ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, error)
 	ListHostname(ctx context.Context, hostname string, opt ...ListOption) ([]*entity.Node, error)
 	Create(ctx context.Context, node *entity.Node, opt ...ExecOption) (*entity.Node, error)
@@ -2478,7 +2791,6 @@ func (d *Node) Tx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 		return err
 	}
 	return nil
-
 }
 
 func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
@@ -2491,14 +2803,36 @@ func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
 
 	v.ResetMark()
 	return v, nil
+}
 
+func (d *Node) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Node, error) {
+	inCause := strings.Repeat("?, ", len(id))
+	args := make([]any, len(id))
+	for i := 0; i < len(id); i++ {
+		args[i] = id[i]
+	}
+	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `node` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*entity.Node, 0, len(id))
+	for rows.Next() {
+		r := &entity.Node{}
+		if err := rows.Scan(&r.Id, &r.Hostname, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+
+	return res, nil
 }
 
 func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `hostname`, `created_at`, `updated_at` FROM `node`"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2528,14 +2862,13 @@ func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, 
 	}
 
 	return res, nil
-
 }
 
 func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOption) ([]*entity.Node, error) {
 	listOpts := newListOpt(opt...)
 	query := "SELECT `id`, `hostname`, `created_at`, `updated_at` FROM `node` WHERE `hostname` = ?"
 	orderCol := "`" + listOpts.sort + "`"
-	if orderCol == "" {
+	if listOpts.sort == "" {
 		orderCol = "`id`"
 	}
 	orderDi := "ASC"
@@ -2566,7 +2899,6 @@ func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOpt
 	}
 
 	return res, nil
-
 }
 
 func (d *Node) Create(ctx context.Context, node *entity.Node, opt ...ExecOption) (*entity.Node, error) {
@@ -2602,7 +2934,6 @@ func (d *Node) Create(ctx context.Context, node *entity.Node, opt ...ExecOption)
 
 	node.ResetMark()
 	return node, nil
-
 }
 
 func (d *Node) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
@@ -2626,7 +2957,6 @@ func (d *Node) Delete(ctx context.Context, id int32, opt ...ExecOption) error {
 	}
 
 	return nil
-
 }
 
 func (d *Node) Update(ctx context.Context, node *entity.Node, opt ...ExecOption) error {
@@ -2669,5 +2999,4 @@ func (d *Node) Update(ctx context.Context, node *entity.Node, opt ...ExecOption)
 
 	node.ResetMark()
 	return nil
-
 }

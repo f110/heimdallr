@@ -1,5 +1,5 @@
 load("@dev_f110_kubeproto//bazel:def.bzl", "go_testing_client")
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 load("//build/rules:vendor.bzl", "vendor_kubeproto")
 
 go_testing_client(
@@ -27,13 +27,14 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/k8s/client",
-        "//vendor/k8s.io/apimachinery/pkg/api/meta",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/labels",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/serializer",
-        "//vendor/k8s.io/apimachinery/pkg/watch",
-        "//vendor/k8s.io/client-go/testing",
+        "@dev_f110_kubeproto//go/apis/metav1",
+        "@io_k8s_apimachinery//pkg/api/meta",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/labels",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
+        "@io_k8s_apimachinery//pkg/runtime/serializer",
+        "@io_k8s_apimachinery//pkg/watch",
+        "@io_k8s_client_go//testing",
     ],
 )

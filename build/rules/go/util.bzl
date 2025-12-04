@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary")
 
 def multiplatform_go_binary(name_prefix, **kwargs):
     if not "platforms" in kwargs:

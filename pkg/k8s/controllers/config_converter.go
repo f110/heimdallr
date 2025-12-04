@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sort"
 
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	corev1 "k8s.io/api/core/v1"
-	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -16,7 +16,7 @@ import (
 type ConfigConverter struct {
 }
 
-func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister listers.ServiceLister) ([]byte, error) {
+func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister *k8sclient.CoreV1ServiceLister) ([]byte, error) {
 	proxies := make([]*configv2.Backend, 0, len(backends))
 	for _, v := range backends {
 		_, virtualDashboard := v.Labels[labelKeyVirtualDashboard]
@@ -91,7 +91,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 				Agent:    v.Spec.Socket.Agent,
 			}
 			if v.Spec.Socket.Timeout != nil {
-				socket.Timeout = &configv2.Duration{Duration: v.Spec.Socket.Timeout.Duration}
+				socket.Timeout = &configv2.Duration{Duration: v.Spec.Socket.Timeout.TimeDuration()}
 			}
 		}
 
@@ -106,7 +106,7 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister li
 			AllowHttp:     v.Spec.AllowHttp,
 		}
 		if v.Spec.MaxSessionDuration != nil {
-			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.Duration}
+			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.TimeDuration()}
 		}
 		proxies = append(proxies, b)
 	}

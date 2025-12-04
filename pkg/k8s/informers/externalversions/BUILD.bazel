@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "externalversions",
@@ -19,14 +19,14 @@ go_library(
         "//pkg/k8s/informers/externalversions/internalinterfaces",
         "//pkg/k8s/informers/externalversions/monitoring",
         "//pkg/k8s/informers/externalversions/proxy",
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1:certmanager",
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2",
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3",
-        "//vendor/github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1",
-        "//vendor/github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:monitoring",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/apimachinery/pkg/runtime",
-        "//vendor/k8s.io/apimachinery/pkg/runtime/schema",
-        "//vendor/k8s.io/client-go/tools/cache",
+        "@com_github_jetstack_cert_manager//pkg/apis/certmanager/v1:certmanager",
+        "@com_github_jetstack_cert_manager//pkg/apis/certmanager/v1alpha2",
+        "@com_github_jetstack_cert_manager//pkg/apis/certmanager/v1alpha3",
+        "@com_github_jetstack_cert_manager//pkg/apis/certmanager/v1beta1",
+        "@com_github_prometheus_operator_prometheus_operator_pkg_apis_monitoring//v1:monitoring",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/runtime",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
+        "@io_k8s_client_go//tools/cache",
     ],
 )

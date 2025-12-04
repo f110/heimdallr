@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "strings",
-    srcs = ["strings.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/github.com/zitadel/oidc/v3/pkg/strings",
-    importpath = "github.com/zitadel/oidc/v3/pkg/strings",
-    visibility = ["//visibility:public"],
-)

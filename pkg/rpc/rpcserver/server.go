@@ -114,6 +114,7 @@ func (s *Server) Start() error {
 	}
 	listener := tls.NewListener(l, &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
+		NextProtos:   []string{"h2"},
 	})
 
 	go func() {

@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "semaphore",
-    srcs = ["semaphore.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/golang.org/x/sync/semaphore",
-    importpath = "golang.org/x/sync/semaphore",
-    visibility = ["//visibility:public"],
-)

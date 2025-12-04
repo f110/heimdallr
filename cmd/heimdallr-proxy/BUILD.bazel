@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("//build/rules/go:util.bzl", "go_binary_for_container")
 
 go_library(
@@ -9,7 +9,7 @@ go_library(
     deps = [
         "//pkg/cmd/reverseproxy",
         "//pkg/version",
-        "//vendor/github.com/spf13/pflag",
+        "@com_github_spf13_pflag//:pflag",
     ],
 )
 

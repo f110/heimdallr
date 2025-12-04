@@ -21,17 +21,16 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/etcdutl/v3/snapshot"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/portforward"
@@ -52,7 +51,7 @@ type EtcdController struct {
 	*controllerbase.Controller
 
 	config            *rest.Config
-	coreClient        kubernetes.Interface
+	coreClient        *k8sclient.Set
 	client            *client.EtcdV1alpha2
 	clusterDomain     string
 	runOutsideCluster bool
@@ -61,15 +60,15 @@ type EtcdController struct {
 	clusterLister        *client.EtcdV1alpha2EtcdClusterLister
 	clusterListerSynced  cache.InformerSynced
 	podInformer          cache.SharedIndexInformer
-	podLister            listers.PodLister
+	podLister            *k8sclient.CoreV1PodLister
 	podListerSynced      cache.InformerSynced
-	serviceLister        listers.ServiceLister
+	serviceLister        *k8sclient.CoreV1ServiceLister
 	serviceListerSynced  cache.InformerSynced
-	secretLister         listers.SecretLister
+	secretLister         *k8sclient.CoreV1SecretLister
 	secretListerSynced   cache.InformerSynced
-	pvcLister            listers.PersistentVolumeClaimLister
+	pvcLister            *k8sclient.CoreV1PersistentVolumeClaimLister
 	pvcListerSynced      cache.InformerSynced
-	serviceAccountLister listers.ServiceAccountLister
+	serviceAccountLister *k8sclient.CoreV1ServiceAccountLister
 	serviceAccountSynced cache.InformerSynced
 
 	// for testing hack
@@ -79,21 +78,17 @@ type EtcdController struct {
 
 func NewEtcdController(
 	sharedInformerFactory *client.InformerFactory,
-	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
-	coreClient kubernetes.Interface,
+	coreSharedInformerFactory *k8sclient.InformerFactory,
+	coreClient *k8sclient.Set,
 	etcdClient *client.EtcdV1alpha2,
+	k8sClient kubernetes.Interface,
 	cfg *rest.Config,
 	clusterDomain string,
 	runOutsideCluster bool,
 	transport http.RoundTripper,
 	mockOpt *MockOption,
 ) (*EtcdController, error) {
-	podInformer := coreSharedInformerFactory.Core().V1().Pods()
-	serviceInformer := coreSharedInformerFactory.Core().V1().Services()
-	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
-	pvcInformer := coreSharedInformerFactory.Core().V1().PersistentVolumeClaims()
-	saInformer := coreSharedInformerFactory.Core().V1().ServiceAccounts()
-
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
 	etcdClusterInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), etcdClient, metav1.NamespaceAll, 30*time.Second)
 
 	c := &EtcdController{
@@ -105,22 +100,22 @@ func NewEtcdController(
 		etcdClusterInformer:  etcdClusterInformer.EtcdClusterInformer(),
 		clusterLister:        etcdClusterInformer.EtcdClusterLister(),
 		clusterListerSynced:  etcdClusterInformer.EtcdClusterInformer().HasSynced,
-		podInformer:          podInformer.Informer(),
-		podLister:            podInformer.Lister(),
-		podListerSynced:      podInformer.Informer().HasSynced,
-		serviceLister:        serviceInformer.Lister(),
-		serviceListerSynced:  serviceInformer.Informer().HasSynced,
-		secretLister:         secretInformer.Lister(),
-		secretListerSynced:   secretInformer.Informer().HasSynced,
-		pvcLister:            pvcInformer.Lister(),
-		pvcListerSynced:      pvcInformer.Informer().HasSynced,
-		serviceAccountLister: saInformer.Lister(),
-		serviceAccountSynced: saInformer.Informer().HasSynced,
+		podInformer:          corev1Informer.PodInformer(),
+		podLister:            corev1Informer.PodLister(),
+		podListerSynced:      corev1Informer.PodInformer().HasSynced,
+		serviceLister:        corev1Informer.ServiceLister(),
+		serviceListerSynced:  corev1Informer.ServiceInformer().HasSynced,
+		secretLister:         corev1Informer.SecretLister(),
+		secretListerSynced:   corev1Informer.SecretInformer().HasSynced,
+		pvcLister:            corev1Informer.PersistentVolumeClaimLister(),
+		pvcListerSynced:      corev1Informer.PersistentVolumeClaimInformer().HasSynced,
+		serviceAccountLister: corev1Informer.ServiceAccountLister(),
+		serviceAccountSynced: corev1Informer.ServiceAccountInformer().HasSynced,
 		transport:            transport,
 		etcdClientMockOpt:    mockOpt,
 	}
 
-	c.Controller = controllerbase.NewController(c, coreClient)
+	c.Controller = controllerbase.NewController(c, k8sClient)
 	return c, nil
 }
 
@@ -272,7 +267,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 			continue
 		}
 
-		if v.Status.Phase != corev1.PodRunning {
+		if v.Status.Phase != corev1.PodPhaseRunning {
 			continue
 		}
 		initFinished := true
@@ -299,11 +294,11 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		}
 		running := true
 		for _, cont := range v.Status.ContainerStatuses {
-			if cont.Started == nil {
+			if !cont.Started {
 				running = false
 				break
 			}
-			if *cont.Started != true || cont.Ready != true {
+			if cont.Started != true || cont.Ready != true {
 				running = false
 				break
 			}
@@ -313,13 +308,13 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		}
 
 		now := ctx.Value(controllerbase.TimeKey{}).(time.Time)
-		metav1.SetMetaDataAnnotation(&v.ObjectMeta, etcd.PodAnnotationKeyRunningAt, now.Format(time.RFC3339))
+		metav1.SetMetadataAnnotation(&v.ObjectMeta, etcd.PodAnnotationKeyRunningAt, now.Format(time.RFC3339))
 		ec.Log(ctx).Debug("Add annotation",
 			zap.String("pod.name", v.Name),
 			zap.String("key", etcd.PodAnnotationKeyRunningAt),
 			zap.String("value", v.Annotations[etcd.PodAnnotationKeyRunningAt]),
 		)
-		p, err := ec.coreClient.CoreV1().Pods(v.Namespace).Update(ctx, v, metav1.UpdateOptions{})
+		p, err := ec.coreClient.CoreV1.UpdatePod(ctx, v, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -410,7 +405,7 @@ func (ec *EtcdController) createNewClusterWithBackup(ctx context.Context, cluste
 		cluster.SetAnnotationForPod(members[0].Pod)
 		cluster.InjectRestoreContainer(members[0].Pod)
 
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, members[0].Pod, metav1.CreateOptions{})
+		_, err := ec.coreClient.CoreV1.CreatePod(ctx, members[0].Pod, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -453,7 +448,6 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 			"candidate pod",
 			zap.String("name", v.Pod.Name),
 			zap.String("phase", string(v.Pod.Status.Phase)),
-			zap.Time("creation", v.Pod.CreationTimestamp.Time),
 		)
 		if !cluster.IsPodReady(v.Pod) && !v.Pod.CreationTimestamp.IsZero() {
 			break
@@ -495,7 +489,7 @@ func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster)
 				continue
 			}
 
-			if v.Pod.Status.Phase != corev1.PodRunning {
+			if v.Pod.Status.Phase != corev1.PodPhaseRunning {
 				canDeleteMember = false
 			}
 		}
@@ -645,7 +639,7 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 
 	for _, v := range members {
 		ec.Log(ctx).Debug("Delete pod", zap.String("name", v.Name))
-		if err := ec.coreClient.CoreV1().Pods(v.Namespace).Delete(ctx, v.Name, metav1.DeleteOptions{}); err != nil {
+		if err := ec.coreClient.CoreV1.DeletePod(ctx, v.Namespace, v.Name, metav1.DeleteOptions{}); err != nil {
 			return xerrors.WithStack(err)
 		}
 	}
@@ -695,7 +689,7 @@ func (ec *EtcdController) setupCA(ctx context.Context, cluster *EtcdCluster) err
 		return err
 	}
 	if caSecret.CreationTimestamp.IsZero() {
-		caSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, caSecret, metav1.CreateOptions{})
+		caSecret, err = ec.coreClient.CoreV1.CreateSecret(ctx, caSecret, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -711,7 +705,7 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 		return err
 	}
 	if serverCertSecret.CreationTimestamp.IsZero() {
-		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, serverCertSecret, metav1.CreateOptions{})
+		serverCertSecret, err = ec.coreClient.CoreV1.CreateSecret(ctx, serverCertSecret, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -724,7 +718,7 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 			return err
 		}
 
-		serverCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Update(ctx, serverCertSecret, metav1.UpdateOptions{})
+		serverCertSecret, err = ec.coreClient.CoreV1.UpdateSecret(ctx, serverCertSecret, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -740,7 +734,7 @@ func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdClus
 		return err
 	}
 	if clientCertSecret.CreationTimestamp.IsZero() {
-		clientCertSecret, err = ec.coreClient.CoreV1().Secrets(cluster.Namespace).Create(ctx, clientCertSecret, metav1.CreateOptions{})
+		clientCertSecret, err = ec.coreClient.CoreV1.CreateSecret(ctx, clientCertSecret, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -754,7 +748,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 	ec.Log(ctx).Debug("Start member", zap.String("pod.name", member.Pod.Name))
 
 	if member.PersistentVolumeClaim != nil && member.PersistentVolumeClaim.CreationTimestamp.IsZero() {
-		_, err := ec.coreClient.CoreV1().PersistentVolumeClaims(cluster.Namespace).Create(ctx, member.PersistentVolumeClaim, metav1.CreateOptions{})
+		_, err := ec.coreClient.CoreV1.CreatePersistentVolumeClaim(ctx, member.PersistentVolumeClaim, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -762,7 +756,7 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 
 	if member.Pod.CreationTimestamp.IsZero() {
 		cluster.SetAnnotationForPod(member.Pod)
-		_, err := ec.coreClient.CoreV1().Pods(cluster.Namespace).Create(ctx, resetPod(member.Pod), metav1.CreateOptions{})
+		_, err := ec.coreClient.CoreV1.CreatePod(ctx, resetPod(member.Pod), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -827,7 +821,7 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 		forwarder.Close()
 	}
 
-	if err = ec.coreClient.CoreV1().Pods(cluster.Namespace).Delete(ctx, member.Pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err = ec.coreClient.CoreV1.DeletePod(ctx, member.Pod.Namespace, member.Pod.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return xerrors.WithStack(err)
 	}
 
@@ -859,7 +853,7 @@ func (ec *EtcdController) ensureService(ctx context.Context, cluster *EtcdCluste
 
 func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdCluster) error {
 	found := true
-	cj, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Get(ctx, cluster.DefragmentCronJobName(), metav1.GetOptions{})
+	cj, err := ec.coreClient.BatchV1.GetCronJob(ctx, cluster.Namespace, cluster.DefragmentCronJobName(), metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
@@ -868,7 +862,7 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 
 	if cluster.Spec.DefragmentSchedule == "" {
 		if found {
-			err = ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Delete(ctx, cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
+			err = ec.coreClient.BatchV1.DeleteCronJob(ctx, cluster.Namespace, cluster.DefragmentCronJobName(), metav1.DeleteOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
@@ -880,13 +874,13 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 
 	if found {
 		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
-			_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Update(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
+			_, err := ec.coreClient.BatchV1.UpdateCronJob(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
 		}
 	} else {
-		_, err := ec.coreClient.BatchV1().CronJobs(cluster.Namespace).Create(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
+		_, err := ec.coreClient.BatchV1.CreateCronJob(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -896,19 +890,19 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 }
 
 func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *EtcdCluster) error {
-	sa, err := ec.serviceAccountLister.ServiceAccounts(cluster.Namespace).Get(cluster.ServiceAccountName())
+	sa, err := ec.serviceAccountLister.Get(cluster.Namespace, cluster.ServiceAccountName())
 	if err != nil && apierrors.IsNotFound(err) {
 		sa = cluster.ServiceAccount()
 
-		sa, err = ec.coreClient.CoreV1().ServiceAccounts(cluster.Namespace).Create(ctx, sa, metav1.CreateOptions{})
+		sa, err = ec.coreClient.CoreV1.CreateServiceAccount(ctx, sa, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
-		_, err = ec.coreClient.RbacV1().Roles(cluster.Namespace).Create(ctx, cluster.EtcdRole(), metav1.CreateOptions{})
+		_, err = ec.coreClient.RbacAuthorizationK8sIoV1.CreateRole(ctx, cluster.EtcdRole(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
-		_, err = ec.coreClient.RbacV1().RoleBindings(cluster.Namespace).Create(ctx, cluster.EtcdRoleBinding(), metav1.CreateOptions{})
+		_, err = ec.coreClient.RbacAuthorizationK8sIoV1.CreateRoleBinding(ctx, cluster.EtcdRoleBinding(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -920,9 +914,9 @@ func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *Etc
 }
 
 func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *EtcdCluster) error {
-	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ServerDiscoveryServiceName())
+	_, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
-		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
+		_, err = ec.coreClient.CoreV1.CreateService(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -934,9 +928,9 @@ func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *E
 }
 
 func (ec *EtcdController) ensureClientService(ctx context.Context, cluster *EtcdCluster) error {
-	_, err := ec.serviceLister.Services(cluster.Namespace).Get(cluster.ClientServiceName())
+	_, err := ec.serviceLister.Get(cluster.Namespace, cluster.ClientServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
-		_, err = ec.coreClient.CoreV1().Services(cluster.Namespace).Create(ctx, cluster.ClientService(), metav1.CreateOptions{})
+		_, err = ec.coreClient.CoreV1.CreateService(ctx, cluster.ClientService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -987,7 +981,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	endpoints := make([]string, 0)
 	runningPods := 0
 	for _, v := range etcdPods {
-		if v.Status.Phase == corev1.PodRunning {
+		if v.Status.Phase == corev1.PodPhaseRunning {
 			runningPods++
 		}
 		endpoints = append(endpoints, v.Endpoint)
@@ -1122,7 +1116,7 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 		etcd.LabelNameClusterName: cluster.Name,
 		etcd.LabelNameRole:        "defragment",
 	})
-	jobList, err := ec.coreClient.BatchV1().Jobs(cluster.Namespace).List(ctx, metav1.ListOptions{LabelSelector: s.String()})
+	jobList, err := ec.coreClient.BatchV1.ListJob(ctx, cluster.Namespace, metav1.ListOptions{LabelSelector: s.String()})
 	if err != nil {
 		return
 	}
@@ -1170,7 +1164,7 @@ func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
 		logger.Log.Debug("LastSucceededTime is zero")
 		return true
 	}
-	if cluster.Status.Backup.LastSucceededTime.Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
+	if cluster.Status.Backup.LastSucceededTime.Time().Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
 		logger.Log.Debug("Backed up is expired")
 		return true
 	}
@@ -1271,7 +1265,7 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		if namespace == "" {
 			namespace = cluster.Namespace
 		}
-		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
+		credential, err := ec.secretLister.Get(namespace, spec.CredentialSelector.Name)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1349,7 +1343,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		if namespace == "" {
 			namespace = cluster.Namespace
 		}
-		credential, err := ec.secretLister.Secrets(namespace).Get(spec.CredentialSelector.Name)
+		credential, err := ec.secretLister.Get(namespace, spec.CredentialSelector.Name)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1424,7 +1418,7 @@ func (ec *EtcdController) getBackupFile(ctx context.Context, cluster *EtcdCluste
 }
 
 func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.BackupStorageMinIOSpec) (*minio.Client, *portforward.PortForwarder, error) {
-	svc, err := ec.serviceLister.Services(spec.ServiceSelector.Namespace).Get(spec.ServiceSelector.Name)
+	svc, err := ec.serviceLister.Get(spec.ServiceSelector.Namespace, spec.ServiceSelector.Name)
 	if err != nil {
 		return nil, nil, xerrors.WithStack(err)
 	}
@@ -1433,13 +1427,13 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 	var forwarder *portforward.PortForwarder
 	if ec.runOutsideCluster {
 		selector := labels.SelectorFromSet(svc.Spec.Selector)
-		pods, err := ec.podLister.List(selector)
+		pods, err := ec.podLister.List(svc.Namespace, selector)
 		if err != nil {
 			return nil, nil, xerrors.WithStack(err)
 		}
 		var targetPod *corev1.Pod
 		for _, v := range pods {
-			if v.Status.Phase == corev1.PodRunning {
+			if v.Status.Phase == corev1.PodPhaseRunning {
 				targetPod = v
 				break
 			}
@@ -1457,7 +1451,7 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 		instanceEndpoint = fmt.Sprintf("127.0.0.1:%d", port)
 	}
 
-	credential, err := ec.secretLister.Secrets(spec.CredentialSelector.Namespace).Get(spec.CredentialSelector.Name)
+	credential, err := ec.secretLister.Get(spec.CredentialSelector.Namespace, spec.CredentialSelector.Name)
 	if err != nil {
 		return nil, forwarder, xerrors.WithStack(err)
 	}
@@ -1511,7 +1505,7 @@ func (ec *EtcdController) etcdClient(ctx context.Context, cluster *EtcdCluster) 
 }
 
 func (ec *EtcdController) portForward(ctx context.Context, pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
-	req := ec.coreClient.CoreV1().RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
+	req := ec.coreClient.RESTClient.Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
 	if err != nil {
 		return nil, 0, xerrors.WithStack(err)

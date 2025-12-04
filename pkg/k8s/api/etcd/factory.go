@@ -3,9 +3,9 @@ package etcd
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
@@ -194,9 +194,9 @@ func PersistentData(object interface{}) {
 
 	e.Spec.VolumeClaimTemplate = &corev1.PersistentVolumeClaimTemplate{
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			Resources: corev1.VolumeResourceRequirements{
-				Requests: corev1.ResourceList{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.PersistentVolumeAccessModeReadWriteOnce},
+			Resources: &corev1.VolumeResourceRequirements{
+				Requests: map[string]resource.Quantity{
 					"storage": resource.MustParse("1Gi"),
 				},
 			},

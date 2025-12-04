@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "dashboard",
@@ -12,11 +12,11 @@ go_library(
         "//pkg/fsm",
         "//pkg/logger",
         "//pkg/rpc",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2:go-grpc-middleware",
-        "//vendor/github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/google.golang.org/grpc",
-        "//vendor/google.golang.org/grpc/credentials",
-        "//vendor/google.golang.org/grpc/keepalive",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//:go-grpc-middleware",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/retry",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//keepalive",
     ],
 )

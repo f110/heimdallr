@@ -1,3 +1,7 @@
+common --enable_bzlmod
+
+build --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+
 test --test_output=errors --test_tag_filters=-e2e
 
 test:ci --test_output=errors

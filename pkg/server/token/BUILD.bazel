@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "token",
@@ -14,7 +14,7 @@ go_library(
         "//pkg/session",
         "//pkg/template",
         "//tmpl/ui",
-        "//vendor/github.com/julienschmidt/httprouter",
-        "//vendor/go.uber.org/zap",
+        "@com_github_julienschmidt_httprouter//:httprouter",
+        "@org_uber_go_zap//:zap",
     ],
 )

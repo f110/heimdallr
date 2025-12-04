@@ -13,13 +13,12 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v41/github"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -40,27 +39,28 @@ type GitHubController struct {
 	backendInformer     cache.SharedIndexInformer
 	backendLister       *client.ProxyV1alpha2BackendLister
 	backendListerSynced cache.InformerSynced
-	secretLister        listers.SecretLister
+	secretLister        *k8sclient.CoreV1SecretLister
 	secretListerSynced  cache.InformerSynced
 
 	client     *client.ProxyV1alpha2
-	coreClient kubernetes.Interface
+	coreClient *k8sclient.Set
 
 	transport http.RoundTripper
 }
 
 func NewGitHubController(
 	sharedInformerFactory *client.InformerFactory,
-	coreSharedInformerFactory kubeinformers.SharedInformerFactory,
-	coreClient kubernetes.Interface,
+	coreSharedInformerFactory *k8sclient.InformerFactory,
+	coreClient *k8sclient.Set,
 	proxyClient *client.ProxyV1alpha2,
+	k8sClient kubernetes.Interface,
 	transport http.RoundTripper,
 ) (*GitHubController, error) {
 	proxyInformers := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, metav1.NamespaceAll, 30*time.Second)
 	backendInformer := proxyInformers.BackendInformer()
 	proxyInformer := proxyInformers.ProxyInformer()
 
-	secretInformer := coreSharedInformerFactory.Core().V1().Secrets()
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
 
 	c := &GitHubController{
 		client:              proxyClient,
@@ -69,12 +69,12 @@ func NewGitHubController(
 		backendInformer:     backendInformer,
 		backendLister:       proxyInformers.BackendLister(),
 		backendListerSynced: backendInformer.HasSynced,
-		secretLister:        secretInformer.Lister(),
-		secretListerSynced:  secretInformer.Informer().HasSynced,
+		secretLister:        corev1Informer.SecretLister(),
+		secretListerSynced:  corev1Informer.SecretInformer().HasSynced,
 		transport:           transport,
 	}
 
-	c.Controller = controllerbase.NewController(c, coreClient)
+	c.Controller = controllerbase.NewController(c, k8sClient)
 	return c, nil
 }
 
@@ -383,7 +383,7 @@ func (c *GitHubController) setWebHook(ctx context.Context, client *github.Client
 				c.Log(ctx).Debug("Is not ready", zap.String("name", proxy.Name))
 				continue
 			}
-			secret, err := c.secretLister.Secrets(proxy.Namespace).Get(proxy.Status.GithubWebhookSecretName)
+			secret, err := c.secretLister.Get(proxy.Namespace, proxy.Status.GithubWebhookSecretName)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					c.Log(ctx).Error("Is not found", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Status.GithubWebhookSecretName))
@@ -426,7 +426,7 @@ func (c *GitHubController) newGithubClient(conf *proxyv1alpha2.WebhookConfigurat
 	if secretNamespace == "" {
 		secretNamespace = namespace
 	}
-	secret, err := c.secretLister.Secrets(secretNamespace).Get(conf.GitHub.CredentialSecretName)
+	secret, err := c.secretLister.Get(secretNamespace, conf.GitHub.CredentialSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, xerrors.WithStack(err)

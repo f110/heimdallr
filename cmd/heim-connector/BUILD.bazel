@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("//:RELEASE.bzl", "PLATFORMS")
 load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 
@@ -13,9 +13,9 @@ go_library(
         "//pkg/connector",
         "//pkg/logger",
         "//pkg/version",
-        "//vendor/github.com/spf13/pflag",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/software.sslmate.com/src/go-pkcs12",
+        "@com_github_spf13_pflag//:pflag",
+        "@com_sslmate_software_src_go_pkcs12//:go-pkcs12",
+        "@dev_f110_go_xerrors//:xerrors",
     ],
 )
 

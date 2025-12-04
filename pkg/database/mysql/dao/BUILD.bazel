@@ -1,5 +1,5 @@
 load("@dev_f110_protoc_ddl//rules:def.bzl", "schema_dao", "vendor_ddl")
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 schema_dao(
     name = "dao_library",

@@ -1,4 +1,17 @@
+load("@dev_f110_kubeproto//bazel:protobuf.bzl", "gen_protobuf")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+
+gen_protobuf(
+    name = "gen",
+    srcs = ["@com_github_jetstack_cert_manager//pkg/apis/acme/v1:acme"],
+    all = True,
+    api_sub_group = "cert-manager.io",
+    api_version = "v1",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/acmev1",
+    proto_package_name = "github.com.jetstack.cert_manager.pkg.apis.acmev1",
+    visibility = ["//visibility:public"],
+    deps = ["//operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1:gen"],
+)
 
 proto_library(
     name = "acmev1",
@@ -8,5 +21,6 @@ proto_library(
         "//operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1",
         "@dev_f110_kubeproto//:k8s_proto",
         "@dev_f110_kubeproto//:kubeproto",
+        "@dev_f110_kubeproto//k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1:apiextensions_proto",
     ],
 )

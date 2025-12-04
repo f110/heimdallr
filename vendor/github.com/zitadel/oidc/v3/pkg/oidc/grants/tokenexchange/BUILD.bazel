@@ -1,9 +1,0 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "tokenexchange",
-    srcs = ["tokenexchange.go"],
-    importmap = "go.f110.dev/heimdallr/vendor/github.com/zitadel/oidc/v3/pkg/oidc/grants/tokenexchange",
-    importpath = "github.com/zitadel/oidc/v3/pkg/oidc/grants/tokenexchange",
-    visibility = ["//visibility:public"],
-)

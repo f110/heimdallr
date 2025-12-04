@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -20,7 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -37,11 +38,11 @@ import (
 
 func DeployTestService(coreClient kubernetes.Interface, client *client.Set, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
-	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, k8smetav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, k8smetav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -55,11 +56,11 @@ func DeployTestService(coreClient kubernetes.Interface, client *client.Set, prox
 
 func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client *client.Set, proxy *proxyv1alpha2.Proxy, name string) (*proxyv1alpha2.Backend, error) {
 	deployment, service, backend := makeTestService(proxy, name)
-	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, metav1.CreateOptions{})
+	_, err := coreClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), deployment, k8smetav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	_, err = coreClient.CoreV1().Services(service.Namespace).Create(context.TODO(), service, k8smetav1.CreateOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -75,7 +76,7 @@ func DeployDisableAuthnTestService(coreClient kubernetes.Interface, client *clie
 
 func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deployment, *corev1.Service, *proxyv1alpha2.Backend) {
 	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: k8smetav1.ObjectMeta{
 			Name:      name,
 			Namespace: proxy.Namespace,
 			Labels: map[string]string{
@@ -83,11 +84,11 @@ func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deploymen
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
+			Selector: &k8smetav1.LabelSelector{
 				MatchLabels: map[string]string{"app": "nginx"},
 			},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: k8smetav1.ObjectMeta{
 					Labels: map[string]string{"app": "nginx", "name": name},
 				},
 				Spec: corev1.PodSpec{
@@ -99,7 +100,7 @@ func makeTestService(proxy *proxyv1alpha2.Proxy, name string) (*appsv1.Deploymen
 		},
 	}
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: k8smetav1.ObjectMeta{
 			Name:      name,
 			Namespace: proxy.Namespace,
 			Labels:    map[string]string{"app": name},
@@ -181,7 +182,7 @@ func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) 
 }
 
 func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy, id string) (*RPCClient, error) {
-	rpcService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-rpcserver", proxy.Name), metav1.GetOptions{})
+	rpcService, err := coreClient.CoreV1().Services(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-rpcserver", proxy.Name), k8smetav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -229,7 +230,7 @@ func NewRPCClient(port uint16, caPool *x509.CertPool, token string) (*rpcclient.
 }
 
 func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy, id string) (string, error) {
-	signPrivKeyS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.SigningPrivateKeySecretName, metav1.GetOptions{})
+	signPrivKeyS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.SigningPrivateKeySecretName, k8smetav1.GetOptions{})
 	if err != nil {
 		return "", xerrors.WithStack(err)
 	}
@@ -254,7 +255,7 @@ func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy,
 }
 
 func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x509.CertPool, error) {
-	caS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.CASecretName, metav1.GetOptions{})
+	caS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), proxy.Status.CASecretName, k8smetav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -271,7 +272,7 @@ func CACertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x
 }
 
 func ProxyCertPool(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy) (*x509.CertPool, error) {
-	caCertS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-cert", proxy.Name), metav1.GetOptions{})
+	caCertS, err := coreClient.CoreV1().Secrets(proxy.Namespace).Get(context.TODO(), fmt.Sprintf("%s-cert", proxy.Name), k8smetav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -299,7 +300,7 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 	}
 
 	selector := labels.SelectorFromSet(svc.Spec.Selector)
-	podList, err := coreClient.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	podList, err := coreClient.CoreV1().Pods(svc.Namespace).List(ctx, k8smetav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}

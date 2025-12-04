@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "heimdev",
@@ -18,16 +18,16 @@ go_library(
         "//pkg/fsm",
         "//pkg/k8s",
         "//pkg/k8s/kind",
-        "//vendor/github.com/go-chi/chi/v5:chi",
-        "//vendor/github.com/go-jose/go-jose/v4:go-jose",
-        "//vendor/github.com/golang-jwt/jwt/v4:jwt",
-        "//vendor/github.com/miekg/dns",
-        "//vendor/github.com/zitadel/oidc/v3/pkg/oidc",
-        "//vendor/github.com/zitadel/oidc/v3/pkg/op",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/k8s.io/api/core/v1:core",
-        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:meta",
-        "//vendor/k8s.io/client-go/kubernetes",
-        "//vendor/nhooyr.io/websocket",
+        "@com_github_go_chi_chi_v5//:chi",
+        "@com_github_go_jose_go_jose_v4//:go-jose",
+        "@com_github_golang_jwt_jwt_v4//:jwt",
+        "@com_github_miekg_dns//:dns",
+        "@com_github_zitadel_oidc_v3//pkg/oidc",
+        "@com_github_zitadel_oidc_v3//pkg/op",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@io_k8s_api//core/v1:core",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_client_go//kubernetes",
+        "@io_nhooyr_websocket//:websocket",
     ],
 )

@@ -9,17 +9,19 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/stretchr/testify/assert"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"go.f110.dev/heimdallr/pkg/varptr"
+	"go.f110.dev/kubeproto/go/apis/appsv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
+	"go.f110.dev/kubeproto/go/apis/policyv1"
+	"go.f110.dev/kubeproto/go/apis/rbacv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
+	"go.f110.dev/kubeproto/go/k8stestingclient"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	kubeinformers "k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/gengo/namer"
@@ -30,6 +32,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/client/testingclient"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient"
 )
@@ -80,21 +83,23 @@ type TestRunner struct {
 	Actions []*Action
 
 	Client                    *testingclient.Set
-	CoreClient                *k8sfake.Clientset
+	CoreClient                *k8stestingclient.Set
+	K8sCoreClient             *k8sfake.Clientset
 	ThirdPartyClient          *testingthirdpartyclient.Set
 	SharedInformerFactory     *client.InformerFactory
-	CoreSharedInformerFactory kubeinformers.SharedInformerFactory
+	CoreSharedInformerFactory *k8sclient.InformerFactory
 	ThirdPartyInformerFactory *thirdpartyclient.InformerFactory
 }
 
 func NewTestRunner() *TestRunner {
 	clientSet := testingclient.NewSet()
-	coreClient := k8sfake.NewSimpleClientset()
+	coreClient := k8stestingclient.NewSet()
+	k8sCoreClient := k8sfake.NewSimpleClientset()
 	thirdPartyClientSet := testingthirdpartyclient.NewSet()
-	coreClient.Resources = []*metav1.APIResourceList{
+	k8sCoreClient.Resources = []*k8smetav1.APIResourceList{
 		{
 			GroupVersion: "cert-manager.io/v1",
-			APIResources: []metav1.APIResource{
+			APIResources: []k8smetav1.APIResource{
 				{
 					Kind: "Certificate",
 				},
@@ -103,17 +108,18 @@ func NewTestRunner() *TestRunner {
 	}
 
 	factory := client.NewInformerFactory(&clientSet.Set, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
-	coreSharedInformerFactory := kubeinformers.NewSharedInformerFactory(coreClient, 30*time.Second)
+	coreSharedInformerFactory := k8sclient.NewInformerFactory(&coreClient.Set, k8sclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 	thirdPartyInformerFactory := thirdpartyclient.NewInformerFactory(&thirdPartyClientSet.Set, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
 
 	factory.Run(context.Background())
-	coreSharedInformerFactory.Start(context.Background().Done())
+	coreSharedInformerFactory.Run(context.Background())
 	thirdPartyInformerFactory.Run(context.Background())
 
 	return &TestRunner{
 		Now:                       time.Now(),
 		Client:                    clientSet,
 		CoreClient:                coreClient,
+		K8sCoreClient:             k8sCoreClient,
 		ThirdPartyClient:          thirdPartyClientSet,
 		SharedInformerFactory:     factory,
 		CoreSharedInformerFactory: coreSharedInformerFactory,
@@ -195,94 +201,99 @@ func (r *TestRunner) RegisterFixtures(objs ...runtime.Object) {
 }
 
 func (r *TestRunner) registerProxyFixture(p *proxyv1alpha2.Proxy) {
-	r.Client.Tracker().Add(p)
-	r.SharedInformerFactory.InformerFor(p).GetIndexer().Add(p)
+	r.registerClientObject(p)
 }
 
 func (r *TestRunner) registerBackendFixture(b *proxyv1alpha2.Backend) {
-	r.Client.Tracker().Add(b)
-	r.SharedInformerFactory.InformerFor(b).GetIndexer().Add(b)
+	r.registerClientObject(b)
 }
 
 func (r *TestRunner) registerProxyRoleFixture(v *proxyv1alpha2.Role) {
-	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
+	r.registerClientObject(v)
 }
 
 func (r *TestRunner) registerProxyRoleBindingFixture(v *proxyv1alpha2.RoleBinding) {
-	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
+	r.registerClientObject(v)
 }
 
 func (r *TestRunner) registerRpcPermission(v *proxyv1alpha2.RpcPermission) {
-	r.Client.Tracker().Add(v)
-	r.SharedInformerFactory.InformerFor(v).GetIndexer().Add(v)
+	r.registerClientObject(v)
 }
 
 func (r *TestRunner) registerEtcdClusterFixture(ec *etcdv1alpha2.EtcdCluster) {
-	r.Client.Tracker().Add(ec)
-	r.SharedInformerFactory.InformerFor(ec).GetIndexer().Add(ec)
+	r.registerClientObject(ec)
+}
+
+func (r *TestRunner) registerClientObject(obj runtime.Object) {
+	if err := r.Client.Tracker().Add(obj); err != nil {
+		panic(err)
+	}
+	if err := r.SharedInformerFactory.InformerFor(obj).GetIndexer().Add(obj); err != nil {
+		panic(err)
+	}
+}
+
+func (r *TestRunner) registerCoreObject(obj runtime.Object) {
+	if err := r.CoreClient.Tracker().Add(obj); err != nil {
+		panic(err)
+	}
+	if err := r.CoreSharedInformerFactory.InformerFor(obj).GetIndexer().Add(obj); err != nil {
+		panic(err)
+	}
 }
 
 func (r *TestRunner) registerPodFixture(v *corev1.Pod) {
-	r.CoreClient.Tracker().Add(v)
-	r.CoreSharedInformerFactory.Core().V1().Pods().Informer().GetIndexer().Add(v)
+	r.registerCoreObject(v)
 }
 
 func (r *TestRunner) registerSecretFixture(s *corev1.Secret) {
-	s.CreationTimestamp = metav1.Now()
-	r.CoreClient.Tracker().Add(s)
-	r.CoreSharedInformerFactory.Core().V1().Secrets().Informer().GetIndexer().Add(s)
-}
-
-func (r *TestRunner) registerDeploymentFixture(d *appsv1.Deployment) {
-	r.CoreClient.Tracker().Add(d)
-	r.CoreSharedInformerFactory.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
-}
-
-func (r *TestRunner) registerPodDisruptionBudgetFixture(pdb *policyv1.PodDisruptionBudget) {
-	r.CoreClient.Tracker().Add(pdb)
-	r.CoreSharedInformerFactory.Policy().V1().PodDisruptionBudgets().Informer().GetIndexer().Add(pdb)
-}
-
-func (r *TestRunner) registerServiceFixture(s *corev1.Service) {
-	r.CoreClient.Tracker().Add(s)
-	r.CoreSharedInformerFactory.Core().V1().Services().Informer().GetIndexer().Add(s)
-}
-
-func (r *TestRunner) registerServiceAccountFixture(sa *corev1.ServiceAccount) {
-	r.CoreClient.Tracker().Add(sa)
-	r.CoreSharedInformerFactory.Core().V1().ServiceAccounts().Informer().GetIndexer().Add(sa)
-}
-
-func (r *TestRunner) registerRoleFixture(v *rbacv1.Role) {
-	r.CoreClient.Tracker().Add(v)
-	r.CoreSharedInformerFactory.Rbac().V1().Roles().Informer().GetIndexer().Add(v)
-}
-
-func (r *TestRunner) registerRoleBindingFixture(v *rbacv1.RoleBinding) {
-	r.CoreClient.Tracker().Add(v)
-	r.CoreSharedInformerFactory.Rbac().V1().RoleBindings().Informer().GetIndexer().Add(v)
-}
-
-func (r *TestRunner) registerConfigMapFixture(v *corev1.ConfigMap) {
-	r.CoreClient.Tracker().Add(v)
-	r.CoreSharedInformerFactory.Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
-}
-
-func (r *TestRunner) registerIngressFixture(i *networkingv1.Ingress) {
-	r.CoreClient.Tracker().Add(i)
-	r.CoreSharedInformerFactory.Networking().V1().Ingresses().Informer().GetIndexer().Add(i)
-}
-
-func (r *TestRunner) registerIngressClassFixture(ic *networkingv1.IngressClass) {
-	r.CoreClient.Tracker().Add(ic)
-	r.CoreSharedInformerFactory.Networking().V1().IngressClasses().Informer().GetIndexer().Add(ic)
+	s.CreationTimestamp = varptr.Ptr(metav1.Now())
+	r.registerCoreObject(s)
 }
 
 func (r *TestRunner) registerCertificateFixture(v *certmanagerv1.Certificate) {
-	r.ThirdPartyClient.Tracker().Add(v)
-	r.ThirdPartyInformerFactory.InformerFor(v).GetIndexer().Add(v)
+	if err := r.ThirdPartyClient.Tracker().Add(v); err != nil {
+		panic(err)
+	}
+	if err := r.ThirdPartyInformerFactory.InformerFor(v).GetIndexer().Add(v); err != nil {
+		panic(err)
+	}
+}
+
+func (r *TestRunner) registerDeploymentFixture(d *appsv1.Deployment) {
+	r.registerCoreObject(d)
+}
+
+func (r *TestRunner) registerPodDisruptionBudgetFixture(pdb *policyv1.PodDisruptionBudget) {
+	r.registerCoreObject(pdb)
+}
+
+func (r *TestRunner) registerServiceFixture(s *corev1.Service) {
+	r.registerCoreObject(s)
+}
+
+func (r *TestRunner) registerServiceAccountFixture(sa *corev1.ServiceAccount) {
+	r.registerCoreObject(sa)
+}
+
+func (r *TestRunner) registerRoleFixture(v *rbacv1.Role) {
+	r.registerCoreObject(v)
+}
+
+func (r *TestRunner) registerRoleBindingFixture(v *rbacv1.RoleBinding) {
+	r.registerCoreObject(v)
+}
+
+func (r *TestRunner) registerConfigMapFixture(v *corev1.ConfigMap) {
+	r.registerCoreObject(v)
+}
+
+func (r *TestRunner) registerIngressFixture(i *networkingv1.Ingress) {
+	r.registerCoreObject(i)
+}
+
+func (r *TestRunner) registerIngressClassFixture(ic *networkingv1.IngressClass) {
+	r.registerCoreObject(ic)
 }
 
 func (r *TestRunner) AssertUpdateAction(t *testing.T, subresource string, obj runtime.Object) bool {
@@ -314,8 +325,8 @@ func (r *TestRunner) AssertDeleteAction(t *testing.T, obj runtime.Object) bool {
 	return r.AssertAction(t, Action{
 		Verb:      ActionDelete,
 		Object:    obj,
-		Name:      m.GetName(),
-		Namespace: m.GetNamespace(),
+		Name:      m.GetObjectMeta().Name,
+		Namespace: m.GetObjectMeta().Namespace,
 	})
 }
 
@@ -355,8 +366,8 @@ Match:
 				continue
 			}
 
-			if actualActionObjMeta.GetNamespace() == objMeta.GetNamespace() &&
-				actualActionObjMeta.GetName() == objMeta.GetName() {
+			if actualActionObjMeta.GetObjectMeta().Namespace == objMeta.GetObjectMeta().Namespace &&
+				actualActionObjMeta.GetObjectMeta().Name == objMeta.GetObjectMeta().Name {
 				matchObj = true
 				got.Visited = true
 				break Match
@@ -379,7 +390,7 @@ Match:
 			}
 
 			if resourceName(expect.Object) == got.GroupVersionResource.Resource &&
-				got.Name == expectMeta.GetName() && got.Namespace == expectMeta.GetNamespace() {
+				got.Name == expectMeta.GetObjectMeta().Name && got.Namespace == expectMeta.GetObjectMeta().Namespace {
 				matchObj = true
 				got.Visited = true
 				break Match
@@ -418,7 +429,7 @@ func (r *TestRunner) AssertNoUnexpectedAction(t *testing.T) {
 			key := ""
 			meta, ok := v.Object.(metav1.Object)
 			if ok {
-				key = fmt.Sprintf(" %s/%s", meta.GetNamespace(), meta.GetName())
+				key = fmt.Sprintf(" %s/%s", meta.GetObjectMeta().Namespace, meta.GetObjectMeta().Name)
 			}
 			if v.Name != "" && v.Namespace != "" {
 				key = fmt.Sprintf("%s/%s", v.Namespace, v.Name)
@@ -463,8 +474,8 @@ func (r *TestRunner) editActions() []*Action {
 			var name, namespace string
 			m, ok := a.GetObject().(metav1.Object)
 			if ok {
-				name = m.GetName()
-				namespace = m.GetNamespace()
+				name = m.GetObjectMeta().Name
+				namespace = m.GetObjectMeta().Namespace
 			}
 			actions = append(actions, &Action{
 				Verb:        ActionVerb(v.GetVerb()),
@@ -477,8 +488,8 @@ func (r *TestRunner) editActions() []*Action {
 			var name, namespace string
 			m, ok := a.GetObject().(metav1.Object)
 			if ok {
-				name = m.GetName()
-				namespace = m.GetNamespace()
+				name = m.GetObjectMeta().Name
+				namespace = m.GetObjectMeta().Namespace
 			}
 			actions = append(actions, &Action{
 				Verb:        ActionVerb(v.GetVerb()),
@@ -513,6 +524,6 @@ func excludeTimeFields(v runtime.Object) runtime.Object {
 		return v
 	}
 
-	m.SetCreationTimestamp(metav1.Time{})
+	m.GetObjectMeta().CreationTimestamp = nil
 	return obj
 }

@@ -1,15 +1,15 @@
 package k8sfactory
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/networkingv1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func IngressClassFactory(base *networkingv1.IngressClass, traits ...Trait) *networkingv1.IngressClass {
 	var ic *networkingv1.IngressClass
 	if base == nil {
-		ic = &networkingv1.IngressClass{}
+		ic = &networkingv1.IngressClass{Spec: &networkingv1.IngressClassSpec{}}
 	} else {
 		ic = base.DeepCopy()
 	}
@@ -40,7 +40,7 @@ func Controller(v string) Trait {
 func IngressFactory(base *networkingv1.Ingress, traits ...Trait) *networkingv1.Ingress {
 	var ing *networkingv1.Ingress
 	if base == nil {
-		ing = &networkingv1.Ingress{}
+		ing = &networkingv1.Ingress{Spec: &networkingv1.IngressSpec{}, Status: &networkingv1.IngressStatus{}}
 	} else {
 		ing = base.DeepCopy()
 	}
@@ -63,7 +63,7 @@ func IngressClass(v *networkingv1.IngressClass) Trait {
 	return func(object interface{}) {
 		switch obj := object.(type) {
 		case *networkingv1.Ingress:
-			obj.Spec.IngressClassName = &v.Name
+			obj.Spec.IngressClassName = v.Name
 		}
 	}
 }
@@ -126,11 +126,11 @@ func Path(path string, pt networkingv1.PathType, svc *corev1.Service, port strin
 			obj.IngressRuleValue.HTTP.Paths = append(obj.IngressRuleValue.HTTP.Paths,
 				networkingv1.HTTPIngressPath{
 					Path:     path,
-					PathType: &pt,
+					PathType: pt,
 					Backend: networkingv1.IngressBackend{
 						Service: &networkingv1.IngressServiceBackend{
 							Name: svc.Name,
-							Port: networkingv1.ServiceBackendPort{
+							Port: &networkingv1.ServiceBackendPort{
 								Name: port,
 							},
 						},

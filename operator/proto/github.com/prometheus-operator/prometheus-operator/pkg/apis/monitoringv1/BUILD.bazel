@@ -1,4 +1,16 @@
+load("@dev_f110_kubeproto//bazel:protobuf.bzl", "gen_protobuf")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+
+gen_protobuf(
+    name = "gen",
+    srcs = ["@com_github_prometheus_operator_prometheus_operator_pkg_apis_monitoring//v1:monitoring"],
+    all = True,
+    api_domain = "monitoring",
+    api_sub_group = "coreos.com",
+    api_version = "v1",
+    importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1",
+    proto_package_name = "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1",
+)
 
 proto_library(
     name = "monitoringv1",

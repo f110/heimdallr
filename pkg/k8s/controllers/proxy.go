@@ -15,20 +15,15 @@ import (
 	"net/url"
 	"sort"
 
-	certmanagerv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
-	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-	certmanagerv1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
-	certmanagerv1beta1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"go.f110.dev/kubeproto/go/apis/appsv1"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/kubeproto/go/apis/policyv1"
+	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert"
@@ -40,8 +35,11 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1"
+	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/netutil"
+	"go.f110.dev/heimdallr/pkg/varptr"
 )
 
 const (
@@ -123,7 +121,7 @@ type HeimdallrProxy struct {
 	DashboardServer *process
 
 	thirdPartyClientSet *thirdpartyclient.Set
-	serviceLister       listers.ServiceLister
+	serviceLister       *k8sclient.CoreV1ServiceLister
 
 	backends           []*proxyv1alpha2.Backend
 	roles              []*proxyv1alpha2.Role
@@ -136,7 +134,7 @@ type HeimdallrProxy struct {
 type HeimdallrProxyParams struct {
 	Spec                *proxyv1alpha2.Proxy
 	ThirdPartyClientSet *thirdpartyclient.Set
-	ServiceLister       listers.ServiceLister
+	ServiceLister       *k8sclient.CoreV1ServiceLister
 	Backends            []*proxyv1alpha2.Backend
 	Roles               []*proxyv1alpha2.Role
 	RpcPermissions      []*proxyv1alpha2.RpcPermission
@@ -162,37 +160,37 @@ func NewHeimdallrProxy(opt HeimdallrProxyParams) *HeimdallrProxy {
 	return r
 }
 
-func (r *HeimdallrProxy) Init(secretLister listers.SecretLister) error {
-	caSecret, err := secretLister.Secrets(r.Namespace).Get(r.CASecretName())
+func (r *HeimdallrProxy) Init(secretLister *k8sclient.CoreV1SecretLister) error {
+	caSecret, err := secretLister.Get(r.Namespace, r.CASecretName())
 	if err == nil {
 		r.CASecret = caSecret
 	}
-	privateKeySecret, err := secretLister.Secrets(r.Namespace).Get(r.PrivateKeySecretName())
+	privateKeySecret, err := secretLister.Get(r.Namespace, r.PrivateKeySecretName())
 	if err == nil {
 		r.SigningPrivateKey = privateKeySecret
 	}
-	githubSecret, err := secretLister.Secrets(r.Namespace).Get(r.GithubSecretName())
+	githubSecret, err := secretLister.Get(r.Namespace, r.GithubSecretName())
 	if err == nil {
 		r.GithubWebhookSecret = githubSecret
 	}
-	cookieSecret, err := secretLister.Secrets(r.Namespace).Get(r.CookieSecretName())
+	cookieSecret, err := secretLister.Get(r.Namespace, r.CookieSecretName())
 	if err == nil {
 		r.CookieSecret = cookieSecret
 	}
-	internalTokenSecret, err := secretLister.Secrets(r.Namespace).Get(r.InternalTokenSecretName())
+	internalTokenSecret, err := secretLister.Get(r.Namespace, r.InternalTokenSecretName())
 	if err == nil {
 		r.InternalTokenSecret = internalTokenSecret
 	}
-	serverCertSecret, err := secretLister.Secrets(r.Namespace).Get(r.CertificateSecretName())
+	serverCertSecret, err := secretLister.Get(r.Namespace, r.CertificateSecretName())
 	if err == nil {
 		r.ServerCertSecret = serverCertSecret
 	}
-	idpSecret, err := secretLister.Secrets(r.Namespace).Get(r.Spec.IdentityProvider.ClientSecretRef.Name)
+	idpSecret, err := secretLister.Get(r.Namespace, r.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err == nil {
 		r.IdentityProviderSecret = idpSecret
 	}
 	if r.Datastore != nil && r.Datastore.Status.ClientCertSecretName != "" {
-		datastoreClientCertSecret, err := secretLister.Secrets(r.Namespace).Get(r.Datastore.Status.ClientCertSecretName)
+		datastoreClientCertSecret, err := secretLister.Get(r.Namespace, r.Datastore.Status.ClientCertSecretName)
 		if err == nil {
 			r.DatastoreClientCertSecret = datastoreClientCertSecret
 		}
@@ -203,7 +201,7 @@ func (r *HeimdallrProxy) Init(secretLister listers.SecretLister) error {
 
 func (r *HeimdallrProxy) ControlObject(obj metav1.Object) {
 	if !metav1.IsControlledBy(obj, r.Object) {
-		obj.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy"))})
+		obj.GetObjectMeta().OwnerReferences = []metav1.OwnerReference{metav1.NewControllerRef(r.Object.ObjectMeta, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy"))}
 	}
 }
 
@@ -410,36 +408,6 @@ func (r *HeimdallrProxy) Certificate() runtime.Object {
 	sort.Strings(domains)
 
 	switch r.certManagerVersion {
-	case "v1alpha2":
-		return &certmanagerv1alpha2.Certificate{
-			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
-			Spec: certmanagerv1alpha2.CertificateSpec{
-				SecretName: r.CertificateSecretName(),
-				IssuerRef:  r.Spec.IssuerRef,
-				CommonName: r.Spec.Domain,
-				DNSNames:   domains,
-			},
-		}
-	case "v1alpha3":
-		return &certmanagerv1alpha3.Certificate{
-			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
-			Spec: certmanagerv1alpha3.CertificateSpec{
-				SecretName: r.CertificateSecretName(),
-				IssuerRef:  r.Spec.IssuerRef,
-				CommonName: r.Spec.Domain,
-				DNSNames:   domains,
-			},
-		}
-	case "v1beta1":
-		return &certmanagerv1beta1.Certificate{
-			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
-			Spec: certmanagerv1beta1.CertificateSpec{
-				SecretName: r.CertificateSecretName(),
-				IssuerRef:  r.Spec.IssuerRef,
-				CommonName: r.Spec.Domain,
-				DNSNames:   domains,
-			},
-		}
 	default: // v1
 		return &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{Name: r.Name, Namespace: r.Namespace},
@@ -530,7 +498,7 @@ func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdC
 			Namespace: r.Namespace,
 			Labels:    r.Spec.Monitor.Labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(r.Object, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy")),
+				metav1.NewControllerRef(r.Object.ObjectMeta, proxyv1alpha2.SchemaGroupVersion.WithKind("Proxy")),
 			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
@@ -541,7 +509,7 @@ func (r *HeimdallrProxy) newPodMonitorForEtcdCluster(cluster *etcdv1alpha2.EtcdC
 					etcd.LabelNameRole:        "etcd",
 				},
 			},
-			NamespaceSelector: monitoringv1.NamespaceSelector{
+			NamespaceSelector: &monitoringv1.NamespaceSelector{
 				MatchNames: []string{r.Namespace},
 			},
 			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
@@ -1022,13 +990,13 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	confHash := sha256.Sum256([]byte(conf.Data[configFilename]))
 
 	resources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		Requests: map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("100m"),
+			string(corev1.ResourceNameMemory): resource.MustParse("128Mi"),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		Limits: map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("1"),
+			string(corev1.ResourceNameMemory): resource.MustParse("256Mi"),
 		},
 	}
 	if r.Spec.ProxyResources != nil {
@@ -1106,7 +1074,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 		k8sfactory.Name(r.DeploymentNameForMain()),
 		k8sfactory.Namespace(r.Namespace),
 		k8sfactory.ControlledBy(r.Object, scheme.Scheme),
-		k8sfactory.Replicas(int32(r.Spec.Replicas)),
+		k8sfactory.Replicas(r.Spec.Replicas),
 		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
 		k8sfactory.Pod(pod),
 	)
@@ -1119,9 +1087,9 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 		k8sfactory.MatchLabelSelector(r.LabelsForMain()),
 	)
 
-	var port int32 = 443
+	port := 443
 	if r.Spec.Port != 0 {
-		port = int32(r.Spec.Port)
+		port = r.Spec.Port
 	}
 	svc := k8sfactory.ServiceFactory(nil,
 		k8sfactory.Name(r.ServiceNameForMain()),
@@ -1134,7 +1102,7 @@ func (r *HeimdallrProxy) IdealProxyProcess() (*process, error) {
 	)
 	if r.Spec.HttpPort != 0 {
 		svc = k8sfactory.ServiceFactory(svc,
-			k8sfactory.Port("http", corev1.ProtocolTCP, int32(r.Spec.HttpPort)),
+			k8sfactory.Port("http", corev1.ProtocolTCP, r.Spec.HttpPort),
 		)
 	}
 	if r.Spec.LoadBalancerIP != "" {
@@ -1192,16 +1160,16 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 		k8sfactory.Name("dashboard"),
 		k8sfactory.Image(fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()), []string{dashboardCommand}),
 		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
-		k8sfactory.PullPolicy(corev1.PullIfNotPresent),
+		k8sfactory.PullPolicy(corev1.PullPolicyIfNotPresent),
 		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(dashboardPort, "/liveness")),
 		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(dashboardPort, "/readiness")),
-		k8sfactory.Requests(corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("10m"),
-			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		k8sfactory.Requests(map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("10m"),
+			string(corev1.ResourceNameMemory): resource.MustParse("64Mi"),
 		}),
-		k8sfactory.Limits(corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		k8sfactory.Limits(map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("100m"),
+			string(corev1.ResourceNameMemory): resource.MustParse("256Mi"),
 		}),
 		k8sfactory.Volume(caVolume),
 		k8sfactory.Volume(internalTokenVolume),
@@ -1226,7 +1194,7 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 			),
 		)
 	}
-	replicas := int32(r.Spec.DashboardReplicas)
+	replicas := r.Spec.DashboardReplicas
 	if replicas == 0 {
 		replicas = 3 // This is default value of DashboardReplicas.
 	}
@@ -1281,13 +1249,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 	datastoreClientCertVolume := k8sfactory.NewSecretVolumeSource("datastore-client-cert", datastoreCertMountPath, r.DatastoreClientCertSecret)
 
 	resources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		Requests: map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("100m"),
+			string(corev1.ResourceNameMemory): resource.MustParse("128Mi"),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		Limits: map[string]resource.Quantity{
+			string(corev1.ResourceNameCpu):    resource.MustParse("1"),
+			string(corev1.ResourceNameMemory): resource.MustParse("256Mi"),
 		},
 	}
 	if r.Spec.RPCServerResources != nil {
@@ -1330,9 +1298,9 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 			),
 		)
 	}
-	var replicas int32 = 2
+	replicas := 2
 	if r.Spec.RPCReplicas > 0 {
-		replicas = int32(r.Spec.RPCReplicas)
+		replicas = r.Spec.RPCReplicas
 	}
 	deployment := k8sfactory.DeploymentFactory(nil,
 		k8sfactory.Name(r.DeploymentNameForRPCServer()),
@@ -1373,7 +1341,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 				Selector: metav1.LabelSelector{
 					MatchLabels: r.LabelsForRPCServer(),
 				},
-				NamespaceSelector: monitoringv1.NamespaceSelector{MatchNames: []string{r.Namespace}},
+				NamespaceSelector: &monitoringv1.NamespaceSelector{MatchNames: []string{r.Namespace}},
 				Endpoints: []monitoringv1.Endpoint{
 					{
 						Port:        "metrics",
@@ -1405,13 +1373,13 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
-	case certmanagerv1.ClusterIssuerKind:
+	case "ClusterIssuer":
 		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetClusterIssuer(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
 		issuerObj = ci
-	case certmanagerv1.IssuerKind:
+	case "Issuer":
 		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetIssuer(context.TODO(), r.Namespace, r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
@@ -1420,48 +1388,6 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	}
 
 	switch v := issuerObj.(type) {
-	case *certmanagerv1alpha2.ClusterIssuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			return xerrors.New("controllers: ClusterIssuer.Spec.CA is not supported")
-		}
-	case *certmanagerv1alpha2.Issuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			r.selfSignedIssuer = true
-		}
-	case *certmanagerv1alpha3.ClusterIssuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			r.selfSignedIssuer = true
-		}
-	case *certmanagerv1alpha3.Issuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			r.selfSignedIssuer = true
-		}
-	case *certmanagerv1beta1.ClusterIssuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			r.selfSignedIssuer = true
-		}
-	case *certmanagerv1beta1.Issuer:
-		if v.Spec.SelfSigned != nil {
-			r.selfSignedIssuer = true
-		}
-		if v.Spec.CA != nil {
-			r.selfSignedIssuer = true
-		}
 	case *certmanagerv1.ClusterIssuer:
 		if v.Spec.SelfSigned != nil {
 			r.selfSignedIssuer = true
@@ -1522,13 +1448,13 @@ func toConfigPermissions(in proxyv1alpha2.BackendSpec) []*configv2.Permission {
 	return permissions
 }
 
-func findService(lister listers.ServiceLister, sel *proxyv1alpha2.ServiceSelector, namespace string) (*corev1.Service, error) {
+func findService(lister *k8sclient.CoreV1ServiceLister, sel *proxyv1alpha2.ServiceSelector, namespace string) (*corev1.Service, error) {
 	ns := sel.Namespace
 	if ns == "" {
 		ns = namespace
 	}
 	if sel.Name != "" {
-		svc, err := lister.Services(ns).Get(sel.Name)
+		svc, err := lister.Get(ns, sel.Name)
 		if err != nil {
 			return nil, xerrors.WithStack(err)
 		}
@@ -1540,15 +1466,15 @@ func findService(lister listers.ServiceLister, sel *proxyv1alpha2.ServiceSelecto
 		return nil, xerrors.WithStack(err)
 	}
 
-	services, err := lister.Services(ns).List(selector)
+	services, err := lister.List(ns, selector)
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
 	if len(services) == 0 {
-		return nil, xerrors.NewfWithStack("%s not found", sel.LabelSelector.String())
+		return nil, xerrors.NewfWithStack("%v not found", sel.LabelSelector)
 	}
 	if len(services) > 1 {
-		return nil, xerrors.NewfWithStack("Found %d services: %s", len(services), sel.LabelSelector.String())
+		return nil, xerrors.NewfWithStack("Found %d services: %v", len(services), sel.LabelSelector)
 	}
 
 	return services[0], nil
@@ -1558,7 +1484,7 @@ func tcpServicePort(name string, port, targetPort int) corev1.ServicePort {
 	return corev1.ServicePort{
 		Name:       name,
 		Protocol:   corev1.ProtocolTCP,
-		Port:       int32(port),
-		TargetPort: intstr.FromInt(targetPort),
+		Port:       port,
+		TargetPort: varptr.Ptr(intstr.FromInt32(int32(targetPort))),
 	}
 }

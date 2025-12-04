@@ -616,15 +616,8 @@ spec:
                           Annotations is an unstructured key value map stored with a resource that may be
                            set by external tools to store and retrieve arbitrary metadata. They are not
                            queryable and should be preserved when modifying objects.
-                           More info: http://kubernetes.io/docs/user-guide/annotations
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations
                         type: object
-                      clusterName:
-                        description: |-
-                          Deprecated: ClusterName is a legacy field that was always cleared by
-                           the system and never used; it will be removed completely in 1.25.
-                           The name in the go struct is changed to help clients detect
-                           accidental use.
-                        type: string
                       creationTimestamp:
                         description: |-
                           CreationTimestamp is a timestamp representing the server time when this object was
@@ -709,7 +702,7 @@ spec:
                           Map of string keys and values that can be used to organize and categorize
                            (scope and select) objects. May match selectors of replication controllers
                            and services.
-                           More info: http://kubernetes.io/docs/user-guide/labels
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
                         type: object
                       managedFields:
                         description: |-
@@ -776,7 +769,7 @@ spec:
                            automatically. Name is primarily intended for creation idempotence and configuration
                            definition.
                            Cannot be updated.
-                           More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
                         type: string
                       namespace:
                         description: |-
@@ -786,7 +779,7 @@ spec:
                            those objects will be empty.
                            Must be a DNS_LABEL.
                            Cannot be updated.
-                           More info: http://kubernetes.io/docs/user-guide/namespaces
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces
                         type: string
                       ownerReferences:
                         description: |-
@@ -822,12 +815,12 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                 More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
                               type: string
                             uid:
                               description: |-
                                 UID of the referent.
-                                 More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                               type: string
                           required:
                           - apiVersion
@@ -859,7 +852,7 @@ spec:
                            operations.
                            Populated by the system.
                            Read-only.
-                           More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                         type: string
                     required:
                     - finalizers
@@ -908,6 +901,12 @@ spec:
                           name:
                             description: Name is the name of resource being referenced
                             type: string
+                          namespace:
+                            description: |-
+                              Namespace is the namespace of resource being referenced
+                               Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+                               (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+                            type: string
                         required:
                         - kind
                         - name
@@ -927,7 +926,7 @@ spec:
                             description: |-
                               Requests describes the minimum amount of compute resources required.
                                If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                               otherwise to an implementation-defined value.
+                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                         type: object
@@ -980,6 +979,21 @@ spec:
                         description: |-
                           storageClassName is the name of the StorageClass required by the claim.
                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+                        type: string
+                      volumeAttributesClassName:
+                        description: |-
+                          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+                           If specified, the CSI driver will create or update the volume with the attributes defined
+                           in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+                           it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
+                           will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
+                           If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
+                           will be set by the persistentvolume controller if it exists.
+                           If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+                           set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+                           exists.
+                           More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+                           (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                         type: string
                       volumeMode:
                         description: |-
@@ -1222,15 +1236,8 @@ spec:
                           Annotations is an unstructured key value map stored with a resource that may be
                            set by external tools to store and retrieve arbitrary metadata. They are not
                            queryable and should be preserved when modifying objects.
-                           More info: http://kubernetes.io/docs/user-guide/annotations
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations
                         type: object
-                      clusterName:
-                        description: |-
-                          Deprecated: ClusterName is a legacy field that was always cleared by
-                           the system and never used; it will be removed completely in 1.25.
-                           The name in the go struct is changed to help clients detect
-                           accidental use.
-                        type: string
                       creationTimestamp:
                         description: |-
                           CreationTimestamp is a timestamp representing the server time when this object was
@@ -1315,7 +1322,7 @@ spec:
                           Map of string keys and values that can be used to organize and categorize
                            (scope and select) objects. May match selectors of replication controllers
                            and services.
-                           More info: http://kubernetes.io/docs/user-guide/labels
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
                         type: object
                       managedFields:
                         description: |-
@@ -1382,7 +1389,7 @@ spec:
                            automatically. Name is primarily intended for creation idempotence and configuration
                            definition.
                            Cannot be updated.
-                           More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
                         type: string
                       namespace:
                         description: |-
@@ -1392,7 +1399,7 @@ spec:
                            those objects will be empty.
                            Must be a DNS_LABEL.
                            Cannot be updated.
-                           More info: http://kubernetes.io/docs/user-guide/namespaces
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces
                         type: string
                       ownerReferences:
                         description: |-
@@ -1428,12 +1435,12 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                 More info: http://kubernetes.io/docs/user-guide/identifiers#names
+                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
                               type: string
                             uid:
                               description: |-
                                 UID of the referent.
-                                 More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                               type: string
                           required:
                           - apiVersion
@@ -1465,7 +1472,7 @@ spec:
                            operations.
                            Populated by the system.
                            Read-only.
-                           More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                         type: string
                     required:
                     - finalizers
@@ -1514,6 +1521,12 @@ spec:
                           name:
                             description: Name is the name of resource being referenced
                             type: string
+                          namespace:
+                            description: |-
+                              Namespace is the namespace of resource being referenced
+                               Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGrant object is required in the referent namespace to allow that namespace's owner to accept the reference. See the ReferenceGrant documentation for details.
+                               (Alpha) This field requires the CrossNamespaceVolumeDataSource feature gate to be enabled.
+                            type: string
                         required:
                         - kind
                         - name
@@ -1533,7 +1546,7 @@ spec:
                             description: |-
                               Requests describes the minimum amount of compute resources required.
                                If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                               otherwise to an implementation-defined value.
+                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                         type: object
@@ -1586,6 +1599,21 @@ spec:
                         description: |-
                           storageClassName is the name of the StorageClass required by the claim.
                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+                        type: string
+                      volumeAttributesClassName:
+                        description: |-
+                          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+                           If specified, the CSI driver will create or update the volume with the attributes defined
+                           in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+                           it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
+                           will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
+                           If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
+                           will be set by the persistentvolume controller if it exists.
+                           If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+                           set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+                           exists.
+                           More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+                           (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                         type: string
                       volumeMode:
                         description: |-
@@ -1922,6 +1950,31 @@ spec:
                 type: integer
               proxyResources:
                 properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                       that are used by this container.
+                       This is an alpha field and requires enabling the
+                       DynamicResourceAllocation feature gate.
+                       This field is immutable. It can only be set for containers.
+                    items:
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                             the Pod where this field is used. It makes that resource available
+                             inside a container.
+                          type: string
+                        request:
+                          description: |-
+                            Request is the name chosen for a request in the referenced claim.
+                             If empty, everything from the claim is made available, otherwise
+                             only the result of this request.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   limits:
                     additionalProperties:
                       type: string
@@ -1935,7 +1988,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                       otherwise to an implementation-defined value.
+                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
@@ -2041,6 +2094,31 @@ spec:
                 type: object
               rpcServerResources:
                 properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                       that are used by this container.
+                       This is an alpha field and requires enabling the
+                       DynamicResourceAllocation feature gate.
+                       This field is immutable. It can only be set for containers.
+                    items:
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                             the Pod where this field is used. It makes that resource available
+                             inside a container.
+                          type: string
+                        request:
+                          description: |-
+                            Request is the name chosen for a request in the referenced claim.
+                             If empty, everything from the claim is made available, otherwise
+                             only the result of this request.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   limits:
                     additionalProperties:
                       type: string
@@ -2054,7 +2132,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                       otherwise to an implementation-defined value.
+                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
@@ -2387,6 +2465,31 @@ spec:
                 type: integer
               proxyResources:
                 properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                       that are used by this container.
+                       This is an alpha field and requires enabling the
+                       DynamicResourceAllocation feature gate.
+                       This field is immutable. It can only be set for containers.
+                    items:
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                             the Pod where this field is used. It makes that resource available
+                             inside a container.
+                          type: string
+                        request:
+                          description: |-
+                            Request is the name chosen for a request in the referenced claim.
+                             If empty, everything from the claim is made available, otherwise
+                             only the result of this request.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   limits:
                     additionalProperties:
                       type: string
@@ -2400,7 +2503,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                       otherwise to an implementation-defined value.
+                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
@@ -2508,6 +2611,31 @@ spec:
                 type: integer
               rpcServerResources:
                 properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                       that are used by this container.
+                       This is an alpha field and requires enabling the
+                       DynamicResourceAllocation feature gate.
+                       This field is immutable. It can only be set for containers.
+                    items:
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                             the Pod where this field is used. It makes that resource available
+                             inside a container.
+                          type: string
+                        request:
+                          description: |-
+                            Request is the name chosen for a request in the referenced claim.
+                             If empty, everything from the claim is made available, otherwise
+                             only the result of this request.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   limits:
                     additionalProperties:
                       type: string
@@ -2521,7 +2649,7 @@ spec:
                     description: |-
                       Requests describes the minimum amount of compute resources required.
                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                       otherwise to an implementation-defined value.
+                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object

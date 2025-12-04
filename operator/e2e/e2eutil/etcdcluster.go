@@ -9,9 +9,10 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -72,7 +73,7 @@ func WaitForBackup(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, af
 		if e.Status.Backup == nil {
 			return false, nil
 		}
-		if e.Status.Backup.Succeeded && after.Before(e.Status.Backup.LastSucceededTime.Time) {
+		if e.Status.Backup.Succeeded && after.Before(e.Status.Backup.LastSucceededTime.Time()) {
 			return true, nil
 		}
 
@@ -110,7 +111,7 @@ func (e *EtcdClient) Close() error {
 }
 
 func NewEtcdClient(coreClient kubernetes.Interface, cfg *rest.Config, ec *etcdv1alpha2.EtcdCluster) (*EtcdClient, error) {
-	certSecret, err := coreClient.CoreV1().Secrets(ec.Namespace).Get(context.TODO(), ec.Status.ClientCertSecretName, metav1.GetOptions{})
+	certSecret, err := coreClient.CoreV1().Secrets(ec.Namespace).Get(context.TODO(), ec.Status.ClientCertSecretName, k8smetav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -135,7 +136,7 @@ func NewEtcdClient(coreClient kubernetes.Interface, cfg *rest.Config, ec *etcdv1
 	caPool := x509.NewCertPool()
 	caPool.AddCert(clientCACert)
 
-	svc, err := coreClient.CoreV1().Services(ec.Namespace).Get(context.TODO(), fmt.Sprintf("%s-client", ec.Name), metav1.GetOptions{})
+	svc, err := coreClient.CoreV1().Services(ec.Namespace).Get(context.TODO(), fmt.Sprintf("%s-client", ec.Name), k8smetav1.GetOptions{})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}

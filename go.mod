@@ -1,6 +1,6 @@
 module go.f110.dev/heimdallr
 
-go 1.23.4
+go 1.24.11
 
 require (
 	cloud.google.com/go/storage v1.36.0
@@ -40,6 +40,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.16
 	go.etcd.io/etcd/etcdutl/v3 v3.5.13
 	go.etcd.io/etcd/server/v3 v3.5.16
+	go.f110.dev/kubeproto v0.0.0-20251203110303-b71a2c740f60
 	go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2
 	go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238
 	go.uber.org/zap v1.27.0
@@ -55,7 +56,6 @@ require (
 	k8s.io/client-go v0.32.0
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	nhooyr.io/websocket v1.8.7
 	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
@@ -179,6 +179,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )

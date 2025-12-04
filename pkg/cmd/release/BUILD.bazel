@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "release",
@@ -12,14 +12,14 @@ go_library(
     deps = [
         "//pkg/cmd",
         "//pkg/githubutil",
-        "//vendor/github.com/Masterminds/semver/v3:semver",
-        "//vendor/github.com/google/go-containerregistry/pkg/authn",
-        "//vendor/github.com/google/go-containerregistry/pkg/name",
-        "//vendor/github.com/google/go-containerregistry/pkg/v1/remote",
-        "//vendor/github.com/google/go-github/v41/github",
-        "//vendor/go.f110.dev/xerrors",
-        "//vendor/golang.org/x/oauth2",
-        "//vendor/gopkg.in/yaml.v2:yaml_v2",
+        "@com_github_google_go_containerregistry//pkg/authn",
+        "@com_github_google_go_containerregistry//pkg/name",
+        "@com_github_google_go_containerregistry//pkg/v1/remote",
+        "@com_github_google_go_github_v41//github",
+        "@com_github_masterminds_semver_v3//:semver",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@in_gopkg_yaml_v2//:yaml_v2",
+        "@org_golang_x_oauth2//:oauth2",
     ],
 )
 
@@ -28,8 +28,8 @@ go_test(
     srcs = ["github_test.go"],
     embed = [":release"],
     deps = [
-        "//vendor/github.com/Masterminds/semver/v3:semver",
-        "//vendor/github.com/stretchr/testify/assert",
-        "//vendor/github.com/stretchr/testify/require",
+        "@com_github_masterminds_semver_v3//:semver",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )
