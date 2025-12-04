@@ -6,6 +6,7 @@ bazel_dep(name = "rules_pkg", version = "1.0.1")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "33.1")
 bazel_dep(name = "bazel_lib", version = "3.0.0")
+bazel_dep(name = "jq.bzl", version = "0.4.0")
 bazel_dep(name = "protoc_ddl", version = "0.0.0", repo_name = "dev_f110_protoc_ddl")
 bazel_dep(name = "dev_f110_kubeproto")
 
@@ -142,5 +143,7 @@ vault_ext.download(
     latest = "1.11.4",
     oldapi = "1.10.7",
 )
-
 use_repo(vault_ext, "vault_110", "vault_latest")
+
+jq_toolchains = use_extension("@jq.bzl//jq:extensions.bzl", "toolchains")
+use_repo(jq_toolchains, "jq_toolchains")

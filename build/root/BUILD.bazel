@@ -1,7 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
 load("//build/rules:release.bzl", "github_release", "template_string")
-load("//build/rules/go:vendor.bzl", "go_vendor")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
 
 gazelle(name = "gazelle")
@@ -14,18 +13,6 @@ filegroup(
 
 # gazelle:proto disable_global
 # gazelle:prefix go.f110.dev/heimdallr
-
-go_vendor(
-    name = "vendor",
-    extra_args = [
-        "-exclude",
-        "third_party",
-    ],
-    patches = [
-        "//patch:cert-manager-fix-typo.patch",
-        "//patch:prometheus-operator-fix-typo.patch",
-    ],
-)
 
 template_string(
     name = "release_message",
