@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -126,7 +127,10 @@ func (s *Server) Start() error {
 		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.AccessProxy.HTTP.BindHttp))
 		go s.server.Serve(l)
 	}
-	return xerrors.WithStack(s.server.Serve(listener))
+	if err := s.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return xerrors.WithStack(err)
+	}
+	return nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

@@ -325,6 +325,24 @@ func (a *Agent) Post(m *btesting.Matcher, u, body string) bool {
 	return true
 }
 
+func (a *Agent) Preflight(m *btesting.Matcher, u string) bool {
+	req, err := http.NewRequest(http.MethodOptions, u, nil)
+	if err != nil {
+		m.SetLastResponse(nil, err)
+		return false
+	}
+	req.Header.Set("Access-Control-Request-Method", "POST")
+
+	res, err := a.client.Do(req)
+	m.SetLastResponse(res, err)
+	m.Done()
+
+	a.lastResponse = res
+	a.lastErr = err
+
+	return true
+}
+
 func (a *Agent) FollowRedirect(m *btesting.Matcher) error {
 	if a.lastResponse == nil {
 		return xerrors.NewWithStack("Agent does not have any response. Probably, test suite's bug.")
