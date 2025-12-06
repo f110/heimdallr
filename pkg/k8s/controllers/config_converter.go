@@ -96,14 +96,15 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister *k
 		}
 
 		b := &configv2.Backend{
-			Name:          name,
-			FQDN:          v.Spec.FQDN,
-			HTTP:          routing,
-			Socket:        socket,
-			Permissions:   toConfigPermissions(v.Spec),
-			AllowRootUser: v.Spec.AllowRootUser,
-			DisableAuthn:  v.Spec.DisableAuthn,
-			AllowHttp:     v.Spec.AllowHttp,
+			Name:           name,
+			FQDN:           v.Spec.FQDN,
+			HTTP:           routing,
+			Socket:         socket,
+			Permissions:    toConfigPermissions(v.Spec),
+			AllowRootUser:  v.Spec.AllowRootUser,
+			DisableAuthn:   v.Spec.DisableAuthn,
+			AllowHttp:      v.Spec.AllowHttp,
+			AllowPreflight: v.Spec.AllowPreflight,
 		}
 		if v.Spec.MaxSessionDuration != nil {
 			b.MaxSessionDuration = &configv2.Duration{Duration: v.Spec.MaxSessionDuration.TimeDuration()}

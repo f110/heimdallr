@@ -385,6 +385,7 @@ type BackendSpec struct {
 	AllowRootUser      bool               `json:"allowRootUser,omitempty"`
 	DisableAuthn       bool               `json:"disableAuthn,omitempty"`
 	AllowHttp          bool               `json:"allowHttp,omitempty"`
+	AllowPreflight     bool               `json:"allowPreflight,omitempty"`
 	Permissions        []Permission       `json:"permissions"`
 	MaxSessionDuration *metav1.Duration   `json:"maxSessionDuration,omitempty"`
 	HTTP               []BackendHTTPSpec  `json:"http"`
