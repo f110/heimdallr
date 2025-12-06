@@ -1,4 +1,4 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push", "oci_tarball")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push", "oci_load")
 
 """
 container_image is a macro function for creating and publishing the container image.
@@ -32,22 +32,22 @@ def container_image(name, tags, amd64_tar, arm64_tar, base_amd64 = "@com_google_
         ],
     )
 
-    native.genrule(
-        name = "%s.gen_digest" % name,
-        srcs = [":%s" % name],
-        outs = ["%s.digest" % name],
-        cmd = "$(JQ_BIN) -r '.manifests[0].digest' $(location :%s)/index.json > $@" % name,
-        toolchains = ["@jq_toolchains//:resolved_toolchain"],
-    )
+#     native.genrule(
+#         name = "%s.gen_digest" % name,
+#         srcs = [":%s" % name],
+#         outs = ["%s.digest" % name],
+#         cmd = "$(JQ_BIN) -r '.manifests[0].digest' $(location :%s)/index.json > $@" % name,
+#         toolchains = ["@jq_toolchains//:resolved_toolchain"],
+#     )
 
-    oci_tarball(
+    oci_load(
         name = "%s.amd64_tar" % name,
         image = ":%s.linux_amd64" % name,
         repo_tags = [repository + ":" + x + "_amd64" for x in tags],
         visibility = ["//visibility:public"],
     )
 
-    oci_tarball(
+    oci_load(
         name = "%s.arm64_tar" % name,
         image = ":%s.linux_arm64" % name,
         repo_tags = [repository + ":" + x + "_arm64" for x in tags],

@@ -24,8 +24,7 @@ run-operator:
 test:
 	$(BAZEL) test //...
 
-#update-deps: gen
-update-deps:
+update-deps: gen
 	$(GO) mod tidy
 	$(BAZEL) mod tidy
 	$(BAZEL) run //:gazelle
