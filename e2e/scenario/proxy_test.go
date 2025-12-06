@@ -170,6 +170,7 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					Permissions: []*configv2.Permission{
 						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
 					},
+					AllowPreflight: true,
 				})
 				f.Proxy.Role(&configv2.Role{Name: "test", Bindings: []*configv2.Binding{{Backend: "test1", Permission: "all"}}})
 				f.Proxy.Role(&configv2.Role{Name: "test2"})
@@ -210,6 +211,16 @@ func DescribeL7ReverseProxy(f *framework.Framework) {
 					s.It("should not proxy to the backend", func(m *btesting.Matcher) {
 						m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
 					})
+				})
+			})
+
+			s.Context("with preflight request", func(s *btesting.Scenario) {
+				s.Subject(func(m *btesting.Matcher) {
+					f.Agents.Authorized("test2@f110.dev").Preflight(m, f.Proxy.URL("test1"))
+				})
+
+				s.It("should proxy to backend", func(m *btesting.Matcher) {
+					m.Equal(http.StatusBadGateway, m.LastResponse().StatusCode)
 				})
 			})
 		})

@@ -245,6 +245,7 @@ type Backend struct {
 	// MaxSessionDuration is a maximum duration before session expire for specify backend.
 	// When MaxSessionDuration is not empty, OIDC authentication is required even if the user submits a client certificate.
 	MaxSessionDuration *Duration `json:"max_session_duration,omitempty"`
+	AllowPreflight     bool      `json:"allow_preflight,omitempty"`
 
 	AllowHttp bool           `json:"allow_http,omitempty"`
 	Socket    *SocketBackend `json:"socket,omitempty"`

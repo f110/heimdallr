@@ -198,28 +198,44 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 			return
 		}
 	}
-
-	user, _, err := auth.Authenticate(ctx, req)
-	defer p.accessLog(ctx, w, req, user)
-
-	switch err {
-	case auth.ErrSessionNotFound:
-		logger.Log.Info("Session not found", logger.WithRequestId(ctx))
-		p.redirectToIdP(w, req)
-		return
-	case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
-		logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	case auth.ErrHostnameNotFound:
-		logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
-		panic(http.ErrAbortHandler)
+	var isPreflight bool
+	if req.Method == http.MethodOptions && req.Header.Get("Access-Control-Request-Method") != "" {
+		backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
+		if !ok {
+			logger.Log.Error("Unreachable")
+			panic(http.ErrAbortHandler)
+		}
+		if backend.AllowPreflight {
+			isPreflight = true
+		}
 	}
-	if user == nil {
-		logger.Log.Warn("Unhandled error", zap.Error(err), logger.WithRequestId(ctx))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+
+	var user *database.User
+	if !isPreflight {
+		u, _, err := auth.Authenticate(ctx, req)
+		defer p.accessLog(ctx, w, req, user)
+		user = u
+
+		switch err {
+		case auth.ErrSessionNotFound:
+			logger.Log.Info("Session not found", logger.WithRequestId(ctx))
+			p.redirectToIdP(w, req)
+			return
+		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
+			logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		case auth.ErrHostnameNotFound:
+			logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
+			panic(http.ErrAbortHandler)
+		}
+		if user == nil {
+			logger.Log.Warn("Unhandled error", zap.Error(err), logger.WithRequestId(ctx))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
+
 	backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
 		logger.Log.Error("Unreachable")
@@ -380,7 +396,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 
-	if user.Id != "" {
+	if user != nil && user.Id != "" {
 		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
 				Subject:   user.Id,
