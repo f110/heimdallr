@@ -710,6 +710,7 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 			return xerrors.WithStack(err)
 		}
 		cluster.SetServerCertSecret(serverCertSecret)
+		return nil
 	}
 
 	if cluster.ShouldUpdateServerCertificate(serverCertSecret.Data[serverCertSecretCertName]) {
@@ -735,6 +736,20 @@ func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdClus
 	}
 	if clientCertSecret.CreationTimestamp.IsZero() {
 		clientCertSecret, err = ec.coreClient.CoreV1.CreateSecret(ctx, clientCertSecret, metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.WithStack(err)
+		}
+		cluster.SetClientCertSecret(clientCertSecret)
+		return nil
+	}
+
+	if cluster.ShouldUpdateClientCertificate(clientCertSecret.Data[clientCertSecretCertName]) {
+		clientCertSecret, err = cluster.ClientCertSecret()
+		if err != nil {
+			return xerrors.WithStack(err)
+		}
+
+		clientCertSecret, err = ec.coreClient.CoreV1.UpdateSecret(ctx, clientCertSecret, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
