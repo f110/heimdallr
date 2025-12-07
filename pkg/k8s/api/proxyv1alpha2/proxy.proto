@@ -196,10 +196,11 @@ message BackendSpec {
   optional bool       allow_root_user                                         = 3;
   optional bool       disable_authn                                           = 4;
   optional bool       allow_http                                              = 5;
-  repeated Permission permissions                                             = 6;
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration max_session_duration = 7;
-  repeated BackendHTTPSpec                               http                 = 8 [(dev.f110.kubeproto.field) = { go_name: "HTTP" }];
-  optional BackendSocketSpec                             socket               = 9;
+  optional bool       allow_preflight                                         = 6;
+  repeated Permission permissions                                             = 7;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration max_session_duration = 8;
+  repeated BackendHTTPSpec                               http                 = 9 [(dev.f110.kubeproto.field) = { go_name: "HTTP" }];
+  optional BackendSocketSpec                             socket               = 10;
 }
 
 message BackendHTTPSpec {
