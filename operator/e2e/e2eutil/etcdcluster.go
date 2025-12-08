@@ -73,7 +73,7 @@ func WaitForBackup(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, af
 		if e.Status.Backup == nil {
 			return false, nil
 		}
-		if e.Status.Backup.Succeeded && after.Before(e.Status.Backup.LastSucceededTime.Time()) {
+		if e.Status.Backup.Succeeded && after.Before(e.Status.Backup.LastSucceededTime.Time) {
 			return true, nil
 		}
 

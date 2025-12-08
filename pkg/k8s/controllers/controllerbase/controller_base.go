@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.f110.dev/kubeproto/go/apis/metav1"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	k8scorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -143,15 +144,15 @@ func (c *Controller) ProcessKey(key string) error {
 	}
 	ctx = context.WithValue(ctx, TimeKey{}, time.Now())
 
-	objMeta, err := meta.Accessor(obj)
-	if err != nil {
-		return err
+	objMeta, ok := obj.(metav1.Object)
+	if !ok {
+		return xerrors.New("object does not implement metav1.Object")
 	}
 	if c.useFinalizer {
-		if objMeta.GetDeletionTimestamp().IsZero() {
+		if objMeta.GetObjectMeta().GetDeletionTimestamp().IsZero() {
 			for _, finalizer := range c.Base.Finalizers() {
-				if !containsString(objMeta.GetFinalizers(), finalizer) {
-					objMeta.SetFinalizers(append(objMeta.GetFinalizers(), finalizer))
+				if !containsString(objMeta.GetObjectMeta().GetFinalizers(), finalizer) {
+					objMeta.GetObjectMeta().SetFinalizers(append(objMeta.GetObjectMeta().GetFinalizers(), finalizer))
 					if err := c.Base.UpdateObject(ctx, obj); err != nil {
 						return err
 					}
@@ -160,7 +161,7 @@ func (c *Controller) ProcessKey(key string) error {
 		}
 	}
 
-	if objMeta.GetDeletionTimestamp().IsZero() {
+	if objMeta.GetObjectMeta().GetDeletionTimestamp().IsZero() {
 		err = c.Base.Reconcile(ctx, obj)
 	} else {
 		err = c.Base.Finalize(ctx, obj)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.f110.dev/kubeproto/go/k8sclient"
+	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -117,23 +118,26 @@ func (m *mainProcess) init() (fsm.State, error) {
 func (m *mainProcess) setup() (fsm.State, error) {
 	cfg, err := clientcmd.BuildConfigFromFlags("", m.kubeconfigPath)
 	if err != nil {
-		return fsm.UnknownState, err
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.restCfg = cfg
 
 	m.k8sCoreClient, err = kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return fsm.UnknownState, err
-	}
-	m.coreClient, err = k8sclient.NewSet(cfg)
-	if err != nil {
-		return fsm.UnknownState, err
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.client, err = client.NewSet(cfg)
 	if err != nil {
-		return fsm.UnknownState, err
+		return fsm.UnknownState, xerrors.WithStack(err)
+	}
+	m.coreClient, err = k8sclient.NewSet(cfg)
+	if err != nil {
+		return fsm.UnknownState, xerrors.WithStack(err)
 	}
 	m.thirdPartyClient, err = thirdpartyclient.NewSet(cfg)
+	if err != nil {
+		return fsm.UnknownState, xerrors.WithStack(err)
+	}
 
 	return stateStartProbe, nil
 }

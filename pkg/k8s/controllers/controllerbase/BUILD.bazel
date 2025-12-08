@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//pkg/k8s/client",
         "//pkg/logger",
+        "@dev_f110_go_xerrors//:xerrors",
         "@dev_f110_kubeproto//go/apis/metav1",
         "@io_k8s_api//core/v1:core",
         "@io_k8s_apimachinery//pkg/api/meta",

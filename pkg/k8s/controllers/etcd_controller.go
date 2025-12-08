@@ -34,7 +34,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
@@ -660,7 +659,7 @@ func (ec *EtcdController) sendBackupToContainer(ctx context.Context, cluster *Et
 
 	endpoint := fmt.Sprintf("%s:%d", pod.Status.PodIP, 2900)
 	if ec.runOutsideCluster {
-		forwarder, localPort, err := ec.portForward(ctx, pod, 2900)
+		forwarder, localPort, err := ec.coreClient.CoreV1.PortForward(ctx, pod, 2900)
 		if err != nil {
 			return err
 		}
@@ -971,7 +970,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 				continue
 			}
 
-			pf, port, err := ec.portForward(ctx, v, EtcdClientPort)
+			pf, port, err := ec.coreClient.CoreV1.PortForward(ctx, v, EtcdClientPort)
 			if err != nil {
 				ec.Log(ctx).Info("Failed port forward", zap.Error(err))
 				continue
@@ -1141,7 +1140,7 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 			continue
 		}
 
-		if cluster.Status.LastDefragmentTime.Before(v.Status.CompletionTime) {
+		if cluster.Status.LastDefragmentTime.Before(v.Status.CompletionTime.Time) {
 			cluster.Status.LastDefragmentTime = v.Status.CompletionTime
 		}
 		if cluster.Status.LastDefragmentTime.IsZero() {
@@ -1179,7 +1178,7 @@ func (ec *EtcdController) shouldBackup(cluster *EtcdCluster) bool {
 		logger.Log.Debug("LastSucceededTime is zero")
 		return true
 	}
-	if cluster.Status.Backup.LastSucceededTime.Time().Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
+	if cluster.Status.Backup.LastSucceededTime.Time.Add(time.Duration(cluster.Spec.Backup.IntervalInSeconds) * time.Second).Before(time.Now()) {
 		logger.Log.Debug("Backed up is expired")
 		return true
 	}
@@ -1457,7 +1456,7 @@ func (ec *EtcdController) minioClient(ctx context.Context, spec *etcdv1alpha2.Ba
 			return nil, nil, xerrors.New("all pods are not running")
 		}
 
-		f, port, err := ec.portForward(ctx, targetPod, int(svc.Spec.Ports[0].Port))
+		f, port, err := ec.coreClient.CoreV1.PortForward(ctx, targetPod, svc.Spec.Ports[0].Port)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1498,7 +1497,7 @@ func (ec *EtcdController) etcdClient(ctx context.Context, cluster *EtcdCluster) 
 		pods := cluster.AllMembers()
 		for _, v := range pods {
 			if cluster.IsPodReady(v.Pod) {
-				f, port, err := ec.portForward(ctx, v.Pod, EtcdClientPort)
+				f, port, err := ec.coreClient.CoreV1.PortForward(ctx, v.Pod, EtcdClientPort)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -1517,42 +1516,4 @@ func (ec *EtcdController) etcdClient(ctx context.Context, cluster *EtcdCluster) 
 	}
 
 	return &etcdv3Client{Client: client}, forwarder, nil
-}
-
-func (ec *EtcdController) portForward(ctx context.Context, pod *corev1.Pod, port int) (*portforward.PortForwarder, uint16, error) {
-	req := ec.coreClient.RESTClient.Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
-	transport, upgrader, err := spdy.RoundTripperFor(ec.config)
-	if err != nil {
-		return nil, 0, xerrors.WithStack(err)
-	}
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
-
-	readyCh := make(chan struct{})
-	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
-	if err != nil {
-		return nil, 0, xerrors.WithStack(err)
-	}
-	go func() {
-		err := pf.ForwardPorts()
-		if err != nil {
-			switch v := err.(type) {
-			case *apierrors.StatusError:
-				ec.Log(ctx).Info("Failed get forwarded ports", zap.Error(v))
-			}
-			ec.Log(ctx).Info("Failed get forwarded ports", zap.Error(err))
-		}
-	}()
-
-	select {
-	case <-readyCh:
-	case <-time.After(5 * time.Second):
-		return nil, 0, errors.New("timed out")
-	}
-
-	ports, err := pf.GetPorts()
-	if err != nil {
-		return nil, 0, xerrors.WithStack(err)
-	}
-
-	return pf, ports[0].Local, nil
 }
