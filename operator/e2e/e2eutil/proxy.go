@@ -242,6 +242,7 @@ func CreateJwtToken(coreClient kubernetes.Interface, proxy *proxyv1alpha2.Proxy,
 	}
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.StandardClaims{
 		Id:        id,
+		Subject:   id,
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
 	})
