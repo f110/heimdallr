@@ -1,12 +1,13 @@
 package k8sfactory
 
 import (
-	"go.f110.dev/heimdallr/pkg/varptr"
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	"go.f110.dev/heimdallr/pkg/varptr"
 )
 
 func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {

@@ -115,6 +115,8 @@ func TestServicesViaServer(t *testing.T) {
 	require.NoError(t, err)
 	port, err := netutil.FindUnusedPort()
 	require.NoError(t, err)
+	metricsPort, err := netutil.FindUnusedPort()
+	require.NoError(t, err)
 	signReqKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	signReqPubKey := signReqKey.PublicKey
@@ -153,7 +155,8 @@ func TestServicesViaServer(t *testing.T) {
 			},
 		},
 		RPCServer: &configv2.RPCServer{
-			Bind: fmt.Sprintf(":%d", port),
+			Bind:        fmt.Sprintf(":%d", port),
+			MetricsBind: fmt.Sprintf(":%d", metricsPort),
 		},
 		Logger: &configv2.Logger{
 			Level: "error",
@@ -212,6 +215,8 @@ func TestServicesViaServer(t *testing.T) {
 		RootCAs:    caPool,
 	})
 	conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", port), grpc.WithTransportCredentials(transCreds))
+	require.NoError(t, err)
+	metricsConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", metricsPort), grpc.WithInsecure())
 	require.NoError(t, err)
 
 	md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: "internal-token"})
@@ -371,7 +376,7 @@ func TestServicesViaServer(t *testing.T) {
 	t.Run("Health", func(t *testing.T) {
 		t.Parallel()
 
-		healthClient := healthpb.NewHealthClient(conn)
+		healthClient := healthpb.NewHealthClient(metricsConn)
 
 		checkRes, err := healthClient.Check(systemUserCtx, &healthpb.HealthCheckRequest{})
 		require.NoError(t, err)
