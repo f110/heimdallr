@@ -985,7 +985,7 @@ func (ec *EtcdController) checkClusterStatus(ctx context.Context, cluster *EtcdC
 	}
 	if len(forwarder) > 0 {
 		defer func() {
-			ec.Log(ctx).Debug("Close all port forwarders")
+			ec.Log(ctx).Debug("Close all port forwarders", zap.Int("count", len(forwarder)))
 			for _, v := range forwarder {
 				v.Close()
 			}

@@ -898,9 +898,7 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 			Role:  r.Spec.CertificateAuthority.Vault.Role,
 		}
 	}
-	if r.Spec.Monitor != nil && r.Spec.Monitor.PrometheusMonitoring {
-		conf.RPCServer.MetricsBind = fmt.Sprintf(":%d", rpcMetricsServerPort)
-	}
+	conf.RPCServer.MetricsBind = fmt.Sprintf(":%d", rpcMetricsServerPort)
 
 	b, err := yaml.Marshal(conf)
 	if err != nil {
@@ -1265,8 +1263,8 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		k8sfactory.Name("rpcserver"),
 		k8sfactory.Image(fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()), []string{rpcServerCommand}),
 		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
-		k8sfactory.LivenessProbe(k8sfactory.GRPCProbe(rpcServerPort)),
-		k8sfactory.ReadinessProbe(k8sfactory.GRPCProbe(rpcServerPort)),
+		k8sfactory.LivenessProbe(k8sfactory.GRPCProbe(rpcMetricsServerPort)),
+		k8sfactory.ReadinessProbe(k8sfactory.GRPCProbe(rpcMetricsServerPort)),
 		k8sfactory.Port("https", corev1.ProtocolTCP, rpcServerPort),
 		k8sfactory.Port("metrics", corev1.ProtocolTCP, rpcMetricsServerPort),
 		k8sfactory.Requests(resources.Requests),

@@ -134,6 +134,7 @@ func (c *Controller) ProcessKey(key string) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelFunc()
 	ctx = context.WithValue(ctx, ReconciliationId{}, randomString(8))
+	defer c.Log(ctx).Debug("Finish ProcessKey")
 
 	obj, err := c.Base.GetObject(key)
 	if err != nil {

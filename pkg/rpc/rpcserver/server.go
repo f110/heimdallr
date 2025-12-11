@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/pprof"
+	"strings"
 	"sync"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2"
@@ -39,6 +41,7 @@ type Server struct {
 
 	ca            *cert.CertificateAuthority
 	server        *grpc.Server
+	healthServer  *grpc.Server
 	privKey       crypto.PrivateKey
 	serverMetrics *grpc_prometheus.ServerMetrics
 }
@@ -81,17 +84,20 @@ func NewServer(
 	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user))
 	rpc.RegisterCertificateAuthorityServer(s, rpcservice.NewCertificateAuthorityService(conf, ca))
 	rpc.RegisterUserServer(s, rpcservice.NewUserService(conf))
-	healthpb.RegisterHealthServer(s, rpcservice.NewHealthService(isReady))
 	r.InitializeMetrics(s)
 	registerOnce.Do(func() {
 		registry.MustRegister(r)
 		registry.MustRegister(prometheus.NewGoCollector())
 	})
 
+	healthServer := grpc.NewServer()
+	healthpb.RegisterHealthServer(healthServer, rpcservice.NewHealthService(isReady))
+
 	return &Server{
 		Config:        conf,
 		ca:            ca,
 		server:        s,
+		healthServer:  healthServer,
 		serverMetrics: r,
 	}
 }
@@ -130,8 +136,26 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/pprof/profile", pprof.Profile)
 		mux.HandleFunc("/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/pprof/trace", pprof.Trace)
+
+		metricsServer := &http.Server{
+			Addr:      s.Config.RPCServer.MetricsBind,
+			Protocols: new(http.Protocols),
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+					s.healthServer.ServeHTTP(w, r)
+				} else {
+					mux.ServeHTTP(w, r)
+				}
+			}),
+		}
+		metricsServer.Protocols.SetHTTP1(true)
+		metricsServer.Protocols.SetHTTP2(true)
+		metricsServer.Protocols.SetUnencryptedHTTP2(true)
+
 		logger.Log.Info("Start RPC metrics and pprof server", zap.String("listen", s.Config.RPCServer.MetricsBind))
-		http.ListenAndServe(s.Config.RPCServer.MetricsBind, mux)
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Error("Something occurred", zap.Error(err))
+		}
 	}()
 
 	return s.server.Serve(listener)
