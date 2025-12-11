@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func (m *Matcher) Failed() bool {
 
 func (m *Matcher) NoError(err error, msg ...string) {
 	if err != nil {
-		m.Fail(msg...)
+		m.Failf("%+v: %s", err, strings.Join(msg, " "))
 	}
 }
 
