@@ -60,12 +60,13 @@ type Backend interface {
 	UpdateStatusClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
 	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
+
+	RESTClient() *rest.RESTClient
 }
 
 type Set struct {
-	CertManagerIoV1 *CertManagerIoV1
-	CoreosComV1     *CoreosComV1
-	RESTClient      *rest.RESTClient
+	CertManagerV1 *CertManagerV1
+	CoreosComV1   *CoreosComV1
 }
 
 func NewSet(cfg *rest.Config) (*Set, error) {
@@ -79,7 +80,7 @@ func NewSet(cfg *rest.Config) (*Set, error) {
 		if err != nil {
 			return nil, err
 		}
-		s.CertManagerIoV1 = NewCertManagerIoV1Client(&restBackend{client: c})
+		s.CertManagerV1 = NewCertManagerV1Client(&restBackend{client: c}, &conf)
 	}
 	{
 		conf := *cfg
@@ -90,15 +91,7 @@ func NewSet(cfg *rest.Config) (*Set, error) {
 		if err != nil {
 			return nil, err
 		}
-		s.CoreosComV1 = NewCoreosComV1Client(&restBackend{client: c})
-	}
-	{
-		conf := *cfg
-		c, err := rest.RESTClientFor(&conf)
-		if err != nil {
-			return nil, err
-		}
-		s.RESTClient = c
+		s.CoreosComV1 = NewCoreosComV1Client(&restBackend{client: c}, &conf)
 	}
 
 	return s, nil
@@ -288,15 +281,20 @@ func (r *restBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVe
 		Watch(ctx)
 }
 
-type CertManagerIoV1 struct {
+func (r *restBackend) RESTClient() *rest.RESTClient {
+	return r.client
+}
+
+type CertManagerV1 struct {
 	backend Backend
+	config  *rest.Config
 }
 
-func NewCertManagerIoV1Client(b Backend) *CertManagerIoV1 {
-	return &CertManagerIoV1{backend: b}
+func NewCertManagerV1Client(b Backend, config *rest.Config) *CertManagerV1 {
+	return &CertManagerV1{backend: b, config: config}
 }
 
-func (c *CertManagerIoV1) GetCertificate(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.Certificate, error) {
+func (c *CertManagerV1) GetCertificate(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.Certificate, error) {
 	result, err := c.backend.Get(ctx, "certificates", namespace, name, opts, &certmanagerv1.Certificate{})
 	if err != nil {
 		return nil, err
@@ -304,7 +302,7 @@ func (c *CertManagerIoV1) GetCertificate(ctx context.Context, namespace, name st
 	return result.(*certmanagerv1.Certificate), nil
 }
 
-func (c *CertManagerIoV1) CreateCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.CreateOptions) (*certmanagerv1.Certificate, error) {
+func (c *CertManagerV1) CreateCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.CreateOptions) (*certmanagerv1.Certificate, error) {
 	result, err := c.backend.Create(ctx, "certificates", v, opts, &certmanagerv1.Certificate{})
 	if err != nil {
 		return nil, err
@@ -312,7 +310,7 @@ func (c *CertManagerIoV1) CreateCertificate(ctx context.Context, v *certmanagerv
 	return result.(*certmanagerv1.Certificate), nil
 }
 
-func (c *CertManagerIoV1) UpdateCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.UpdateOptions) (*certmanagerv1.Certificate, error) {
+func (c *CertManagerV1) UpdateCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.UpdateOptions) (*certmanagerv1.Certificate, error) {
 	result, err := c.backend.Update(ctx, "certificates", v, opts, &certmanagerv1.Certificate{})
 	if err != nil {
 		return nil, err
@@ -320,7 +318,7 @@ func (c *CertManagerIoV1) UpdateCertificate(ctx context.Context, v *certmanagerv
 	return result.(*certmanagerv1.Certificate), nil
 }
 
-func (c *CertManagerIoV1) UpdateStatusCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.UpdateOptions) (*certmanagerv1.Certificate, error) {
+func (c *CertManagerV1) UpdateStatusCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.UpdateOptions) (*certmanagerv1.Certificate, error) {
 	result, err := c.backend.UpdateStatus(ctx, "certificates", v, opts, &certmanagerv1.Certificate{})
 	if err != nil {
 		return nil, err
@@ -328,23 +326,23 @@ func (c *CertManagerIoV1) UpdateStatusCertificate(ctx context.Context, v *certma
 	return result.(*certmanagerv1.Certificate), nil
 }
 
-func (c *CertManagerIoV1) DeleteCertificate(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "certificates"}, namespace, name, opts)
+func (c *CertManagerV1) DeleteCertificate(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}, namespace, name, opts)
 }
 
-func (c *CertManagerIoV1) ListCertificate(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.CertificateList, error) {
-	result, err := c.backend.List(ctx, "certificates", namespace, opts, &certmanagerv1.Certificate{})
+func (c *CertManagerV1) ListCertificate(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.CertificateList, error) {
+	result, err := c.backend.List(ctx, "certificates", namespace, opts, &certmanagerv1.CertificateList{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.CertificateList), nil
 }
 
-func (c *CertManagerIoV1) WatchCertificate(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "certificates"}, namespace, opts)
+func (c *CertManagerV1) WatchCertificate(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}, namespace, opts)
 }
 
-func (c *CertManagerIoV1) GetCertificateRequest(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.CertificateRequest, error) {
+func (c *CertManagerV1) GetCertificateRequest(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.CertificateRequest, error) {
 	result, err := c.backend.Get(ctx, "certificaterequests", namespace, name, opts, &certmanagerv1.CertificateRequest{})
 	if err != nil {
 		return nil, err
@@ -352,7 +350,7 @@ func (c *CertManagerIoV1) GetCertificateRequest(ctx context.Context, namespace, 
 	return result.(*certmanagerv1.CertificateRequest), nil
 }
 
-func (c *CertManagerIoV1) CreateCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.CreateOptions) (*certmanagerv1.CertificateRequest, error) {
+func (c *CertManagerV1) CreateCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.CreateOptions) (*certmanagerv1.CertificateRequest, error) {
 	result, err := c.backend.Create(ctx, "certificaterequests", v, opts, &certmanagerv1.CertificateRequest{})
 	if err != nil {
 		return nil, err
@@ -360,7 +358,7 @@ func (c *CertManagerIoV1) CreateCertificateRequest(ctx context.Context, v *certm
 	return result.(*certmanagerv1.CertificateRequest), nil
 }
 
-func (c *CertManagerIoV1) UpdateCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.UpdateOptions) (*certmanagerv1.CertificateRequest, error) {
+func (c *CertManagerV1) UpdateCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.UpdateOptions) (*certmanagerv1.CertificateRequest, error) {
 	result, err := c.backend.Update(ctx, "certificaterequests", v, opts, &certmanagerv1.CertificateRequest{})
 	if err != nil {
 		return nil, err
@@ -368,7 +366,7 @@ func (c *CertManagerIoV1) UpdateCertificateRequest(ctx context.Context, v *certm
 	return result.(*certmanagerv1.CertificateRequest), nil
 }
 
-func (c *CertManagerIoV1) UpdateStatusCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.UpdateOptions) (*certmanagerv1.CertificateRequest, error) {
+func (c *CertManagerV1) UpdateStatusCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.UpdateOptions) (*certmanagerv1.CertificateRequest, error) {
 	result, err := c.backend.UpdateStatus(ctx, "certificaterequests", v, opts, &certmanagerv1.CertificateRequest{})
 	if err != nil {
 		return nil, err
@@ -376,23 +374,23 @@ func (c *CertManagerIoV1) UpdateStatusCertificateRequest(ctx context.Context, v 
 	return result.(*certmanagerv1.CertificateRequest), nil
 }
 
-func (c *CertManagerIoV1) DeleteCertificateRequest(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "certificaterequests"}, namespace, name, opts)
+func (c *CertManagerV1) DeleteCertificateRequest(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificaterequests"}, namespace, name, opts)
 }
 
-func (c *CertManagerIoV1) ListCertificateRequest(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.CertificateRequestList, error) {
-	result, err := c.backend.List(ctx, "certificaterequests", namespace, opts, &certmanagerv1.CertificateRequest{})
+func (c *CertManagerV1) ListCertificateRequest(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.CertificateRequestList, error) {
+	result, err := c.backend.List(ctx, "certificaterequests", namespace, opts, &certmanagerv1.CertificateRequestList{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.CertificateRequestList), nil
 }
 
-func (c *CertManagerIoV1) WatchCertificateRequest(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "certificaterequests"}, namespace, opts)
+func (c *CertManagerV1) WatchCertificateRequest(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificaterequests"}, namespace, opts)
 }
 
-func (c *CertManagerIoV1) GetClusterIssuer(ctx context.Context, name string, opts metav1.GetOptions) (*certmanagerv1.ClusterIssuer, error) {
+func (c *CertManagerV1) GetClusterIssuer(ctx context.Context, name string, opts metav1.GetOptions) (*certmanagerv1.ClusterIssuer, error) {
 	result, err := c.backend.GetClusterScoped(ctx, "clusterissuers", name, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
@@ -400,7 +398,7 @@ func (c *CertManagerIoV1) GetClusterIssuer(ctx context.Context, name string, opt
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
-func (c *CertManagerIoV1) CreateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.CreateOptions) (*certmanagerv1.ClusterIssuer, error) {
+func (c *CertManagerV1) CreateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.CreateOptions) (*certmanagerv1.ClusterIssuer, error) {
 	result, err := c.backend.CreateClusterScoped(ctx, "clusterissuers", v, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
@@ -408,7 +406,7 @@ func (c *CertManagerIoV1) CreateClusterIssuer(ctx context.Context, v *certmanage
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
-func (c *CertManagerIoV1) UpdateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.UpdateOptions) (*certmanagerv1.ClusterIssuer, error) {
+func (c *CertManagerV1) UpdateClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.UpdateOptions) (*certmanagerv1.ClusterIssuer, error) {
 	result, err := c.backend.UpdateClusterScoped(ctx, "clusterissuers", v, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
@@ -416,7 +414,7 @@ func (c *CertManagerIoV1) UpdateClusterIssuer(ctx context.Context, v *certmanage
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
-func (c *CertManagerIoV1) UpdateStatusClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.UpdateOptions) (*certmanagerv1.ClusterIssuer, error) {
+func (c *CertManagerV1) UpdateStatusClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.UpdateOptions) (*certmanagerv1.ClusterIssuer, error) {
 	result, err := c.backend.UpdateStatusClusterScoped(ctx, "clusterissuers", v, opts, &certmanagerv1.ClusterIssuer{})
 	if err != nil {
 		return nil, err
@@ -424,23 +422,23 @@ func (c *CertManagerIoV1) UpdateStatusClusterIssuer(ctx context.Context, v *cert
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
-func (c *CertManagerIoV1) DeleteClusterIssuer(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	return c.backend.DeleteClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, name, opts)
+func (c *CertManagerV1) DeleteClusterIssuer(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	return c.backend.DeleteClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "clusterissuers"}, name, opts)
 }
 
-func (c *CertManagerIoV1) ListClusterIssuer(ctx context.Context, opts metav1.ListOptions) (*certmanagerv1.ClusterIssuerList, error) {
-	result, err := c.backend.ListClusterScoped(ctx, "clusterissuers", opts, &certmanagerv1.ClusterIssuer{})
+func (c *CertManagerV1) ListClusterIssuer(ctx context.Context, opts metav1.ListOptions) (*certmanagerv1.ClusterIssuerList, error) {
+	result, err := c.backend.ListClusterScoped(ctx, "clusterissuers", opts, &certmanagerv1.ClusterIssuerList{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.ClusterIssuerList), nil
 }
 
-func (c *CertManagerIoV1) WatchClusterIssuer(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.WatchClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "clusterissuers"}, opts)
+func (c *CertManagerV1) WatchClusterIssuer(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.WatchClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "clusterissuers"}, opts)
 }
 
-func (c *CertManagerIoV1) GetIssuer(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.Issuer, error) {
+func (c *CertManagerV1) GetIssuer(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*certmanagerv1.Issuer, error) {
 	result, err := c.backend.Get(ctx, "issuers", namespace, name, opts, &certmanagerv1.Issuer{})
 	if err != nil {
 		return nil, err
@@ -448,7 +446,7 @@ func (c *CertManagerIoV1) GetIssuer(ctx context.Context, namespace, name string,
 	return result.(*certmanagerv1.Issuer), nil
 }
 
-func (c *CertManagerIoV1) CreateIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.CreateOptions) (*certmanagerv1.Issuer, error) {
+func (c *CertManagerV1) CreateIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.CreateOptions) (*certmanagerv1.Issuer, error) {
 	result, err := c.backend.Create(ctx, "issuers", v, opts, &certmanagerv1.Issuer{})
 	if err != nil {
 		return nil, err
@@ -456,7 +454,7 @@ func (c *CertManagerIoV1) CreateIssuer(ctx context.Context, v *certmanagerv1.Iss
 	return result.(*certmanagerv1.Issuer), nil
 }
 
-func (c *CertManagerIoV1) UpdateIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.UpdateOptions) (*certmanagerv1.Issuer, error) {
+func (c *CertManagerV1) UpdateIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.UpdateOptions) (*certmanagerv1.Issuer, error) {
 	result, err := c.backend.Update(ctx, "issuers", v, opts, &certmanagerv1.Issuer{})
 	if err != nil {
 		return nil, err
@@ -464,7 +462,7 @@ func (c *CertManagerIoV1) UpdateIssuer(ctx context.Context, v *certmanagerv1.Iss
 	return result.(*certmanagerv1.Issuer), nil
 }
 
-func (c *CertManagerIoV1) UpdateStatusIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.UpdateOptions) (*certmanagerv1.Issuer, error) {
+func (c *CertManagerV1) UpdateStatusIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.UpdateOptions) (*certmanagerv1.Issuer, error) {
 	result, err := c.backend.UpdateStatus(ctx, "issuers", v, opts, &certmanagerv1.Issuer{})
 	if err != nil {
 		return nil, err
@@ -472,28 +470,29 @@ func (c *CertManagerIoV1) UpdateStatusIssuer(ctx context.Context, v *certmanager
 	return result.(*certmanagerv1.Issuer), nil
 }
 
-func (c *CertManagerIoV1) DeleteIssuer(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "issuers"}, namespace, name, opts)
+func (c *CertManagerV1) DeleteIssuer(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "issuers"}, namespace, name, opts)
 }
 
-func (c *CertManagerIoV1) ListIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.IssuerList, error) {
-	result, err := c.backend.List(ctx, "issuers", namespace, opts, &certmanagerv1.Issuer{})
+func (c *CertManagerV1) ListIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (*certmanagerv1.IssuerList, error) {
+	result, err := c.backend.List(ctx, "issuers", namespace, opts, &certmanagerv1.IssuerList{})
 	if err != nil {
 		return nil, err
 	}
 	return result.(*certmanagerv1.IssuerList), nil
 }
 
-func (c *CertManagerIoV1) WatchIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io.", Version: "v1", Resource: "issuers"}, namespace, opts)
+func (c *CertManagerV1) WatchIssuer(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "issuers"}, namespace, opts)
 }
 
 type CoreosComV1 struct {
 	backend Backend
+	config  *rest.Config
 }
 
-func NewCoreosComV1Client(b Backend) *CoreosComV1 {
-	return &CoreosComV1{backend: b}
+func NewCoreosComV1Client(b Backend, config *rest.Config) *CoreosComV1 {
+	return &CoreosComV1{backend: b, config: config}
 }
 
 func (c *CoreosComV1) GetAlertmanager(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Alertmanager, error) {
@@ -533,7 +532,7 @@ func (c *CoreosComV1) DeleteAlertmanager(ctx context.Context, namespace, name st
 }
 
 func (c *CoreosComV1) ListAlertmanager(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.AlertmanagerList, error) {
-	result, err := c.backend.List(ctx, "alertmanagers", namespace, opts, &monitoringv1.Alertmanager{})
+	result, err := c.backend.List(ctx, "alertmanagers", namespace, opts, &monitoringv1.AlertmanagerList{})
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +572,7 @@ func (c *CoreosComV1) DeletePodMonitor(ctx context.Context, namespace, name stri
 }
 
 func (c *CoreosComV1) ListPodMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PodMonitorList, error) {
-	result, err := c.backend.List(ctx, "podmonitors", namespace, opts, &monitoringv1.PodMonitor{})
+	result, err := c.backend.List(ctx, "podmonitors", namespace, opts, &monitoringv1.PodMonitorList{})
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +612,7 @@ func (c *CoreosComV1) DeleteProbe(ctx context.Context, namespace, name string, o
 }
 
 func (c *CoreosComV1) ListProbe(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ProbeList, error) {
-	result, err := c.backend.List(ctx, "probes", namespace, opts, &monitoringv1.Probe{})
+	result, err := c.backend.List(ctx, "probes", namespace, opts, &monitoringv1.ProbeList{})
 	if err != nil {
 		return nil, err
 	}
@@ -661,7 +660,7 @@ func (c *CoreosComV1) DeletePrometheus(ctx context.Context, namespace, name stri
 }
 
 func (c *CoreosComV1) ListPrometheus(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusList, error) {
-	result, err := c.backend.List(ctx, "prometheuses", namespace, opts, &monitoringv1.Prometheus{})
+	result, err := c.backend.List(ctx, "prometheuses", namespace, opts, &monitoringv1.PrometheusList{})
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +700,7 @@ func (c *CoreosComV1) DeletePrometheusRule(ctx context.Context, namespace, name 
 }
 
 func (c *CoreosComV1) ListPrometheusRule(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusRuleList, error) {
-	result, err := c.backend.List(ctx, "prometheusrules", namespace, opts, &monitoringv1.PrometheusRule{})
+	result, err := c.backend.List(ctx, "prometheusrules", namespace, opts, &monitoringv1.PrometheusRuleList{})
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +740,7 @@ func (c *CoreosComV1) DeleteServiceMonitor(ctx context.Context, namespace, name 
 }
 
 func (c *CoreosComV1) ListServiceMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ServiceMonitorList, error) {
-	result, err := c.backend.List(ctx, "servicemonitors", namespace, opts, &monitoringv1.ServiceMonitor{})
+	result, err := c.backend.List(ctx, "servicemonitors", namespace, opts, &monitoringv1.ServiceMonitorList{})
 	if err != nil {
 		return nil, err
 	}
@@ -789,7 +788,7 @@ func (c *CoreosComV1) DeleteThanosRuler(ctx context.Context, namespace, name str
 }
 
 func (c *CoreosComV1) ListThanosRuler(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ThanosRulerList, error) {
-	result, err := c.backend.List(ctx, "thanosrulers", namespace, opts, &monitoringv1.ThanosRuler{})
+	result, err := c.backend.List(ctx, "thanosrulers", namespace, opts, &monitoringv1.ThanosRulerList{})
 	if err != nil {
 		return nil, err
 	}
@@ -854,13 +853,13 @@ func (f *InformerFactory) Cache() *InformerCache {
 func (f *InformerFactory) InformerFor(obj runtime.Object) cache.SharedIndexInformer {
 	switch obj.(type) {
 	case *certmanagerv1.Certificate:
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).CertificateInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateInformer()
 	case *certmanagerv1.CertificateRequest:
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).CertificateRequestInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateRequestInformer()
 	case *certmanagerv1.ClusterIssuer:
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
 	case *certmanagerv1.Issuer:
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).IssuerInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).IssuerInformer()
 	case *monitoringv1.Alertmanager:
 		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
 	case *monitoringv1.PodMonitor:
@@ -883,13 +882,13 @@ func (f *InformerFactory) InformerFor(obj runtime.Object) cache.SharedIndexInfor
 func (f *InformerFactory) InformerForResource(gvr schema.GroupVersionResource) cache.SharedIndexInformer {
 	switch gvr {
 	case certmanagerv1.SchemaGroupVersion.WithResource("certificates"):
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).CertificateInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("certificaterequests"):
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).CertificateRequestInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateRequestInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("clusterissuers"):
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("issuers"):
-		return NewCertManagerIoV1Informer(f.cache, f.set.CertManagerIoV1, f.namespace, f.resyncPeriod).IssuerInformer()
+		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).IssuerInformer()
 	case monitoringv1.SchemaGroupVersion.WithResource("alertmanagers"):
 		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
 	case monitoringv1.SchemaGroupVersion.WithResource("podmonitors"):
@@ -915,16 +914,16 @@ func (f *InformerFactory) Run(ctx context.Context) {
 	}
 }
 
-type CertManagerIoV1Informer struct {
+type CertManagerV1Informer struct {
 	cache        *InformerCache
-	client       *CertManagerIoV1
+	client       *CertManagerV1
 	namespace    string
 	resyncPeriod time.Duration
 	indexers     cache.Indexers
 }
 
-func NewCertManagerIoV1Informer(c *InformerCache, client *CertManagerIoV1, namespace string, resyncPeriod time.Duration) *CertManagerIoV1Informer {
-	return &CertManagerIoV1Informer{
+func NewCertManagerV1Informer(c *InformerCache, client *CertManagerV1, namespace string, resyncPeriod time.Duration) *CertManagerV1Informer {
+	return &CertManagerV1Informer{
 		cache:        c,
 		client:       client,
 		namespace:    namespace,
@@ -933,7 +932,7 @@ func NewCertManagerIoV1Informer(c *InformerCache, client *CertManagerIoV1, names
 	}
 }
 
-func (f *CertManagerIoV1Informer) CertificateInformer() cache.SharedIndexInformer {
+func (f *CertManagerV1Informer) CertificateInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&certmanagerv1.Certificate{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -951,11 +950,11 @@ func (f *CertManagerIoV1Informer) CertificateInformer() cache.SharedIndexInforme
 	})
 }
 
-func (f *CertManagerIoV1Informer) CertificateLister() *CertManagerIoV1CertificateLister {
-	return NewCertManagerIoV1CertificateLister(f.CertificateInformer().GetIndexer())
+func (f *CertManagerV1Informer) CertificateLister() *CertManagerV1CertificateLister {
+	return NewCertManagerV1CertificateLister(f.CertificateInformer().GetIndexer())
 }
 
-func (f *CertManagerIoV1Informer) CertificateRequestInformer() cache.SharedIndexInformer {
+func (f *CertManagerV1Informer) CertificateRequestInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&certmanagerv1.CertificateRequest{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -973,11 +972,11 @@ func (f *CertManagerIoV1Informer) CertificateRequestInformer() cache.SharedIndex
 	})
 }
 
-func (f *CertManagerIoV1Informer) CertificateRequestLister() *CertManagerIoV1CertificateRequestLister {
-	return NewCertManagerIoV1CertificateRequestLister(f.CertificateRequestInformer().GetIndexer())
+func (f *CertManagerV1Informer) CertificateRequestLister() *CertManagerV1CertificateRequestLister {
+	return NewCertManagerV1CertificateRequestLister(f.CertificateRequestInformer().GetIndexer())
 }
 
-func (f *CertManagerIoV1Informer) ClusterIssuerInformer() cache.SharedIndexInformer {
+func (f *CertManagerV1Informer) ClusterIssuerInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&certmanagerv1.ClusterIssuer{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -995,11 +994,11 @@ func (f *CertManagerIoV1Informer) ClusterIssuerInformer() cache.SharedIndexInfor
 	})
 }
 
-func (f *CertManagerIoV1Informer) ClusterIssuerLister() *CertManagerIoV1ClusterIssuerLister {
-	return NewCertManagerIoV1ClusterIssuerLister(f.ClusterIssuerInformer().GetIndexer())
+func (f *CertManagerV1Informer) ClusterIssuerLister() *CertManagerV1ClusterIssuerLister {
+	return NewCertManagerV1ClusterIssuerLister(f.ClusterIssuerInformer().GetIndexer())
 }
 
-func (f *CertManagerIoV1Informer) IssuerInformer() cache.SharedIndexInformer {
+func (f *CertManagerV1Informer) IssuerInformer() cache.SharedIndexInformer {
 	return f.cache.Write(&certmanagerv1.Issuer{}, func() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
@@ -1017,8 +1016,8 @@ func (f *CertManagerIoV1Informer) IssuerInformer() cache.SharedIndexInformer {
 	})
 }
 
-func (f *CertManagerIoV1Informer) IssuerLister() *CertManagerIoV1IssuerLister {
-	return NewCertManagerIoV1IssuerLister(f.IssuerInformer().GetIndexer())
+func (f *CertManagerV1Informer) IssuerLister() *CertManagerV1IssuerLister {
+	return NewCertManagerV1IssuerLister(f.IssuerInformer().GetIndexer())
 }
 
 type CoreosComV1Informer struct {
@@ -1193,15 +1192,15 @@ func (f *CoreosComV1Informer) ThanosRulerLister() *CoreosComV1ThanosRulerLister 
 	return NewCoreosComV1ThanosRulerLister(f.ThanosRulerInformer().GetIndexer())
 }
 
-type CertManagerIoV1CertificateLister struct {
+type CertManagerV1CertificateLister struct {
 	indexer cache.Indexer
 }
 
-func NewCertManagerIoV1CertificateLister(indexer cache.Indexer) *CertManagerIoV1CertificateLister {
-	return &CertManagerIoV1CertificateLister{indexer: indexer}
+func NewCertManagerV1CertificateLister(indexer cache.Indexer) *CertManagerV1CertificateLister {
+	return &CertManagerV1CertificateLister{indexer: indexer}
 }
 
-func (x *CertManagerIoV1CertificateLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.Certificate, error) {
+func (x *CertManagerV1CertificateLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.Certificate, error) {
 	var ret []*certmanagerv1.Certificate
 	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*certmanagerv1.Certificate).DeepCopy())
@@ -1209,7 +1208,7 @@ func (x *CertManagerIoV1CertificateLister) List(namespace string, selector label
 	return ret, err
 }
 
-func (x *CertManagerIoV1CertificateLister) Get(namespace, name string) (*certmanagerv1.Certificate, error) {
+func (x *CertManagerV1CertificateLister) Get(namespace, name string) (*certmanagerv1.Certificate, error) {
 	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
 	if err != nil {
 		return nil, err
@@ -1220,15 +1219,15 @@ func (x *CertManagerIoV1CertificateLister) Get(namespace, name string) (*certman
 	return obj.(*certmanagerv1.Certificate).DeepCopy(), nil
 }
 
-type CertManagerIoV1CertificateRequestLister struct {
+type CertManagerV1CertificateRequestLister struct {
 	indexer cache.Indexer
 }
 
-func NewCertManagerIoV1CertificateRequestLister(indexer cache.Indexer) *CertManagerIoV1CertificateRequestLister {
-	return &CertManagerIoV1CertificateRequestLister{indexer: indexer}
+func NewCertManagerV1CertificateRequestLister(indexer cache.Indexer) *CertManagerV1CertificateRequestLister {
+	return &CertManagerV1CertificateRequestLister{indexer: indexer}
 }
 
-func (x *CertManagerIoV1CertificateRequestLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.CertificateRequest, error) {
+func (x *CertManagerV1CertificateRequestLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.CertificateRequest, error) {
 	var ret []*certmanagerv1.CertificateRequest
 	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*certmanagerv1.CertificateRequest).DeepCopy())
@@ -1236,7 +1235,7 @@ func (x *CertManagerIoV1CertificateRequestLister) List(namespace string, selecto
 	return ret, err
 }
 
-func (x *CertManagerIoV1CertificateRequestLister) Get(namespace, name string) (*certmanagerv1.CertificateRequest, error) {
+func (x *CertManagerV1CertificateRequestLister) Get(namespace, name string) (*certmanagerv1.CertificateRequest, error) {
 	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
 	if err != nil {
 		return nil, err
@@ -1247,15 +1246,15 @@ func (x *CertManagerIoV1CertificateRequestLister) Get(namespace, name string) (*
 	return obj.(*certmanagerv1.CertificateRequest).DeepCopy(), nil
 }
 
-type CertManagerIoV1ClusterIssuerLister struct {
+type CertManagerV1ClusterIssuerLister struct {
 	indexer cache.Indexer
 }
 
-func NewCertManagerIoV1ClusterIssuerLister(indexer cache.Indexer) *CertManagerIoV1ClusterIssuerLister {
-	return &CertManagerIoV1ClusterIssuerLister{indexer: indexer}
+func NewCertManagerV1ClusterIssuerLister(indexer cache.Indexer) *CertManagerV1ClusterIssuerLister {
+	return &CertManagerV1ClusterIssuerLister{indexer: indexer}
 }
 
-func (x *CertManagerIoV1ClusterIssuerLister) List(selector labels.Selector) ([]*certmanagerv1.ClusterIssuer, error) {
+func (x *CertManagerV1ClusterIssuerLister) List(selector labels.Selector) ([]*certmanagerv1.ClusterIssuer, error) {
 	var ret []*certmanagerv1.ClusterIssuer
 	err := cache.ListAll(x.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*certmanagerv1.ClusterIssuer).DeepCopy())
@@ -1263,7 +1262,7 @@ func (x *CertManagerIoV1ClusterIssuerLister) List(selector labels.Selector) ([]*
 	return ret, err
 }
 
-func (x *CertManagerIoV1ClusterIssuerLister) Get(name string) (*certmanagerv1.ClusterIssuer, error) {
+func (x *CertManagerV1ClusterIssuerLister) Get(name string) (*certmanagerv1.ClusterIssuer, error) {
 	obj, exists, err := x.indexer.GetByKey("/" + name)
 	if err != nil {
 		return nil, err
@@ -1274,15 +1273,15 @@ func (x *CertManagerIoV1ClusterIssuerLister) Get(name string) (*certmanagerv1.Cl
 	return obj.(*certmanagerv1.ClusterIssuer).DeepCopy(), nil
 }
 
-type CertManagerIoV1IssuerLister struct {
+type CertManagerV1IssuerLister struct {
 	indexer cache.Indexer
 }
 
-func NewCertManagerIoV1IssuerLister(indexer cache.Indexer) *CertManagerIoV1IssuerLister {
-	return &CertManagerIoV1IssuerLister{indexer: indexer}
+func NewCertManagerV1IssuerLister(indexer cache.Indexer) *CertManagerV1IssuerLister {
+	return &CertManagerV1IssuerLister{indexer: indexer}
 }
 
-func (x *CertManagerIoV1IssuerLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.Issuer, error) {
+func (x *CertManagerV1IssuerLister) List(namespace string, selector labels.Selector) ([]*certmanagerv1.Issuer, error) {
 	var ret []*certmanagerv1.Issuer
 	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
 		ret = append(ret, m.(*certmanagerv1.Issuer).DeepCopy())
@@ -1290,7 +1289,7 @@ func (x *CertManagerIoV1IssuerLister) List(namespace string, selector labels.Sel
 	return ret, err
 }
 
-func (x *CertManagerIoV1IssuerLister) Get(namespace, name string) (*certmanagerv1.Issuer, error) {
+func (x *CertManagerV1IssuerLister) Get(namespace, name string) (*certmanagerv1.Issuer, error) {
 	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
 	if err != nil {
 		return nil, err

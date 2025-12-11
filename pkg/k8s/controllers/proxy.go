@@ -1374,13 +1374,13 @@ func (r *HeimdallrProxy) checkSelfSignedIssuer() error {
 	var issuerObj runtime.Object
 	switch r.Spec.IssuerRef.Kind {
 	case "ClusterIssuer":
-		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetClusterIssuer(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.thirdPartyClientSet.CertManagerV1.GetClusterIssuer(context.TODO(), r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
 		issuerObj = ci
 	case "Issuer":
-		ci, err := r.thirdPartyClientSet.CertManagerIoV1.GetIssuer(context.TODO(), r.Namespace, r.Spec.IssuerRef.Name, metav1.GetOptions{})
+		ci, err := r.thirdPartyClientSet.CertManagerV1.GetIssuer(context.TODO(), r.Namespace, r.Spec.IssuerRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}

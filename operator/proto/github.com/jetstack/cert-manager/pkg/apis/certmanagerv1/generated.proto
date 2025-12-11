@@ -3,7 +3,8 @@ syntax = "proto3";
 package github.com.jetstack.cert_manager.pkg.apis.certmanagerv1;
 option go_package = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1";
 option (dev.f110.kubeproto.k8s) = {
-sub_group: "cert-manager.io",
+domain: "io",
+sub_group: "cert-manager",
 version: "v1",
 };
 

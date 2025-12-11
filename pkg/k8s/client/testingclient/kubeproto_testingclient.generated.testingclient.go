@@ -2,6 +2,7 @@ package testingclient
 
 import (
 	"context"
+	"strings"
 
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
 
 	"go.f110.dev/heimdallr/pkg/k8s/client"
@@ -39,10 +41,10 @@ func NewSet() *Set {
 		return true, w, nil
 	})
 
-	s.EtcdV1alpha1 = client.NewEtcdV1alpha1Client(&fakerBackend{fake: &s.fake})
-	s.EtcdV1alpha2 = client.NewEtcdV1alpha2Client(&fakerBackend{fake: &s.fake})
-	s.ProxyV1alpha1 = client.NewProxyV1alpha1Client(&fakerBackend{fake: &s.fake})
-	s.ProxyV1alpha2 = client.NewProxyV1alpha2Client(&fakerBackend{fake: &s.fake})
+	s.EtcdV1alpha1 = client.NewEtcdV1alpha1Client(&fakerBackend{fake: &s.fake}, nil)
+	s.EtcdV1alpha2 = client.NewEtcdV1alpha2Client(&fakerBackend{fake: &s.fake}, nil)
+	s.ProxyV1alpha1 = client.NewProxyV1alpha1Client(&fakerBackend{fake: &s.fake}, nil)
+	s.ProxyV1alpha2 = client.NewProxyV1alpha2Client(&fakerBackend{fake: &s.fake}, nil)
 	return s
 }
 
@@ -77,6 +79,9 @@ func (f *fakerBackend) List(ctx context.Context, resourceName, namespace string,
 		return nil, err
 	}
 	gvk := gvks[0]
+	if strings.HasSuffix(gvk.Kind, "List") {
+		gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
+	}
 	k8sListOpt := k8smetav1.ListOptions{
 		LabelSelector:   opts.LabelSelector,
 		FieldSelector:   opts.FieldSelector,
@@ -190,4 +195,8 @@ func (f *fakerBackend) DeleteClusterScoped(ctx context.Context, gvr schema.Group
 
 func (f *fakerBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error) {
 	return f.Watch(ctx, gvr, "", opts)
+}
+
+func (f *fakerBackend) RESTClient() *rest.RESTClient {
+	return nil
 }

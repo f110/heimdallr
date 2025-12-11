@@ -40,7 +40,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.16
 	go.etcd.io/etcd/etcdutl/v3 v3.5.13
 	go.etcd.io/etcd/server/v3 v3.5.16
-	go.f110.dev/kubeproto v0.0.0-20251203110303-b71a2c740f60
+	go.f110.dev/kubeproto v0.0.0-20251210170207-086c7bdbe6a8
 	go.f110.dev/protoc-ddl v0.0.0-20240318220439-f8fad953adf2
 	go.f110.dev/xerrors v0.0.0-20240416164428-6f0b6ccbd238
 	go.uber.org/zap v1.27.0

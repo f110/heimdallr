@@ -1097,11 +1097,11 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *HeimdallrProxy, obj runtime.Object) error {
 	switch certificate := obj.(type) {
 	case *certmanagerv1.Certificate:
-		crt, err := c.thirdPartyClientSet.CertManagerIoV1.GetCertificate(ctx, certificate.Namespace, certificate.Name, metav1.GetOptions{})
+		crt, err := c.thirdPartyClientSet.CertManagerV1.GetCertificate(ctx, certificate.Namespace, certificate.Name, metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			lp.ControlObject(certificate)
 
-			_, err = c.thirdPartyClientSet.CertManagerIoV1.CreateCertificate(ctx, certificate, metav1.CreateOptions{})
+			_, err = c.thirdPartyClientSet.CertManagerV1.CreateCertificate(ctx, certificate, metav1.CreateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
@@ -1115,7 +1115,7 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 		newCRT.Spec = certificate.Spec
 
 		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.thirdPartyClientSet.CertManagerIoV1.UpdateCertificate(ctx, newCRT, metav1.UpdateOptions{})
+			_, err = c.thirdPartyClientSet.CertManagerV1.UpdateCertificate(ctx, newCRT, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
