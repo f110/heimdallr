@@ -47,10 +47,24 @@ def container_image(name, tags, amd64_tar, arm64_tar, base_amd64 = "@com_google_
         visibility = ["//visibility:public"],
     )
 
+    native.filegroup(
+        name = "%s.amd64_tar.tar" % name,
+        srcs = [":%s.amd64_tar" % name],
+        output_group = "tarball",
+        visibility = ["//visibility:public"],
+    )
+
     oci_load(
         name = "%s.arm64_tar" % name,
         image = ":%s.linux_arm64" % name,
         repo_tags = [repository + ":" + x + "_arm64" for x in tags],
+        visibility = ["//visibility:public"],
+    )
+
+    native.filegroup(
+        name = "%s.arm64_tar.tar" % name,
+        srcs = [":%s.arm64_tar" % name],
+        output_group = "tarball",
         visibility = ["//visibility:public"],
     )
 
