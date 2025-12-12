@@ -53,7 +53,7 @@ func Job(j *batchv1.Job) Trait {
 func JobFactory(base *batchv1.Job, traits ...Trait) *batchv1.Job {
 	var j *batchv1.Job
 	if base == nil {
-		j = &batchv1.Job{}
+		j = &batchv1.Job{Spec: &batchv1.JobSpec{}, Status: &batchv1.JobStatus{}}
 	} else {
 		j = base.DeepCopy()
 	}
