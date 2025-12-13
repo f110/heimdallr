@@ -3,8 +3,7 @@ syntax = "proto3";
 package github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1;
 option go_package = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1";
 option (dev.f110.kubeproto.k8s) = {
-domain: "monitoring",
-sub_group: "coreos.com",
+domain: "monitoring.coreos.com",
 version: "v1",
 };
 
