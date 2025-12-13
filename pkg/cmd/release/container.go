@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -21,7 +22,7 @@ func containerReleaseCmd(repository, sha256File, tag string, override bool) erro
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
-	sha256 := string(b)
+	sha256 := strings.TrimSpace(string(b))
 
 	repo, err := name.NewRepository(repository)
 	if err != nil {
