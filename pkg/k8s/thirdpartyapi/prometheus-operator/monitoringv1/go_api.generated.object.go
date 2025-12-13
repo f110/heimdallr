@@ -8,7 +8,7 @@ import (
 	utilintstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const GroupName = "coreos.com.monitoring"
+const GroupName = "monitoring.coreos.com"
 
 var (
 	GroupVersion       = metav1.GroupVersion{Group: GroupName, Version: "v1"}

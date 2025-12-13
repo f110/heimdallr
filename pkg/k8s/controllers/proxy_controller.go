@@ -72,7 +72,7 @@ type ProxyController struct {
 
 	ecLister       *client.EtcdV1alpha2EtcdClusterLister
 	ecListerSynced cache.InformerSynced
-	pmLister       *thirdpartyclient.CoreosComV1PodMonitorLister
+	pmLister       *thirdpartyclient.CoreV1PodMonitorLister
 	pmListerSynced cache.InformerSynced
 
 	certManagerVersion       string
@@ -143,7 +143,7 @@ func NewProxyController(
 
 	if c.enablePrometheusOperator {
 		f := thirdpartyclient.NewInformerFactory(thirdPartyClientSet, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
-		coreosInformer := thirdpartyclient.NewCoreosComV1Informer(f.Cache(), thirdPartyClientSet.CoreosComV1, metav1.NamespaceAll, 30*time.Second)
+		coreosInformer := thirdpartyclient.NewCoreV1Informer(f.Cache(), thirdPartyClientSet.CoreV1, metav1.NamespaceAll, 30*time.Second)
 		c.pmLister = coreosInformer.PodMonitorLister()
 		c.pmListerSynced = coreosInformer.PodMonitorInformer().HasSynced
 		f.Run(ctx)
@@ -663,7 +663,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 		podMonitor, err = c.pmLister.Get(lp.Namespace, newPM.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				_, err = c.thirdPartyClientSet.CoreosComV1.CreatePodMonitor(ctx, newPM, metav1.CreateOptions{})
+				_, err = c.thirdPartyClientSet.CoreV1.CreatePodMonitor(ctx, newPM, metav1.CreateOptions{})
 				if err != nil {
 					return xerrors.WithStack(err)
 				}
@@ -686,7 +686,7 @@ func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *Heimdall
 		if !reflect.DeepEqual(podMonitor.Labels, newPM.Labels) || !reflect.DeepEqual(podMonitor.Spec, newPM.Spec) {
 			podMonitor.Spec = newPM.Spec
 			podMonitor.Labels = newPM.Labels
-			_, err = c.thirdPartyClientSet.CoreosComV1.UpdatePodMonitor(ctx, podMonitor, metav1.UpdateOptions{})
+			_, err = c.thirdPartyClientSet.CoreV1.UpdatePodMonitor(ctx, podMonitor, metav1.UpdateOptions{})
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
@@ -1126,11 +1126,11 @@ func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *Hei
 }
 
 func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
-	sm, err := c.thirdPartyClientSet.CoreosComV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Name, metav1.GetOptions{})
+	sm, err := c.thirdPartyClientSet.CoreV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		lp.ControlObject(serviceMonitor)
 
-		_, err = c.thirdPartyClientSet.CoreosComV1.CreateServiceMonitor(ctx, serviceMonitor, metav1.CreateOptions{})
+		_, err = c.thirdPartyClientSet.CoreV1.CreateServiceMonitor(ctx, serviceMonitor, metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1145,7 +1145,7 @@ func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *
 	newSM.Spec = serviceMonitor.Spec
 
 	if !reflect.DeepEqual(newSM.Spec, sm.Spec) || !reflect.DeepEqual(newSM.ObjectMeta, sm.ObjectMeta) {
-		_, err = c.thirdPartyClientSet.CoreosComV1.UpdateServiceMonitor(ctx, newSM, metav1.UpdateOptions{})
+		_, err = c.thirdPartyClientSet.CoreV1.UpdateServiceMonitor(ctx, newSM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}

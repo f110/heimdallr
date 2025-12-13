@@ -41,8 +41,8 @@ func NewSet() *Set {
 		return true, w, nil
 	})
 
+	s.CoreV1 = thirdpartyclient.NewCoreV1Client(&fakerBackend{fake: &s.fake}, nil)
 	s.CertManagerV1 = thirdpartyclient.NewCertManagerV1Client(&fakerBackend{fake: &s.fake}, nil)
-	s.CoreosComV1 = thirdpartyclient.NewCoreosComV1Client(&fakerBackend{fake: &s.fake}, nil)
 	return s
 }
 

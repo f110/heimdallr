@@ -30,14 +30,14 @@ var (
 )
 
 var localSchemeBuilder = runtime.SchemeBuilder{
-	certmanagerv1.AddToScheme,
 	monitoringv1.AddToScheme,
+	certmanagerv1.AddToScheme,
 }
 
 func init() {
 	for _, v := range []func(*runtime.Scheme) error{
-		certmanagerv1.AddToScheme,
 		monitoringv1.AddToScheme,
+		certmanagerv1.AddToScheme,
 	} {
 		if err := v(Scheme); err != nil {
 			panic(err)
@@ -65,12 +65,23 @@ type Backend interface {
 }
 
 type Set struct {
+	CoreV1        *CoreV1
 	CertManagerV1 *CertManagerV1
-	CoreosComV1   *CoreosComV1
 }
 
 func NewSet(cfg *rest.Config) (*Set, error) {
 	s := &Set{}
+	{
+		conf := *cfg
+		conf.GroupVersion = &monitoringv1.SchemaGroupVersion
+		conf.APIPath = "/apis"
+		conf.NegotiatedSerializer = Codecs.WithoutConversion()
+		c, err := rest.RESTClientFor(&conf)
+		if err != nil {
+			return nil, err
+		}
+		s.CoreV1 = NewCoreV1Client(&restBackend{client: c}, &conf)
+	}
 	{
 		conf := *cfg
 		conf.GroupVersion = &certmanagerv1.SchemaGroupVersion
@@ -81,17 +92,6 @@ func NewSet(cfg *rest.Config) (*Set, error) {
 			return nil, err
 		}
 		s.CertManagerV1 = NewCertManagerV1Client(&restBackend{client: c}, &conf)
-	}
-	{
-		conf := *cfg
-		conf.GroupVersion = &monitoringv1.SchemaGroupVersion
-		conf.APIPath = "/apis"
-		conf.NegotiatedSerializer = Codecs.WithoutConversion()
-		c, err := rest.RESTClientFor(&conf)
-		if err != nil {
-			return nil, err
-		}
-		s.CoreosComV1 = NewCoreosComV1Client(&restBackend{client: c}, &conf)
 	}
 
 	return s, nil
@@ -283,6 +283,319 @@ func (r *restBackend) WatchClusterScoped(ctx context.Context, gvr schema.GroupVe
 
 func (r *restBackend) RESTClient() *rest.RESTClient {
 	return r.client
+}
+
+type CoreV1 struct {
+	backend Backend
+	config  *rest.Config
+}
+
+func NewCoreV1Client(b Backend, config *rest.Config) *CoreV1 {
+	return &CoreV1{backend: b, config: config}
+}
+
+func (c *CoreV1) GetAlertmanager(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Alertmanager, error) {
+	result, err := c.backend.Get(ctx, "alertmanagers", namespace, name, opts, &monitoringv1.Alertmanager{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Alertmanager), nil
+}
+
+func (c *CoreV1) CreateAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.CreateOptions) (*monitoringv1.Alertmanager, error) {
+	result, err := c.backend.Create(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Alertmanager), nil
+}
+
+func (c *CoreV1) UpdateAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.UpdateOptions) (*monitoringv1.Alertmanager, error) {
+	result, err := c.backend.Update(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Alertmanager), nil
+}
+
+func (c *CoreV1) UpdateStatusAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.UpdateOptions) (*monitoringv1.Alertmanager, error) {
+	result, err := c.backend.UpdateStatus(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Alertmanager), nil
+}
+
+func (c *CoreV1) DeleteAlertmanager(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "alertmanagers"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListAlertmanager(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.AlertmanagerList, error) {
+	result, err := c.backend.List(ctx, "alertmanagers", namespace, opts, &monitoringv1.AlertmanagerList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.AlertmanagerList), nil
+}
+
+func (c *CoreV1) WatchAlertmanager(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "alertmanagers"}, namespace, opts)
+}
+
+func (c *CoreV1) GetPodMonitor(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.PodMonitor, error) {
+	result, err := c.backend.Get(ctx, "podmonitors", namespace, name, opts, &monitoringv1.PodMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PodMonitor), nil
+}
+
+func (c *CoreV1) CreatePodMonitor(ctx context.Context, v *monitoringv1.PodMonitor, opts metav1.CreateOptions) (*monitoringv1.PodMonitor, error) {
+	result, err := c.backend.Create(ctx, "podmonitors", v, opts, &monitoringv1.PodMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PodMonitor), nil
+}
+
+func (c *CoreV1) UpdatePodMonitor(ctx context.Context, v *monitoringv1.PodMonitor, opts metav1.UpdateOptions) (*monitoringv1.PodMonitor, error) {
+	result, err := c.backend.Update(ctx, "podmonitors", v, opts, &monitoringv1.PodMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PodMonitor), nil
+}
+
+func (c *CoreV1) DeletePodMonitor(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "podmonitors"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListPodMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PodMonitorList, error) {
+	result, err := c.backend.List(ctx, "podmonitors", namespace, opts, &monitoringv1.PodMonitorList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PodMonitorList), nil
+}
+
+func (c *CoreV1) WatchPodMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "podmonitors"}, namespace, opts)
+}
+
+func (c *CoreV1) GetProbe(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Probe, error) {
+	result, err := c.backend.Get(ctx, "probes", namespace, name, opts, &monitoringv1.Probe{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Probe), nil
+}
+
+func (c *CoreV1) CreateProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.CreateOptions) (*monitoringv1.Probe, error) {
+	result, err := c.backend.Create(ctx, "probes", v, opts, &monitoringv1.Probe{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Probe), nil
+}
+
+func (c *CoreV1) UpdateProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.UpdateOptions) (*monitoringv1.Probe, error) {
+	result, err := c.backend.Update(ctx, "probes", v, opts, &monitoringv1.Probe{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Probe), nil
+}
+
+func (c *CoreV1) DeleteProbe(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "probes"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListProbe(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ProbeList, error) {
+	result, err := c.backend.List(ctx, "probes", namespace, opts, &monitoringv1.ProbeList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ProbeList), nil
+}
+
+func (c *CoreV1) WatchProbe(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "probes"}, namespace, opts)
+}
+
+func (c *CoreV1) GetPrometheus(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Prometheus, error) {
+	result, err := c.backend.Get(ctx, "prometheuses", namespace, name, opts, &monitoringv1.Prometheus{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Prometheus), nil
+}
+
+func (c *CoreV1) CreatePrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.CreateOptions) (*monitoringv1.Prometheus, error) {
+	result, err := c.backend.Create(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Prometheus), nil
+}
+
+func (c *CoreV1) UpdatePrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.UpdateOptions) (*monitoringv1.Prometheus, error) {
+	result, err := c.backend.Update(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Prometheus), nil
+}
+
+func (c *CoreV1) UpdateStatusPrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.UpdateOptions) (*monitoringv1.Prometheus, error) {
+	result, err := c.backend.UpdateStatus(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Prometheus), nil
+}
+
+func (c *CoreV1) DeletePrometheus(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheuses"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListPrometheus(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusList, error) {
+	result, err := c.backend.List(ctx, "prometheuses", namespace, opts, &monitoringv1.PrometheusList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusList), nil
+}
+
+func (c *CoreV1) WatchPrometheus(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheuses"}, namespace, opts)
+}
+
+func (c *CoreV1) GetPrometheusRule(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.PrometheusRule, error) {
+	result, err := c.backend.Get(ctx, "prometheusrules", namespace, name, opts, &monitoringv1.PrometheusRule{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusRule), nil
+}
+
+func (c *CoreV1) CreatePrometheusRule(ctx context.Context, v *monitoringv1.PrometheusRule, opts metav1.CreateOptions) (*monitoringv1.PrometheusRule, error) {
+	result, err := c.backend.Create(ctx, "prometheusrules", v, opts, &monitoringv1.PrometheusRule{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusRule), nil
+}
+
+func (c *CoreV1) UpdatePrometheusRule(ctx context.Context, v *monitoringv1.PrometheusRule, opts metav1.UpdateOptions) (*monitoringv1.PrometheusRule, error) {
+	result, err := c.backend.Update(ctx, "prometheusrules", v, opts, &monitoringv1.PrometheusRule{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusRule), nil
+}
+
+func (c *CoreV1) DeletePrometheusRule(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheusrules"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListPrometheusRule(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusRuleList, error) {
+	result, err := c.backend.List(ctx, "prometheusrules", namespace, opts, &monitoringv1.PrometheusRuleList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusRuleList), nil
+}
+
+func (c *CoreV1) WatchPrometheusRule(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheusrules"}, namespace, opts)
+}
+
+func (c *CoreV1) GetServiceMonitor(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.ServiceMonitor, error) {
+	result, err := c.backend.Get(ctx, "servicemonitors", namespace, name, opts, &monitoringv1.ServiceMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ServiceMonitor), nil
+}
+
+func (c *CoreV1) CreateServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.CreateOptions) (*monitoringv1.ServiceMonitor, error) {
+	result, err := c.backend.Create(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ServiceMonitor), nil
+}
+
+func (c *CoreV1) UpdateServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.UpdateOptions) (*monitoringv1.ServiceMonitor, error) {
+	result, err := c.backend.Update(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ServiceMonitor), nil
+}
+
+func (c *CoreV1) DeleteServiceMonitor(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "servicemonitors"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListServiceMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ServiceMonitorList, error) {
+	result, err := c.backend.List(ctx, "servicemonitors", namespace, opts, &monitoringv1.ServiceMonitorList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ServiceMonitorList), nil
+}
+
+func (c *CoreV1) WatchServiceMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "servicemonitors"}, namespace, opts)
+}
+
+func (c *CoreV1) GetThanosRuler(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.ThanosRuler, error) {
+	result, err := c.backend.Get(ctx, "thanosrulers", namespace, name, opts, &monitoringv1.ThanosRuler{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRuler), nil
+}
+
+func (c *CoreV1) CreateThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.CreateOptions) (*monitoringv1.ThanosRuler, error) {
+	result, err := c.backend.Create(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRuler), nil
+}
+
+func (c *CoreV1) UpdateThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.UpdateOptions) (*monitoringv1.ThanosRuler, error) {
+	result, err := c.backend.Update(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRuler), nil
+}
+
+func (c *CoreV1) UpdateStatusThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.UpdateOptions) (*monitoringv1.ThanosRuler, error) {
+	result, err := c.backend.UpdateStatus(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRuler), nil
+}
+
+func (c *CoreV1) DeleteThanosRuler(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
+	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "thanosrulers"}, namespace, name, opts)
+}
+
+func (c *CoreV1) ListThanosRuler(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ThanosRulerList, error) {
+	result, err := c.backend.List(ctx, "thanosrulers", namespace, opts, &monitoringv1.ThanosRulerList{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRulerList), nil
+}
+
+func (c *CoreV1) WatchThanosRuler(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "thanosrulers"}, namespace, opts)
 }
 
 type CertManagerV1 struct {
@@ -486,319 +799,6 @@ func (c *CertManagerV1) WatchIssuer(ctx context.Context, namespace string, opts 
 	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "issuers"}, namespace, opts)
 }
 
-type CoreosComV1 struct {
-	backend Backend
-	config  *rest.Config
-}
-
-func NewCoreosComV1Client(b Backend, config *rest.Config) *CoreosComV1 {
-	return &CoreosComV1{backend: b, config: config}
-}
-
-func (c *CoreosComV1) GetAlertmanager(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Alertmanager, error) {
-	result, err := c.backend.Get(ctx, "alertmanagers", namespace, name, opts, &monitoringv1.Alertmanager{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Alertmanager), nil
-}
-
-func (c *CoreosComV1) CreateAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.CreateOptions) (*monitoringv1.Alertmanager, error) {
-	result, err := c.backend.Create(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Alertmanager), nil
-}
-
-func (c *CoreosComV1) UpdateAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.UpdateOptions) (*monitoringv1.Alertmanager, error) {
-	result, err := c.backend.Update(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Alertmanager), nil
-}
-
-func (c *CoreosComV1) UpdateStatusAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.UpdateOptions) (*monitoringv1.Alertmanager, error) {
-	result, err := c.backend.UpdateStatus(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Alertmanager), nil
-}
-
-func (c *CoreosComV1) DeleteAlertmanager(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "alertmanagers"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListAlertmanager(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.AlertmanagerList, error) {
-	result, err := c.backend.List(ctx, "alertmanagers", namespace, opts, &monitoringv1.AlertmanagerList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.AlertmanagerList), nil
-}
-
-func (c *CoreosComV1) WatchAlertmanager(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "alertmanagers"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetPodMonitor(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.PodMonitor, error) {
-	result, err := c.backend.Get(ctx, "podmonitors", namespace, name, opts, &monitoringv1.PodMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PodMonitor), nil
-}
-
-func (c *CoreosComV1) CreatePodMonitor(ctx context.Context, v *monitoringv1.PodMonitor, opts metav1.CreateOptions) (*monitoringv1.PodMonitor, error) {
-	result, err := c.backend.Create(ctx, "podmonitors", v, opts, &monitoringv1.PodMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PodMonitor), nil
-}
-
-func (c *CoreosComV1) UpdatePodMonitor(ctx context.Context, v *monitoringv1.PodMonitor, opts metav1.UpdateOptions) (*monitoringv1.PodMonitor, error) {
-	result, err := c.backend.Update(ctx, "podmonitors", v, opts, &monitoringv1.PodMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PodMonitor), nil
-}
-
-func (c *CoreosComV1) DeletePodMonitor(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "podmonitors"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListPodMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PodMonitorList, error) {
-	result, err := c.backend.List(ctx, "podmonitors", namespace, opts, &monitoringv1.PodMonitorList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PodMonitorList), nil
-}
-
-func (c *CoreosComV1) WatchPodMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "podmonitors"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetProbe(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Probe, error) {
-	result, err := c.backend.Get(ctx, "probes", namespace, name, opts, &monitoringv1.Probe{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Probe), nil
-}
-
-func (c *CoreosComV1) CreateProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.CreateOptions) (*monitoringv1.Probe, error) {
-	result, err := c.backend.Create(ctx, "probes", v, opts, &monitoringv1.Probe{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Probe), nil
-}
-
-func (c *CoreosComV1) UpdateProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.UpdateOptions) (*monitoringv1.Probe, error) {
-	result, err := c.backend.Update(ctx, "probes", v, opts, &monitoringv1.Probe{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Probe), nil
-}
-
-func (c *CoreosComV1) DeleteProbe(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "probes"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListProbe(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ProbeList, error) {
-	result, err := c.backend.List(ctx, "probes", namespace, opts, &monitoringv1.ProbeList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ProbeList), nil
-}
-
-func (c *CoreosComV1) WatchProbe(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "probes"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetPrometheus(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.Prometheus, error) {
-	result, err := c.backend.Get(ctx, "prometheuses", namespace, name, opts, &monitoringv1.Prometheus{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Prometheus), nil
-}
-
-func (c *CoreosComV1) CreatePrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.CreateOptions) (*monitoringv1.Prometheus, error) {
-	result, err := c.backend.Create(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Prometheus), nil
-}
-
-func (c *CoreosComV1) UpdatePrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.UpdateOptions) (*monitoringv1.Prometheus, error) {
-	result, err := c.backend.Update(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Prometheus), nil
-}
-
-func (c *CoreosComV1) UpdateStatusPrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.UpdateOptions) (*monitoringv1.Prometheus, error) {
-	result, err := c.backend.UpdateStatus(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.Prometheus), nil
-}
-
-func (c *CoreosComV1) DeletePrometheus(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "prometheuses"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListPrometheus(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusList, error) {
-	result, err := c.backend.List(ctx, "prometheuses", namespace, opts, &monitoringv1.PrometheusList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PrometheusList), nil
-}
-
-func (c *CoreosComV1) WatchPrometheus(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "prometheuses"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetPrometheusRule(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.PrometheusRule, error) {
-	result, err := c.backend.Get(ctx, "prometheusrules", namespace, name, opts, &monitoringv1.PrometheusRule{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PrometheusRule), nil
-}
-
-func (c *CoreosComV1) CreatePrometheusRule(ctx context.Context, v *monitoringv1.PrometheusRule, opts metav1.CreateOptions) (*monitoringv1.PrometheusRule, error) {
-	result, err := c.backend.Create(ctx, "prometheusrules", v, opts, &monitoringv1.PrometheusRule{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PrometheusRule), nil
-}
-
-func (c *CoreosComV1) UpdatePrometheusRule(ctx context.Context, v *monitoringv1.PrometheusRule, opts metav1.UpdateOptions) (*monitoringv1.PrometheusRule, error) {
-	result, err := c.backend.Update(ctx, "prometheusrules", v, opts, &monitoringv1.PrometheusRule{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PrometheusRule), nil
-}
-
-func (c *CoreosComV1) DeletePrometheusRule(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "prometheusrules"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListPrometheusRule(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.PrometheusRuleList, error) {
-	result, err := c.backend.List(ctx, "prometheusrules", namespace, opts, &monitoringv1.PrometheusRuleList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.PrometheusRuleList), nil
-}
-
-func (c *CoreosComV1) WatchPrometheusRule(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "prometheusrules"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetServiceMonitor(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.ServiceMonitor, error) {
-	result, err := c.backend.Get(ctx, "servicemonitors", namespace, name, opts, &monitoringv1.ServiceMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ServiceMonitor), nil
-}
-
-func (c *CoreosComV1) CreateServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.CreateOptions) (*monitoringv1.ServiceMonitor, error) {
-	result, err := c.backend.Create(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ServiceMonitor), nil
-}
-
-func (c *CoreosComV1) UpdateServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.UpdateOptions) (*monitoringv1.ServiceMonitor, error) {
-	result, err := c.backend.Update(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ServiceMonitor), nil
-}
-
-func (c *CoreosComV1) DeleteServiceMonitor(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "servicemonitors"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListServiceMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ServiceMonitorList, error) {
-	result, err := c.backend.List(ctx, "servicemonitors", namespace, opts, &monitoringv1.ServiceMonitorList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ServiceMonitorList), nil
-}
-
-func (c *CoreosComV1) WatchServiceMonitor(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "servicemonitors"}, namespace, opts)
-}
-
-func (c *CoreosComV1) GetThanosRuler(ctx context.Context, namespace, name string, opts metav1.GetOptions) (*monitoringv1.ThanosRuler, error) {
-	result, err := c.backend.Get(ctx, "thanosrulers", namespace, name, opts, &monitoringv1.ThanosRuler{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ThanosRuler), nil
-}
-
-func (c *CoreosComV1) CreateThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.CreateOptions) (*monitoringv1.ThanosRuler, error) {
-	result, err := c.backend.Create(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ThanosRuler), nil
-}
-
-func (c *CoreosComV1) UpdateThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.UpdateOptions) (*monitoringv1.ThanosRuler, error) {
-	result, err := c.backend.Update(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ThanosRuler), nil
-}
-
-func (c *CoreosComV1) UpdateStatusThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.UpdateOptions) (*monitoringv1.ThanosRuler, error) {
-	result, err := c.backend.UpdateStatus(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ThanosRuler), nil
-}
-
-func (c *CoreosComV1) DeleteThanosRuler(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
-	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "thanosrulers"}, namespace, name, opts)
-}
-
-func (c *CoreosComV1) ListThanosRuler(ctx context.Context, namespace string, opts metav1.ListOptions) (*monitoringv1.ThanosRulerList, error) {
-	result, err := c.backend.List(ctx, "thanosrulers", namespace, opts, &monitoringv1.ThanosRulerList{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*monitoringv1.ThanosRulerList), nil
-}
-
-func (c *CoreosComV1) WatchThanosRuler(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.backend.Watch(ctx, schema.GroupVersionResource{Group: "coreos.com.monitoring", Version: "v1", Resource: "thanosrulers"}, namespace, opts)
-}
-
 type InformerCache struct {
 	mu        sync.Mutex
 	informers map[reflect.Type]cache.SharedIndexInformer
@@ -852,6 +852,20 @@ func (f *InformerFactory) Cache() *InformerCache {
 
 func (f *InformerFactory) InformerFor(obj runtime.Object) cache.SharedIndexInformer {
 	switch obj.(type) {
+	case *monitoringv1.Alertmanager:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
+	case *monitoringv1.PodMonitor:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PodMonitorInformer()
+	case *monitoringv1.Probe:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ProbeInformer()
+	case *monitoringv1.Prometheus:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PrometheusInformer()
+	case *monitoringv1.PrometheusRule:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PrometheusRuleInformer()
+	case *monitoringv1.ServiceMonitor:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ServiceMonitorInformer()
+	case *monitoringv1.ThanosRuler:
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ThanosRulerInformer()
 	case *certmanagerv1.Certificate:
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateInformer()
 	case *certmanagerv1.CertificateRequest:
@@ -860,20 +874,6 @@ func (f *InformerFactory) InformerFor(obj runtime.Object) cache.SharedIndexInfor
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
 	case *certmanagerv1.Issuer:
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).IssuerInformer()
-	case *monitoringv1.Alertmanager:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
-	case *monitoringv1.PodMonitor:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PodMonitorInformer()
-	case *monitoringv1.Probe:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ProbeInformer()
-	case *monitoringv1.Prometheus:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PrometheusInformer()
-	case *monitoringv1.PrometheusRule:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PrometheusRuleInformer()
-	case *monitoringv1.ServiceMonitor:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ServiceMonitorInformer()
-	case *monitoringv1.ThanosRuler:
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ThanosRulerInformer()
 	default:
 		return nil
 	}
@@ -881,6 +881,20 @@ func (f *InformerFactory) InformerFor(obj runtime.Object) cache.SharedIndexInfor
 
 func (f *InformerFactory) InformerForResource(gvr schema.GroupVersionResource) cache.SharedIndexInformer {
 	switch gvr {
+	case monitoringv1.SchemaGroupVersion.WithResource("alertmanagers"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("podmonitors"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PodMonitorInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("probes"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ProbeInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("prometheuses"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PrometheusInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("prometheusrules"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).PrometheusRuleInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("servicemonitors"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ServiceMonitorInformer()
+	case monitoringv1.SchemaGroupVersion.WithResource("thanosrulers"):
+		return NewCoreV1Informer(f.cache, f.set.CoreV1, f.namespace, f.resyncPeriod).ThanosRulerInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("certificates"):
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).CertificateInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("certificaterequests"):
@@ -889,20 +903,6 @@ func (f *InformerFactory) InformerForResource(gvr schema.GroupVersionResource) c
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).ClusterIssuerInformer()
 	case certmanagerv1.SchemaGroupVersion.WithResource("issuers"):
 		return NewCertManagerV1Informer(f.cache, f.set.CertManagerV1, f.namespace, f.resyncPeriod).IssuerInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("alertmanagers"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).AlertmanagerInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("podmonitors"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PodMonitorInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("probes"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ProbeInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("prometheuses"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PrometheusInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("prometheusrules"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).PrometheusRuleInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("servicemonitors"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ServiceMonitorInformer()
-	case monitoringv1.SchemaGroupVersion.WithResource("thanosrulers"):
-		return NewCoreosComV1Informer(f.cache, f.set.CoreosComV1, f.namespace, f.resyncPeriod).ThanosRulerInformer()
 	default:
 		return nil
 	}
@@ -912,6 +912,178 @@ func (f *InformerFactory) Run(ctx context.Context) {
 	for _, v := range f.cache.Informers() {
 		go v.Run(ctx.Done())
 	}
+}
+
+type CoreV1Informer struct {
+	cache        *InformerCache
+	client       *CoreV1
+	namespace    string
+	resyncPeriod time.Duration
+	indexers     cache.Indexers
+}
+
+func NewCoreV1Informer(c *InformerCache, client *CoreV1, namespace string, resyncPeriod time.Duration) *CoreV1Informer {
+	return &CoreV1Informer{
+		cache:        c,
+		client:       client,
+		namespace:    namespace,
+		resyncPeriod: resyncPeriod,
+		indexers:     cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+	}
+}
+
+func (f *CoreV1Informer) AlertmanagerInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.Alertmanager{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.Alertmanager{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) AlertmanagerLister() *CoreV1AlertmanagerLister {
+	return NewCoreV1AlertmanagerLister(f.AlertmanagerInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) PodMonitorInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.PodMonitor{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.PodMonitor{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) PodMonitorLister() *CoreV1PodMonitorLister {
+	return NewCoreV1PodMonitorLister(f.PodMonitorInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) ProbeInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.Probe{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListProbe(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchProbe(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.Probe{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) ProbeLister() *CoreV1ProbeLister {
+	return NewCoreV1ProbeLister(f.ProbeInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) PrometheusInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.Prometheus{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.Prometheus{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) PrometheusLister() *CoreV1PrometheusLister {
+	return NewCoreV1PrometheusLister(f.PrometheusInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) PrometheusRuleInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.PrometheusRule{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.PrometheusRule{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) PrometheusRuleLister() *CoreV1PrometheusRuleLister {
+	return NewCoreV1PrometheusRuleLister(f.PrometheusRuleInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) ServiceMonitorInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.ServiceMonitor{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.ServiceMonitor{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) ServiceMonitorLister() *CoreV1ServiceMonitorLister {
+	return NewCoreV1ServiceMonitorLister(f.ServiceMonitorInformer().GetIndexer())
+}
+
+func (f *CoreV1Informer) ThanosRulerInformer() cache.SharedIndexInformer {
+	return f.cache.Write(&monitoringv1.ThanosRuler{}, func() cache.SharedIndexInformer {
+		return cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
+					return f.client.ListThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
+					return f.client.WatchThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
+				},
+			},
+			&monitoringv1.ThanosRuler{},
+			f.resyncPeriod,
+			f.indexers,
+		)
+	})
+}
+
+func (f *CoreV1Informer) ThanosRulerLister() *CoreV1ThanosRulerLister {
+	return NewCoreV1ThanosRulerLister(f.ThanosRulerInformer().GetIndexer())
 }
 
 type CertManagerV1Informer struct {
@@ -1020,176 +1192,193 @@ func (f *CertManagerV1Informer) IssuerLister() *CertManagerV1IssuerLister {
 	return NewCertManagerV1IssuerLister(f.IssuerInformer().GetIndexer())
 }
 
-type CoreosComV1Informer struct {
-	cache        *InformerCache
-	client       *CoreosComV1
-	namespace    string
-	resyncPeriod time.Duration
-	indexers     cache.Indexers
+type CoreV1AlertmanagerLister struct {
+	indexer cache.Indexer
 }
 
-func NewCoreosComV1Informer(c *InformerCache, client *CoreosComV1, namespace string, resyncPeriod time.Duration) *CoreosComV1Informer {
-	return &CoreosComV1Informer{
-		cache:        c,
-		client:       client,
-		namespace:    namespace,
-		resyncPeriod: resyncPeriod,
-		indexers:     cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+func NewCoreV1AlertmanagerLister(indexer cache.Indexer) *CoreV1AlertmanagerLister {
+	return &CoreV1AlertmanagerLister{indexer: indexer}
+}
+
+func (x *CoreV1AlertmanagerLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Alertmanager, error) {
+	var ret []*monitoringv1.Alertmanager
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.Alertmanager).DeepCopy())
+	})
+	return ret, err
+}
+
+func (x *CoreV1AlertmanagerLister) Get(namespace, name string) (*monitoringv1.Alertmanager, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
 	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("alertmanager").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.Alertmanager).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) AlertmanagerInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.Alertmanager{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.Alertmanager{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1PodMonitorLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1PodMonitorLister(indexer cache.Indexer) *CoreV1PodMonitorLister {
+	return &CoreV1PodMonitorLister{indexer: indexer}
+}
+
+func (x *CoreV1PodMonitorLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.PodMonitor, error) {
+	var ret []*monitoringv1.PodMonitor
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.PodMonitor).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) AlertmanagerLister() *CoreosComV1AlertmanagerLister {
-	return NewCoreosComV1AlertmanagerLister(f.AlertmanagerInformer().GetIndexer())
+func (x *CoreV1PodMonitorLister) Get(namespace, name string) (*monitoringv1.PodMonitor, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("podmonitor").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.PodMonitor).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) PodMonitorInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.PodMonitor{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.PodMonitor{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1ProbeLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1ProbeLister(indexer cache.Indexer) *CoreV1ProbeLister {
+	return &CoreV1ProbeLister{indexer: indexer}
+}
+
+func (x *CoreV1ProbeLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Probe, error) {
+	var ret []*monitoringv1.Probe
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.Probe).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) PodMonitorLister() *CoreosComV1PodMonitorLister {
-	return NewCoreosComV1PodMonitorLister(f.PodMonitorInformer().GetIndexer())
+func (x *CoreV1ProbeLister) Get(namespace, name string) (*monitoringv1.Probe, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("probe").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.Probe).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) ProbeInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.Probe{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListProbe(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchProbe(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.Probe{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1PrometheusLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1PrometheusLister(indexer cache.Indexer) *CoreV1PrometheusLister {
+	return &CoreV1PrometheusLister{indexer: indexer}
+}
+
+func (x *CoreV1PrometheusLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Prometheus, error) {
+	var ret []*monitoringv1.Prometheus
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.Prometheus).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) ProbeLister() *CoreosComV1ProbeLister {
-	return NewCoreosComV1ProbeLister(f.ProbeInformer().GetIndexer())
+func (x *CoreV1PrometheusLister) Get(namespace, name string) (*monitoringv1.Prometheus, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("prometheus").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.Prometheus).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) PrometheusInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.Prometheus{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.Prometheus{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1PrometheusRuleLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1PrometheusRuleLister(indexer cache.Indexer) *CoreV1PrometheusRuleLister {
+	return &CoreV1PrometheusRuleLister{indexer: indexer}
+}
+
+func (x *CoreV1PrometheusRuleLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.PrometheusRule, error) {
+	var ret []*monitoringv1.PrometheusRule
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.PrometheusRule).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) PrometheusLister() *CoreosComV1PrometheusLister {
-	return NewCoreosComV1PrometheusLister(f.PrometheusInformer().GetIndexer())
+func (x *CoreV1PrometheusRuleLister) Get(namespace, name string) (*monitoringv1.PrometheusRule, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("prometheusrule").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.PrometheusRule).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) PrometheusRuleInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.PrometheusRule{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.PrometheusRule{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1ServiceMonitorLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1ServiceMonitorLister(indexer cache.Indexer) *CoreV1ServiceMonitorLister {
+	return &CoreV1ServiceMonitorLister{indexer: indexer}
+}
+
+func (x *CoreV1ServiceMonitorLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.ServiceMonitor, error) {
+	var ret []*monitoringv1.ServiceMonitor
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.ServiceMonitor).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) PrometheusRuleLister() *CoreosComV1PrometheusRuleLister {
-	return NewCoreosComV1PrometheusRuleLister(f.PrometheusRuleInformer().GetIndexer())
+func (x *CoreV1ServiceMonitorLister) Get(namespace, name string) (*monitoringv1.ServiceMonitor, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("servicemonitor").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.ServiceMonitor).DeepCopy(), nil
 }
 
-func (f *CoreosComV1Informer) ServiceMonitorInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.ServiceMonitor{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.ServiceMonitor{},
-			f.resyncPeriod,
-			f.indexers,
-		)
+type CoreV1ThanosRulerLister struct {
+	indexer cache.Indexer
+}
+
+func NewCoreV1ThanosRulerLister(indexer cache.Indexer) *CoreV1ThanosRulerLister {
+	return &CoreV1ThanosRulerLister{indexer: indexer}
+}
+
+func (x *CoreV1ThanosRulerLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.ThanosRuler, error) {
+	var ret []*monitoringv1.ThanosRuler
+	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*monitoringv1.ThanosRuler).DeepCopy())
 	})
+	return ret, err
 }
 
-func (f *CoreosComV1Informer) ServiceMonitorLister() *CoreosComV1ServiceMonitorLister {
-	return NewCoreosComV1ServiceMonitorLister(f.ServiceMonitorInformer().GetIndexer())
-}
-
-func (f *CoreosComV1Informer) ThanosRulerInformer() cache.SharedIndexInformer {
-	return f.cache.Write(&monitoringv1.ThanosRuler{}, func() cache.SharedIndexInformer {
-		return cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
-				},
-			},
-			&monitoringv1.ThanosRuler{},
-			f.resyncPeriod,
-			f.indexers,
-		)
-	})
-}
-
-func (f *CoreosComV1Informer) ThanosRulerLister() *CoreosComV1ThanosRulerLister {
-	return NewCoreosComV1ThanosRulerLister(f.ThanosRulerInformer().GetIndexer())
+func (x *CoreV1ThanosRulerLister) Get(namespace, name string) (*monitoringv1.ThanosRuler, error) {
+	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("thanosruler").GroupResource(), name)
+	}
+	return obj.(*monitoringv1.ThanosRuler).DeepCopy(), nil
 }
 
 type CertManagerV1CertificateLister struct {
@@ -1298,193 +1487,4 @@ func (x *CertManagerV1IssuerLister) Get(namespace, name string) (*certmanagerv1.
 		return nil, k8serrors.NewNotFound(certmanagerv1.SchemaGroupVersion.WithResource("issuer").GroupResource(), name)
 	}
 	return obj.(*certmanagerv1.Issuer).DeepCopy(), nil
-}
-
-type CoreosComV1AlertmanagerLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1AlertmanagerLister(indexer cache.Indexer) *CoreosComV1AlertmanagerLister {
-	return &CoreosComV1AlertmanagerLister{indexer: indexer}
-}
-
-func (x *CoreosComV1AlertmanagerLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Alertmanager, error) {
-	var ret []*monitoringv1.Alertmanager
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.Alertmanager).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1AlertmanagerLister) Get(namespace, name string) (*monitoringv1.Alertmanager, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("alertmanager").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.Alertmanager).DeepCopy(), nil
-}
-
-type CoreosComV1PodMonitorLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1PodMonitorLister(indexer cache.Indexer) *CoreosComV1PodMonitorLister {
-	return &CoreosComV1PodMonitorLister{indexer: indexer}
-}
-
-func (x *CoreosComV1PodMonitorLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.PodMonitor, error) {
-	var ret []*monitoringv1.PodMonitor
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.PodMonitor).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1PodMonitorLister) Get(namespace, name string) (*monitoringv1.PodMonitor, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("podmonitor").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.PodMonitor).DeepCopy(), nil
-}
-
-type CoreosComV1ProbeLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1ProbeLister(indexer cache.Indexer) *CoreosComV1ProbeLister {
-	return &CoreosComV1ProbeLister{indexer: indexer}
-}
-
-func (x *CoreosComV1ProbeLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Probe, error) {
-	var ret []*monitoringv1.Probe
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.Probe).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1ProbeLister) Get(namespace, name string) (*monitoringv1.Probe, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("probe").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.Probe).DeepCopy(), nil
-}
-
-type CoreosComV1PrometheusLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1PrometheusLister(indexer cache.Indexer) *CoreosComV1PrometheusLister {
-	return &CoreosComV1PrometheusLister{indexer: indexer}
-}
-
-func (x *CoreosComV1PrometheusLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.Prometheus, error) {
-	var ret []*monitoringv1.Prometheus
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.Prometheus).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1PrometheusLister) Get(namespace, name string) (*monitoringv1.Prometheus, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("prometheus").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.Prometheus).DeepCopy(), nil
-}
-
-type CoreosComV1PrometheusRuleLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1PrometheusRuleLister(indexer cache.Indexer) *CoreosComV1PrometheusRuleLister {
-	return &CoreosComV1PrometheusRuleLister{indexer: indexer}
-}
-
-func (x *CoreosComV1PrometheusRuleLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.PrometheusRule, error) {
-	var ret []*monitoringv1.PrometheusRule
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.PrometheusRule).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1PrometheusRuleLister) Get(namespace, name string) (*monitoringv1.PrometheusRule, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("prometheusrule").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.PrometheusRule).DeepCopy(), nil
-}
-
-type CoreosComV1ServiceMonitorLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1ServiceMonitorLister(indexer cache.Indexer) *CoreosComV1ServiceMonitorLister {
-	return &CoreosComV1ServiceMonitorLister{indexer: indexer}
-}
-
-func (x *CoreosComV1ServiceMonitorLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.ServiceMonitor, error) {
-	var ret []*monitoringv1.ServiceMonitor
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.ServiceMonitor).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1ServiceMonitorLister) Get(namespace, name string) (*monitoringv1.ServiceMonitor, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("servicemonitor").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.ServiceMonitor).DeepCopy(), nil
-}
-
-type CoreosComV1ThanosRulerLister struct {
-	indexer cache.Indexer
-}
-
-func NewCoreosComV1ThanosRulerLister(indexer cache.Indexer) *CoreosComV1ThanosRulerLister {
-	return &CoreosComV1ThanosRulerLister{indexer: indexer}
-}
-
-func (x *CoreosComV1ThanosRulerLister) List(namespace string, selector labels.Selector) ([]*monitoringv1.ThanosRuler, error) {
-	var ret []*monitoringv1.ThanosRuler
-	err := cache.ListAllByNamespace(x.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*monitoringv1.ThanosRuler).DeepCopy())
-	})
-	return ret, err
-}
-
-func (x *CoreosComV1ThanosRulerLister) Get(namespace, name string) (*monitoringv1.ThanosRuler, error) {
-	obj, exists, err := x.indexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, k8serrors.NewNotFound(monitoringv1.SchemaGroupVersion.WithResource("thanosruler").GroupResource(), name)
-	}
-	return obj.(*monitoringv1.ThanosRuler).DeepCopy(), nil
 }
