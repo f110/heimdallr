@@ -10,7 +10,7 @@ import (
 func CronJobFactory(base *batchv1.CronJob, traits ...Trait) *batchv1.CronJob {
 	var cj *batchv1.CronJob
 	if base == nil {
-		cj = &batchv1.CronJob{}
+		cj = &batchv1.CronJob{Spec: &batchv1.CronJobSpec{}, Status: &batchv1.CronJobStatus{}}
 	} else {
 		cj = base.DeepCopy()
 	}
