@@ -232,6 +232,8 @@ spec:
             properties:
               allowHttp:
                 type: boolean
+              allowPreflight:
+                type: boolean
               allowRootUser:
                 type: boolean
               disableAuthn:
