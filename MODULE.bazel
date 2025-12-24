@@ -113,7 +113,7 @@ git_override(
 
 git_override(
     module_name = "dev_f110_kubeproto",
-    commit = "086c7bdbe6a80527712f573e1c39d79adb046f1c",
+    commit = "1ece9405ca153a93cd9483c83b69cf97e7a62344",
     remote = "https://github.com/f110/kubeproto",
 )
 

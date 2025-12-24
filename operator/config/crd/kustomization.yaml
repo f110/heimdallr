@@ -1,7 +1,2 @@
 resources:
-  - etcd.f110.dev_etcdclusters.yaml
-  - proxy.f110.dev_proxies.yaml
-  - proxy.f110.dev_backends.yaml
-  - proxy.f110.dev_roles.yaml
-  - proxy.f110.dev_rpcpermissions.yaml
-  - proxy.f110.dev_rolebindings.yaml
+  - proto.crd.yaml

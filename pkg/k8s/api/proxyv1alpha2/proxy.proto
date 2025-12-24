@@ -126,7 +126,7 @@ message AWSCredentialSelector {
 message GCPCredentialSelector {
   optional string name                     = 1;
   optional        string namespace         = 2;
-  optional string service_account_json_key = 3 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccountJSONKey" }];
+  optional string service_account_json_key = 3 [(dev.f110.kubeproto.field) = { go_name: "ServiceAccountJSONKey" api_field_name: "serviceAccountJSONKey" }];
 }
 
 message IdentityProviderSpec {
