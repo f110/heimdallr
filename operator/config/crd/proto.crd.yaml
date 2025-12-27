@@ -44,13 +44,8 @@ spec:
               layer:
                 type: string
               maxSessionDuration:
-                properties:
-                  duration:
-                    format: int64
-                    type: integer
-                required:
-                - duration
-                type: object
+                format: duration
+                type: string
               permissions:
                 items:
                   properties:
@@ -139,13 +134,8 @@ spec:
               socket:
                 type: boolean
               socketTimeout:
-                properties:
-                  duration:
-                    format: int64
-                    type: integer
-                required:
-                - duration
-                type: object
+                format: duration
+                type: string
               upstream:
                 type: string
               webhook:
@@ -207,7 +197,7 @@ spec:
                     repository:
                       type: string
                     updateTime:
-                      format: date-time
+                      format: datetime
                       type: string
                   required:
                   - id
@@ -318,13 +308,8 @@ spec:
               layer:
                 type: string
               maxSessionDuration:
-                properties:
-                  duration:
-                    format: int64
-                    type: integer
-                required:
-                - duration
-                type: object
+                format: duration
+                type: string
               permissions:
                 items:
                   properties:
@@ -448,13 +433,8 @@ spec:
                         type: string
                     type: object
                   timeout:
-                    properties:
-                      duration:
-                        format: int64
-                        type: integer
-                    required:
-                    - duration
-                    type: object
+                    format: duration
+                    type: string
                   upstream:
                     type: string
                 type: object
@@ -481,7 +461,7 @@ spec:
                     repository:
                       type: string
                     updateTime:
-                      format: date-time
+                      format: datetime
                       type: string
                   required:
                   - id
@@ -566,7 +546,7 @@ spec:
                                 type: string
                               namespace:
                                 type: string
-                              serviceAccountJsonKey:
+                              serviceAccountJSONKey:
                                 type: string
                             type: object
                           path:
@@ -578,7 +558,7 @@ spec:
                             type: string
                           credentialSelector:
                             properties:
-                              accessKeyIdKey:
+                              accessKeyIDKey:
                                 type: string
                               name:
                                 type: string
@@ -629,7 +609,7 @@ spec:
                            Read-only.
                            Null for lists.
                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-                        format: date-time
+                        format: datetime
                         type: string
                       deletionGracePeriodSeconds:
                         description: |-
@@ -658,7 +638,7 @@ spec:
                            Populated by the system when a graceful deletion is requested.
                            Read-only.
                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-                        format: date-time
+                        format: datetime
                         type: string
                       finalizers:
                         description: |-
@@ -760,7 +740,7 @@ spec:
                                  changes any of the owned fields value or removes a field. The
                                  timestamp does not update when a field is removed from the entry
                                  because another manager took it over.
-                              format: date-time
+                              format: datetime
                               type: string
                           type: object
                         type: array
@@ -1033,7 +1013,7 @@ spec:
                         etcdVersion:
                           type: string
                         executeTime:
-                          format: date-time
+                          format: datetime
                           type: string
                         message:
                           type: string
@@ -1044,7 +1024,7 @@ spec:
                       type: object
                     type: array
                   lastSucceededTime:
-                    format: date-time
+                    format: datetime
                     type: string
                   succeeded:
                     type: boolean
@@ -1054,10 +1034,10 @@ spec:
               clientEndpoint:
                 type: string
               lastDefragmentTime:
-                format: date-time
+                format: datetime
                 type: string
               lastReadyTransitionTime:
-                format: date-time
+                format: datetime
                 type: string
               members:
                 items:
@@ -1093,14 +1073,14 @@ spec:
               restored:
                 properties:
                   backupTime:
-                    format: date-time
+                    format: datetime
                     type: string
                   completed:
                     type: boolean
                   path:
                     type: string
                   restoredTime:
-                    format: date-time
+                    format: datetime
                     type: string
                 type: object
             required:
@@ -1249,7 +1229,7 @@ spec:
                            Read-only.
                            Null for lists.
                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-                        format: date-time
+                        format: datetime
                         type: string
                       deletionGracePeriodSeconds:
                         description: |-
@@ -1278,7 +1258,7 @@ spec:
                            Populated by the system when a graceful deletion is requested.
                            Read-only.
                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-                        format: date-time
+                        format: datetime
                         type: string
                       finalizers:
                         description: |-
@@ -1380,7 +1360,7 @@ spec:
                                  changes any of the owned fields value or removes a field. The
                                  timestamp does not update when a field is removed from the entry
                                  because another manager took it over.
-                              format: date-time
+                              format: datetime
                               type: string
                           type: object
                         type: array
@@ -1653,7 +1633,7 @@ spec:
                         etcdVersion:
                           type: string
                         executeTime:
-                          format: date-time
+                          format: datetime
                           type: string
                         message:
                           type: string
@@ -1664,7 +1644,7 @@ spec:
                       type: object
                     type: array
                   lastSucceededTime:
-                    format: date-time
+                    format: datetime
                     type: string
                   succeeded:
                     type: boolean
@@ -1676,10 +1656,10 @@ spec:
               creatingCompleted:
                 type: boolean
               lastDefragmentTime:
-                format: date-time
+                format: datetime
                 type: string
               lastReadyTransitionTime:
-                format: date-time
+                format: datetime
                 type: string
               members:
                 items:
@@ -1719,14 +1699,14 @@ spec:
               restored:
                 properties:
                   backupTime:
-                    format: date-time
+                    format: datetime
                     type: string
                   completed:
                     type: boolean
                   path:
                     type: string
                   restoredTime:
-                    format: date-time
+                    format: datetime
                     type: string
                 type: object
             required:
@@ -2368,7 +2348,7 @@ spec:
                                         type: string
                                       namespace:
                                         type: string
-                                      serviceAccountJsonKey:
+                                      serviceAccountJSONKey:
                                         type: string
                                     type: object
                                   path:
