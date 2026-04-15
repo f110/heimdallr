@@ -16,6 +16,15 @@ def _github_release_impl(ctx):
         substitutions["@@BODY@@"] = shell.quote(ctx.file.body.short_path)
         files.append(ctx.file.body)
 
+    if ctx.file.ca_cert and ctx.file.ca_key:
+        substitutions["@@CA_CERT@@"] = shell.quote(ctx.file.ca_cert.short_path)
+        substitutions["@@CA_KEY@@"] = shell.quote(ctx.file.ca_key.short_path)
+        files.append(ctx.file.ca_cert)
+        files.append(ctx.file.ca_key)
+    else:
+        substitutions["@@CA_CERT@@"] = ""
+        substitutions["@@CA_KEY@@"] = ""
+
     out = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.expand_template(
         template = ctx.file._template,
@@ -44,6 +53,8 @@ github_release = rule(
         "branch": attr.string(),
         "assets": attr.label_list(allow_files = True),
         "body": attr.label(allow_single_file = True),
+        "ca_cert": attr.label(allow_single_file = True),
+        "ca_key": attr.label(allow_single_file = True),
         "_bin": attr.label(
             executable = True,
             cfg = "host",
