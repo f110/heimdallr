@@ -1,5 +1,13 @@
 load("//:RELEASE.bzl", "VERSION")
 
+exports_files(
+    [
+        "webhook_ca.crt",
+        "webhook_ca.key",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 sh_binary(
     name = "run",
     srcs = ["//cmd/heimdev"],

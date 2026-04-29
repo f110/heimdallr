@@ -29,6 +29,8 @@ type githubOpt struct {
 	GitHubAppId                 int64
 	GitHubAppInstallationId     int64
 	GitHubAppPrivateKeyFile     string
+	CACert                      string
+	CAKey                       string
 }
 
 func githubRelease(opt *githubOpt) error {
@@ -142,17 +144,40 @@ func githubRelease(opt *githubOpt) error {
 		release = r
 	}
 
+	// Inject webhook certificates if CA cert/key are provided
+	var certs *webhookCerts
+	if opt.CACert != "" && opt.CAKey != "" {
+		caCert, caKey, err := loadCA(opt.CACert, opt.CAKey)
+		if err != nil {
+			return err
+		}
+		certs = &webhookCerts{caCert: caCert, caKey: caKey}
+	}
+
 	for _, v := range opt.Attach {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "%s is not found", v)
 			continue
 		}
-		f, err := os.Open(v)
+
+		uploadPath := v
+		if certs != nil {
+			injected, err := maybeInjectWebhookCert(v, certs)
+			if err != nil {
+				return err
+			}
+			if injected != "" {
+				uploadPath = injected
+				defer os.Remove(injected)
+			}
+		}
+
+		f, err := os.Open(uploadPath)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
 
-		filename := filepath.Base(f.Name())
+		filename := filepath.Base(v)
 		if _, ok := attachedFiles[filename]; ok {
 			fmt.Printf("%s is already exist. skip uploading this file", filename)
 			continue
@@ -191,5 +216,7 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
 	ghRelease.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
 	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
+	ghRelease.Flags().String("ca-cert", "Path to CA certificate PEM file for webhook cert injection").Var(&opt.CACert)
+	ghRelease.Flags().String("ca-key", "Path to CA private key PEM file for webhook cert injection").Var(&opt.CAKey)
 	rootCmd.AddCommand(ghRelease)
 }

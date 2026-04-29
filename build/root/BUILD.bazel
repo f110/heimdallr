@@ -32,6 +32,8 @@ github_release(
     assets = ASSET_FILES,
     body = ":release_message",
     branch = RELEASE_BRANCH,
+    ca_cert = "//operator:webhook_ca.crt",
+    ca_key = "//operator:webhook_ca.key",
     repository = "f110/heimdallr",
     version = VERSION,
 )

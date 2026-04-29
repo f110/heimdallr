@@ -6,10 +6,12 @@ go_library(
         "container.go",
         "github.go",
         "manifest.go",
+        "webhook_cert.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/release",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cert",
         "//pkg/cmd",
         "//pkg/githubutil",
         "@com_github_google_go_containerregistry//pkg/authn",

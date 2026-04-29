@@ -75,7 +75,6 @@ func editCustomResourceDefinition(v map[interface{}]interface{}) {
 
 	m := v["metadata"].(map[interface{}]interface{})
 	delete(m, "creationTimestamp")
-	delete(m, "annotations")
 }
 
 func editDeployment(v map[interface{}]interface{}, version string) {
