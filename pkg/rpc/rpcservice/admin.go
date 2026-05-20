@@ -2,9 +2,9 @@ package rpcservice
 
 import (
 	"context"
+	"log/slog"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.f110.dev/heimdallr/pkg/auth"
@@ -114,7 +114,7 @@ func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc
 func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*rpc.ResponseUserAdd, error) {
 	u, err := s.userDatabase.Get(req.GetId(), database.WithoutCache)
 	if err != nil && err != database.ErrUserNotFound {
-		logger.Log.Info("Failure get user", zap.Error(err))
+		logger.Log.Info("Failure get user", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -130,36 +130,36 @@ func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*r
 	}
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
-		logger.Log.Warn("Failure create or update user", zap.Error(err))
+		logger.Log.Warn("Failure create or update user", slog.Any("error", err))
 		return nil, err
 	}
 
-	logger.Audit.Info("Add user", zap.Any("user", u), auditBy(ctx))
+	logger.Audit.Info("Add user", slog.Any("user", u), auditBy(ctx))
 	return &rpc.ResponseUserAdd{Ok: true}, nil
 }
 
 func (s *AdminService) UserEdit(ctx context.Context, req *rpc.RequestUserEdit) (*rpc.ResponseUserEdit, error) {
 	u, err := s.userDatabase.Get(req.GetId(), database.WithoutCache)
 	if err != nil {
-		logger.Log.Info("Failed get user", zap.Error(err), zap.String("id", req.GetId()))
+		logger.Log.Info("Failed get user", slog.Any("error", err), slog.String("id", req.GetId()))
 		return nil, err
 	}
 
 	u.LoginName = req.User.LoginName
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
-		logger.Log.Warn("Failed update user", zap.Error(err), zap.String("id", u.Id))
+		logger.Log.Warn("Failed update user", slog.Any("error", err), slog.String("id", u.Id))
 		return nil, err
 	}
 
-	logger.Audit.Info("Edit user", zap.Any("user", u), auditBy(ctx))
+	logger.Audit.Info("Edit user", slog.Any("user", u), auditBy(ctx))
 	return &rpc.ResponseUserEdit{Ok: true}, nil
 }
 
 func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*rpc.ResponseUserDel, error) {
 	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
-		logger.Log.Info("Failure get user", zap.Error(err))
+		logger.Log.Info("Failure get user", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -168,7 +168,7 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 			return nil, err
 		}
 
-		logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("by", u.Id))
+		logger.Audit.Info("Delete user", slog.String("user", u.Id), slog.String("by", u.Id))
 		return &rpc.ResponseUserDel{Ok: true}, nil
 	}
 
@@ -183,23 +183,23 @@ func (s *AdminService) UserDel(ctx context.Context, req *rpc.RequestUserDel) (*r
 	}
 
 	if err := s.userDatabase.Set(ctx, u); err != nil {
-		logger.Log.Warn("Failure delete role", zap.Error(err))
+		logger.Log.Warn("Failure delete role", slog.Any("error", err))
 		return nil, err
 	}
 
-	logger.Audit.Info("Delete user", zap.String("user", u.Id), zap.String("role", req.GetRole()), auditBy(ctx))
+	logger.Audit.Info("Delete user", slog.String("user", u.Id), slog.String("role", req.GetRole()), auditBy(ctx))
 	return &rpc.ResponseUserDel{Ok: true}, nil
 }
 
 func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBecomeMaintainer) (*rpc.ResponseBecomeMaintainer, error) {
 	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
-		logger.Log.Info("Failure get user", zap.Error(err))
+		logger.Log.Info("Failure get user", slog.Any("error", err))
 		return nil, err
 	}
 
 	if _, err := s.Config.AuthorizationEngine.GetRole(req.GetRole()); err != nil {
-		logger.Log.Info("Role not found", zap.String("role", req.Role))
+		logger.Log.Info("Role not found", slog.String("role", req.Role))
 		return nil, err
 	}
 
@@ -215,28 +215,28 @@ func (s *AdminService) BecomeMaintainer(ctx context.Context, req *rpc.RequestBec
 
 	u.MaintainRoles[req.GetRole()] = true
 	if err := s.userDatabase.Set(ctx, u); err != nil {
-		logger.Log.Warn("Failure update user", zap.Error(err))
+		logger.Log.Warn("Failure update user", slog.Any("error", err))
 		return nil, err
 	}
 
-	logger.Audit.Info("Become maintainer", zap.String("user", u.Id), zap.String("role", req.GetRole()), auditBy(ctx))
+	logger.Audit.Info("Become maintainer", slog.String("user", u.Id), slog.String("role", req.GetRole()), auditBy(ctx))
 	return &rpc.ResponseBecomeMaintainer{Ok: true}, nil
 }
 
 func (s *AdminService) ToggleAdmin(ctx context.Context, req *rpc.RequestToggleAdmin) (*rpc.ResponseToggleAdmin, error) {
 	u, err := s.userDatabase.Get(req.GetId())
 	if err != nil {
-		logger.Log.Info("Failure get user", zap.Error(err))
+		logger.Log.Info("Failure get user", slog.Any("error", err))
 		return nil, err
 	}
 
 	u.Admin = !u.Admin
 	if err := s.userDatabase.Set(ctx, u); err != nil {
-		logger.Log.Warn("Failure update user", zap.Error(err))
+		logger.Log.Warn("Failure update user", slog.Any("error", err))
 		return nil, err
 	}
 
-	logger.Audit.Info("Change admin privilege", zap.String("user", u.Id), zap.Bool("to", u.Admin), auditBy(ctx))
+	logger.Audit.Info("Change admin privilege", slog.String("user", u.Id), slog.Bool("to", u.Admin), auditBy(ctx))
 	return &rpc.ResponseToggleAdmin{Ok: true}, nil
 }
 
@@ -261,12 +261,12 @@ func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (
 	}
 
 	if err := s.userDatabase.SetAccessToken(ctx, newToken); err != nil {
-		logger.Log.Info("Failed set access token", zap.Error(err))
+		logger.Log.Info("Failed set access token", slog.Any("error", err))
 		return nil, err
 	}
 
 	issuedAt := timestamppb.New(newToken.CreatedAt)
-	logger.Audit.Info("Issue token", zap.String("user", req.GetUserId()), auditBy(ctx))
+	logger.Audit.Info("Issue token", slog.String("user", req.GetUserId()), auditBy(ctx))
 	return &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{
 		Name:     newToken.Name,
 		Value:    newToken.Value,
@@ -361,11 +361,11 @@ func extractUser(ctx context.Context) (*database.User, error) {
 	}
 }
 
-func auditBy(ctx context.Context) zap.Field {
+func auditBy(ctx context.Context) slog.Attr {
 	user, err := extractUser(ctx)
 	if err != nil {
-		return zap.Skip()
+		return slog.Attr{}
 	}
 
-	return zap.String("by", user.Id)
+	return slog.String("by", user.Id)
 }

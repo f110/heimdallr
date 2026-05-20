@@ -1,7 +1,7 @@
 package configutil
 
 import (
-	"go.uber.org/zap"
+	"log/slog"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/k8s"
@@ -23,7 +23,7 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 		w, err := k8s.NewVolumeWatcher(mountPath, func() {
 			logger.Log.Info("Reload certificate")
 			if err := conf.AccessProxy.HTTP.Certificate.ReloadCertificate(); err != nil {
-				logger.Log.Error("Failed reload certificate", zap.Error(err))
+				logger.Log.Error("Failed reload certificate", slog.Any("error", err))
 			}
 		})
 		if err != nil {
@@ -40,10 +40,10 @@ func NewReloader(conf *configv2.Config) (*Reloader, error) {
 		}
 		w, err := k8s.NewVolumeWatcher(mountPath, func() {
 			if err := conf.AccessProxy.ReloadConfig(); err != nil {
-				logger.Log.Error("Failed reload proxy config", zap.Error(err))
+				logger.Log.Error("Failed reload proxy config", slog.Any("error", err))
 			}
 			if err := conf.AuthorizationEngine.ReloadConfig(); err != nil {
-				logger.Log.Error("Failed reload authorization engine config", zap.Error(err))
+				logger.Log.Error("Failed reload authorization engine config", slog.Any("error", err))
 			}
 		})
 		if err != nil {

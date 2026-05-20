@@ -1,11 +1,11 @@
 package proxy
 
 import (
+	"log/slog"
 	"net/url"
 	"reflect"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -40,17 +40,17 @@ func V1Alpha1ProxyToV1Alpha2Proxy(in runtime.Object) (runtime.Object, error) {
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.Proxy{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
-	logger.Log.Debug("Covert from v1alpha1.Proxy", zap.String("name", before.Name))
+	logger.Log.Debug("Covert from v1alpha1.Proxy", slog.String("name", before.Name))
 
 	after := &proxyv1alpha2.Proxy{
 		TypeMeta: metav1.TypeMeta{
@@ -156,17 +156,17 @@ func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha2.Proxy{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
-	logger.Log.Debug("Covert from v1alpha1.Proxy", zap.String("name", before.Name))
+	logger.Log.Debug("Covert from v1alpha1.Proxy", slog.String("name", before.Name))
 
 	after := &proxyv1alpha1.Proxy{
 		TypeMeta: metav1.TypeMeta{
@@ -270,17 +270,17 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.Backend{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
-	logger.Log.Debug("Covert v1alpha1.Backend", zap.String("name", before.Name))
+	logger.Log.Debug("Covert v1alpha1.Backend", slog.String("name", before.Name))
 
 	after := &proxyv1alpha2.Backend{
 		TypeMeta: metav1.TypeMeta{
@@ -435,17 +435,17 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha2.Backend{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
-	logger.Log.Debug("Covert v1alpha1.Backend", zap.String("name", before.Name))
+	logger.Log.Debug("Covert v1alpha1.Backend", slog.String("name", before.Name))
 
 	after := &proxyv1alpha1.Backend{
 		TypeMeta: metav1.TypeMeta{
@@ -579,14 +579,14 @@ func V1Alpha1RoleToV1Alpha2Role(in runtime.Object) (runtime.Object, error) {
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.Role{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -608,14 +608,14 @@ func V1Alpha2RoleToV1Alpha2Role(in runtime.Object) (runtime.Object, error) {
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha2.Role{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -637,14 +637,14 @@ func V1Alpha1RpcPermissionToV1Alpha2RpcPermission(in runtime.Object) (runtime.Ob
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.RpcPermission{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -664,14 +664,14 @@ func V1Alpha2RpcPermissionToV1Alpha1RpcPermission(in runtime.Object) (runtime.Ob
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha2.RpcPermission{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -691,14 +691,14 @@ func V1Alpha1RoleBindingToV1Alpha2RoleBinding(in runtime.Object) (runtime.Object
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha1.RoleBinding{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -730,14 +730,14 @@ func V1Alpha2RoleBindingToV1Alpha1RoleBinding(in runtime.Object) (runtime.Object
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.New("unexpected input data type")
 	}
 
 	before := &proxyv1alpha2.RoleBinding{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 

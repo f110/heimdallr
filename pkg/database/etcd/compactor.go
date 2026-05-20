@@ -2,12 +2,12 @@ package etcd
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -83,7 +83,7 @@ func (c *Compactor) compact() error {
 	if _, err := c.client.Compact(context.Background(), c.rev); err != nil {
 		return xerrors.WithStack(err)
 	}
-	logger.Log.Info("Finish Compaction", zap.Int64("Revision", c.rev))
+	logger.Log.Info("Finish Compaction", slog.Int64("Revision", c.rev))
 
 	c.rev = currentRev
 	c.version++

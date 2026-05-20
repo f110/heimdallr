@@ -22,7 +22,6 @@ go_library(
         "@io_etcd_go_etcd_api_v3//mvccpb",
         "@io_etcd_go_etcd_client_v3//:client",
         "@io_k8s_sigs_yaml//:yaml",
-        "@org_uber_go_zap//:zap",
     ],
 )
 

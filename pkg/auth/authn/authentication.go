@@ -5,12 +5,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -122,7 +122,7 @@ func (a *authentication) UnaryCall(ctx context.Context) (*database.User, error) 
 
 	user, err := a.authenticateByMetadata(ctx, md)
 	if err != nil {
-		logger.Log.Info("Failed request authentication", zap.Error(err))
+		logger.Log.Info("Failed request authentication", slog.Any("error", err))
 		return nil, ErrSessionNotFound
 	}
 
@@ -137,7 +137,7 @@ func (a *authentication) StreamCall(ss grpc.ServerStream) (*database.User, error
 
 	user, err := a.authenticateByMetadata(ss.Context(), md)
 	if err != nil {
-		logger.Log.Info("Failed request authentication", zap.Error(err))
+		logger.Log.Info("Failed request authentication", slog.Any("error", err))
 		return nil, ErrSessionNotFound
 	}
 
@@ -158,7 +158,7 @@ func (a *authentication) findUser(ctx context.Context, req *http.Request) (*data
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		})
 		if err != nil {
-			logger.Log.Debug("Failure verify certificate", zap.Error(err), logger.WithRequestId(ctx))
+			logger.Log.Debug("Failure verify certificate", slog.Any("error", err), logger.WithRequestId(ctx))
 			return nil, nil, ErrInvalidCertificate
 		}
 
@@ -206,7 +206,7 @@ func (a *authentication) findUser(ctx context.Context, req *http.Request) (*data
 
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
-		logger.Log.Debug("Failed get session", zap.Error(err))
+		logger.Log.Debug("Failed get session", slog.Any("error", err))
 		return nil, nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
@@ -255,16 +255,16 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 	userId := ""
 	if len(md.Get(rpc.TokenMetadataKey)) > 0 {
 		tokenString := md.Get(rpc.TokenMetadataKey)[0]
-		logger.Log.Debug("Found token", zap.String("token", tokenString))
+		logger.Log.Debug("Found token", slog.String("token", tokenString))
 
 		token, err := a.tokenDatabase.FindToken(ctx, tokenString)
 		if err != nil {
-			logger.Log.Info("Could not find token", zap.Error(err))
+			logger.Log.Info("Could not find token", slog.Any("error", err))
 			return nil, ErrInvalidToken
 		}
 		userId = token.UserId
 	} else if len(md.Get(rpc.JwtTokenMetadataKey)) > 0 {
-		logger.Log.Debug("Found jwt token", zap.String("token", md.Get(rpc.JwtTokenMetadataKey)[0]))
+		logger.Log.Debug("Found jwt token", slog.String("token", md.Get(rpc.JwtTokenMetadataKey)[0]))
 		j := md.Get(rpc.JwtTokenMetadataKey)[0]
 		claims := &TokenClaims{}
 		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i interface{}, e error) {
@@ -274,16 +274,16 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 			return &a.publicKey, nil
 		})
 		if err != nil {
-			logger.Log.Info("Failed parse jwt", zap.Error(err))
+			logger.Log.Info("Failed parse jwt", slog.Any("error", err))
 			return nil, ErrInvalidToken
 		}
 		if err := claims.Valid(); err != nil {
-			logger.Log.Info("Invalid token", zap.Error(err))
+			logger.Log.Info("Invalid token", slog.Any("error", err))
 			return nil, ErrInvalidToken
 		}
 		userId = claims.Subject
 	} else if len(md.Get(rpc.InternalTokenMetadataKey)) > 0 {
-		logger.Log.Debug("Found internal token", zap.String("token", md.Get(rpc.InternalTokenMetadataKey)[0]))
+		logger.Log.Debug("Found internal token", slog.String("token", md.Get(rpc.InternalTokenMetadataKey)[0]))
 		t := md.Get(rpc.InternalTokenMetadataKey)[0]
 		if a.Config.AccessProxy.Credential.InternalToken != t {
 			return nil, ErrInvalidToken
@@ -301,7 +301,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 
 	user, err := a.userDatabase.Get(userId)
 	if err != nil && rootUser == nil {
-		logger.Log.Info("Could not find user", zap.Error(err), zap.String("user_id", userId))
+		logger.Log.Info("Could not find user", slog.Any("error", err), slog.String("user_id", userId))
 		return nil, ErrUserNotFound
 	}
 	if user == nil && rootUser != nil {

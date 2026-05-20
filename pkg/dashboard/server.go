@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"sort"
@@ -18,7 +19,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/julienschmidt/httprouter"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/auth/authn"
@@ -132,7 +132,7 @@ func (s *Server) Post(path string, handle httprouter.Handle) {
 }
 
 func (s *Server) Start() error {
-	logger.Log.Info("Start dashboard", zap.String("listen", s.server.Addr))
+	logger.Log.Info("Start dashboard", slog.String("listen", s.server.Addr))
 	client := rpcclient.NewClientWithUserToken(s.conn)
 	s.client = client
 
@@ -195,7 +195,7 @@ func (s *Server) handleCreateServiceAccount(w http.ResponseWriter, req *http.Req
 
 	err := client.NewServiceAccount(req.FormValue("id"), req.FormValue("comment"))
 	if err != nil {
-		logger.Log.Info("Failed create service account", zap.Error(err))
+		logger.Log.Info("Failed create service account", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -208,7 +208,7 @@ func (s *Server) handleServiceAccountToken(w http.ResponseWriter, req *http.Requ
 
 	user, err := client.GetUser(params.ByName("id"), true)
 	if err != nil {
-		logger.Log.Info("Failed get tokens", zap.Error(err))
+		logger.Log.Info("Failed get tokens", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -266,7 +266,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 	signed, err := client.ListCert()
 	if err != nil {
-		logger.Log.Info("Can't get signed certificates", zap.Error(err))
+		logger.Log.Info("Can't get signed certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -294,7 +294,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 	revoked, err := client.ListRevokedCert()
 	if err != nil {
-		logger.Log.Info("Can't get revoked certificate", zap.Error(err))
+		logger.Log.Info("Can't get revoked certificate", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -343,7 +343,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	if req.FormValue("csr") != "" {
 		_, err := client.NewCertByCSR(req.FormValue("csr"), rpcclient.VerifyCommonName(req.FormValue("id")))
 		if err != nil {
-			logger.Log.Info("Failed sign CSR", zap.Error(err))
+			logger.Log.Info("Failed sign CSR", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -351,7 +351,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 		switch req.FormValue("key_type") {
 		case "ecdsa", "rsa":
 		default:
-			logger.Log.Info("Unknown key type", zap.String("key_type", req.FormValue("key_type")))
+			logger.Log.Info("Unknown key type", slog.String("key_type", req.FormValue("key_type")))
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -365,7 +365,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 
 		err = client.NewCert(req.FormValue("id"), req.FormValue("key_type"), int(bit), req.FormValue("password"), req.FormValue("comment"))
 		if err != nil {
-			logger.Log.Info("Failed create new client certificate", zap.Error(err))
+			logger.Log.Info("Failed create new client certificate", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -385,14 +385,14 @@ func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ ht
 	i := &big.Int{}
 	i, ok := i.SetString(req.FormValue("serial"), 16)
 	if !ok {
-		logger.Log.Info("Can't convert to integer", zap.String("serial", req.FormValue("serial")))
+		logger.Log.Info("Can't convert to integer", slog.String("serial", req.FormValue("serial")))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	err := client.RevokeCert(i)
 	if err != nil {
-		logger.Log.Info("Failed revoke certificate", zap.Error(err))
+		logger.Log.Info("Failed revoke certificate", slog.Any("error", err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -410,7 +410,7 @@ func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ 
 	i := &big.Int{}
 	i, ok := i.SetString(req.FormValue("serial"), 16)
 	if !ok {
-		logger.Log.Info("Can't convert to integer", zap.String("serial", req.FormValue("serial")))
+		logger.Log.Info("Can't convert to integer", slog.String("serial", req.FormValue("serial")))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -482,7 +482,7 @@ func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 	users, err := client.ListUser("")
 	if err != nil {
-		logger.Log.Info("Can't get users", zap.Error(err))
+		logger.Log.Info("Can't get users", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -499,7 +499,7 @@ func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ htt
 
 	roles, err := client.ListRole()
 	if err != nil {
-		logger.Log.Info("Can't get roles", zap.Error(err))
+		logger.Log.Info("Can't get roles", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -589,14 +589,14 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 
 	u, err := client.GetUser(id, false)
 	if err != nil {
-		logger.Log.Info("User not found", zap.Error(err))
+		logger.Log.Info("User not found", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	allRoles, err := client.ListRole()
 	if err != nil {
-		logger.Log.Info("Failure fetch roles", zap.Error(err))
+		logger.Log.Info("Failure fetch roles", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -606,7 +606,7 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 	}
 	allBackends, err := client.ListAllBackend()
 	if err != nil {
-		logger.Log.Info("Failure fetch backends", zap.Error(err))
+		logger.Log.Info("Failure fetch backends", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -658,7 +658,7 @@ func (s *Server) handleEditUserIndex(w http.ResponseWriter, req *http.Request, p
 
 	u, err := client.GetUser(id, false)
 	if err != nil {
-		logger.Log.Info("User not found", zap.Error(err))
+		logger.Log.Info("User not found", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -746,7 +746,7 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 	}
 
 	if err := client.UserBecomeMaintainer(params.ByName("id"), req.FormValue("role")); err != nil {
-		logger.Log.Info("Failure becoming maintainer", zap.String("id", params.ByName("id")), zap.String("role", req.FormValue("role")))
+		logger.Log.Info("Failure becoming maintainer", slog.String("id", params.ByName("id")), slog.String("role", req.FormValue("role")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -770,7 +770,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 	signed, err := client.ListCert()
 	if err != nil {
-		logger.Log.Info("Can't get signed certificates", zap.Error(err))
+		logger.Log.Info("Can't get signed certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -798,7 +798,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 	revoked, err := client.ListRevokedCert()
 	if err != nil {
-		logger.Log.Info("Can't get revoked certificates", zap.Error(err))
+		logger.Log.Info("Can't get revoked certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -825,7 +825,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 
 	agents, err := client.ListConnectedAgent()
 	if err != nil {
-		logger.Log.Info("Can't get connected agents", zap.Error(err))
+		logger.Log.Info("Can't get connected agents", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -856,7 +856,7 @@ func (s *Server) handleNewAgent(w http.ResponseWriter, req *http.Request, _ http
 
 	backends, err := client.ListAgentBackend()
 	if err != nil {
-		logger.Log.Info("Can't get backends from rpc server", zap.Error(err))
+		logger.Log.Info("Can't get backends from rpc server", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -889,14 +889,14 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 	if req.FormValue("csr") != "" {
 		_, err := client.NewAgentCertByCSR(req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
-			logger.Log.Info("Failed sign a CSR", zap.Error(err))
+			logger.Log.Info("Failed sign a CSR", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	} else {
 		err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
 		if err != nil {
-			logger.Log.Info("Failed create a new client certificate", zap.Error(err))
+			logger.Log.Info("Failed create a new client certificate", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -916,7 +916,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 
 	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
 	if err != nil {
-		logger.Log.Info("Failed get my certs", zap.Error(err))
+		logger.Log.Info("Failed get my certs", slog.Any("error", err))
 	}
 
 	signedCertificates := make([]*certificate, 0, len(signed))
@@ -935,7 +935,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 
 	backends, err := client.GetBackends()
 	if err != nil {
-		logger.Log.Info("Failed get backends", zap.Error(err))
+		logger.Log.Info("Failed get backends", slog.Any("error", err))
 	}
 
 	s.RenderTemplate(w, "me/index.tmpl", struct {
@@ -985,7 +985,7 @@ func (s *Server) handleAddDevice(w http.ResponseWriter, req *http.Request, _ htt
 		rpcclient.Comment(req.FormValue("name")),
 	)
 	if err != nil {
-		logger.Log.Warn("Failed create certificate", zap.Error(err))
+		logger.Log.Warn("Failed create certificate", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -996,7 +996,7 @@ func (s *Server) handleAddDevice(w http.ResponseWriter, req *http.Request, _ htt
 func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interface{}) {
 	err := s.loader.Render(w, name, data)
 	if err != nil {
-		logger.Log.Info("Failed render template", zap.Error(err))
+		logger.Log.Info("Failed render template", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -1019,12 +1019,12 @@ func (s *Server) verifyRequest(handle httprouter.Handle) httprouter.Handle {
 			return s.publicKey, nil
 		})
 		if err != nil {
-			logger.Log.Info("Failed parse JWT", zap.Error(err))
+			logger.Log.Info("Failed parse JWT", slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if err := claim.Valid(); err != nil {
-			logger.Log.Warn("Invalid JWT token", zap.Error(err))
+			logger.Log.Warn("Invalid JWT token", slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

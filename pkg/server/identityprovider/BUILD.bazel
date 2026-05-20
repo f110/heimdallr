@@ -16,6 +16,5 @@ go_library(
         "@com_github_zitadel_oidc_v3//pkg/oidc",
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_x_oauth2//:oauth2",
-        "@org_uber_go_zap//:zap",
     ],
 )

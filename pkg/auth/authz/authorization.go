@@ -3,11 +3,11 @@ package authz
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -84,7 +84,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 		}
 	}
 	if !checkPermission {
-		logger.Log.Debug("User not permitted", zap.String("user", user.Id), zap.Strings("roles", user.Roles))
+		logger.Log.Debug("User not permitted", slog.String("user", user.Id), slog.Any("roles", user.Roles))
 		return ErrNotAllowed
 	}
 
@@ -94,7 +94,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 		}
 
 		if time.Now().After(sess.IssuedAt.Add(backend.MaxSessionDuration.Duration)) {
-			logger.Log.Debug("User authenticated but session is expired", zap.Time("issued_at", sess.IssuedAt))
+			logger.Log.Debug("User authenticated but session is expired", slog.Time("issued_at", sess.IssuedAt))
 			return ErrSessionNotFound
 		}
 	}
@@ -138,7 +138,7 @@ func (a *authorization) UnaryCall(info *grpc.UnaryServerInfo, user *database.Use
 		ok = true
 	}
 	if !ok {
-		logger.Log.Info("User doesn't have privilege", zap.String("user_id", user.Id), zap.String("method", info.FullMethod))
+		logger.Log.Info("User doesn't have privilege", slog.String("user_id", user.Id), slog.String("method", info.FullMethod))
 		return ErrNotAllowed
 	}
 

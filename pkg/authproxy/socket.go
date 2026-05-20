@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,7 +19,6 @@ import (
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/auth/authz"
@@ -147,7 +147,7 @@ func NewSocketProxy(conf *configv2.Config, ct *connector.Server) *SocketProxy {
 // Accept handles incoming connection.
 // conn is an established connection that is finished handshake.
 func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
-	logger.Log.Debug("Accept new socket", zap.String("server_name", conn.ConnectionState().ServerName))
+	logger.Log.Debug("Accept new socket", slog.String("server_name", conn.ConnectionState().ServerName))
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	defer conn.Close()
@@ -162,7 +162,7 @@ func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	})
 	if err != nil {
-		logger.Log.Info("Client submitted the certificate but it is invalid", zap.Error(err))
+		logger.Log.Info("Client submitted the certificate but it is invalid", slog.Any("error", err))
 		return
 	}
 
@@ -182,19 +182,19 @@ func (s *SocketProxy) Accept(_ *http.Server, conn tlsConn, _ http.Handler) {
 	}()
 
 	if err := st.handshake(); err != nil {
-		logger.Log.Info("Failure handshake", zap.Error(err))
+		logger.Log.Info("Failure handshake", slog.Any("error", err))
 		return
 	}
 	if err := st.authenticate(ctx, s.Config.AccessProxy.TokenEndpoint); err != nil {
-		logger.Log.Info("Failure authenticate", zap.Error(err))
+		logger.Log.Info("Failure authenticate", slog.Any("error", err))
 		return
 	}
 	if err := st.dialBackend(ctx); err != nil {
-		logger.Log.Info("Failure dial backend", zap.Error(err))
+		logger.Log.Info("Failure dial backend", slog.Any("error", err))
 		return
 	}
 	if err := st.pipe(); err != nil && !isClosedNetwork(err) {
-		logger.Log.Info("Close pipe", zap.Error(err))
+		logger.Log.Info("Close pipe", slog.Any("error", err))
 		return
 	}
 }
@@ -215,7 +215,7 @@ func (st *Stream) handshake() error {
 	for {
 		n, err := st.conn.Read(readBuffer)
 		if err != nil {
-			logger.Log.Info("Close tls.Conn", zap.Error(err))
+			logger.Log.Info("Close tls.Conn", slog.Any("error", err))
 			return err
 		}
 		msg.Write(readBuffer[:n])
@@ -233,7 +233,7 @@ func (st *Stream) handshake() error {
 	l := binary.BigEndian.Uint32(buf[1:5])
 	v, err := url.ParseQuery(string(buf[5 : 5+l]))
 	if err != nil {
-		logger.Log.Debug("Failed parse value", zap.Error(err))
+		logger.Log.Debug("Failed parse value", slog.Any("error", err))
 		return err
 	}
 	st.token = v.Get("token")
@@ -254,7 +254,7 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 		return err
 	}
 	if err != nil {
-		logger.Log.Error("Unhandled error", zap.Error(err))
+		logger.Log.Error("Unhandled error", slog.Any("error", err))
 		return err
 	}
 
@@ -272,7 +272,7 @@ func (st *Stream) authenticate(ctx context.Context, endpoint string) error {
 }
 
 func (st *Stream) dialBackend(ctx context.Context) error {
-	logger.Log.Debug("dial backend", zap.String("addr", st.backend.Socket.Url.Host))
+	logger.Log.Debug("dial backend", slog.String("addr", st.backend.Socket.Url.Host))
 	var conn net.Conn
 	var err error
 	if st.backend.Socket.Agent {
@@ -294,10 +294,10 @@ func (st *Stream) dialBackend(ctx context.Context) error {
 }
 
 func (st *Stream) pipe() error {
-	logger.Log.Debug("Start duplex connection", zap.String("host", st.host), zap.String("user", st.user.Id))
+	logger.Log.Debug("Start duplex connection", slog.String("host", st.host), slog.String("user", st.user.Id))
 	go func() {
 		if err := st.readBackend(); err != nil {
-			logger.Log.Info("Something occurred during to read from backend", zap.Error(err))
+			logger.Log.Info("Something occurred during to read from backend", slog.Any("error", err))
 		}
 		st.close()
 	}()
@@ -309,7 +309,7 @@ func (st *Stream) pipe() error {
 			case <-st.closeCh:
 				break
 			case <-time.After(st.backend.Socket.Timeout.Duration):
-				logger.Log.Info("Close a connection due to timeout", zap.String("host", st.host), zap.String("user", st.user.Id))
+				logger.Log.Info("Close a connection due to timeout", slog.String("host", st.host), slog.String("user", st.user.Id))
 				st.close()
 			}
 		}()

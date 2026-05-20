@@ -3,13 +3,13 @@ package operator
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -239,7 +239,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 		go func() {
 			err := ws.Start()
 			if err != nil && err != http.ErrServerClosed {
-				logger.Log.Info("Failed start webhook server", zap.Error(err))
+				logger.Log.Info("Failed start webhook server", slog.Any("error", err))
 			}
 		}()
 	}

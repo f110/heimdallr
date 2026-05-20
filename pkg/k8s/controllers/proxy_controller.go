@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"sort"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"go.f110.dev/kubeproto/go/apis/policyv1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -136,7 +136,7 @@ func NewProxyController(
 	if cmV, err := c.checkCertManagerVersion(groups); err != nil {
 		return nil, err
 	} else {
-		c.Log(nil).Debug("Found cert-manager.io", zap.String("GroupVersion", cmV))
+		c.Log(nil).Debug("Found cert-manager.io", slog.String("GroupVersion", cmV))
 		c.certManagerVersion = cmV
 	}
 	c.discoverPrometheusOperator(apiList)
@@ -207,7 +207,7 @@ func (c *ProxyController) ConvertToKeys() controllerbase.ObjectToKeyConverter {
 
 			return c.dependentProxyKeys(role)
 		default:
-			c.Log(nil).Info("Unhandled object type", zap.String("type", reflect.TypeOf(obj).String()))
+			c.Log(nil).Info("Unhandled object type", slog.String("type", reflect.TypeOf(obj).String()))
 			return nil, nil
 		}
 	}
@@ -324,7 +324,7 @@ func (c *ProxyController) UpdateObject(ctx context.Context, obj interface{}) err
 
 func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error {
 	proxy := obj.(*proxyv1alpha2.Proxy)
-	c.Log(ctx).Debug("Reconcile Proxy", zap.String("namespace", proxy.Namespace), zap.String("name", proxy.Name))
+	c.Log(ctx).Debug("Reconcile Proxy", slog.String("namespace", proxy.Namespace), slog.String("name", proxy.Name))
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
@@ -799,7 +799,7 @@ func (c *ProxyController) reconcileProxyProcess(ctx context.Context, lp *Heimdal
 		}
 		ns, name, err := cache.SplitMetaNamespaceKey(backend.Annotations[proxy.AnnotationKeyIngressName])
 		if err != nil {
-			c.Log(ctx).Warn("Could not parse annotation key which contains Ingress name", zap.Error(err))
+			c.Log(ctx).Warn("Could not parse annotation key which contains Ingress name", slog.Any("error", err))
 			continue
 		}
 		ingress, err := c.ingressLister.Get(ns, name)
@@ -1084,7 +1084,7 @@ func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *Heimd
 	newCM.Data = configMap.Data
 
 	if !reflect.DeepEqual(newCM.Data, cm.Data) {
-		c.Log(ctx).Debug("Will update ConfigMap", zap.String("diff", cmp.Diff(cm.Data, newCM.Data)))
+		c.Log(ctx).Debug("Will update ConfigMap", slog.String("diff", cmp.Diff(cm.Data, newCM.Data)))
 		_, err = c.client.CoreV1.UpdateConfigMap(ctx, newCM, metav1.UpdateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)

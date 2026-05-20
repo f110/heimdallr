@@ -15,6 +15,5 @@ go_library(
         "//pkg/template",
         "//tmpl/ui",
         "@com_github_julienschmidt_httprouter//:httprouter",
-        "@org_uber_go_zap//:zap",
     ],
 )

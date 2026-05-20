@@ -5,17 +5,17 @@ import (
 	"context"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/go-github/v41/github"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/auth/authn"
@@ -51,18 +51,18 @@ type AccessLog struct {
 	UserId    string `json:"user_id"`
 }
 
-func (a AccessLog) Fields() []zap.Field {
-	return []zap.Field{
-		zap.String("host", a.Host),
-		zap.String("protocol", a.Protocol),
-		zap.String("method", a.Method),
-		zap.String("path", a.Path),
-		zap.Int("status", a.Status),
-		zap.String("user_agent", a.UserAgent),
-		zap.String("client_ip", a.ClientIp),
-		zap.Int("app_time_ms", a.AppTime),
-		zap.String("request_id", a.RequestId),
-		zap.String("user_id", a.UserId),
+func (a AccessLog) Fields() []slog.Attr {
+	return []slog.Attr{
+		slog.String("host", a.Host),
+		slog.String("protocol", a.Protocol),
+		slog.String("method", a.Method),
+		slog.String("path", a.Path),
+		slog.Int("status", a.Status),
+		slog.String("user_agent", a.UserAgent),
+		slog.String("client_ip", a.ClientIp),
+		slog.Int("app_time_ms", a.AppTime),
+		slog.String("request_id", a.RequestId),
+		slog.String("user_id", a.UserId),
 	}
 }
 
@@ -79,7 +79,7 @@ func (w *loggedResponseWriter) WriteHeader(statusCode int) {
 }
 
 type accessLogger struct {
-	internal *zap.Logger
+	internal *slog.Logger
 }
 
 func newAccessLogger(conf *configv2.Logger) *accessLogger {
@@ -88,39 +88,25 @@ func newAccessLogger(conf *configv2.Logger) *accessLogger {
 		encoding = conf.Encoding
 	}
 
-	encoderConf := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "",
-		NameKey:        "tag",
-		CallerKey:      "",
-		MessageKey:     "",
-		StacktraceKey:  "",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
+	var handler slog.Handler
+	switch strings.ToLower(encoding) {
+	case "console":
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	default:
+		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
-
-	zapConf := zap.Config{
-		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		Development:      false,
-		Sampling:         nil,
-		Encoding:         encoding,
-		EncoderConfig:    encoderConf,
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
-	l, err := zapConf.Build()
-	if err != nil {
-		return nil
-	}
-	l = l.Named("access_log")
+	l := slog.New(handler).With(slog.String("tag", "access_log"))
 	return &accessLogger{internal: l}
 }
 
 func (a *accessLogger) Log(l AccessLog) {
-	a.internal.Info("", l.Fields()...)
+	attrs := l.Fields()
+	args := make([]any, len(attrs))
+	for i, attr := range attrs {
+		args[i] = attr
+	}
+	a.internal.Info("", args...)
 }
 
 type Transport struct {
@@ -190,7 +176,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		// non secure access
 		backend, ok := p.Config.AccessProxy.GetBackendByHost(req.Host)
 		if !ok {
-			logger.Log.Debug("Hostname not found", zap.String("host", req.Host))
+			logger.Log.Debug("Hostname not found", slog.String("host", req.Host))
 			panic(http.ErrAbortHandler)
 		}
 		if !backend.AllowHttp {
@@ -222,15 +208,15 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 			p.redirectToIdP(w, req)
 			return
 		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
-			logger.Log.Info("Unauthorized", zap.Error(err), logger.WithRequestId(ctx))
+			logger.Log.Info("Unauthorized", slog.Any("error", err), logger.WithRequestId(ctx))
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		case auth.ErrHostnameNotFound:
-			logger.Log.Info("Hostname not found", zap.String("host", req.Host), logger.WithRequestId(ctx))
+			logger.Log.Info("Hostname not found", slog.String("host", req.Host), logger.WithRequestId(ctx))
 			panic(http.ErrAbortHandler)
 		}
 		if user == nil {
-			logger.Log.Warn("Unhandled error", zap.Error(err), logger.WithRequestId(ctx))
+			logger.Log.Warn("Unhandled error", slog.Any("error", err), logger.WithRequestId(ctx))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -249,7 +235,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	}
 
 	if err := p.setHeader(req, user); err != nil {
-		logger.Log.Warn("Failed to set headers to request of backend", zap.Error(err), logger.WithRequestId(ctx))
+		logger.Log.Warn("Failed to set headers to request of backend", slog.Any("error", err), logger.WithRequestId(ctx))
 		return
 	}
 	p.reverseProxy.ServeHTTP(w, req)
@@ -305,7 +291,7 @@ func (p *HttpProxy) ServeGithubWebHook(ctx context.Context, w http.ResponseWrite
 	req.Body = io.NopCloser(bytes.NewReader(buf))
 	err = github.ValidateSignature(req.Header.Get("X-Hub-Signature"), buf, p.Config.AccessProxy.Credential.GithubWebhookSecret)
 	if err != nil {
-		logger.Log.Debug("Couldn't validate signature", zap.Error(err), logger.WithRequestId(ctx))
+		logger.Log.Debug("Couldn't validate signature", slog.Any("error", err), logger.WithRequestId(ctx))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -385,9 +371,9 @@ func (p *HttpProxy) director(req *http.Request) {
 		}
 		logger.Log.Debug(
 			"Backend is ",
-			zap.String("name", backend.Name),
-			zap.String("before", orig.String()),
-			zap.String("after", req.URL.String()),
+			slog.String("name", backend.Name),
+			slog.String("before", orig.String()),
+			slog.String("after", req.URL.String()),
 		)
 	}
 }
@@ -407,7 +393,7 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 		})
 		token, err := claim.SignedString(p.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {
-			logger.Log.Warn("Failed sign jwt", zap.Error(err))
+			logger.Log.Warn("Failed sign jwt", slog.Any("error", err))
 			return xerrors.WithStack(err)
 		}
 

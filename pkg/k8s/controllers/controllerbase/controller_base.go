@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
 
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	k8scorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/kubernetes"
@@ -43,7 +43,7 @@ type ControllerBase interface {
 type Controller struct {
 	Base ControllerBase
 
-	log     *zap.Logger
+	log     *slog.Logger
 	recoder record.EventRecorder
 	queue   workqueue.RateLimitingInterface
 	wg      sync.WaitGroup
@@ -60,7 +60,7 @@ func NewController(base ControllerBase, coreClient kubernetes.Interface) *Contro
 			workqueue.DefaultControllerRateLimiter(),
 			base.Name(),
 		),
-		log:          logger.Log.Named(base.Name()),
+		log:          logger.Log.With(slog.String("logger", base.Name())),
 		useFinalizer: len(base.Finalizers()) > 0,
 	}
 	for _, v := range base.EventSources() {
@@ -103,7 +103,7 @@ func (c *Controller) Shutdown() {
 	c.wg.Wait()
 }
 
-func (c *Controller) Log(ctx context.Context) *zap.Logger {
+func (c *Controller) Log(ctx context.Context) *slog.Logger {
 	return c.log.With(WithReconciliationId(ctx))
 }
 
@@ -118,11 +118,11 @@ func (c *Controller) processNextItem() bool {
 	if shutdown {
 		return false
 	}
-	c.log.Debug("Get next queue", zap.Any("key", key))
+	c.log.Debug("Get next queue", slog.Any("key", key))
 
 	err := c.ProcessKey(key.(string))
 	if err != nil {
-		c.log.Info("Failed sync", zap.Error(err))
+		c.log.Info("Failed sync", slog.Any("error", err))
 	}
 
 	return true
@@ -169,7 +169,7 @@ func (c *Controller) ProcessKey(key string) error {
 	}
 	if err != nil {
 		if errors.Is(err, &RetryError{}) {
-			c.Log(ctx).Debug("Retrying", zap.Error(err))
+			c.Log(ctx).Debug("Retrying", slog.Any("error", err))
 			c.queue.AddRateLimited(key)
 			return nil
 		}

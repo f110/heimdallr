@@ -5,11 +5,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"log/slog"
 	"math/big"
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -77,7 +77,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 
 	if req.GetAgent() {
 		if _, ok := s.Config.AccessProxy.GetBackend(commonName); !ok {
-			logger.Log.Info("Could not find backend", zap.String("common_name", req.GetCommonName()))
+			logger.Log.Info("Could not find backend", slog.String("common_name", req.GetCommonName()))
 			return nil, xerrors.New("rpcservice: unknown backend")
 		}
 	}
@@ -103,7 +103,7 @@ func (s *CertificateAuthorityService) NewClientCert(ctx context.Context, req *rp
 		return nil, err
 	}
 
-	logger.Audit.Info("Generate certificate", zap.String("common_name", commonName), auditBy(ctx))
+	logger.Audit.Info("Generate certificate", slog.String("common_name", commonName), auditBy(ctx))
 	return &rpc.ResponseNewClientCert{Ok: true, Certificate: rpc.DatabaseCertToRPCCertWithByte(signed)}, nil
 }
 
@@ -121,7 +121,7 @@ func (s *CertificateAuthorityService) Revoke(ctx context.Context, req *rpc.CAReq
 		return nil, err
 	}
 
-	logger.Audit.Info("Revoke certificate", zap.String("common_name", signed.Certificate.Subject.CommonName), auditBy(ctx))
+	logger.Audit.Info("Revoke certificate", slog.String("common_name", signed.Certificate.Subject.CommonName), auditBy(ctx))
 	return &rpc.CAResponseRevoke{Ok: true}, nil
 }
 
@@ -154,8 +154,8 @@ func (s *CertificateAuthorityService) NewServerCert(ctx context.Context, req *rp
 
 	logger.Audit.Info(
 		"Signing Certificate",
-		zap.String("common_name", signingRequest.Subject.CommonName),
-		zap.Int64("serial_number", c.Certificate.SerialNumber.Int64()),
+		slog.String("common_name", signingRequest.Subject.CommonName),
+		slog.Int64("serial_number", c.Certificate.SerialNumber.Int64()),
 		auditBy(ctx),
 	)
 	return &rpc.ResponseNewServerCert{Certificate: c.Certificate.Raw}, nil

@@ -14,7 +14,6 @@ go_library(
         "//pkg/logger",
         "@dev_f110_go_xerrors//:xerrors",
         "@io_k8s_sigs_yaml//:yaml",
-        "@org_uber_go_zap//:zap",
     ],
 )
 

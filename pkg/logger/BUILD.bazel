@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "logger",
     srcs = [
+        "grpc.go",
         "klog.go",
         "log.go",
         "logger.go",
@@ -12,11 +13,8 @@ go_library(
     deps = [
         "//pkg/cmd",
         "//pkg/config/configv2",
-        "@com_github_go_logr_zapr//:zapr",
+        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/logging",
         "@com_github_spf13_pflag//:pflag",
-        "@dev_f110_go_xerrors//:xerrors",
         "@io_k8s_klog_v2//:klog",
-        "@org_uber_go_zap//:zap",
-        "@org_uber_go_zap//zapcore",
     ],
 )

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -75,7 +75,7 @@ func (c *Cache) Notify() chan struct{} {
 func (c *Cache) Start(ctx context.Context) {
 	go func() {
 		if err := c.watch(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.Log.Warn("Close cache", zap.Error(err))
+			logger.Log.Warn("Close cache", slog.Any("error", err))
 		}
 	}()
 }
@@ -142,7 +142,7 @@ func (c *Cache) watch(ctx context.Context) error {
 }
 
 func (c *Cache) startWatch(ctx context.Context, revision int64) error {
-	logger.Log.Debug("Start watch", zap.String("prefix", c.prefix))
+	logger.Log.Debug("Start watch", slog.String("prefix", c.prefix))
 	watchCh := c.client.Watch(ctx, c.prefix, clientv3.WithPrefix(), clientv3.WithRev(revision))
 	for {
 		select {

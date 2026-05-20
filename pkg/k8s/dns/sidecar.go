@@ -3,13 +3,13 @@ package dns
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
 
 	"github.com/miekg/dns"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -111,7 +111,7 @@ func (s *Sidecar) handleQuery(w dns.ResponseWriter, msg *dns.Msg) {
 
 func (s *Sidecar) handleReadiness(w dns.ResponseWriter, msg *dns.Msg) {
 	if len(msg.Question) == 0 {
-		logger.Log.Debug("Not have question", zap.Uint16("id", msg.Id))
+		logger.Log.Debug("Not have question", slog.Int("id", int(msg.Id)))
 		return
 	}
 
@@ -139,7 +139,7 @@ func (s *Sidecar) handleReadiness(w dns.ResponseWriter, msg *dns.Msg) {
 				},
 			})
 		default:
-			logger.Log.Debug("Unhandled query type", zap.Uint16("type", q.Qtype))
+			logger.Log.Debug("Unhandled query type", slog.Int("type", int(q.Qtype)))
 		}
 	}
 	res.Answer = ans

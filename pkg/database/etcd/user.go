@@ -6,12 +6,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log/slog"
 	"time"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -288,7 +288,7 @@ func (d *UserDatabase) GetState(ctx context.Context, stateString string) (string
 	if s.CreatedAt.Add(1 * time.Hour).Before(now()) {
 		_, err := d.client.Delete(ctx, fmt.Sprintf("user_state/%s", stateString))
 		if err != nil {
-			logger.Log.Warn("failure delete state", zap.String("state", stateString))
+			logger.Log.Warn("failure delete state", slog.String("state", stateString))
 		}
 
 		return "", xerrors.NewWithStack("database: state not founds")

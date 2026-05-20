@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//pkg/logger",
         "@dev_f110_go_xerrors//:xerrors",
-        "@org_uber_go_zap//:zap",
     ],
 )
 

@@ -2,11 +2,11 @@ package token
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/url"
 
 	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/auth/token"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -61,12 +61,12 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 	sess.Challenge = req.URL.Query().Get("challenge")
 	sess.ChallengeMethod = req.URL.Query().Get("challenge_method")
 	if err := t.sessionStore.SetSession(w, sess); err != nil {
-		logger.Log.Debug("Failed set the session", zap.Error(err))
+		logger.Log.Debug("Failed set the session", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if err := t.loader.Render(w, "token/authorization.tmpl", nil); err != nil {
-		logger.Log.Debug("Failed render the template", zap.Error(err))
+		logger.Log.Debug("Failed render the template", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -75,14 +75,14 @@ func (t *Server) handleAuthorize(w http.ResponseWriter, req *http.Request, _ htt
 func (t *Server) handleAuthorized(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	sess, err := t.sessionStore.GetSession(req)
 	if err != nil {
-		logger.Log.Debug("Can not get session from request", zap.Error(err))
+		logger.Log.Debug("Can not get session from request", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	code, err := t.tokenDatabase.NewCode(req.Context(), sess.Id, sess.Challenge, sess.ChallengeMethod)
 	if err != nil {
-		logger.Log.Debug("Can not create code", zap.Error(err))
+		logger.Log.Debug("Can not create code", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -92,7 +92,7 @@ func (t *Server) handleAuthorized(w http.ResponseWriter, req *http.Request, _ ht
 func (t *Server) handleExchange(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	tk, err := t.tokenDatabase.IssueToken(req.Context(), req.URL.Query().Get("code"), req.URL.Query().Get("code_verifier"))
 	if err != nil {
-		logger.Log.Debug("Failure issue token", zap.Error(err), zap.String("code", req.URL.Query().Get("code")))
+		logger.Log.Debug("Failure issue token", slog.Any("error", err), slog.String("code", req.URL.Query().Get("code")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -20,7 +20,6 @@ go_library(
         "@org_golang_google_grpc//keepalive",
         "@org_golang_google_grpc//metadata",
         "@org_golang_google_grpc//status",
-        "@org_uber_go_zap//:zap",
     ],
 )
 

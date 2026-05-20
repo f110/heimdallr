@@ -5,12 +5,12 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -50,7 +50,7 @@ func New(data embed.FS, typ, dir string, funcMap template.FuncMap) *Loader {
 			return nil
 		})
 		if err != nil {
-			logger.Log.Info("Failed walk embed files", zap.Error(err))
+			logger.Log.Info("Failed walk embed files", slog.Any("error", err))
 		}
 
 		loader.tmpl = t
@@ -90,7 +90,7 @@ func (l *Loader) Render(w io.Writer, name string, data interface{}) error {
 			t = t.New(name)
 			_, err = t.Parse(string(b))
 			if err != nil {
-				logger.Log.Debug("Failure parsing template", zap.Error(err))
+				logger.Log.Debug("Failure parsing template", slog.Any("error", err))
 				return xerrors.WithStack(err)
 			}
 			parsed[name] = struct{}{}

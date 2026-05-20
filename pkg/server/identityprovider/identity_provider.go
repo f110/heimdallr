@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -102,11 +102,11 @@ func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params ht
 	}
 	state, err := s.database.SetState(req.Context(), sess.Unique)
 	if err != nil {
-		logger.Log.Info("Failed set state", zap.Error(err))
+		logger.Log.Info("Failed set state", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	logger.Log.Debug("Generated state", zap.String("value", state))
+	logger.Log.Debug("Generated state", slog.String("value", state))
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -117,13 +117,13 @@ func (s *Server) handleAuth(w http.ResponseWriter, req *http.Request, _params ht
 func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _params httprouter.Params) {
 	sess, err := s.sessionStore.GetSession(req)
 	if err != nil {
-		logger.Log.Debug("Could not get session", zap.Error(err))
+		logger.Log.Debug("Could not get session", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	unique, err := s.database.GetState(req.Context(), req.URL.Query().Get("state"))
 	if err != nil {
-		logger.Log.Debug("Could not get state", zap.Error(err), zap.String("state", req.URL.Query().Get("state")))
+		logger.Log.Debug("Could not get state", slog.Any("error", err), slog.String("state", req.URL.Query().Get("state")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -139,7 +139,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	}
 	token, err := s.oauth2Config.Exchange(req.Context(), req.URL.Query().Get("code"))
 	if err != nil {
-		logger.Log.Info("Failed exchange token", zap.Error(err))
+		logger.Log.Info("Failed exchange token", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -149,10 +149,10 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	logger.Log.Debug("raw_id_token", zap.String("token", rawIdToken))
+	logger.Log.Debug("raw_id_token", slog.String("token", rawIdToken))
 	idToken, err := rp.VerifyIDToken[*oidc.IDTokenClaims](req.Context(), rawIdToken, s.idTokenVerifier)
 	if err != nil {
-		logger.Log.Info("Not verified id token", zap.Error(err))
+		logger.Log.Info("Not verified id token", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -173,7 +173,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 
 	user, err := s.database.Get(idToken.Email)
 	if err != nil && !rootUser {
-		logger.Log.Info("Could not get email", zap.Error(err), zap.String("email", idToken.Email))
+		logger.Log.Info("Could not get email", slog.Any("error", err), slog.String("email", idToken.Email))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -184,7 +184,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	}
 	sess.SetId(idToken.Email)
 	if err := s.sessionStore.SetSession(w, sess); err != nil {
-		logger.Log.Info("Failed write session", zap.Error(err))
+		logger.Log.Info("Failed write session", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -192,12 +192,12 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 	if user != nil {
 		user.LastLogin = time.Now()
 		if err := s.database.Set(req.Context(), user); err != nil {
-			logger.Log.Warn("Failed update user", zap.Error(err), zap.String("id", user.Id))
+			logger.Log.Warn("Failed update user", slog.Any("error", err), slog.String("id", user.Id))
 		}
 	}
 
 	if redirectUrl != "" {
-		logger.Log.Debug("Redirect to", zap.String("url", redirectUrl))
+		logger.Log.Debug("Redirect to", slog.String("url", redirectUrl))
 		http.Redirect(w, req, redirectUrl, http.StatusFound)
 	} else {
 		io.WriteString(w, "success!")
