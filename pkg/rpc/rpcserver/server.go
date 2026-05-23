@@ -5,20 +5,19 @@ import (
 	"crypto"
 	"crypto/tls"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"strings"
 	"sync"
 
-	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
@@ -47,12 +46,12 @@ type Server struct {
 }
 
 func unaryAccessLogInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	logger.Log.Debug("Unary", zap.String("method", info.FullMethod))
+	logger.Log.Debug("Unary", slog.String("method", info.FullMethod))
 	return handler(ctx, req)
 }
 
 func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	logger.Log.Debug("Stream", zap.String("method", info.FullMethod))
+	logger.Log.Debug("Stream", slog.String("method", info.FullMethod))
 	return handler(srv, ss)
 }
 
@@ -71,13 +70,13 @@ func NewServer(
 			unaryAccessLogInterceptor,
 			auth.UnaryInterceptor,
 			r.UnaryServerInterceptor(),
-			logging.UnaryServerInterceptor(grpczap.InterceptorLogger(logger.Log)),
+			logging.UnaryServerInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
 		)),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			streamAccessLogInterceptor,
 			auth.StreamInterceptor,
 			r.StreamServerInterceptor(),
-			logging.StreamServerInterceptor(grpczap.InterceptorLogger(logger.Log)),
+			logging.StreamServerInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
 		)),
 	)
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
@@ -103,7 +102,7 @@ func NewServer(
 }
 
 func (s *Server) Start() error {
-	logger.Log.Info("Start RPC server", zap.String("listen", s.Config.RPCServer.Bind), zap.String("hostname", rpc.ServerHostname))
+	logger.Log.Info("Start RPC server", slog.String("listen", s.Config.RPCServer.Bind), slog.String("hostname", rpc.ServerHostname))
 	serverCert, privKey, err := s.ca.NewServerCertificate(rpc.ServerHostname)
 	if err != nil {
 		return err
@@ -152,9 +151,9 @@ func (s *Server) Start() error {
 		metricsServer.Protocols.SetHTTP2(true)
 		metricsServer.Protocols.SetUnencryptedHTTP2(true)
 
-		logger.Log.Info("Start RPC metrics and pprof server", zap.String("listen", s.Config.RPCServer.MetricsBind))
+		logger.Log.Info("Start RPC metrics and pprof server", slog.String("listen", s.Config.RPCServer.MetricsBind))
 		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Log.Error("Something occurred", zap.Error(err))
+			logger.Log.Error("Something occurred", slog.Any("error", err))
 		}
 	}()
 

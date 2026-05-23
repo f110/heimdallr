@@ -2,15 +2,14 @@ package rpcclient
 
 import (
 	"context"
-	"math/big"
-	"sync"
-	"time"
-
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"log/slog"
+	"math/big"
+	"sync"
+	"time"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/rpc"
@@ -97,7 +96,7 @@ func (w *RevokedCertificateWatcher) watch() error {
 				return nil
 			}
 
-			logger.Log.Debug("Recv", zap.Error(err))
+			logger.Log.Debug("Recv", slog.Any("error", err))
 			w.err = err
 			return err
 		}
@@ -108,7 +107,7 @@ func (w *RevokedCertificateWatcher) watch() error {
 
 		revoked, err := w.client.GetRevokedList(ctx, &rpc.RequestGetRevokedList{})
 		if err != nil {
-			logger.Log.Warn("Could not get revoked certs", zap.Error(err))
+			logger.Log.Warn("Could not get revoked certs", slog.Any("error", err))
 			continue
 		}
 
@@ -122,6 +121,6 @@ func (w *RevokedCertificateWatcher) watch() error {
 		w.mu.Lock()
 		w.items = c
 		w.mu.Unlock()
-		logger.Log.Debug("Renew revoked items", zap.Int("Len", len(w.items)))
+		logger.Log.Debug("Renew revoked items", slog.Int("Len", len(w.items)))
 	}
 }

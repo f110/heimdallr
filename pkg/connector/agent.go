@@ -6,13 +6,13 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -95,7 +95,7 @@ func (a *Agent) Serve() error {
 			dialId := binary.BigEndian.Uint32(buf[:4])
 			conn, err := net.Dial("tcp", a.backend)
 			if err != nil {
-				logger.Log.Error("Failed dial backend", zap.Error(err), zap.String("addr", a.backend))
+				logger.Log.Error("Failed dial backend", slog.Any("error", err), slog.String("addr", a.backend))
 				continue
 			}
 			streamId := atomic.AddUint32(&a.id, 1)

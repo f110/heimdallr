@@ -27,11 +27,16 @@ go_library(
 
 go_test(
     name = "release_test",
-    srcs = ["github_test.go"],
+    srcs = [
+        "github_test.go",
+        "webhook_cert_test.go",
+    ],
     embed = [":release"],
     deps = [
+        "//pkg/cert",
         "@com_github_masterminds_semver_v3//:semver",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
+        "@in_gopkg_yaml_v2//:yaml_v2",
     ],
 )

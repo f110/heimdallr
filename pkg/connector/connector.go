@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"io"
+	"log/slog"
 	"math"
 	"math/big"
 	"net"
@@ -15,7 +16,6 @@ import (
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -227,7 +227,7 @@ func (c *ConnThroughRelay) readUpstream() {
 	for {
 		n, err := io.ReadFull(c.conn, header)
 		if err != nil {
-			logger.Log.Debug("Failure read header", zap.Error(err))
+			logger.Log.Debug("Failure read header", slog.Any("error", err))
 			return
 		}
 		if n != 5 {
@@ -242,11 +242,11 @@ func (c *ConnThroughRelay) readUpstream() {
 
 		n, err = io.ReadAtLeast(c.conn, buf, int(bodySize))
 		if err != nil {
-			logger.Log.Debug("Failure read body", zap.Error(err))
+			logger.Log.Debug("Failure read body", slog.Any("error", err))
 			return
 		}
 		if n != int(bodySize) {
-			logger.Log.Debug("Could not read all body", zap.Int("readed", n), zap.Uint32("body_size", bodySize))
+			logger.Log.Debug("Could not read all body", slog.Int("readed", n), slog.Int("body_size", int(bodySize)))
 			return
 		}
 		switch header[0] {
@@ -268,7 +268,7 @@ func (c *ConnThroughRelay) readUpstream() {
 			_ = c.conn.SetReadDeadline(time.Now().Add(heartbeatDuration * 2))
 			logger.Log.Debug("Got heartbeat of relay")
 		default:
-			logger.Log.Debug("unknown type", zap.Uint8("opcode", header[0]))
+			logger.Log.Debug("unknown type", slog.Int("opcode", int(header[0])))
 		}
 	}
 }
@@ -320,14 +320,14 @@ func NewServer(conf *configv2.Config, rpcConn *grpc.ClientConn, locator database
 }
 
 func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
-	logger.Log.Debug("Accept connector", zap.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
+	logger.Log.Debug("Accept connector", slog.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
 	b, ok := s.Config.AccessProxy.GetBackend(conn.ConnectionState().PeerCertificates[0].Subject.CommonName)
 	if !ok {
-		logger.Log.Info("Unknown host", zap.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
+		logger.Log.Info("Unknown host", slog.String("name", conn.ConnectionState().PeerCertificates[0].Subject.CommonName))
 		return
 	}
 	if !b.Agent() {
-		logger.Log.Info("Not agent host", zap.String("name", b.Name))
+		logger.Log.Info("Not agent host", slog.String("name", b.Name))
 		return
 	}
 	name := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
@@ -344,7 +344,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 
 	relay, err := NewRelay(s.client, name, s, conn)
 	if err != nil {
-		logger.Log.Warn("Can not start relay", zap.Error(err))
+		logger.Log.Warn("Can not start relay", slog.Any("error", err))
 		return
 	}
 	go func() {
@@ -356,7 +356,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 
 	err = s.Serve(conn)
 	if err != nil && err != io.EOF {
-		logger.Log.Info("Something occurred", zap.Error(err))
+		logger.Log.Info("Something occurred", slog.Any("error", err))
 	}
 }
 

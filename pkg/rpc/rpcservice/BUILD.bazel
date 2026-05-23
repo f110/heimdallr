@@ -23,6 +23,5 @@ go_library(
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_google_grpc//health/grpc_health_v1",
         "@org_golang_google_protobuf//types/known/timestamppb",
-        "@org_uber_go_zap//:zap",
     ],
 )

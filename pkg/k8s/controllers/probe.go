@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"sync"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -30,7 +30,7 @@ func NewProbe(addr string) *Probe {
 }
 
 func (p *Probe) Start() error {
-	logger.Log.Info("Start probe server", zap.String("addr", p.s.Addr))
+	logger.Log.Info("Start probe server", slog.String("addr", p.s.Addr))
 	if err := p.s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return xerrors.WithStack(err)
 	}

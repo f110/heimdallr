@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -36,7 +36,7 @@ func NewInternal(conf *configv2.Config, child ...ChildServer) *Internal {
 }
 
 func (s *Internal) Start() error {
-	logger.Log.Info("Start Internal server", zap.String("listen", s.Config.AccessProxy.HTTP.BindInternalApi))
+	logger.Log.Info("Start Internal server", slog.String("listen", s.Config.AccessProxy.HTTP.BindInternalApi))
 	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return xerrors.WithStack(s.server.ListenAndServe())
 	}

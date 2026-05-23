@@ -7,6 +7,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -333,7 +333,7 @@ func PortForward(ctx context.Context, cfg *rest.Config, coreClient kubernetes.In
 		if err != nil {
 			switch v := err.(type) {
 			case *apierrors.StatusError:
-				logger.Log.Debug("Status error", zap.Any("err", v))
+				logger.Log.Debug("Status error", slog.Any("err", v))
 			}
 		}
 	}()

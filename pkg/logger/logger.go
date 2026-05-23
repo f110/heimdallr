@@ -2,43 +2,30 @@ package logger
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/spf13/pflag"
-	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 )
 
 var (
-	Log       *zap.Logger
-	LogConfig *zap.Config
-	Audit     *zap.Logger
-	flagConf  configv2.Logger
+	Log      *slog.Logger
+	Audit    *slog.Logger
+	flagConf configv2.Logger
 )
 var initOnce = &sync.Once{}
 
 func Init(conf *configv2.Logger) error {
-	var err error
 	initOnce.Do(func() {
-		if e := initLogger(conf); e != nil {
-			err = e
-			return
-		}
-
-		if e := initAuditLogger(conf); e != nil {
-			err = e
-			return
-		}
+		Log = newLogger(conf)
+		Audit = newLogger(conf).With(slog.String("tag", "audit"))
 	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -46,22 +33,7 @@ func Init(conf *configv2.Logger) error {
 // The logger configuration will bring from command line arguments.
 // Thus, you must define the flag by Flags and parse arguments before calling this.
 func InitByFlags() error {
-	var err error
-	initOnce.Do(func() {
-		if e := initLogger(&flagConf); e != nil {
-			err = e
-			return
-		}
-		if e := initAuditLogger(&flagConf); e != nil {
-			err = e
-			return
-		}
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return Init(&flagConf)
 }
 
 type flagSet interface {
@@ -79,67 +51,47 @@ func Flags[FS flagSet](v FS) {
 	}
 }
 
-func WithRequestId(ctx context.Context) zap.Field {
+func WithRequestId(ctx context.Context) slog.Attr {
 	v := ctx.Value("request_id")
 	switch value := v.(type) {
 	case string:
-		return zap.String("request_id", value)
+		return slog.String("request_id", value)
 	default:
-		return zap.Skip()
+		return slog.Attr{}
 	}
 }
 
-// TypeOf constructs a field of zap. value will be convert to type name.
-func TypeOf(key string, val interface{}) zap.Field {
-	return zap.String(key, reflect.TypeOf(val).String())
+// TypeOf constructs an attribute. value will be converted to type name.
+func TypeOf(key string, val interface{}) slog.Attr {
+	return slog.String(key, reflect.TypeOf(val).String())
 }
 
-func initLogger(conf *configv2.Logger) error {
-	encoderConf := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
+func newLogger(conf *configv2.Logger) *slog.Logger {
+	opts := &slog.HandlerOptions{Level: parseLevel(conf.Level)}
 
-	zapConf := conf.ZapConfig(encoderConf)
-	l, err := zapConf.Build()
-	if err != nil {
-		return xerrors.WithStack(err)
+	encoding := strings.ToLower(conf.Encoding)
+	if encoding == "" {
+		encoding = "json"
 	}
-
-	Log = l
-	LogConfig = zapConf
-	return nil
+	var handler slog.Handler
+	switch encoding {
+	case "console":
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	default:
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	}
+	return slog.New(handler)
 }
 
-func initAuditLogger(conf *configv2.Logger) error {
-	encoderConf := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "tag",
-		CallerKey:      "",
-		MessageKey:     "msg",
-		StacktraceKey:  "",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+func parseLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error", "panic", "fatal":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
-	zapConf := conf.ZapConfig(encoderConf)
-	l, err := zapConf.Build()
-	if err != nil {
-		return xerrors.WithStack(err)
-	}
-
-	Audit = l.Named("audit")
-	return nil
 }

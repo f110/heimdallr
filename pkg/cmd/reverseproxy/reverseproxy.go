@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/providers/zap/v2"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
@@ -28,7 +28,6 @@ import (
 	"go.etcd.io/etcd/server/v3/embed"
 	"go.f110.dev/protoc-ddl/probe"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
@@ -282,7 +281,7 @@ func (m *mainProcess) embedMiddlewareShutdown() (fsm.State, error) {
 	}
 	if m.vault != nil {
 		if err := m.vault.Process.Signal(syscall.SIGTERM); err != nil {
-			logger.Log.Warn("Failed send signal", zap.Error(err))
+			logger.Log.Warn("Failed send signal", slog.Any("error", err))
 			return stateWaitMiddlewareShutdown, nil
 		}
 	}
@@ -381,7 +380,7 @@ func (m *mainProcess) startEmbedEtcd() error {
 
 	select {
 	case <-e.Server.ReadyNotify():
-		logger.Log.Info("Start embed etcd", zap.String("url", c.ListenClientUrls[0].String()))
+		logger.Log.Info("Start embed etcd", slog.String("url", c.ListenClientUrls[0].String()))
 	case <-time.After(10 * time.Second):
 		logger.Log.Error("Failed start embed etcd")
 		return xerrors.NewWithStack("failed start embed etcd")
@@ -408,7 +407,7 @@ func (m *mainProcess) startVault() error {
 		return xerrors.WithStack(err)
 	}
 	m.vault = vaultCmd
-	logger.Log.Debug("Start Vault", zap.Int("pid", vaultCmd.Process.Pid), zap.Int("port", vaultPort))
+	logger.Log.Debug("Start Vault", slog.Int("pid", vaultCmd.Process.Pid), slog.Int("port", vaultPort))
 
 	rootToken := ""
 	scan := bufio.NewScanner(r)
@@ -419,7 +418,7 @@ func (m *mainProcess) startVault() error {
 			break
 		}
 	}
-	logger.Log.Debug("Vault root token", zap.String("token", rootToken))
+	logger.Log.Debug("Vault root token", slog.String("token", rootToken))
 
 	m.config.CertificateAuthority.Vault.Addr = fmt.Sprintf("http://127.0.0.1:%d", vaultPort)
 	m.config.CertificateAuthority.Vault.Token = rootToken
@@ -431,7 +430,7 @@ func (m *mainProcess) startVault() error {
 	if err := vaultClient.EnablePKI(context.TODO()); err != nil {
 		return err
 	}
-	logger.Log.Debug("Enable PKI Engine", zap.String("path", "pki/"))
+	logger.Log.Debug("Enable PKI Engine", slog.String("path", "pki/"))
 
 	var caCert *x509.Certificate
 	var privateKey *rsa.PrivateKey
@@ -621,11 +620,11 @@ func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			retry.StreamClientInterceptor(),
-			logging.StreamClientInterceptor(grpczap.InterceptorLogger(logger.Log)),
+			logging.StreamClientInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			retry.UnaryClientInterceptor(),
-			logging.UnaryClientInterceptor(grpczap.InterceptorLogger(logger.Log)),
+			logging.UnaryClientInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
 		)),
 	)
 	if err != nil {

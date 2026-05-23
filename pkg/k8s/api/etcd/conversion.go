@@ -1,10 +1,10 @@
 package etcd
 
 import (
+	"log/slog"
 	"reflect"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -35,14 +35,14 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &etcdv1alpha1.EtcdCluster{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -156,14 +156,14 @@ func V1Alpha2EtcdClusterToV1Alpha1EtcdCluster(in runtime.Object) (runtime.Object
 	// in is UnstructuredJSONScheme
 	un, ok := in.(runtime.Unstructured)
 	if !ok {
-		logger.Log.Error("in is not Unstructured", zap.String("type_of", reflect.TypeOf(in).String()))
+		logger.Log.Error("in is not Unstructured", slog.String("type_of", reflect.TypeOf(in).String()))
 		return nil, xerrors.NewWithStack("unexpected input data type")
 	}
 
 	before := &etcdv1alpha2.EtcdCluster{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.UnstructuredContent(), before)
 	if err != nil {
-		logger.Log.Warn("Failed convert to the object from unstructured", zap.Error(err))
+		logger.Log.Warn("Failed convert to the object from unstructured", slog.Any("error", err))
 		return nil, err
 	}
 

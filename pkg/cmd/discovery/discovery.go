@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/spf13/pflag"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -108,10 +108,10 @@ func (m *mainProcess) init() (fsm.State, error) {
 		http.HandleFunc("/liveness", func(w http.ResponseWriter, req *http.Request) {})
 		http.HandleFunc("/readiness", func(w http.ResponseWriter, req *http.Request) {})
 
-		logger.Log.Info("Listen pprof and probe", zap.Int("port", 8080))
+		logger.Log.Info("Listen pprof and probe", slog.Int("port", 8080))
 		err := http.ListenAndServe(":8080", nil)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Log.Warn("Failed listen", zap.Error(err))
+			logger.Log.Warn("Failed listen", slog.Any("error", err))
 		}
 	}()
 
@@ -121,13 +121,13 @@ func (m *mainProcess) init() (fsm.State, error) {
 func (m *mainProcess) start() (fsm.State, error) {
 	m.sharedInformerFactory.Start(context.Background().Done())
 	if _, err := os.Stat(m.readyFile); !os.IsNotExist(err) {
-		logger.Log.Info("Delete readiness file before start DNS server", zap.String("path", m.readyFile))
+		logger.Log.Info("Delete readiness file before start DNS server", slog.String("path", m.readyFile))
 		if err := os.Remove(m.readyFile); err != nil {
 			return fsm.UnknownState, xerrors.WithStack(err)
 		}
 	}
 
-	logger.Log.Info("Start DNS server", zap.Int("port", m.port))
+	logger.Log.Info("Start DNS server", slog.Int("port", m.port))
 	go m.dnsServer.Start()
 
 	logger.Log.Debug("Waiting for booting")
@@ -146,7 +146,7 @@ Wait:
 			addrs, err := r.LookupIPAddr(ctx, "ready.local.")
 			if err != nil {
 				cancel()
-				logger.Log.Debug("Occurred error", zap.Error(err))
+				logger.Log.Debug("Occurred error", slog.Any("error", err))
 				continue
 			}
 			if len(addrs) == 0 {
@@ -159,13 +159,13 @@ Wait:
 				break Wait
 			}
 			cancel()
-			logger.Log.Debug("Unexpected response", zap.Any("addrs", addrs))
+			logger.Log.Debug("Unexpected response", slog.Any("addrs", addrs))
 		}
 	}
 	t.Stop()
 
 	if m.readyFile != "" {
-		logger.Log.Debug("Create file", zap.String("path", m.readyFile))
+		logger.Log.Debug("Create file", slog.String("path", m.readyFile))
 		_, err := os.Create(m.readyFile)
 		if err != nil {
 			return fsm.UnknownState, xerrors.WithStack(err)
@@ -193,17 +193,17 @@ Wait:
 			}
 			buf, err := os.ReadFile(m.etcdPidFile)
 			if err != nil {
-				logger.Log.Debug("Cannot read pid file", zap.Error(err))
+				logger.Log.Debug("Cannot read pid file", slog.Any("error", err))
 				continue
 			}
 			etcdPid, err := strconv.Atoi(string(bytes.TrimSpace(buf)))
 			if err != nil {
-				logger.Log.Debug("invalid pid", zap.Error(err))
+				logger.Log.Debug("invalid pid", slog.Any("error", err))
 				continue
 			}
 			etcdProcess, err := os.FindProcess(etcdPid)
 			if err != nil {
-				logger.Log.Debug("Could not find pid", zap.Int("pid", etcdPid), zap.Error(err))
+				logger.Log.Debug("Could not find pid", slog.Int("pid", etcdPid), slog.Any("error", err))
 				continue
 			}
 			process = etcdProcess
@@ -218,7 +218,7 @@ Wait:
 			select {
 			case <-t.C:
 				if err := process.Signal(syscall.Signal(0)); err != nil {
-					logger.Log.Info("Detect process death", zap.Error(err))
+					logger.Log.Info("Detect process death", slog.Any("error", err))
 					m.Shutdown()
 					return
 				}

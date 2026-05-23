@@ -1,12 +1,12 @@
 package logger
 
 import (
-	"github.com/go-logr/zapr"
+	"log/slog"
+
 	"k8s.io/klog/v2"
 )
 
 func OverrideKlog() error {
-	klog.SetLogger(zapr.NewLogger(Log.Named("klog")))
-
+	klog.SetSlogLogger(Log.With(slog.String("logger", "klog")))
 	return nil
 }

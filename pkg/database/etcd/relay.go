@@ -3,12 +3,12 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -48,7 +48,7 @@ func (l *RelayLocator) Get(name string) (*database.Relay, bool) {
 	for _, v := range all {
 		r := &database.Relay{}
 		if err := yaml.Unmarshal(v.Value, r); err != nil {
-			logger.Log.Warn("Ignore relay record due to unmarshal error", zap.Error(err), zap.String("key", string(v.Key)))
+			logger.Log.Warn("Ignore relay record due to unmarshal error", slog.Any("error", err), slog.String("key", string(v.Key)))
 			continue
 		}
 		r.Version = v.Version
@@ -142,7 +142,7 @@ func (l *RelayLocator) ListAllConnectedAgents() []*database.Relay {
 	for _, v := range all {
 		r := &database.Relay{}
 		if err := yaml.Unmarshal(v.Value, r); err != nil {
-			logger.Log.Warn("Ignore relay record due to unmarshal error", zap.Error(err), zap.String("key", string(v.Key)))
+			logger.Log.Warn("Ignore relay record due to unmarshal error", slog.Any("error", err), slog.String("key", string(v.Key)))
 			continue
 		}
 		r.Version = v.Version

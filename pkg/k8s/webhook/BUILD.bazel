@@ -18,6 +18,5 @@ go_library(
         "@io_k8s_apimachinery//pkg/runtime/schema",
         "@io_k8s_apimachinery//pkg/runtime/serializer/json",
         "@io_k8s_apimachinery//pkg/types",
-        "@org_uber_go_zap//:zap",
     ],
 )

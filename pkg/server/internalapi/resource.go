@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -34,11 +34,11 @@ func (r *ResourceServer) Route(mux *httprouter.Router) {
 func (r *ResourceServer) PublicKey(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	b, err := x509.MarshalPKIXPublicKey(&r.Config.AccessProxy.Credential.SigningPublicKey)
 	if err != nil {
-		logger.Log.Error("Failed marshal public key", zap.Error(err))
+		logger.Log.Error("Failed marshal public key", slog.Any("error", err))
 	}
 	buf := new(bytes.Buffer)
 	if err := pem.Encode(buf, &pem.Block{Type: "PUBLIC KEY", Bytes: b}); err != nil {
-		logger.Log.Error("Failed pem encode", zap.Error(err))
+		logger.Log.Error("Failed pem encode", slog.Any("error", err))
 	}
 
 	w.Header().Set("Content-Type", "application/x-pem-file")

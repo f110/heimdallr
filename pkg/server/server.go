@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 
 	"go.f110.dev/heimdallr/pkg/authproxy"
@@ -117,14 +117,14 @@ func (s *Server) Start() error {
 	if err := s.clusterDatabase.Join(context.Background()); err != nil {
 		return err
 	}
-	logger.Log.Info("Start Server", zap.String("listen", s.Config.AccessProxy.HTTP.Bind))
+	logger.Log.Info("Start Server", slog.String("listen", s.Config.AccessProxy.HTTP.Bind))
 
 	if s.Config.AccessProxy.HTTP.BindHttp != "" {
 		l, err := net.Listen("tcp", s.Config.AccessProxy.HTTP.BindHttp)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
-		logger.Log.Info("Start HTTP Server", zap.String("listen", s.Config.AccessProxy.HTTP.BindHttp))
+		logger.Log.Info("Start HTTP Server", slog.String("listen", s.Config.AccessProxy.HTTP.BindHttp))
 		go s.server.Serve(l)
 	}
 	if err := s.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -3,8 +3,7 @@ package controllerbase
 import (
 	"context"
 	"errors"
-
-	"go.uber.org/zap"
+	"log/slog"
 )
 
 func WrapRetryError(err error) error {
@@ -32,16 +31,16 @@ func ShouldRetry(err error) bool {
 	return errors.Is(err, &RetryError{})
 }
 
-func WithReconciliationId(ctx context.Context) zap.Field {
+func WithReconciliationId(ctx context.Context) slog.Attr {
 	if ctx == nil {
-		return zap.Skip()
+		return slog.Attr{}
 	}
 
 	v := ctx.Value(ReconciliationId{})
 	switch value := v.(type) {
 	case string:
-		return zap.String("reconcilation_id", value)
+		return slog.String("reconcilation_id", value)
 	default:
-		return zap.Skip()
+		return slog.Attr{}
 	}
 }

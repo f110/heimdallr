@@ -7,12 +7,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
 
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -93,7 +93,7 @@ func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.C
 }
 
 func (r *Relay) Serve() error {
-	logger.Log.Debug("Start relay", zap.String("for", r.name), zap.String("addr", r.Addr.String()))
+	logger.Log.Debug("Start relay", slog.String("for", r.name), slog.String("addr", r.Addr.String()))
 	for {
 		conn, err := r.listener.Accept()
 		if err != nil {
@@ -101,13 +101,13 @@ func (r *Relay) Serve() error {
 		}
 		go r.acceptConn(conn)
 	}
-	logger.Log.Debug("Close relay listener", zap.String("name", r.name))
+	logger.Log.Debug("Close relay listener", slog.String("name", r.name))
 	return nil
 }
 
 func (r *Relay) Close() {
 	if err := r.server.Locator.Delete(context.Background(), r.name, r.address); err != nil {
-		logger.Log.Info("Failure delete relay record", zap.Error(err))
+		logger.Log.Info("Failure delete relay record", slog.Any("error", err))
 	}
 	r.listener.Close()
 	for _, c := range r.accepted {
@@ -165,7 +165,7 @@ func (r *Relay) acceptConn(childConn net.Conn) {
 			}
 			copy(buf[9:9+len(addr.IP)], addr.IP)
 			binary.BigEndian.PutUint32(buf[9+len(addr.IP):9+len(addr.IP)+4], uint32(addr.Port))
-			logger.Log.Debug("dial success", zap.Int32("Dial id", int32(dialId)), zap.Uint32("stream id", streamId))
+			logger.Log.Debug("dial success", slog.Int("Dial id", int(int32(dialId))), slog.Int("stream id", int(streamId)))
 			f := NewFrame()
 			f.Write(b)
 			f.EncodeTo(OpcodeDialSuccess, childConn)

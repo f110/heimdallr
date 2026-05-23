@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -30,7 +31,6 @@ import (
 	"go.f110.dev/kubeproto/go/apis/rbacv1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
@@ -115,11 +115,11 @@ type EtcdCluster struct {
 	podsOnce              sync.Once
 	expectedPods          []*EtcdMember
 
-	log     *zap.Logger
+	log     *slog.Logger
 	mockOpt *MockOption
 }
 
-func NewEtcdCluster(c *etcdv1alpha2.EtcdCluster, clusterDomain string, log *zap.Logger, mockOpt *MockOption) *EtcdCluster {
+func NewEtcdCluster(c *etcdv1alpha2.EtcdCluster, clusterDomain string, log *slog.Logger, mockOpt *MockOption) *EtcdCluster {
 	return &EtcdCluster{
 		EtcdCluster:   c.DeepCopy(),
 		ClusterDomain: clusterDomain,
@@ -138,12 +138,12 @@ func (c *EtcdCluster) Init(secretLister *k8sclient.CoreV1SecretLister) {
 	if err == nil {
 		tlsKeyPair, err := tls.X509KeyPair(certS.Data[serverCertSecretCertName], certS.Data[serverCertSecretPrivateKeyName])
 		if err != nil {
-			c.log.Warn("Failed decode a server certificate", zap.String("name", certS.Name))
+			c.log.Warn("Failed decode a server certificate", slog.String("name", certS.Name))
 		}
 
 		serverCert, err := NewCertificate(certS, tlsKeyPair)
 		if err != nil {
-			c.log.Warn("Failed encode a private key", zap.Error(err))
+			c.log.Warn("Failed encode a private key", slog.Any("error", err))
 		}
 		c.serverCertSecret = &serverCert
 	}
@@ -176,12 +176,12 @@ func (c *EtcdCluster) SetCASecret(ca *corev1.Secret) {
 func (c *EtcdCluster) SetServerCertSecret(cert *corev1.Secret) {
 	tlsKeyPair, err := tls.X509KeyPair(cert.Data[serverCertSecretCertName], cert.Data[serverCertSecretPrivateKeyName])
 	if err != nil {
-		c.log.Warn("Failed decode a server certificate", zap.String("name", cert.Name))
+		c.log.Warn("Failed decode a server certificate", slog.String("name", cert.Name))
 	}
 
 	serverCert, err := NewCertificate(cert, tlsKeyPair)
 	if err != nil {
-		c.log.Warn("Failed encode a private key", zap.Error(err))
+		c.log.Warn("Failed encode a private key", slog.Any("error", err))
 	}
 	c.serverCertSecret = &serverCert
 }
@@ -580,24 +580,24 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 	}
 
 	if pod.CreationTimestamp.IsZero() {
-		c.log.Debug("Should be updated because not created yet", zap.String("pod.name", pod.Name))
+		c.log.Debug("Should be updated because not created yet", slog.String("pod.name", pod.Name))
 		return true
 	}
 
 	etcdVersion := pod.Labels[etcd.LabelNameEtcdVersion]
 	if (c.Spec.Version != "" && etcdVersion != c.Spec.Version) || (c.Spec.Version == "" && etcdVersion != defaultEtcdVersion) {
-		c.log.Debug("Older version", zap.String("pod.name", pod.Name), zap.String("version", etcdVersion))
+		c.log.Debug("Older version", slog.String("pod.name", pod.Name), slog.String("version", etcdVersion))
 		return true
 	}
 
 	if v, ok := pod.Annotations[etcd.AnnotationKeyServerCertificate]; ok {
 		if c.ShouldUpdateServerCertificate([]byte(v)) {
-			c.log.Debug("Certificate is outdated", zap.String("pod.name", pod.Name))
+			c.log.Debug("Certificate is outdated", slog.String("pod.name", pod.Name))
 			return true
 		}
 	} else if !ok {
 		// If pod doesn't have AnnotationKeyServerCertificate, pod should be updated.
-		c.log.Debug("Don't have AnnotationKeyServerCertificate", zap.String("pod.name", pod.Name))
+		c.log.Debug("Don't have AnnotationKeyServerCertificate", slog.String("pod.name", pod.Name))
 		return true
 	}
 	if c.Spec.Template != nil && c.Spec.Template.Metadata != nil {
@@ -668,7 +668,7 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 	}
 
 	if time.Now().Add(90 * 24 * time.Hour).After(podCert.NotAfter) {
-		c.log.Debug("The expiration date of the certificate is approaching", zap.Time("not_after", podCert.NotAfter))
+		c.log.Debug("The expiration date of the certificate is approaching", slog.Time("not_after", podCert.NotAfter))
 		return true
 	}
 
@@ -680,7 +680,7 @@ func (c *EtcdCluster) ShouldUpdateServerCertificate(certPem []byte) bool {
 
 	for i, v := range podCert.DNSNames {
 		if expectDNSName[i] != v {
-			c.log.Debug("Unexpected DNSName", zap.String("expect", expectDNSName[i]), zap.String("got", v))
+			c.log.Debug("Unexpected DNSName", slog.String("expect", expectDNSName[i]), slog.String("got", v))
 			return true
 		}
 	}
@@ -697,7 +697,7 @@ func (c *EtcdCluster) ShouldUpdateClientCertificate(certPem []byte) bool {
 	}
 
 	if time.Now().Add(90 * 24 * time.Hour).After(clientCert.NotAfter) {
-		c.log.Debug("The expiration date of the certificate is approaching", zap.Time("not_after", clientCert.NotAfter))
+		c.log.Debug("The expiration date of the certificate is approaching", slog.Time("not_after", clientCert.NotAfter))
 		return true
 	}
 
@@ -779,7 +779,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 		if c.Status.LastReadyTransitionTime.IsZero() || !c.Status.CreatingCompleted {
 			return etcdv1alpha2.EtcdClusterPhaseCreating
 		} else {
-			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", zap.Int("ownedPods.len", len(c.ownedPods)))
+			c.log.Debug("The number of pods is not enough but LastReadyTransitionTime is not zero", slog.Int("ownedPods.len", len(c.ownedPods)))
 			return etcdv1alpha2.EtcdClusterPhaseDegrading
 		}
 	}
@@ -790,7 +790,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 
 	for _, pod := range c.ownedPods {
 		if c.NeedRepair(pod) {
-			c.log.Debug("Need repair pod", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
+			c.log.Debug("Need repair pod", slog.String("pod.name", pod.Name), slog.String("pod.Status.Phase", string(pod.Status.Phase)))
 			return etcdv1alpha2.EtcdClusterPhaseDegrading
 		}
 
@@ -798,7 +798,7 @@ func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 			if c.Status.LastReadyTransitionTime.IsZero() {
 				return etcdv1alpha2.EtcdClusterPhaseCreating
 			} else {
-				c.log.Debug("Pod is not ready", zap.String("pod.name", pod.Name), zap.String("pod.Status.Phase", string(pod.Status.Phase)))
+				c.log.Debug("Pod is not ready", slog.String("pod.name", pod.Name), slog.String("pod.Status.Phase", string(pod.Status.Phase)))
 				if c.Status.CreatingCompleted {
 					return etcdv1alpha2.EtcdClusterPhaseDegrading
 				} else {
@@ -1287,7 +1287,7 @@ func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
 		AdvertisePeerUrl: fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
 	})
 	if err != nil {
-		logger.Log.Error("Failed render script", zap.Error(err))
+		logger.Log.Error("Failed render script", slog.Any("error", err))
 		return
 	}
 	etcdVersion := c.Spec.Version

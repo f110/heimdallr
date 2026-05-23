@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,7 +19,6 @@ import (
 	minioclient "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	goyaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -564,7 +564,7 @@ func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interf
 	go func() {
 		err := pf.ForwardPorts()
 		if err != nil {
-			logger.Log.Info("ForwardPorts returns an error", zap.Error(err))
+			logger.Log.Info("ForwardPorts returns an error", slog.Any("error", err))
 		}
 	}()
 

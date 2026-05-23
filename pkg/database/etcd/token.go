@@ -5,11 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
-	"go.uber.org/zap"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/database"
@@ -85,7 +85,7 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 		return nil, xerrors.WithStack(err)
 	}
 	if !c.Verify(codeVerifier) {
-		logger.Log.Debug("code verifier", zap.String("code_verifier", codeVerifier))
+		logger.Log.Debug("code verifier", slog.String("code_verifier", codeVerifier))
 		return nil, xerrors.New("etcd: code verify failure")
 	}
 
