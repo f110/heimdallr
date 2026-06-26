@@ -291,6 +291,11 @@ spec:
                              operator is "In", and the values array contains only "value". The requirements are ANDed.
                           type: object
                         name:
+                          description: |-
+                            name selects the Service by name and takes precedence over the label selector. The selector must
+                             resolve to exactly one Service: if the label selector matches more than one Service (or none), the
+                             route that uses this selector is silently dropped from the proxy configuration. Set name, or use
+                             labels unique to the target Service, to keep the match to a single Service.
                           type: string
                         namespace:
                           type: string
@@ -424,6 +429,11 @@ spec:
                            operator is "In", and the values array contains only "value". The requirements are ANDed.
                         type: object
                       name:
+                        description: |-
+                          name selects the Service by name and takes precedence over the label selector. The selector must
+                           resolve to exactly one Service: if the label selector matches more than one Service (or none), the
+                           route that uses this selector is silently dropped from the proxy configuration. Set name, or use
+                           labels unique to the target Service, to keep the match to a single Service.
                         type: string
                       namespace:
                         type: string

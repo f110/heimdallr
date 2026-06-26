@@ -208,10 +208,15 @@ type ProxyList struct {
 	Items []Proxy `json:"items"`
 }
 
+// ServiceSelector selects a single Service as the upstream.
+// The selector must resolve to exactly one Service. When the label selector matches
+// more than one Service (or none), the resolution fails and the route that uses this
+// selector is silently dropped from the proxy configuration. Use Name, or labels that
+// are unique to the target Service, to keep the match to a single Service.
 type ServiceSelector struct {
 	metav1.LabelSelector `json:",inline"`
 	Namespace            string `json:"namespace,omitempty"`
-	Name                 string `json:"name,omitempty"`
+	Name                 string `json:"name,omitempty"` // If set, selects the Service by name and takes precedence over the label selector.
 	Port                 string `json:"port,omitempty"`
 	Scheme               string `json:"scheme,omitempty"`
 }

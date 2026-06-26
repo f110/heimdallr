@@ -205,6 +205,9 @@ message BackendSpec {
 
 message BackendHTTPSpec {
   string                   path             = 1;
+  // service_selector must resolve to exactly one Service. If the label selector matches more than
+  // one Service (or none), this route is silently dropped from the proxy configuration. Set name,
+  // or use labels unique to the target Service, to keep the match to a single Service.
   optional ServiceSelector service_selector = 2;
   optional string          upstream         = 3;
   optional bool            insecure         = 4;
@@ -213,14 +216,26 @@ message BackendHTTPSpec {
 
 message BackendSocketSpec {
   optional string          upstream                              = 1;
+  // service_selector must resolve to exactly one Service. If the label selector matches more than
+  // one Service (or none), this socket backend is silently dropped from the proxy configuration. Set
+  // name, or use labels unique to the target Service, to keep the match to a single Service.
   optional ServiceSelector service_selector                      = 2;
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration timeout = 3;
   optional bool                                          agent   = 4;
 }
 
+// ServiceSelector selects a single Service as the upstream.
+// The selector must resolve to exactly one Service. When the label selector matches more
+// than one Service (or none), the resolution fails and the route that uses this selector is
+// silently dropped from the proxy configuration. Set name, or use labels that are unique to
+// the target Service, to keep the match to a single Service.
 message ServiceSelector {
   k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector label_selector   = 1 [(dev.f110.kubeproto.field) = { inline: true }];
   optional                                           string namespace = 2;
+  // name selects the Service by name and takes precedence over the label selector. The selector must
+  // resolve to exactly one Service: if the label selector matches more than one Service (or none), the
+  // route that uses this selector is silently dropped from the proxy configuration. Set name, or use
+  // labels unique to the target Service, to keep the match to a single Service.
   optional string                                    name             = 3;
   optional string                                    port             = 4;
   optional string                                    scheme           = 5;

@@ -729,7 +729,10 @@ func (in *Permission) DeepCopy() *Permission {
 }
 
 type BackendHTTPSpec struct {
-	Path            string           `json:"path"`
+	Path string `json:"path"`
+	// service_selector must resolve to exactly one Service. If the label selector matches more than
+	// one Service (or none), this route is silently dropped from the proxy configuration. Set name,
+	// or use labels unique to the target Service, to keep the match to a single Service.
 	ServiceSelector *ServiceSelector `json:"serviceSelector,omitempty"`
 	Upstream        string           `json:"upstream,omitempty"`
 	Insecure        bool             `json:"insecure,omitempty"`
@@ -755,7 +758,10 @@ func (in *BackendHTTPSpec) DeepCopy() *BackendHTTPSpec {
 }
 
 type BackendSocketSpec struct {
-	Upstream        string           `json:"upstream,omitempty"`
+	Upstream string `json:"upstream,omitempty"`
+	// service_selector must resolve to exactly one Service. If the label selector matches more than
+	// one Service (or none), this socket backend is silently dropped from the proxy configuration. Set
+	// name, or use labels unique to the target Service, to keep the match to a single Service.
 	ServiceSelector *ServiceSelector `json:"serviceSelector,omitempty"`
 	Timeout         *metav1.Duration `json:"timeout,omitempty"`
 	Agent           bool             `json:"agent,omitempty"`
@@ -1043,9 +1049,10 @@ func (in *Location) DeepCopy() *Location {
 type ServiceSelector struct {
 	metav1.LabelSelector `json:",inline"`
 	Namespace            string `json:"namespace,omitempty"`
-	Name                 string `json:"name,omitempty"`
-	Port                 string `json:"port,omitempty"`
-	Scheme               string `json:"scheme,omitempty"`
+	// name selects the Service by name and takes precedence over the label selector.
+	Name   string `json:"name,omitempty"`
+	Port   string `json:"port,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
 }
 
 func (in *ServiceSelector) DeepCopyInto(out *ServiceSelector) {
@@ -1349,7 +1356,7 @@ func (in *AWSCredentialSelector) DeepCopy() *AWSCredentialSelector {
 type GCPCredentialSelector struct {
 	Name                  string `json:"name,omitempty"`
 	Namespace             string `json:"namespace,omitempty"`
-	ServiceAccountJSONKey string `json:"serviceAccountJsonKey,omitempty"`
+	ServiceAccountJSONKey string `json:"serviceAccountJSONKey,omitempty"`
 }
 
 func (in *GCPCredentialSelector) DeepCopyInto(out *GCPCredentialSelector) {
