@@ -1,4 +1,5 @@
 common --enable_bzlmod
+common --incompatible_enable_proto_toolchain_resolution
 
 build --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
