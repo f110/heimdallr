@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.36.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/bazelbuild/buildtools v0.0.0-20260622120422-77b9b380c0a4
-	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
+	github.com/bradfitz/gomemcache v0.0.0-20260422231931-4d751bb6e37c
 	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/fatih/color v1.12.0
 	github.com/fsnotify/fsnotify v1.7.0
