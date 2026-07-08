@@ -40,7 +40,7 @@ require (
 	go.etcd.io/etcd/server/v3 v3.5.16
 	go.f110.dev/kubeproto v0.0.0-20251210170207-086c7bdbe6a8
 	go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e
-	go.f110.dev/xerrors v0.0.0-20250917112712-38fe07e3caa9
+	go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0

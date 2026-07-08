@@ -606,8 +606,8 @@ go.f110.dev/kubeproto v0.0.0-20251210170207-086c7bdbe6a8 h1:WJ38OAvKlSU5x26jHyHT
 go.f110.dev/kubeproto v0.0.0-20251210170207-086c7bdbe6a8/go.mod h1:5C/a40SzX1XVYk5OBtdkvHjeyBUlCH1Sdsa4fiJFlU8=
 go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e h1:JktOV2kO997MzXvaL5xEd11vd2M8Eu4XVjklzh/jxMU=
 go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e/go.mod h1:6pxDObNjuB5LNwO/5oevZrrb0vLcC16JTlLZazL6CqM=
-go.f110.dev/xerrors v0.0.0-20250917112712-38fe07e3caa9 h1:F1CD6kgLX1Hcll9n8XWdbp16MOrb5zRcRpVkjZRRiXc=
-go.f110.dev/xerrors v0.0.0-20250917112712-38fe07e3caa9/go.mod h1:3yUl7O5IuWwb+EnyHpK/zlyMK8z8s0boTM8skb6UyWg=
+go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89 h1:vmDGfMJANqslvJr74UdBL8rre7wmZsUSmNvfSDiA6mM=
+go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89/go.mod h1:3yUl7O5IuWwb+EnyHpK/zlyMK8z8s0boTM8skb6UyWg=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.2/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
