@@ -1033,18 +1033,11 @@ func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListO
 		res = append(res, r)
 	}
 	if len(res) > 0 {
-		issuerPrimaryKeys := make([]int32, len(res))
 		userPrimaryKeys := make([]int32, len(res))
+		issuerPrimaryKeys := make([]int32, len(res))
 		for i, v := range res {
-			issuerPrimaryKeys[i] = v.IssuerId
 			userPrimaryKeys[i] = v.UserId
-		}
-		issuerData := make(map[int32]*entity.User)
-		{
-			rels, _ := d.user.SelectMulti(ctx, issuerPrimaryKeys...)
-			for _, v := range rels {
-				issuerData[v.Id] = v
-			}
+			issuerPrimaryKeys[i] = v.IssuerId
 		}
 		userData := make(map[int32]*entity.User)
 		{
@@ -1053,9 +1046,16 @@ func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListO
 				userData[v.Id] = v
 			}
 		}
+		issuerData := make(map[int32]*entity.User)
+		{
+			rels, _ := d.user.SelectMulti(ctx, issuerPrimaryKeys...)
+			for _, v := range rels {
+				issuerData[v.Id] = v
+			}
+		}
 		for _, v := range res {
-			v.Issuer = issuerData[v.IssuerId]
 			v.User = userData[v.UserId]
+			v.Issuer = issuerData[v.IssuerId]
 		}
 	}
 
