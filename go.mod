@@ -26,7 +26,7 @@ require (
 	github.com/mattn/go-shellwords v1.0.13
 	github.com/miekg/dns v1.1.72
 	github.com/minio/minio-go/v7 v7.2.1
-	github.com/peterh/liner v1.2.1
+	github.com/peterh/liner v1.2.2
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.46.0
 	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/client_model v0.6.1
