@@ -12,7 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/go-sql-driver/mysql v1.7.1
+	github.com/go-sql-driver/mysql v1.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.19.1
@@ -64,6 +64,7 @@ require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
