@@ -20,7 +20,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2.0.20201002093600-73cf2ae9d891
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/jarcoal/httpmock v1.3.1
+	github.com/jarcoal/httpmock v1.4.1
 	github.com/jetstack/cert-manager v1.6.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mattn/go-shellwords v1.0.12
