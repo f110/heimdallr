@@ -52,7 +52,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.32.0
 	k8s.io/apimachinery v0.32.0
 	k8s.io/client-go v0.32.0
-	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d
+	k8s.io/gengo v0.0.0-20260408192533-25e2208e0dc3
 	k8s.io/klog/v2 v2.130.1
 	nhooyr.io/websocket v1.8.7
 	sigs.k8s.io/kind v0.22.0
