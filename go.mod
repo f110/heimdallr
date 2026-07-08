@@ -1,6 +1,6 @@
 module go.f110.dev/heimdallr
 
-go 1.25.5
+go 1.26.5
 
 require (
 	cloud.google.com/go/storage v1.36.0
