@@ -57,7 +57,7 @@ require (
 	nhooyr.io/websocket v1.8.17
 	sigs.k8s.io/kind v0.32.0
 	sigs.k8s.io/yaml v1.6.0
-	software.sslmate.com/src/go-pkcs12 v0.4.0
+	software.sslmate.com/src/go-pkcs12 v0.7.3
 )
 
 require (
