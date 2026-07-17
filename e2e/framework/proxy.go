@@ -598,7 +598,7 @@ func (p *Proxy) setupRPCClient() error {
 	caPool.AddCert(p.CA)
 
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
@@ -633,7 +633,7 @@ func (p *Proxy) syncUsers() error {
 	caPool.AddCert(p.CA)
 
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		fmt.Sprintf("127.0.0.1:%d", p.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),

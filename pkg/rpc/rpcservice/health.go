@@ -7,6 +7,8 @@ import (
 )
 
 type HealthService struct {
+	healthpb.UnimplementedHealthServer
+
 	isReady func() bool
 }
 
@@ -20,8 +22,4 @@ func (h *HealthService) Check(_ context.Context, _ *healthpb.HealthCheckRequest)
 	} else {
 		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_NOT_SERVING}, nil
 	}
-}
-
-func (h *HealthService) Watch(_ *healthpb.HealthCheckRequest, _ healthpb.Health_WatchServer) error {
-	panic("implement me")
 }

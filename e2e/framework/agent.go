@@ -232,7 +232,7 @@ func (a *Agents) User(id string) *Agent {
 
 func (a *Agents) RPCClient(id string) *rpcclient.ClientWithUserToken {
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: a.tlsConfig.RootCAs})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		fmt.Sprintf("127.0.0.1:%d", a.rpcPort),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
