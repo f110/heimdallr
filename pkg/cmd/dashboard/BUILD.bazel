@@ -12,7 +12,6 @@ go_library(
         "//pkg/fsm",
         "//pkg/logger",
         "//pkg/rpc",
-        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//:go-grpc-middleware",
         "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/retry",
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_google_grpc//:grpc",

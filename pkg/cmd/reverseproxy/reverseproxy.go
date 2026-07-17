@@ -21,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -618,14 +617,14 @@ func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
 		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
-		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+		grpc.WithChainStreamInterceptor(
 			retry.StreamClientInterceptor(),
 			logging.StreamClientInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
-		)),
-		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+		),
+		grpc.WithChainUnaryInterceptor(
 			retry.UnaryClientInterceptor(),
 			logging.UnaryClientInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
-		)),
+		),
 	)
 	if err != nil {
 		return fsm.UnknownState, xerrors.WithStack(err)
