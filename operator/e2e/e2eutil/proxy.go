@@ -215,7 +215,7 @@ func DialRPCServer(cfg *rest.Config, coreClient kubernetes.Interface, proxy *pro
 
 func NewRPCClient(port uint16, caPool *x509.CertPool, token string) (*rpcclient.ClientWithUserToken, error) {
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: caPool})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		fmt.Sprintf("127.0.0.1:%d", port),
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),

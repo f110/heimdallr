@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
@@ -214,9 +215,9 @@ func TestServicesViaServer(t *testing.T) {
 		ServerName: rpc.ServerHostname,
 		RootCAs:    caPool,
 	})
-	conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", port), grpc.WithTransportCredentials(transCreds))
+	conn, err := grpc.NewClient(fmt.Sprintf("127.0.0.1:%d", port), grpc.WithTransportCredentials(transCreds))
 	require.NoError(t, err)
-	metricsConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", metricsPort), grpc.WithInsecure())
+	metricsConn, err := grpc.NewClient(fmt.Sprintf("127.0.0.1:%d", metricsPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
 	md := metadata.New(map[string]string{rpc.InternalTokenMetadataKey: "internal-token"})

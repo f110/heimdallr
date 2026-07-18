@@ -81,7 +81,7 @@ func (m *mainProcess) openConnection() (fsm.State, error) {
 		ServerName: rpc.ServerHostname,
 		RootCAs:    m.config.CertificateAuthority.CertPool,
 	})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		m.config.Dashboard.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),

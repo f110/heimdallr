@@ -48,7 +48,7 @@ func main() {
 	}
 
 	cred := credentials.NewTLS(&tls.Config{ServerName: host, RootCAs: pool})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		host,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),

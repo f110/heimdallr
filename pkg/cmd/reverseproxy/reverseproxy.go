@@ -614,7 +614,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 func (m *mainProcess) setupAfterStartingRPCServer() (fsm.State, error) {
 	cred := credentials.NewTLS(&tls.Config{ServerName: rpc.ServerHostname, RootCAs: m.config.CertificateAuthority.CertPool})
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		m.config.AccessProxy.RPCServer,
 		grpc.WithTransportCredentials(cred),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 20 * time.Second, Timeout: time.Second, PermitWithoutStream: true}),
