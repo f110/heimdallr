@@ -13,7 +13,6 @@ go_library(
         "//pkg/logger",
         "//pkg/rpc",
         "//pkg/rpc/rpcservice",
-        "@com_github_grpc_ecosystem_go_grpc_middleware_v2//:go-grpc-middleware",
         "@com_github_grpc_ecosystem_go_grpc_middleware_v2//interceptors/logging",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go-grpc-prometheus",
         "@com_github_prometheus_client_golang//prometheus",

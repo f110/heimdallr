@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,18 +65,18 @@ func NewServer(
 ) *Server {
 	r := grpc_prometheus.NewServerMetrics()
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+		grpc.ChainUnaryInterceptor(
 			unaryAccessLogInterceptor,
 			auth.UnaryInterceptor,
 			r.UnaryServerInterceptor(),
 			logging.UnaryServerInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
-		)),
-		grpc.StreamInterceptor(middleware.ChainStreamServer(
+		),
+		grpc.ChainStreamInterceptor(
 			streamAccessLogInterceptor,
 			auth.StreamInterceptor,
 			r.StreamServerInterceptor(),
 			logging.StreamServerInterceptor(logger.GRPCInterceptorLogger(logger.Log)),
-		)),
+		),
 	)
 	rpc.RegisterClusterServer(s, rpcservice.NewClusterService(user, token, cluster, relay))
 	rpc.RegisterAdminServer(s, rpcservice.NewAdminService(conf, user))

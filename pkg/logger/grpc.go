@@ -8,36 +8,11 @@ import (
 )
 
 // GRPCInterceptorLogger adapts a *slog.Logger to the grpc-middleware logging.Logger interface.
+//
+// logging.Level shares the same numeric values as slog.Level, and fields are the same
+// alternating key/value sequence that slog expects, so both can be forwarded as-is.
 func GRPCInterceptorLogger(l *slog.Logger) logging.Logger {
-	return &grpcLogger{logger: l}
-}
-
-type grpcLogger struct {
-	logger *slog.Logger
-}
-
-func (g *grpcLogger) Log(lvl logging.Level, msg string) {
-	ctx := context.Background()
-	var level slog.Level
-	switch lvl {
-	case logging.DEBUG:
-		level = slog.LevelDebug
-	case logging.INFO:
-		level = slog.LevelInfo
-	case logging.WARNING:
-		level = slog.LevelWarn
-	case logging.ERROR:
-		level = slog.LevelError
-	default:
-		level = slog.LevelInfo
-	}
-	g.logger.Log(ctx, level, msg)
-}
-
-func (g *grpcLogger) With(fields ...string) logging.Logger {
-	attrs := make([]any, 0, len(fields)/2)
-	for i := 0; i+1 < len(fields); i += 2 {
-		attrs = append(attrs, slog.String(fields[i], fields[i+1]))
-	}
-	return &grpcLogger{logger: g.logger.With(attrs...)}
+	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		l.Log(ctx, slog.Level(lvl), msg, fields...)
+	})
 }

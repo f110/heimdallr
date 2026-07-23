@@ -17,9 +17,20 @@ func NewHealthService(isReady func() bool) *HealthService {
 }
 
 func (h *HealthService) Check(_ context.Context, _ *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	return &healthpb.HealthCheckResponse{Status: h.status()}, nil
+}
+
+func (h *HealthService) List(_ context.Context, _ *healthpb.HealthListRequest) (*healthpb.HealthListResponse, error) {
+	return &healthpb.HealthListResponse{
+		Statuses: map[string]*healthpb.HealthCheckResponse{
+			"": {Status: h.status()},
+		},
+	}, nil
+}
+
+func (h *HealthService) status() healthpb.HealthCheckResponse_ServingStatus {
 	if h.isReady() {
-		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
-	} else {
-		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_NOT_SERVING}, nil
+		return healthpb.HealthCheckResponse_SERVING
 	}
+	return healthpb.HealthCheckResponse_NOT_SERVING
 }

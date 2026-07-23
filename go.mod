@@ -18,7 +18,7 @@ require (
 	github.com/google/go-containerregistry v0.21.7
 	github.com/google/go-github/v41 v41.0.0
 	github.com/google/uuid v1.6.0
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.2.0.20201002093600-73cf2ae9d891
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/jetstack/cert-manager v1.6.1
