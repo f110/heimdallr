@@ -450,8 +450,7 @@ func (a *authRequest) GetClientID() string {
 }
 
 func (a *authRequest) GetCodeChallenge() *oidc.CodeChallenge {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (a *authRequest) GetNonce() string {
