@@ -6,7 +6,8 @@ heimdallr
 
 **Currently under development**
 
-Zero trust proxy for using in corporate.
+
+`Zero trust <https://techster.wiki/zero-trust-security-model>`_ proxy for using in corporate.
 
 Features
 ===========
