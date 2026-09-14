@@ -64,17 +64,24 @@ const (
 	EtcdMetricsPort = 2381
 )
 
+// addMemberScript joins this Pod to the cluster as a new member.
+//
+// The data directory is always wiped by the init container before starting etcd.
+// So the member can't take over the member id that is already registered to the cluster.
+// The left behind member has to be removed and added again to get a new member id.
+//
+// The name of a member is the 3rd column of "member list" and each column is separated by ", ".
+// The name is surrounded by commas to avoid matching a member that has the name as its prefix.
 const addMemberScript = `
 ETCDCTL_OPT="--cacert={{ .CACert }} --cert={{ .Cert }} --key={{ .Key }} --endpoints={{ .Endpoint }}"
 MEMBER_LIST=$(/usr/local/bin/etcdctl ${ETCDCTL_OPT} member list)
-if echo "${MEMBER_LIST}" | grep -sq "{{ .Name }}"; then
-	MEMBER_ID=$(echo "${MEMBER_LIST}" | grep "{{ .Name }}" | cut -d, -f1)
-	/usr/local/bin/etcdctl ${ETCDCTL_OPT} member update "${MEMBER_ID}" --peer-urls={{ .PeerUrl }}
-else
+MEMBER_ID=$(echo "${MEMBER_LIST}" | grep ", {{ .Name }}," | cut -d, -f1)
+if [ -n "${MEMBER_ID}" ]; then
+	/usr/local/bin/etcdctl ${ETCDCTL_OPT} member remove "${MEMBER_ID}"
+fi
 /usr/local/bin/etcdctl ${ETCDCTL_OPT} \
 	member add {{ .Name }} \
 	--peer-urls={{ .PeerUrl }}
-fi
 `
 
 const restoreDataScript = `
@@ -313,11 +320,19 @@ func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
 		return c.serverCertSecret.ToSecret(), nil
 	}
 
+	return c.NewServerCertSecret()
+}
+
+// NewServerCertSecret issues a new server certificate and returns the Secret that has it.
+// ServerCertSecret returns the loaded certificate as is, so it can't be used for the rotation.
+func (c *EtcdCluster) NewServerCertSecret() (*corev1.Secret, error) {
 	serverCert, err := c.ServerCert()
 	if err != nil {
 		return nil, err
 	}
-	c.serverCertSecret = &serverCert
+	if c.serverCertSecret != nil {
+		serverCert.secret = c.serverCertSecret.secret
+	}
 
 	secret := k8sfactory.SecretFactory(
 		serverCert.ToSecret(),
@@ -325,7 +340,8 @@ func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
 	)
-	c.serverCertSecret.secret = secret
+	serverCert.secret = secret
+	c.serverCertSecret = &serverCert
 	return secret, nil
 }
 
@@ -342,6 +358,12 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 		return c.clientCertSecret, nil
 	}
 
+	return c.NewClientCertSecret()
+}
+
+// NewClientCertSecret issues a new client certificate and returns the Secret that has it.
+// ClientCertSecret returns the loaded certificate as is, so it can't be used for the rotation.
+func (c *EtcdCluster) NewClientCertSecret() (*corev1.Secret, error) {
 	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
 		return nil, err
@@ -364,7 +386,7 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 	clientCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
 
-	secret := k8sfactory.SecretFactory(nil,
+	secret := k8sfactory.SecretFactory(c.clientCertSecret,
 		k8sfactory.Name(c.ClientCertSecretName()),
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
@@ -734,6 +756,17 @@ func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 
 func (c *EtcdCluster) ServerDiscoveryServiceName() string {
 	return fmt.Sprintf("%s-discovery", c.Name)
+}
+
+// peerURL returns the url of the peer endpoint.
+// host is the ip address of the Pod that the dots are replaced with hyphens.
+func (c *EtcdCluster) peerURL(host string) string {
+	return fmt.Sprintf("https://%s.%s.pod.%s:%d", host, c.Namespace, c.ClusterDomain, EtcdPeerPort)
+}
+
+// PodPeerURL returns the url of the peer endpoint of the Pod that has podIP.
+func (c *EtcdCluster) PodPeerURL(podIP string) string {
+	return c.peerURL(strings.Replace(podIP, ".", "-", -1))
 }
 
 func (c *EtcdCluster) DiscoveryService() *corev1.Service {

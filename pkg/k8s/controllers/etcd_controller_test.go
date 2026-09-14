@@ -2,7 +2,14 @@ package controllers
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 	"testing"
@@ -249,6 +256,7 @@ func TestEtcdController(t *testing.T) {
 			require.NoError(t, err)
 
 			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
+			updated.Status.Members = updated.Status.Members[1:]
 			runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -441,6 +449,7 @@ func TestEtcdController(t *testing.T) {
 				require.NoError(t, err)
 
 				updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseDegrading), etcd.CreatedStatus)
+				updated.Status.Members = updated.Status.Members[1:]
 				runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 				runner.AssertUpdateAction(t, "status", updated)
 				runner.AssertNoUnexpectedAction(t)
@@ -776,6 +785,258 @@ func TestEtcdController_Restore(t *testing.T) {
 	require.NotNil(t, updatedEC.Status.Restored)
 	assert.Equal(t, "backup/latest", updatedEC.Status.Restored.Path)
 	assert.True(t, updatedEC.Status.Restored.Completed)
+}
+
+func TestEtcdController_DeleteMember(t *testing.T) {
+	etcdClusterBase := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+		etcd.MemberStatus(nil),
+	)
+
+	peerURL := func(podIP string) string {
+		return fmt.Sprintf("https://%s.%s.pod.cluster.local:%d", strings.ReplaceAll(podIP, ".", "-"), metav1.NamespaceDefault, EtcdPeerPort)
+	}
+
+	// An empty name means the member that hasn't joined the cluster yet.
+	type etcdMember struct {
+		Name  string
+		PodIP string
+	}
+	cases := []struct {
+		Name string
+		// PodIP is the ip address of the Pod that is going to be deleted.
+		PodIP string
+		// Members is the members that belong to the cluster.
+		Members []etcdMember
+		// Remain is the ip addresses of the members that have to remain after deleting the member.
+		Remain []string
+	}{
+		{
+			Name:    "RemoveTheMemberOfThePod",
+			PodIP:   "10.0.0.1",
+			Members: []etcdMember{{"self", "10.0.0.1"}, {"other-2", "10.0.0.2"}, {"other-3", "10.0.0.3"}},
+			Remain:  []string{"10.0.0.2", "10.0.0.3"},
+		},
+		{
+			Name:    "RemoveTheMemberThatHasOutdatedPeerURL",
+			PodIP:   "10.0.0.9",
+			Members: []etcdMember{{"self", "10.0.0.1"}, {"other-2", "10.0.0.2"}},
+			Remain:  []string{"10.0.0.2"},
+		},
+		{
+			Name:    "KeepTheMemberThatHasSimilarAddress",
+			PodIP:   "10.0.0.1",
+			Members: []etcdMember{{"", "10.0.0.1"}, {"", "10.0.0.11"}},
+			Remain:  []string{"10.0.0.11"},
+		},
+		{
+			Name:    "KeepAllMembersIfThePodDoesNotHaveAddress",
+			PodIP:   "",
+			Members: []etcdMember{{"", "10.0.0.1"}, {"", "10.0.0.2"}},
+			Remain:  []string{"10.0.0.1", "10.0.0.2"},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			runner := controllertest.NewTestRunner()
+			etcdMockCluster := NewMockCluster()
+			mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+			controller, err := NewEtcdController(
+				runner.SharedInformerFactory,
+				runner.CoreSharedInformerFactory,
+				&runner.CoreClient.Set,
+				runner.Client.EtcdV1alpha2,
+				runner.K8sCoreClient,
+				nil,
+				"cluster.local",
+				false,
+				nil,
+				mockOpt,
+			)
+			require.NoError(t, err)
+
+			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
+			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, mockOpt)
+			cluster.registerBasicObjectOfEtcdCluster(runner)
+
+			member := cluster.AllMembers()[0]
+			member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Created, k8sfactory.Ready)
+			member.Pod.Status.PodIP = tc.PodIP
+			runner.RegisterFixtures(member.Pod)
+			for _, v := range tc.Members {
+				name := v.Name
+				if name == "self" {
+					name = member.Pod.Name
+				}
+				etcdMockCluster.AddMember(&etcdserverpb.Member{Name: name, PeerURLs: []string{peerURL(v.PodIP)}})
+			}
+
+			err = controller.deleteMember(context.Background(), cluster, member)
+			require.NoError(t, err)
+
+			res, err := etcdMockCluster.MemberList(context.Background())
+			require.NoError(t, err)
+			got := make([]string, 0, len(res.Members))
+			for _, v := range res.Members {
+				got = append(got, v.PeerURLs[0])
+			}
+			expect := make([]string, 0, len(tc.Remain))
+			for _, v := range tc.Remain {
+				expect = append(expect, peerURL(v))
+			}
+			assert.ElementsMatch(t, expect, got)
+		})
+	}
+}
+
+func TestEtcdController_RotateCertificate(t *testing.T) {
+	etcdClusterBase := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+		etcd.MemberStatus(nil),
+	)
+
+	// The controller has to regenerate a certificate that expires within 90 days.
+	issueExpiringCertificate := func(t *testing.T, c *EtcdCluster, dnsNames []string) (certPem, privateKeyPem []byte) {
+		caPair, err := c.parseCASecret(c.caSecret)
+		require.NoError(t, err)
+
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+		require.NoError(t, err)
+		template := &x509.Certificate{
+			SerialNumber: serial,
+			Subject:      pkix.Name{CommonName: dnsNames[0]},
+			NotBefore:    time.Now().AddDate(0, 0, -335),
+			NotAfter:     time.Now().AddDate(0, 0, 30),
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+			DNSNames:     dnsNames,
+		}
+		b, err := x509.CreateCertificate(rand.Reader, template, caPair.Cert, &privateKey.PublicKey, caPair.PrivateKey)
+		require.NoError(t, err)
+		marshaledPrivateKey, err := x509.MarshalECPrivateKey(privateKey)
+		require.NoError(t, err)
+
+		return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: b}),
+			pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
+	}
+
+	parseCertificate := func(t *testing.T, certPem []byte) *x509.Certificate {
+		block, _ := pem.Decode(certPem)
+		require.NotNil(t, block)
+		c, err := x509.ParseCertificate(block.Bytes)
+		require.NoError(t, err)
+		return c
+	}
+
+	newRunner := func(t *testing.T) (*controllertest.TestRunner, *EtcdController, *MockCluster) {
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
+
+		return runner, controller, etcdMockCluster
+	}
+
+	t.Run("ServerCertificate", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, etcdMockCluster := newRunner(t)
+
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		ca, err := cluster.CA()
+		require.NoError(t, err)
+		cluster.SetCASecret(ca)
+		certPem, privateKeyPem := issueExpiringCertificate(t, cluster, cluster.DNSNames())
+		serverS := k8sfactory.SecretFactory(nil,
+			k8sfactory.Name(cluster.ServerCertSecretName()),
+			k8sfactory.Namespace(cluster.Namespace),
+			k8sfactory.Data(serverCertSecretCertName, certPem),
+			k8sfactory.Data(serverCertSecretPrivateKeyName, privateKeyPem),
+		)
+		cluster.SetServerCertSecret(serverS)
+		clientS, err := cluster.ClientCertSecret()
+		require.NoError(t, err)
+		runner.RegisterFixtures(ca, serverS, clientS, cluster.DiscoveryService(), cluster.ClientService(), cluster.ServiceAccount(), cluster.EtcdRole(), cluster.EtcdRoleBinding())
+		for _, v := range cluster.AllMembers() {
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+		}
+
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		got, err := runner.CoreClient.CoreV1.GetSecret(context.TODO(), e.Namespace, cluster.ServerCertSecretName(), metav1.GetOptions{})
+		require.NoError(t, err)
+		rotated := parseCertificate(t, got.Data[serverCertSecretCertName])
+		assert.True(t, rotated.NotAfter.After(time.Now().AddDate(0, 0, 90)), "The server certificate is not rotated")
+		assert.Equal(t, cluster.DNSNames(), rotated.DNSNames)
+	})
+
+	t.Run("ClientCertificate", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, etcdMockCluster := newRunner(t)
+
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		ca, err := cluster.CA()
+		require.NoError(t, err)
+		cluster.SetCASecret(ca)
+		serverS, err := cluster.ServerCertSecret()
+		require.NoError(t, err)
+		cluster.SetServerCertSecret(serverS)
+		clientCertDNSName := fmt.Sprintf("%s.%s.%s.svc.%s", e.Name, cluster.ServerDiscoveryServiceName(), e.Namespace, cluster.ClusterDomain)
+		certPem, privateKeyPem := issueExpiringCertificate(t, cluster, []string{clientCertDNSName})
+		clientS := k8sfactory.SecretFactory(nil,
+			k8sfactory.Name(cluster.ClientCertSecretName()),
+			k8sfactory.Namespace(cluster.Namespace),
+			k8sfactory.Data(clientCertSecretCACertName, ca.Data[caSecretCertName]),
+			k8sfactory.Data(clientCertSecretCertName, certPem),
+			k8sfactory.Data(clientCertSecretPrivateKeyName, privateKeyPem),
+		)
+		cluster.SetClientCertSecret(clientS)
+		runner.RegisterFixtures(ca, serverS, clientS, cluster.DiscoveryService(), cluster.ClientService(), cluster.ServiceAccount(), cluster.EtcdRole(), cluster.EtcdRoleBinding())
+		for _, v := range cluster.AllMembers() {
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+		}
+
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		got, err := runner.CoreClient.CoreV1.GetSecret(context.TODO(), e.Namespace, cluster.ClientCertSecretName(), metav1.GetOptions{})
+		require.NoError(t, err)
+		rotated := parseCertificate(t, got.Data[clientCertSecretCertName])
+		assert.True(t, rotated.NotAfter.After(time.Now().AddDate(0, 0, 90)), "The client certificate is not rotated")
+		assert.Equal(t, []string{clientCertDNSName}, rotated.DNSNames)
+	})
 }
 
 func minIOFixtures() (*corev1.Service, *corev1.Secret) {
