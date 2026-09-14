@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
@@ -232,4 +234,42 @@ func TestEtcdCluster_EqualLabels(t *testing.T) {
 			assert.Equal(t, tc.Equal, e.EqualLabels(tc.Left, tc.Right))
 		})
 	}
+}
+
+func TestEtcdCluster_MemberPodSpec(t *testing.T) {
+	e := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+	)
+	c := NewEtcdCluster(e, "cluster.local", logger.Log, nil)
+	ca, err := c.CA()
+	require.NoError(t, err)
+	c.SetCASecret(ca)
+	serverS, err := c.ServerCertSecret()
+	require.NoError(t, err)
+	c.SetServerCertSecret(serverS)
+	clientS, err := c.ClientCertSecret()
+	require.NoError(t, err)
+	c.SetClientCertSecret(clientS)
+
+	pod := c.newEtcdPod(defaultEtcdVersion, 1, "existing", nil, false)
+
+	var wipeData, addMember *corev1.Container
+	for i, v := range pod.Spec.InitContainers {
+		switch v.Name {
+		case "wipe-data":
+			wipeData = &pod.Spec.InitContainers[i]
+		case "add-member":
+			addMember = &pod.Spec.InitContainers[i]
+		}
+	}
+	require.NotNil(t, wipeData, "The Pod doesn't have the init container that wipes the data directory")
+	require.NotNil(t, addMember, "The Pod doesn't have the init container that manipulates the member")
+
+	script := addMember.Command[2]
+	assert.NotContains(t, script, "member update")
+	assert.Contains(t, script, "member remove")
+	assert.Contains(t, script, "member add")
 }

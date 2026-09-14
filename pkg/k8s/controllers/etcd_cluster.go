@@ -64,17 +64,24 @@ const (
 	EtcdMetricsPort = 2381
 )
 
+// addMemberScript joins this Pod to the cluster as a new member.
+//
+// The data directory is always wiped by the init container before starting etcd.
+// So the member can't take over the member id that is already registered to the cluster.
+// The left behind member has to be removed and added again to get a new member id.
+//
+// The name of a member is the 3rd column of "member list" and each column is separated by ", ".
+// The name is surrounded by commas to avoid matching a member that has the name as its prefix.
 const addMemberScript = `
 ETCDCTL_OPT="--cacert={{ .CACert }} --cert={{ .Cert }} --key={{ .Key }} --endpoints={{ .Endpoint }}"
 MEMBER_LIST=$(/usr/local/bin/etcdctl ${ETCDCTL_OPT} member list)
-if echo "${MEMBER_LIST}" | grep -sq "{{ .Name }}"; then
-	MEMBER_ID=$(echo "${MEMBER_LIST}" | grep "{{ .Name }}" | cut -d, -f1)
-	/usr/local/bin/etcdctl ${ETCDCTL_OPT} member update "${MEMBER_ID}" --peer-urls={{ .PeerUrl }}
-else
+MEMBER_ID=$(echo "${MEMBER_LIST}" | grep ", {{ .Name }}," | cut -d, -f1)
+if [ -n "${MEMBER_ID}" ]; then
+	/usr/local/bin/etcdctl ${ETCDCTL_OPT} member remove "${MEMBER_ID}"
+fi
 /usr/local/bin/etcdctl ${ETCDCTL_OPT} \
 	member add {{ .Name }} \
 	--peer-urls={{ .PeerUrl }}
-fi
 `
 
 const restoreDataScript = `
