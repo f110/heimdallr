@@ -802,14 +802,20 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 			return xerrors.WithStack(err)
 		}
 
+		// The member doesn't have the name until it joins the cluster.
+		// In that case, the member is identified by the peer url that is derived from the ip address of the Pod.
 		var memberStatus *etcdserverpb.Member
 		for _, v := range mList.Members {
 			ec.Log(ctx).Debug("Found the member", slog.String("name", v.Name), slog.Any("peerURLs", v.PeerURLs))
+			if v.Name == member.Pod.Name {
+				memberStatus = v
+				break
+			}
 			if len(v.PeerURLs) == 0 {
 				ec.Log(ctx).Warn("The member hasn't any peer url", slog.Uint64("id", v.ID), slog.String("name", v.Name))
 				continue
 			}
-			if strings.HasPrefix(v.PeerURLs[0], "https://"+strings.Replace(member.Pod.Status.PodIP, ".", "-", -1)) {
+			if v.Name == "" && member.Pod.Status.PodIP != "" && v.PeerURLs[0] == cluster.PodPeerURL(member.Pod.Status.PodIP) {
 				memberStatus = v
 			}
 		}
@@ -820,6 +826,8 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 				return xerrors.WithStack(err)
 			}
 			ec.Log(ctx).Debug("Remove the member from cluster", slog.String("name", memberStatus.Name), slog.Any("peerURLs", memberStatus.PeerURLs))
+		} else {
+			ec.Log(ctx).Warn("Could not find the member of the Pod", slog.String("pod.name", member.Pod.Name), slog.String("pod.ip", member.Pod.Status.PodIP))
 		}
 
 		if err := eClient.Close(); err != nil && !errors.Is(err, context.Canceled) {

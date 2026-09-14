@@ -256,6 +256,7 @@ func TestEtcdController(t *testing.T) {
 			require.NoError(t, err)
 
 			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
+			updated.Status.Members = updated.Status.Members[1:]
 			runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -448,6 +449,7 @@ func TestEtcdController(t *testing.T) {
 				require.NoError(t, err)
 
 				updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseDegrading), etcd.CreatedStatus)
+				updated.Status.Members = updated.Status.Members[1:]
 				runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 				runner.AssertUpdateAction(t, "status", updated)
 				runner.AssertNoUnexpectedAction(t)
@@ -783,6 +785,115 @@ func TestEtcdController_Restore(t *testing.T) {
 	require.NotNil(t, updatedEC.Status.Restored)
 	assert.Equal(t, "backup/latest", updatedEC.Status.Restored.Path)
 	assert.True(t, updatedEC.Status.Restored.Completed)
+}
+
+func TestEtcdController_DeleteMember(t *testing.T) {
+	etcdClusterBase := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+		etcd.MemberStatus(nil),
+	)
+
+	peerURL := func(podIP string) string {
+		return fmt.Sprintf("https://%s.%s.pod.cluster.local:%d", strings.ReplaceAll(podIP, ".", "-"), metav1.NamespaceDefault, EtcdPeerPort)
+	}
+
+	// An empty name means the member that hasn't joined the cluster yet.
+	type etcdMember struct {
+		Name  string
+		PodIP string
+	}
+	cases := []struct {
+		Name string
+		// PodIP is the ip address of the Pod that is going to be deleted.
+		PodIP string
+		// Members is the members that belong to the cluster.
+		Members []etcdMember
+		// Remain is the ip addresses of the members that have to remain after deleting the member.
+		Remain []string
+	}{
+		{
+			Name:    "RemoveTheMemberOfThePod",
+			PodIP:   "10.0.0.1",
+			Members: []etcdMember{{"self", "10.0.0.1"}, {"other-2", "10.0.0.2"}, {"other-3", "10.0.0.3"}},
+			Remain:  []string{"10.0.0.2", "10.0.0.3"},
+		},
+		{
+			Name:    "RemoveTheMemberThatHasOutdatedPeerURL",
+			PodIP:   "10.0.0.9",
+			Members: []etcdMember{{"self", "10.0.0.1"}, {"other-2", "10.0.0.2"}},
+			Remain:  []string{"10.0.0.2"},
+		},
+		{
+			Name:    "KeepTheMemberThatHasSimilarAddress",
+			PodIP:   "10.0.0.1",
+			Members: []etcdMember{{"", "10.0.0.1"}, {"", "10.0.0.11"}},
+			Remain:  []string{"10.0.0.11"},
+		},
+		{
+			Name:    "KeepAllMembersIfThePodDoesNotHaveAddress",
+			PodIP:   "",
+			Members: []etcdMember{{"", "10.0.0.1"}, {"", "10.0.0.2"}},
+			Remain:  []string{"10.0.0.1", "10.0.0.2"},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			runner := controllertest.NewTestRunner()
+			etcdMockCluster := NewMockCluster()
+			mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+			controller, err := NewEtcdController(
+				runner.SharedInformerFactory,
+				runner.CoreSharedInformerFactory,
+				&runner.CoreClient.Set,
+				runner.Client.EtcdV1alpha2,
+				runner.K8sCoreClient,
+				nil,
+				"cluster.local",
+				false,
+				nil,
+				mockOpt,
+			)
+			require.NoError(t, err)
+
+			e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
+			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, mockOpt)
+			cluster.registerBasicObjectOfEtcdCluster(runner)
+
+			member := cluster.AllMembers()[0]
+			member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Created, k8sfactory.Ready)
+			member.Pod.Status.PodIP = tc.PodIP
+			runner.RegisterFixtures(member.Pod)
+			for _, v := range tc.Members {
+				name := v.Name
+				if name == "self" {
+					name = member.Pod.Name
+				}
+				etcdMockCluster.AddMember(&etcdserverpb.Member{Name: name, PeerURLs: []string{peerURL(v.PodIP)}})
+			}
+
+			err = controller.deleteMember(context.Background(), cluster, member)
+			require.NoError(t, err)
+
+			res, err := etcdMockCluster.MemberList(context.Background())
+			require.NoError(t, err)
+			got := make([]string, 0, len(res.Members))
+			for _, v := range res.Members {
+				got = append(got, v.PeerURLs[0])
+			}
+			expect := make([]string, 0, len(tc.Remain))
+			for _, v := range tc.Remain {
+				expect = append(expect, peerURL(v))
+			}
+			assert.ElementsMatch(t, expect, got)
+		})
+	}
 }
 
 func TestEtcdController_RotateCertificate(t *testing.T) {

@@ -751,6 +751,17 @@ func (c *EtcdCluster) ServerDiscoveryServiceName() string {
 	return fmt.Sprintf("%s-discovery", c.Name)
 }
 
+// peerURL returns the url of the peer endpoint.
+// host is the ip address of the Pod that the dots are replaced with hyphens.
+func (c *EtcdCluster) peerURL(host string) string {
+	return fmt.Sprintf("https://%s.%s.pod.%s:%d", host, c.Namespace, c.ClusterDomain, EtcdPeerPort)
+}
+
+// PodPeerURL returns the url of the peer endpoint of the Pod that has podIP.
+func (c *EtcdCluster) PodPeerURL(podIP string) string {
+	return c.peerURL(strings.Replace(podIP, ".", "-", -1))
+}
+
 func (c *EtcdCluster) DiscoveryService() *corev1.Service {
 	return k8sfactory.ServiceFactory(nil,
 		k8sfactory.Name(c.ServerDiscoveryServiceName()),
