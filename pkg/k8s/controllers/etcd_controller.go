@@ -714,7 +714,7 @@ func (ec *EtcdController) setupServerCert(ctx context.Context, cluster *EtcdClus
 	}
 
 	if cluster.ShouldUpdateServerCertificate(serverCertSecret.Data[serverCertSecretCertName]) {
-		serverCertSecret, err = cluster.ServerCertSecret()
+		serverCertSecret, err = cluster.NewServerCertSecret()
 		if err != nil {
 			return err
 		}
@@ -744,7 +744,7 @@ func (ec *EtcdController) setupClientCert(ctx context.Context, cluster *EtcdClus
 	}
 
 	if cluster.ShouldUpdateClientCertificate(clientCertSecret.Data[clientCertSecretCertName]) {
-		clientCertSecret, err = cluster.ClientCertSecret()
+		clientCertSecret, err = cluster.NewClientCertSecret()
 		if err != nil {
 			return xerrors.WithStack(err)
 		}

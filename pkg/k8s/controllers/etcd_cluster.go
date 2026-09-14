@@ -313,11 +313,19 @@ func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
 		return c.serverCertSecret.ToSecret(), nil
 	}
 
+	return c.NewServerCertSecret()
+}
+
+// NewServerCertSecret issues a new server certificate and returns the Secret that has it.
+// ServerCertSecret returns the loaded certificate as is, so it can't be used for the rotation.
+func (c *EtcdCluster) NewServerCertSecret() (*corev1.Secret, error) {
 	serverCert, err := c.ServerCert()
 	if err != nil {
 		return nil, err
 	}
-	c.serverCertSecret = &serverCert
+	if c.serverCertSecret != nil {
+		serverCert.secret = c.serverCertSecret.secret
+	}
 
 	secret := k8sfactory.SecretFactory(
 		serverCert.ToSecret(),
@@ -325,7 +333,8 @@ func (c *EtcdCluster) ServerCertSecret() (*corev1.Secret, error) {
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
 	)
-	c.serverCertSecret.secret = secret
+	serverCert.secret = secret
+	c.serverCertSecret = &serverCert
 	return secret, nil
 }
 
@@ -342,6 +351,12 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 		return c.clientCertSecret, nil
 	}
 
+	return c.NewClientCertSecret()
+}
+
+// NewClientCertSecret issues a new client certificate and returns the Secret that has it.
+// ClientCertSecret returns the loaded certificate as is, so it can't be used for the rotation.
+func (c *EtcdCluster) NewClientCertSecret() (*corev1.Secret, error) {
 	certPair, err := c.parseCASecret(c.caSecret)
 	if err != nil {
 		return nil, err
@@ -364,7 +379,7 @@ func (c *EtcdCluster) ClientCertSecret() (*corev1.Secret, error) {
 	clientCertBuf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCert.Raw})
 	privateKeyBuf := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshaledPrivateKey})
 
-	secret := k8sfactory.SecretFactory(nil,
+	secret := k8sfactory.SecretFactory(c.clientCertSecret,
 		k8sfactory.Name(c.ClientCertSecretName()),
 		k8sfactory.Namespace(c.Namespace),
 		k8sfactory.ControlledBy(c.EtcdCluster, scheme.Scheme),
