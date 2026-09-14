@@ -1351,13 +1351,13 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 				backupFiles = append(backupFiles, obj.Key)
 			}
 		}
-		ec.Log(ctx).Debug("Backup files", slog.Any("files", backupFiles))
+		ec.Log(ctx).Debug("Backup files", slog.Int("count", len(backupFiles)))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
-		sort.Strings(backupFiles)
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
+		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
 		for _, v := range purgeTargets {
 			if err := mc.RemoveObject(ctx, spec.Bucket, v, minio.RemoveObjectOptions{}); err != nil {
 				return xerrors.WithStack(err)
@@ -1397,15 +1397,14 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 			}
 			backupFiles = append(backupFiles, attr.Name)
 		}
-		ec.Log(ctx).Debug("Backup files", slog.Any("files", backupFiles))
+		ec.Log(ctx).Debug("Backup files", slog.Int("count", len(backupFiles)))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
-		sort.Strings(backupFiles)
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
+		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
 		for _, v := range purgeTargets {
-			ec.Log(ctx).Debug("Delete backup file", slog.String("target", v))
 			if err := bh.Object(v).Delete(ctx); err != nil {
 				return xerrors.WithStack(err)
 			}
