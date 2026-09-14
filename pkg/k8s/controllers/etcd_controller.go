@@ -1271,12 +1271,8 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 			return err
 		}
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
-		path := spec.Path
-		if path[0] == '/' {
-			path = path[1:]
-		}
-		backupStatus.Path = filepath.Join(path, filename)
-		_, err = mc.PutObject(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
+		backupStatus.Path = filepath.Join(normalizeObjectPath(spec.Path), filename)
+		_, err = mc.PutObject(ctx, spec.Bucket, backupStatus.Path, data, dataSize, minio.PutObjectOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1303,7 +1299,8 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		}
 
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
-		obj := client.Bucket(spec.Bucket).Object(filepath.Join(spec.Path, filename))
+		objectPath := filepath.Join(normalizeObjectPath(spec.Path), filename)
+		obj := client.Bucket(spec.Bucket).Object(objectPath)
 		w := obj.NewWriter(ctx)
 		if _, err := io.Copy(w, data); err != nil {
 			return xerrors.WithStack(err)
@@ -1311,12 +1308,19 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		if err := w.Close(); err != nil {
 			return xerrors.WithStack(err)
 		}
-		backupStatus.Path = filepath.Join(spec.Path, filename)
+		backupStatus.Path = objectPath
 
 		return nil
 	default:
 		return xerrors.NewWithStack("Not configured a storage")
 	}
+}
+
+// normalizeObjectPath returns the path that is usable as a prefix of the object key.
+// The object storage has no directory. A key never starts with a slash even if the path of the spec starts with it.
+// Storing and rotating have to agree on this. Otherwise rotating can't find any object that storing made.
+func normalizeObjectPath(path string) string {
+	return strings.TrimPrefix(path, "/")
 }
 
 func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdCluster) error {
@@ -1336,13 +1340,14 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		if err != nil {
 			return err
 		}
-		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: spec.Path + "/", Recursive: false})
+		path := normalizeObjectPath(spec.Path)
+		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: path + "/", Recursive: false})
 		backupFiles := make([]string, 0)
 		for obj := range listCh {
 			if obj.Err != nil {
 				return xerrors.WithStack(err)
 			}
-			if strings.HasPrefix(obj.Key, filepath.Join(spec.Path, cluster.Name)) {
+			if strings.HasPrefix(obj.Key, filepath.Join(path, cluster.Name)) {
 				backupFiles = append(backupFiles, obj.Key)
 			}
 		}
@@ -1381,7 +1386,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		bh := client.Bucket(spec.Bucket)
 
 		backupFiles := make([]string, 0)
-		iter := bh.Objects(ctx, &storage.Query{Prefix: spec.Path})
+		iter := bh.Objects(ctx, &storage.Query{Prefix: normalizeObjectPath(spec.Path)})
 		for {
 			attr, err := iter.Next()
 			if errors.Is(err, iterator.Done) {

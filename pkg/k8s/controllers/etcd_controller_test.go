@@ -694,6 +694,73 @@ func TestEtcdController_Backup(t *testing.T) {
 	})
 }
 
+func TestEtcdController_RotateBackup(t *testing.T) {
+	const bucket = "etcdcontroller"
+
+	newFixture := func(t *testing.T, path string, maxBackups int) (*EtcdController, *EtcdCluster, *httpmock.MockTransport) {
+		runner := controllertest.NewTestRunner()
+		mockOpt := &MockOption{Cluster: NewMockCluster(), Maintenance: NewMockMaintenance()}
+		transport := httpmock.NewMockTransport()
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			transport,
+			mockOpt,
+		)
+		require.NoError(t, err)
+
+		minIOService, minIOSecret := minIOFixtures()
+		runner.RegisterFixtures(minIOService, minIOSecret)
+
+		e := etcd.Factory(nil,
+			k8sfactory.Name(normalizeName(t.Name())),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Created,
+			etcd.Member(3),
+			etcd.MemberStatus(nil),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+			etcd.Backup(30, maxBackups),
+			etcd.BackupToMinIO(bucket, path, false, minIOService.Name, minIOService.Namespace, &etcdv1alpha2.AWSCredentialSelector{
+				Name:               minIOSecret.Name,
+				Namespace:          minIOSecret.Namespace,
+				AccessKeyIDKey:     "accesskey",
+				SecretAccessKeyKey: "secretkey",
+			}),
+		)
+
+		// Get bucket location
+		transport.RegisterResponder(
+			http.MethodGet,
+			fmt.Sprintf("/%s/?location=", bucket),
+			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
+		)
+
+		return controller, NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil), transport
+	}
+
+	t.Run("NormalizePathPrefix", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "/backup", 2)
+
+		var gotPrefix string
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), func(req *http.Request) (*http.Response, error) {
+			gotPrefix = req.URL.Query().Get("prefix")
+			return httpmock.NewStringResponse(http.StatusOK, listObjectsResponse(bucket, gotPrefix)), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.NoError(t, err)
+
+		// storeBackupFile trims the leading slash, so the rotation has to look up the same key space.
+		assert.Equal(t, "backup/", gotPrefix)
+	})
+}
+
 func TestEtcdController_Restore(t *testing.T) {
 	runner := controllertest.NewTestRunner()
 	etcdMockCluster := NewMockCluster()
@@ -1062,4 +1129,15 @@ func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.Te
 	c.SetCASecret(ca)
 	c.SetServerCertSecret(serverS)
 	runner.RegisterFixtures(ca, serverS, clientS, c.DiscoveryService(), c.ClientService(), c.ServiceAccount(), c.EtcdRole(), c.EtcdRoleBinding())
+}
+
+// listObjectsResponse builds a ListObjectsV2 response that contains the given keys.
+func listObjectsResponse(bucket, prefix string, keys ...string) string {
+	var buf strings.Builder
+	fmt.Fprintf(&buf, `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>%s</Name><Prefix>%s</Prefix><KeyCount>%d</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated>`, bucket, prefix, len(keys))
+	for _, v := range keys {
+		fmt.Fprintf(&buf, `<Contents><Key>%s</Key><LastModified>2026-09-14T16:00:00.000Z</LastModified><ETag>&quot;etag&quot;</ETag><Size>24608</Size><StorageClass>STANDARD</StorageClass></Contents>`, v)
+	}
+	buf.WriteString(`</ListBucketResult>`)
+	return buf.String()
 }
