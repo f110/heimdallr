@@ -49,6 +49,10 @@ const (
 	// maxReportedRemoveError is the maximum number of the errors that the rotation of backup files reports.
 	// The rotation can fail to delete a lot of objects at once. Reporting all of them floods the log and the event.
 	maxReportedRemoveError = 10
+
+	// statusUpdateReservation is the time that backing up never uses.
+	// It's kept for updating the status of EtcdCluster at the end of the reconcile.
+	statusUpdateReservation = 5 * time.Second
 )
 
 type EtcdController struct {
@@ -336,24 +340,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	ec.updateStatus(ctx, cluster)
 
 	if cluster.Status.Phase == etcdv1alpha2.EtcdClusterPhaseRunning && ec.shouldBackup(cluster) {
-		err := ec.doBackup(ctx, cluster)
-		if err != nil {
-			ec.Log(ctx).Warn("Failed backup", slog.Any("error", err))
-			cluster.Status.Backup.Succeeded = false
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
-		} else {
-			cluster.Status.Backup.Succeeded = true
-			cluster.Status.Backup.LastSucceededTime = cluster.Status.Backup.History[0].ExecuteTime
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "BackupSuccess", fmt.Sprintf("Backup succeeded"))
-		}
-
-		err = ec.doRotateBackup(ctx, cluster)
-		if err != nil {
-			ec.Log(ctx).Warn("Failed rotate backup", slog.Any("error", err))
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
-		}
-
-		ec.updateBackupStatus(cluster)
+		ec.backup(ctx, cluster)
 	}
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
@@ -1347,6 +1334,47 @@ func (e *removeErrors) Err() error {
 // Storing and rotating have to agree on this. Otherwise rotating can't find any object that storing made.
 func normalizeObjectPath(path string) string {
 	return strings.TrimPrefix(path, "/")
+}
+
+func backupContext(ctx context.Context, reservation time.Duration) (context.Context, context.CancelFunc, bool) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		backupCtx, cancel := context.WithCancel(ctx)
+		return backupCtx, cancel, true
+	}
+
+	budget := time.Until(deadline) - reservation
+	if budget <= 0 {
+		return nil, func() {}, false
+	}
+	backupCtx, cancel := context.WithTimeout(ctx, budget)
+	return backupCtx, cancel, true
+}
+
+func (ec *EtcdController) backup(ctx context.Context, cluster *EtcdCluster) {
+	backupCtx, cancel, ok := backupContext(ctx, statusUpdateReservation)
+	if !ok {
+		ec.Log(ctx).Warn("Skipped backup because the remaining time is reserved for updating the status")
+		return
+	}
+	defer cancel()
+
+	if err := ec.doBackup(backupCtx, cluster); err != nil {
+		ec.Log(ctx).Warn("Failed backup", slog.Any("error", err))
+		cluster.Status.Backup.Succeeded = false
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
+	} else {
+		cluster.Status.Backup.Succeeded = true
+		cluster.Status.Backup.LastSucceededTime = cluster.Status.Backup.History[0].ExecuteTime
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "BackupSuccess", "Backup succeeded")
+	}
+
+	if err := ec.doRotateBackup(backupCtx, cluster); err != nil {
+		ec.Log(ctx).Warn("Failed rotate backup", slog.Any("error", err))
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
+	}
+
+	ec.updateBackupStatus(cluster)
 }
 
 func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdCluster) error {

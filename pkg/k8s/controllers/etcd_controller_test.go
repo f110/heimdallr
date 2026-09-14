@@ -848,6 +848,40 @@ func TestEtcdController_RotateBackup(t *testing.T) {
 	})
 }
 
+func TestBackupContext(t *testing.T) {
+	reservation := 5 * time.Second
+
+	t.Run("NoDeadline", func(t *testing.T) {
+		backupCtx, cancel, ok := backupContext(context.Background(), reservation)
+		require.True(t, ok)
+		defer cancel()
+
+		_, hasDeadline := backupCtx.Deadline()
+		assert.False(t, hasDeadline)
+	})
+
+	t.Run("ReservesTimeForStatusUpdate", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		backupCtx, backupCancel, ok := backupContext(ctx, reservation)
+		require.True(t, ok)
+		defer backupCancel()
+
+		deadline, hasDeadline := backupCtx.Deadline()
+		require.True(t, hasDeadline)
+		assert.InDelta(t, 25*time.Second, time.Until(deadline), float64(time.Second))
+	})
+
+	t.Run("NotEnoughTime", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), reservation/2)
+		defer cancel()
+
+		_, _, ok := backupContext(ctx, reservation)
+		assert.False(t, ok)
+	})
+}
+
 func TestEtcdController_Restore(t *testing.T) {
 	runner := controllertest.NewTestRunner()
 	etcdMockCluster := NewMockCluster()
