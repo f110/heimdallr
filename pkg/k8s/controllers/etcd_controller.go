@@ -1345,7 +1345,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		backupFiles := make([]string, 0)
 		for obj := range listCh {
 			if obj.Err != nil {
-				return xerrors.WithStack(err)
+				return xerrors.WithStack(obj.Err)
 			}
 			if strings.HasPrefix(obj.Key, filepath.Join(path, cluster.Name)) {
 				backupFiles = append(backupFiles, obj.Key)

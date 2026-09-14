@@ -759,6 +759,15 @@ func TestEtcdController_RotateBackup(t *testing.T) {
 		// storeBackupFile trims the leading slash, so the rotation has to look up the same key space.
 		assert.Equal(t, "backup/", gotPrefix)
 	})
+
+	t.Run("ReturnsListError", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusInternalServerError, ""))
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+	})
 }
 
 func TestEtcdController_Restore(t *testing.T) {
