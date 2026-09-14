@@ -8,7 +8,9 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strings"
@@ -768,6 +770,82 @@ func TestEtcdController_RotateBackup(t *testing.T) {
 		err := controller.doRotateBackup(context.Background(), cluster)
 		require.Error(t, err)
 	})
+
+	t.Run("DeletesInBulk", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, 5)
+		for i := 1; i <= 5; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+
+		var deleteRequests int
+		var deleted []string
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), func(req *http.Request) (*http.Response, error) {
+			deleteRequests++
+			keys, err := deleteRequestKeys(req)
+			if err != nil {
+				return nil, err
+			}
+			deleted = append(deleted, keys...)
+			return httpmock.NewStringResponse(http.StatusOK, `<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"></DeleteResult>`), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, deleteRequests)
+		assert.ElementsMatch(t, []string{keys[0], keys[1], keys[2]}, deleted)
+	})
+
+	t.Run("ReturnsDeleteError", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, 4)
+		for i := 1; i <= 4; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), httpmock.NewStringResponder(http.StatusOK,
+			fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Error><Key>%s</Key><Code>AccessDenied</Code><Message>Access Denied</Message></Error></DeleteResult>`, keys[0]),
+		))
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), keys[0])
+	})
+
+	t.Run("LimitsReportedDeleteError", func(t *testing.T) {
+		const objects = 32
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, objects)
+		for i := 1; i <= objects; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), func(req *http.Request) (*http.Response, error) {
+			keys, err := deleteRequestKeys(req)
+			if err != nil {
+				return nil, err
+			}
+			var buf strings.Builder
+			buf.WriteString(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">`)
+			for _, v := range keys {
+				fmt.Fprintf(&buf, `<Error><Key>%s</Key><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`, v)
+			}
+			buf.WriteString(`</DeleteResult>`)
+			return httpmock.NewStringResponse(http.StatusOK, buf.String()), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+
+		// All of the 30 purge targets fail but the error message has to stay short.
+		assert.Len(t, strings.Split(err.Error(), "\n"), maxReportedRemoveError+1)
+		assert.Contains(t, err.Error(), fmt.Sprintf("and %d more errors", objects-cluster.Spec.Backup.MaxBackups-maxReportedRemoveError))
+	})
 }
 
 func TestEtcdController_Restore(t *testing.T) {
@@ -1149,4 +1227,26 @@ func listObjectsResponse(bucket, prefix string, keys ...string) string {
 	}
 	buf.WriteString(`</ListBucketResult>`)
 	return buf.String()
+}
+
+// deleteRequestKeys returns the object keys that the multi object delete request holds.
+func deleteRequestKeys(req *http.Request) ([]string, error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	var payload struct {
+		Object []struct {
+			Key string `xml:"Key"`
+		} `xml:"Object"`
+	}
+	if err := xml.Unmarshal(body, &payload); err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, len(payload.Object))
+	for _, v := range payload.Object {
+		keys = append(keys, v.Key)
+	}
+	return keys, nil
 }

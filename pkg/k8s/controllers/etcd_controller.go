@@ -45,6 +45,10 @@ import (
 
 const (
 	defaultEtcdVersion = "v3.5.1"
+
+	// maxReportedRemoveError is the maximum number of the errors that the rotation of backup files reports.
+	// The rotation can fail to delete a lot of objects at once. Reporting all of them floods the log and the event.
+	maxReportedRemoveError = 10
 )
 
 type EtcdController struct {
@@ -1316,6 +1320,28 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 	}
 }
 
+// removeErrors collects the errors that happened while deleting backup files.
+// The number of the objects to delete is unbounded. Keeping every error makes the log and the event huge,
+// so it holds only the first maxReportedRemoveError errors and counts the rest.
+type removeErrors struct {
+	errs  []error
+	count int
+}
+
+func (e *removeErrors) Add(err error) {
+	e.count++
+	if len(e.errs) < maxReportedRemoveError {
+		e.errs = append(e.errs, err)
+	}
+}
+
+func (e *removeErrors) Err() error {
+	if e.count > len(e.errs) {
+		return errors.Join(append(e.errs, xerrors.NewfWithStack("and %d more errors", e.count-len(e.errs)))...)
+	}
+	return errors.Join(e.errs...)
+}
+
 // normalizeObjectPath returns the path that is usable as a prefix of the object key.
 // The object storage has no directory. A key never starts with a slash even if the path of the spec starts with it.
 // Storing and rotating have to agree on this. Otherwise rotating can't find any object that storing made.
@@ -1358,13 +1384,24 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
-		for _, v := range purgeTargets {
-			if err := mc.RemoveObject(ctx, spec.Bucket, v, minio.RemoveObjectOptions{}); err != nil {
-				return xerrors.WithStack(err)
+
+		objectCh := make(chan minio.ObjectInfo)
+		go func() {
+			defer close(objectCh)
+			for _, v := range purgeTargets {
+				select {
+				case objectCh <- minio.ObjectInfo{Key: v}:
+				case <-ctx.Done():
+					return
+				}
 			}
+		}()
+		var removeErr removeErrors
+		for e := range mc.RemoveObjects(ctx, spec.Bucket, objectCh, minio.RemoveObjectsOptions{}) {
+			removeErr.Add(xerrors.NewfWithStack("%s: %v", e.ObjectName, e.Err))
 		}
 
-		return nil
+		return removeErr.Err()
 	case cluster.Spec.Backup.Storage.GCS != nil:
 		spec := cluster.Spec.Backup.Storage.GCS
 		namespace := spec.CredentialSelector.Namespace
@@ -1404,13 +1441,19 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
 		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
+
+		var removeErr removeErrors
 		for _, v := range purgeTargets {
+			if err := ctx.Err(); err != nil {
+				removeErr.Add(xerrors.WithStack(err))
+				break
+			}
 			if err := bh.Object(v).Delete(ctx); err != nil {
-				return xerrors.WithStack(err)
+				removeErr.Add(xerrors.NewfWithStack("%s: %v", v, err))
 			}
 		}
 
-		return nil
+		return removeErr.Err()
 	default:
 		return xerrors.NewWithStack("Not configured a storage")
 	}
