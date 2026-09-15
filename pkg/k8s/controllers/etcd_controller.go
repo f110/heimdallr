@@ -45,6 +45,14 @@ import (
 
 const (
 	defaultEtcdVersion = "v3.5.1"
+
+	// maxReportedRemoveError is the maximum number of the errors that the rotation of backup files reports.
+	// The rotation can fail to delete a lot of objects at once. Reporting all of them floods the log and the event.
+	maxReportedRemoveError = 10
+
+	// statusUpdateReservation is the time that backing up never uses.
+	// It's kept for updating the status of EtcdCluster at the end of the reconcile.
+	statusUpdateReservation = 5 * time.Second
 )
 
 type EtcdController struct {
@@ -332,24 +340,7 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 	ec.updateStatus(ctx, cluster)
 
 	if cluster.Status.Phase == etcdv1alpha2.EtcdClusterPhaseRunning && ec.shouldBackup(cluster) {
-		err := ec.doBackup(ctx, cluster)
-		if err != nil {
-			ec.Log(ctx).Warn("Failed backup", slog.Any("error", err))
-			cluster.Status.Backup.Succeeded = false
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
-		} else {
-			cluster.Status.Backup.Succeeded = true
-			cluster.Status.Backup.LastSucceededTime = cluster.Status.Backup.History[0].ExecuteTime
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "BackupSuccess", fmt.Sprintf("Backup succeeded"))
-		}
-
-		err = ec.doRotateBackup(ctx, cluster)
-		if err != nil {
-			ec.Log(ctx).Warn("Failed rotate backup", slog.Any("error", err))
-			ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
-		}
-
-		ec.updateBackupStatus(cluster)
+		ec.backup(ctx, cluster)
 	}
 
 	if !reflect.DeepEqual(cluster.Status, c.Status) {
@@ -1271,12 +1262,8 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 			return err
 		}
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
-		path := spec.Path
-		if path[0] == '/' {
-			path = path[1:]
-		}
-		backupStatus.Path = filepath.Join(path, filename)
-		_, err = mc.PutObject(ctx, spec.Bucket, filepath.Join(path, filename), data, dataSize, minio.PutObjectOptions{})
+		backupStatus.Path = filepath.Join(normalizeObjectPath(spec.Path), filename)
+		_, err = mc.PutObject(ctx, spec.Bucket, backupStatus.Path, data, dataSize, minio.PutObjectOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -1303,7 +1290,8 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		}
 
 		filename := fmt.Sprintf("%s_%d", cluster.Name, t.Unix())
-		obj := client.Bucket(spec.Bucket).Object(filepath.Join(spec.Path, filename))
+		objectPath := filepath.Join(normalizeObjectPath(spec.Path), filename)
+		obj := client.Bucket(spec.Bucket).Object(objectPath)
 		w := obj.NewWriter(ctx)
 		if _, err := io.Copy(w, data); err != nil {
 			return xerrors.WithStack(err)
@@ -1311,12 +1299,82 @@ func (ec *EtcdController) storeBackupFile(ctx context.Context, cluster *EtcdClus
 		if err := w.Close(); err != nil {
 			return xerrors.WithStack(err)
 		}
-		backupStatus.Path = filepath.Join(spec.Path, filename)
+		backupStatus.Path = objectPath
 
 		return nil
 	default:
 		return xerrors.NewWithStack("Not configured a storage")
 	}
+}
+
+// removeErrors collects the errors that happened while deleting backup files.
+// The number of the objects to delete is unbounded. Keeping every error makes the log and the event huge,
+// so it holds only the first maxReportedRemoveError errors and counts the rest.
+type removeErrors struct {
+	errs  []error
+	count int
+}
+
+func (e *removeErrors) Add(err error) {
+	e.count++
+	if len(e.errs) < maxReportedRemoveError {
+		e.errs = append(e.errs, err)
+	}
+}
+
+func (e *removeErrors) Err() error {
+	if e.count > len(e.errs) {
+		return errors.Join(append(e.errs, xerrors.NewfWithStack("and %d more errors", e.count-len(e.errs)))...)
+	}
+	return errors.Join(e.errs...)
+}
+
+// normalizeObjectPath returns the path that is usable as a prefix of the object key.
+// The object storage has no directory. A key never starts with a slash even if the path of the spec starts with it.
+// Storing and rotating have to agree on this. Otherwise rotating can't find any object that storing made.
+func normalizeObjectPath(path string) string {
+	return strings.TrimPrefix(path, "/")
+}
+
+func backupContext(ctx context.Context, reservation time.Duration) (context.Context, context.CancelFunc, bool) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		backupCtx, cancel := context.WithCancel(ctx)
+		return backupCtx, cancel, true
+	}
+
+	budget := time.Until(deadline) - reservation
+	if budget <= 0 {
+		return nil, func() {}, false
+	}
+	backupCtx, cancel := context.WithTimeout(ctx, budget)
+	return backupCtx, cancel, true
+}
+
+func (ec *EtcdController) backup(ctx context.Context, cluster *EtcdCluster) {
+	backupCtx, cancel, ok := backupContext(ctx, statusUpdateReservation)
+	if !ok {
+		ec.Log(ctx).Warn("Skipped backup because the remaining time is reserved for updating the status")
+		return
+	}
+	defer cancel()
+
+	if err := ec.doBackup(backupCtx, cluster); err != nil {
+		ec.Log(ctx).Warn("Failed backup", slog.Any("error", err))
+		cluster.Status.Backup.Succeeded = false
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "BackupFailure", fmt.Sprintf("Failed backup: %v", err))
+	} else {
+		cluster.Status.Backup.Succeeded = true
+		cluster.Status.Backup.LastSucceededTime = cluster.Status.Backup.History[0].ExecuteTime
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "BackupSuccess", "Backup succeeded")
+	}
+
+	if err := ec.doRotateBackup(backupCtx, cluster); err != nil {
+		ec.Log(ctx).Warn("Failed rotate backup", slog.Any("error", err))
+		ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeWarning, "RotateBackupFailure", fmt.Sprintf("Failed rotate backup: %v", err))
+	}
+
+	ec.updateBackupStatus(cluster)
 }
 
 func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdCluster) error {
@@ -1336,30 +1394,42 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		if err != nil {
 			return err
 		}
-		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: spec.Path + "/", Recursive: false})
+		path := normalizeObjectPath(spec.Path)
+		listCh := mc.ListObjects(ctx, spec.Bucket, minio.ListObjectsOptions{Prefix: path + "/", Recursive: false})
 		backupFiles := make([]string, 0)
 		for obj := range listCh {
 			if obj.Err != nil {
-				return xerrors.WithStack(err)
+				return xerrors.WithStack(obj.Err)
 			}
-			if strings.HasPrefix(obj.Key, filepath.Join(spec.Path, cluster.Name)) {
+			if strings.HasPrefix(obj.Key, filepath.Join(path, cluster.Name)) {
 				backupFiles = append(backupFiles, obj.Key)
 			}
 		}
-		ec.Log(ctx).Debug("Backup files", slog.Any("files", backupFiles))
+		ec.Log(ctx).Debug("Backup files", slog.Int("count", len(backupFiles)))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
-		sort.Strings(backupFiles)
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
-		for _, v := range purgeTargets {
-			if err := mc.RemoveObject(ctx, spec.Bucket, v, minio.RemoveObjectOptions{}); err != nil {
-				return xerrors.WithStack(err)
+		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
+
+		objectCh := make(chan minio.ObjectInfo)
+		go func() {
+			defer close(objectCh)
+			for _, v := range purgeTargets {
+				select {
+				case objectCh <- minio.ObjectInfo{Key: v}:
+				case <-ctx.Done():
+					return
+				}
 			}
+		}()
+		var removeErr removeErrors
+		for e := range mc.RemoveObjects(ctx, spec.Bucket, objectCh, minio.RemoveObjectsOptions{}) {
+			removeErr.Add(xerrors.NewfWithStack("%s: %v", e.ObjectName, e.Err))
 		}
 
-		return nil
+		return removeErr.Err()
 	case cluster.Spec.Backup.Storage.GCS != nil:
 		spec := cluster.Spec.Backup.Storage.GCS
 		namespace := spec.CredentialSelector.Namespace
@@ -1381,7 +1451,7 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 		bh := client.Bucket(spec.Bucket)
 
 		backupFiles := make([]string, 0)
-		iter := bh.Objects(ctx, &storage.Query{Prefix: spec.Path})
+		iter := bh.Objects(ctx, &storage.Query{Prefix: normalizeObjectPath(spec.Path)})
 		for {
 			attr, err := iter.Next()
 			if errors.Is(err, iterator.Done) {
@@ -1392,21 +1462,26 @@ func (ec *EtcdController) doRotateBackup(ctx context.Context, cluster *EtcdClust
 			}
 			backupFiles = append(backupFiles, attr.Name)
 		}
-		ec.Log(ctx).Debug("Backup files", slog.Any("files", backupFiles))
+		ec.Log(ctx).Debug("Backup files", slog.Int("count", len(backupFiles)))
 		if len(backupFiles) <= cluster.Spec.Backup.MaxBackups {
 			return nil
 		}
-		sort.Strings(backupFiles)
 		sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 		purgeTargets := backupFiles[cluster.Spec.Backup.MaxBackups:]
+		ec.Log(ctx).Debug("Purge backup files", slog.Int("count", len(purgeTargets)))
+
+		var removeErr removeErrors
 		for _, v := range purgeTargets {
-			ec.Log(ctx).Debug("Delete backup file", slog.String("target", v))
+			if err := ctx.Err(); err != nil {
+				removeErr.Add(xerrors.WithStack(err))
+				break
+			}
 			if err := bh.Object(v).Delete(ctx); err != nil {
-				return xerrors.WithStack(err)
+				removeErr.Add(xerrors.NewfWithStack("%s: %v", v, err))
 			}
 		}
 
-		return nil
+		return removeErr.Err()
 	default:
 		return xerrors.NewWithStack("Not configured a storage")
 	}

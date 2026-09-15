@@ -8,7 +8,9 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strings"
@@ -694,6 +696,192 @@ func TestEtcdController_Backup(t *testing.T) {
 	})
 }
 
+func TestEtcdController_RotateBackup(t *testing.T) {
+	const bucket = "etcdcontroller"
+
+	newFixture := func(t *testing.T, path string, maxBackups int) (*EtcdController, *EtcdCluster, *httpmock.MockTransport) {
+		runner := controllertest.NewTestRunner()
+		mockOpt := &MockOption{Cluster: NewMockCluster(), Maintenance: NewMockMaintenance()}
+		transport := httpmock.NewMockTransport()
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			transport,
+			mockOpt,
+		)
+		require.NoError(t, err)
+
+		minIOService, minIOSecret := minIOFixtures()
+		runner.RegisterFixtures(minIOService, minIOSecret)
+
+		e := etcd.Factory(nil,
+			k8sfactory.Name(normalizeName(t.Name())),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Created,
+			etcd.Member(3),
+			etcd.MemberStatus(nil),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+			etcd.Backup(30, maxBackups),
+			etcd.BackupToMinIO(bucket, path, false, minIOService.Name, minIOService.Namespace, &etcdv1alpha2.AWSCredentialSelector{
+				Name:               minIOSecret.Name,
+				Namespace:          minIOSecret.Namespace,
+				AccessKeyIDKey:     "accesskey",
+				SecretAccessKeyKey: "secretkey",
+			}),
+		)
+
+		// Get bucket location
+		transport.RegisterResponder(
+			http.MethodGet,
+			fmt.Sprintf("/%s/?location=", bucket),
+			httpmock.NewStringResponder(http.StatusOK, `<LocationConstraint>us-west-2</LocationConstraint>`),
+		)
+
+		return controller, NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil), transport
+	}
+
+	t.Run("NormalizePathPrefix", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "/backup", 2)
+
+		var gotPrefix string
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), func(req *http.Request) (*http.Response, error) {
+			gotPrefix = req.URL.Query().Get("prefix")
+			return httpmock.NewStringResponse(http.StatusOK, listObjectsResponse(bucket, gotPrefix)), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.NoError(t, err)
+
+		// storeBackupFile trims the leading slash, so the rotation has to look up the same key space.
+		assert.Equal(t, "backup/", gotPrefix)
+	})
+
+	t.Run("ReturnsListError", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusInternalServerError, ""))
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+	})
+
+	t.Run("DeletesInBulk", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, 5)
+		for i := 1; i <= 5; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+
+		var deleteRequests int
+		var deleted []string
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), func(req *http.Request) (*http.Response, error) {
+			deleteRequests++
+			keys, err := deleteRequestKeys(req)
+			if err != nil {
+				return nil, err
+			}
+			deleted = append(deleted, keys...)
+			return httpmock.NewStringResponse(http.StatusOK, `<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"></DeleteResult>`), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, deleteRequests)
+		assert.ElementsMatch(t, []string{keys[0], keys[1], keys[2]}, deleted)
+	})
+
+	t.Run("ReturnsDeleteError", func(t *testing.T) {
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, 4)
+		for i := 1; i <= 4; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), httpmock.NewStringResponder(http.StatusOK,
+			fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Error><Key>%s</Key><Code>AccessDenied</Code><Message>Access Denied</Message></Error></DeleteResult>`, keys[0]),
+		))
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), keys[0])
+	})
+
+	t.Run("LimitsReportedDeleteError", func(t *testing.T) {
+		const objects = 32
+		controller, cluster, transport := newFixture(t, "backup", 2)
+
+		keys := make([]string, 0, objects)
+		for i := 1; i <= objects; i++ {
+			keys = append(keys, fmt.Sprintf("backup/%s_%d", cluster.Name, 1789400000+i))
+		}
+		transport.RegisterResponder(http.MethodGet, fmt.Sprintf("/%s/", bucket), httpmock.NewStringResponder(http.StatusOK, listObjectsResponse(bucket, "backup/", keys...)))
+		transport.RegisterResponder(http.MethodPost, fmt.Sprintf("/%s/?delete=", bucket), func(req *http.Request) (*http.Response, error) {
+			keys, err := deleteRequestKeys(req)
+			if err != nil {
+				return nil, err
+			}
+			var buf strings.Builder
+			buf.WriteString(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">`)
+			for _, v := range keys {
+				fmt.Fprintf(&buf, `<Error><Key>%s</Key><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`, v)
+			}
+			buf.WriteString(`</DeleteResult>`)
+			return httpmock.NewStringResponse(http.StatusOK, buf.String()), nil
+		})
+
+		err := controller.doRotateBackup(context.Background(), cluster)
+		require.Error(t, err)
+
+		// All of the 30 purge targets fail but the error message has to stay short.
+		assert.Len(t, strings.Split(err.Error(), "\n"), maxReportedRemoveError+1)
+		assert.Contains(t, err.Error(), fmt.Sprintf("and %d more errors", objects-cluster.Spec.Backup.MaxBackups-maxReportedRemoveError))
+	})
+}
+
+func TestBackupContext(t *testing.T) {
+	reservation := 5 * time.Second
+
+	t.Run("NoDeadline", func(t *testing.T) {
+		backupCtx, cancel, ok := backupContext(context.Background(), reservation)
+		require.True(t, ok)
+		defer cancel()
+
+		_, hasDeadline := backupCtx.Deadline()
+		assert.False(t, hasDeadline)
+	})
+
+	t.Run("ReservesTimeForStatusUpdate", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		backupCtx, backupCancel, ok := backupContext(ctx, reservation)
+		require.True(t, ok)
+		defer backupCancel()
+
+		deadline, hasDeadline := backupCtx.Deadline()
+		require.True(t, hasDeadline)
+		assert.InDelta(t, 25*time.Second, time.Until(deadline), float64(time.Second))
+	})
+
+	t.Run("NotEnoughTime", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), reservation/2)
+		defer cancel()
+
+		_, _, ok := backupContext(ctx, reservation)
+		assert.False(t, ok)
+	})
+}
+
 func TestEtcdController_Restore(t *testing.T) {
 	runner := controllertest.NewTestRunner()
 	etcdMockCluster := NewMockCluster()
@@ -1062,4 +1250,37 @@ func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.Te
 	c.SetCASecret(ca)
 	c.SetServerCertSecret(serverS)
 	runner.RegisterFixtures(ca, serverS, clientS, c.DiscoveryService(), c.ClientService(), c.ServiceAccount(), c.EtcdRole(), c.EtcdRoleBinding())
+}
+
+// listObjectsResponse builds a ListObjectsV2 response that contains the given keys.
+func listObjectsResponse(bucket, prefix string, keys ...string) string {
+	var buf strings.Builder
+	fmt.Fprintf(&buf, `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>%s</Name><Prefix>%s</Prefix><KeyCount>%d</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated>`, bucket, prefix, len(keys))
+	for _, v := range keys {
+		fmt.Fprintf(&buf, `<Contents><Key>%s</Key><LastModified>2026-09-14T16:00:00.000Z</LastModified><ETag>&quot;etag&quot;</ETag><Size>24608</Size><StorageClass>STANDARD</StorageClass></Contents>`, v)
+	}
+	buf.WriteString(`</ListBucketResult>`)
+	return buf.String()
+}
+
+// deleteRequestKeys returns the object keys that the multi object delete request holds.
+func deleteRequestKeys(req *http.Request) ([]string, error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	var payload struct {
+		Object []struct {
+			Key string `xml:"Key"`
+		} `xml:"Object"`
+	}
+	if err := xml.Unmarshal(body, &payload); err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, len(payload.Object))
+	for _, v := range payload.Object {
+		keys = append(keys, v.Key)
+	}
+	return keys, nil
 }
