@@ -41,10 +41,6 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 		},
 		Dashboard: &configv2.Dashboard{
 			Bind: "",
-			Template: &configv2.Template{
-				Loader: "embed",
-				Dir:    "tmpl/dashboard",
-			},
 		},
 		Datastore: &configv2.Datastore{},
 		IdentityProvider: &configv2.IdentityProvider{
@@ -76,11 +72,6 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 	}
 	if conf.CertificateAuthority != nil {
 		if err := conf.CertificateAuthority.Load(dir); err != nil {
-			return nil, err
-		}
-	}
-	if conf.Dashboard != nil {
-		if err := conf.Dashboard.Load(dir); err != nil {
 			return nil, err
 		}
 	}

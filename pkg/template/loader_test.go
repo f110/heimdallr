@@ -11,7 +11,7 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
-	"go.f110.dev/heimdallr/tmpl/dashboard"
+	"go.f110.dev/heimdallr/tmpl/ui"
 )
 
 func TestMain(m *testing.M) {
@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 
 func TestNew(t *testing.T) {
 	v := New(
-		dashboard.Data,
+		ui.Data,
 		LoaderTypeEmbed,
 		"/data",
 		map[string]interface{}{
@@ -41,7 +41,7 @@ func TestLoader_Render(t *testing.T) {
 	require.NoError(t, err)
 
 	v := New(
-		dashboard.Data,
+		ui.Data,
 		LoaderTypeShotgun,
 		dir,
 		map[string]interface{}{

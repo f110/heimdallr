@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -314,13 +313,15 @@ func DescribeL4Proxy(f *framework.Framework) {
 
 			s.Step("send CSR to the dashboard", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					v := url.Values{}
-					v.Set("csr", tunnel.CSR(m))
-					f.Agents.Authorized("test@f110.dev").Post(m, f.Proxy.URL("dashboard", "/me/device/new"), v.Encode())
+					f.Agents.Authorized("test@f110.dev").PostJSON(
+						m,
+						f.Proxy.URL("dashboard", "/dashboard.bff.MeService/AddDevice"),
+						map[string]string{"csr": tunnel.CSR(m), "name": "e2e"},
+					)
 				})
 
 				s.It("should success", func(_ context.Context, m *btesting.Matcher) {
-					m.StatusCode(http.StatusFound)
+					m.StatusCode(http.StatusOK)
 				})
 			})
 

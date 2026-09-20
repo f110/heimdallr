@@ -11,6 +11,11 @@ import (
 	"go.f110.dev/heimdallr/pkg/testing/btesting"
 )
 
+const (
+	listUsersProcedure = "/dashboard.bff.AdminService/ListUsers"
+	listRolesProcedure = "/dashboard.bff.AdminService/ListRoles"
+)
+
 func TestDashboard(t *testing.T) {
 	f := framework.New(t)
 	defer f.Execute()
@@ -23,9 +28,9 @@ func TestDashboard(t *testing.T) {
 			s.BeforeAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.Backend(f.Proxy.DashboardBackend()) })
 			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
-			s.Context("request /", func(s *btesting.Scenario) {
+			s.Context("call ListUsers", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized(framework.RootUserId).Get(m, f.Proxy.URL("dashboard"))
+					f.Agents.Authorized(framework.RootUserId).PostJSON(m, f.Proxy.URL("dashboard", listUsersProcedure), struct{}{})
 				})
 
 				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
@@ -33,9 +38,9 @@ func TestDashboard(t *testing.T) {
 				})
 			})
 
-			s.Context("request /user", func(s *btesting.Scenario) {
+			s.Context("call ListRoles", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized(framework.RootUserId).Get(m, f.Proxy.URL("dashboard", "/user"))
+					f.Agents.Authorized(framework.RootUserId).PostJSON(m, f.Proxy.URL("dashboard", listRolesProcedure), struct{}{})
 				})
 
 				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
@@ -63,9 +68,9 @@ func TestDashboard(t *testing.T) {
 			})
 			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
-			s.Context("request /", func(s *btesting.Scenario) {
+			s.Context("call ListUsers", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized("admin@f110.dev").Get(m, f.Proxy.URL("dashboard"))
+					f.Agents.Authorized("admin@f110.dev").PostJSON(m, f.Proxy.URL("dashboard", listUsersProcedure), struct{}{})
 				})
 
 				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
@@ -73,9 +78,9 @@ func TestDashboard(t *testing.T) {
 				})
 			})
 
-			s.Context("request /user", func(s *btesting.Scenario) {
+			s.Context("call ListRoles", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized("admin@f110.dev").Get(m, f.Proxy.URL("dashboard", "/user"))
+					f.Agents.Authorized("admin@f110.dev").PostJSON(m, f.Proxy.URL("dashboard", listRolesProcedure), struct{}{})
 				})
 
 				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
@@ -96,9 +101,9 @@ func TestDashboard(t *testing.T) {
 			})
 			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
-			s.Context("request /", func(s *btesting.Scenario) {
+			s.Context("call ListUsers", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("dashboard"))
+					f.Agents.Authorized("test@f110.dev").PostJSON(m, f.Proxy.URL("dashboard", listUsersProcedure), struct{}{})
 				})
 
 				s.It("should return StatusUnauthorized", func(_ context.Context, m *btesting.Matcher) {
@@ -106,9 +111,9 @@ func TestDashboard(t *testing.T) {
 				})
 			})
 
-			s.Context("request /user", func(s *btesting.Scenario) {
+			s.Context("call ListRoles", func(s *btesting.Scenario) {
 				s.Subject(func(_ context.Context, m *btesting.Matcher) {
-					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("dashboard", "/user"))
+					f.Agents.Authorized("test@f110.dev").PostJSON(m, f.Proxy.URL("dashboard", listRolesProcedure), struct{}{})
 				})
 
 				s.It("should return StatusUnauthorized", func(_ context.Context, m *btesting.Matcher) {

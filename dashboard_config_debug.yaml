@@ -7,9 +7,8 @@ certificate_authority:
     organization_unit: dev
 dashboard:
   bind: :4101
+  probe_bind: :4103
   rpc_server: 127.0.0.1:4002
-  template:
-    loader: shotgun
 datastore:
   etcd:
     namespace: /heimdallr/
