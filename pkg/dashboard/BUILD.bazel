@@ -1,3 +1,4 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@rules_go//go:def.bzl", "go_library")
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
@@ -35,6 +36,12 @@ go_proto_library(
 vendor_grpc_source(
     name = "vendor_connect_source",
     src = ":dashboard_proto_connect",
+)
+
+js_library(
+    name = "dashboard_es",
+    visibility = ["//visibility:public"],
+    deps = [":dashboard_proto"],
 )
 
 go_library(

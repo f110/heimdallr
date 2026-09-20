@@ -166,6 +166,8 @@ npm.npm_translate_lock(
 )
 use_repo(npm, "npm")
 
+register_toolchains("//ts/toolchains:all")
+
 typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript", dev_dependency = True)
 typescript.deps(version_from = "//ts:package.json")
 use_repo(typescript, "npm_typescript")

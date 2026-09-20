@@ -1,0 +1,20 @@
+load("@aspect_rules_js//js:proto.bzl", "js_proto_toolchain")
+load("@npm//ts:@bufbuild/protoc-gen-es/package_json.bzl", gen_es = "bin")
+
+gen_es.protoc_gen_es_binary(
+    name = "protoc_gen_es",
+)
+
+js_proto_toolchain(
+    name = "protobuf_es",
+    out_dts_extension = "_pb.d.ts",
+    out_js_extension = "_pb.js",
+    plugin_bin = ":protoc_gen_es",
+    plugin_name = "es",
+    # https://github.com/bufbuild/protobuf-es/tree/main/packages/protoc-gen-es#plugin-options
+    plugin_options = [
+        "target=js+dts",
+        "import_extension=js",
+    ],
+    runtime = "//ts:node_modules/@bufbuild/protobuf",
+)
