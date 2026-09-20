@@ -1045,10 +1045,10 @@ func (f *EtcdV1alpha1Informer) EtcdClusterInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&etcdv1alpha1.EtcdCluster{},
@@ -1085,10 +1085,10 @@ func (f *EtcdV1alpha2Informer) EtcdClusterInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListEtcdCluster(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchEtcdCluster(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&etcdv1alpha2.EtcdCluster{},
@@ -1125,10 +1125,10 @@ func (f *ProxyV1alpha1Informer) BackendInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha1.Backend{},
@@ -1147,10 +1147,10 @@ func (f *ProxyV1alpha1Informer) ProxyInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha1.Proxy{},
@@ -1169,10 +1169,10 @@ func (f *ProxyV1alpha1Informer) RoleInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha1.Role{},
@@ -1191,10 +1191,10 @@ func (f *ProxyV1alpha1Informer) RoleBindingInformer() cache.SharedIndexInformer 
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha1.RoleBinding{},
@@ -1213,10 +1213,10 @@ func (f *ProxyV1alpha1Informer) RpcPermissionInformer() cache.SharedIndexInforme
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha1.RpcPermission{},
@@ -1253,10 +1253,10 @@ func (f *ProxyV1alpha2Informer) BackendInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListBackend(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchBackend(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha2.Backend{},
@@ -1275,10 +1275,10 @@ func (f *ProxyV1alpha2Informer) ProxyInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListProxy(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchProxy(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha2.Proxy{},
@@ -1297,10 +1297,10 @@ func (f *ProxyV1alpha2Informer) RoleInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRole(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRole(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha2.Role{},
@@ -1319,10 +1319,10 @@ func (f *ProxyV1alpha2Informer) RoleBindingInformer() cache.SharedIndexInformer 
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRoleBinding(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRoleBinding(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha2.RoleBinding{},
@@ -1341,10 +1341,10 @@ func (f *ProxyV1alpha2Informer) RpcPermissionInformer() cache.SharedIndexInforme
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListRpcPermission(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchRpcPermission(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&proxyv1alpha2.RpcPermission{},

@@ -56,6 +56,10 @@ func (s *Set) Actions() []k8stesting.Action {
 	return s.fake.Actions()
 }
 
+func (s *Set) ClearActions() {
+	s.fake.ClearActions()
+}
+
 type fakerBackend struct {
 	fake *k8stesting.Fake
 }

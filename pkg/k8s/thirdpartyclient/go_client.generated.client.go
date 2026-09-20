@@ -937,10 +937,10 @@ func (f *CoreV1Informer) AlertmanagerInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListAlertmanager(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchAlertmanager(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchAlertmanager(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.Alertmanager{},
@@ -959,10 +959,10 @@ func (f *CoreV1Informer) PodMonitorInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListPodMonitor(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPodMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchPodMonitor(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.PodMonitor{},
@@ -981,10 +981,10 @@ func (f *CoreV1Informer) ProbeInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListProbe(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListProbe(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchProbe(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchProbe(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.Probe{},
@@ -1003,10 +1003,10 @@ func (f *CoreV1Informer) PrometheusInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListPrometheus(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPrometheus(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchPrometheus(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.Prometheus{},
@@ -1025,10 +1025,10 @@ func (f *CoreV1Informer) PrometheusRuleInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListPrometheusRule(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchPrometheusRule(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchPrometheusRule(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.PrometheusRule{},
@@ -1047,10 +1047,10 @@ func (f *CoreV1Informer) ServiceMonitorInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListServiceMonitor(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchServiceMonitor(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchServiceMonitor(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.ServiceMonitor{},
@@ -1069,10 +1069,10 @@ func (f *CoreV1Informer) ThanosRulerInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListThanosRuler(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchThanosRuler(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchThanosRuler(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&monitoringv1.ThanosRuler{},
@@ -1109,10 +1109,10 @@ func (f *CertManagerV1Informer) CertificateInformer() cache.SharedIndexInformer 
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListCertificate(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListCertificate(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchCertificate(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchCertificate(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&certmanagerv1.Certificate{},
@@ -1131,10 +1131,10 @@ func (f *CertManagerV1Informer) CertificateRequestInformer() cache.SharedIndexIn
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListCertificateRequest(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListCertificateRequest(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchCertificateRequest(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchCertificateRequest(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&certmanagerv1.CertificateRequest{},
@@ -1153,10 +1153,10 @@ func (f *CertManagerV1Informer) ClusterIssuerInformer() cache.SharedIndexInforme
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListClusterIssuer(context.TODO(), metav1.ListOptions{})
+					return f.client.ListClusterIssuer(context.TODO(), metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchClusterIssuer(context.TODO(), metav1.ListOptions{})
+					return f.client.WatchClusterIssuer(context.TODO(), metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&certmanagerv1.ClusterIssuer{},
@@ -1175,10 +1175,10 @@ func (f *CertManagerV1Informer) IssuerInformer() cache.SharedIndexInformer {
 		return cache.NewSharedIndexInformer(
 			&cache.ListWatch{
 				ListFunc: func(options k8smetav1.ListOptions) (runtime.Object, error) {
-					return f.client.ListIssuer(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.ListIssuer(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 				WatchFunc: func(options k8smetav1.ListOptions) (watch.Interface, error) {
-					return f.client.WatchIssuer(context.TODO(), f.namespace, metav1.ListOptions{})
+					return f.client.WatchIssuer(context.TODO(), f.namespace, metav1.ListOptionsFromUpstream(options))
 				},
 			},
 			&certmanagerv1.Issuer{},

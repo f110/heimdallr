@@ -66,7 +66,7 @@ func newExecOpt(opts ...ExecOption) *execOpt {
 }
 
 type execConn interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
 type User struct {
@@ -85,7 +85,7 @@ type UserInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ UserInterface = &User{}
+var _ UserInterface = (*User)(nil)
 
 func NewUser(conn *sql.DB) *User {
 	return &User{
@@ -134,6 +134,7 @@ func (d *User) SelectMulti(ctx context.Context, id ...int32) ([]*entity.User, er
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.User, 0, len(id))
 	for rows.Next() {
@@ -185,6 +186,7 @@ func (d *User) ListIdentityByLoginName(ctx context.Context, loginName string, op
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.User, 0)
 	for rows.Next() {
@@ -221,6 +223,7 @@ func (d *User) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.User, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.User, 0)
 	for rows.Next() {
@@ -308,7 +311,7 @@ func (d *User) Update(ctx context.Context, user *entity.User, opt ...ExecOption)
 
 	changedColumn := user.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -349,7 +352,7 @@ type UserStateInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ UserStateInterface = &UserState{}
+var _ UserStateInterface = (*UserState)(nil)
 
 func NewUserState(conn *sql.DB) *UserState {
 	return &UserState{
@@ -398,6 +401,7 @@ func (d *UserState) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Use
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.UserState, 0, len(id))
 	for rows.Next() {
@@ -499,7 +503,7 @@ func (d *UserState) Update(ctx context.Context, userState *entity.UserState, opt
 
 	changedColumn := userState.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -544,7 +548,7 @@ type RoleBindingInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ RoleBindingInterface = &RoleBinding{}
+var _ RoleBindingInterface = (*RoleBinding)(nil)
 
 func NewRoleBinding(conn *sql.DB) *RoleBinding {
 	return &RoleBinding{
@@ -600,6 +604,7 @@ func (d *RoleBinding) SelectMulti(ctx context.Context, id ...int32) ([]*entity.R
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RoleBinding, 0, len(id))
 	for rows.Next() {
@@ -652,6 +657,7 @@ func (d *RoleBinding) ListUser(ctx context.Context, userId int32, opt ...ListOpt
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RoleBinding, 0)
 	for rows.Next() {
@@ -704,6 +710,7 @@ func (d *RoleBinding) ListAll(ctx context.Context, opt ...ListOption) ([]*entity
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RoleBinding, 0)
 	for rows.Next() {
@@ -829,7 +836,7 @@ func (d *RoleBinding) Update(ctx context.Context, roleBinding *entity.RoleBindin
 
 	changedColumn := roleBinding.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -873,7 +880,7 @@ type AccessTokenInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ AccessTokenInterface = &AccessToken{}
+var _ AccessTokenInterface = (*AccessToken)(nil)
 
 func NewAccessToken(conn *sql.DB) *AccessToken {
 	return &AccessToken{
@@ -934,6 +941,7 @@ func (d *AccessToken) SelectMulti(ctx context.Context, id ...int32) ([]*entity.A
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.AccessToken, 0, len(id))
 	for rows.Next() {
@@ -1022,6 +1030,7 @@ func (d *AccessToken) ListByUser(ctx context.Context, userId int32, opt ...ListO
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.AccessToken, 0)
 	for rows.Next() {
@@ -1135,7 +1144,7 @@ func (d *AccessToken) Update(ctx context.Context, accessToken *entity.AccessToke
 
 	changedColumn := accessToken.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -1179,7 +1188,7 @@ type TokenInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ TokenInterface = &Token{}
+var _ TokenInterface = (*Token)(nil)
 
 func NewToken(conn *sql.DB) *Token {
 	return &Token{
@@ -1235,6 +1244,7 @@ func (d *Token) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Token, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Token, 0, len(id))
 	for rows.Next() {
@@ -1286,6 +1296,7 @@ func (d *Token) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Token
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Token, 0)
 	for rows.Next() {
@@ -1339,6 +1350,7 @@ func (d *Token) ListToken(ctx context.Context, token string, opt ...ListOption) 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Token, 0)
 	for rows.Next() {
@@ -1441,8 +1453,8 @@ func (d *Token) Update(ctx context.Context, token *entity.Token, opt ...ExecOpti
 	}
 
 	changedColumn := token.ChangedColumn()
-	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	cols := make([]string, len(changedColumn))
+	values := make([]any, len(changedColumn))
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -1484,7 +1496,7 @@ type CodeInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ CodeInterface = &Code{}
+var _ CodeInterface = (*Code)(nil)
 
 func NewCode(conn *sql.DB) *Code {
 	return &Code{
@@ -1540,6 +1552,7 @@ func (d *Code) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Code, er
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Code, 0, len(id))
 	for rows.Next() {
@@ -1612,6 +1625,7 @@ func (d *Code) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Code, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Code, 0)
 	for rows.Next() {
@@ -1714,8 +1728,8 @@ func (d *Code) Update(ctx context.Context, code *entity.Code, opt ...ExecOption)
 	}
 
 	changedColumn := code.ChangedColumn()
-	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	cols := make([]string, len(changedColumn))
+	values := make([]any, len(changedColumn))
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -1756,7 +1770,7 @@ type RelayInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ RelayInterface = &Relay{}
+var _ RelayInterface = (*Relay)(nil)
 
 func NewRelay(conn *sql.DB) *Relay {
 	return &Relay{
@@ -1805,6 +1819,7 @@ func (d *Relay) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Relay, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Relay, 0, len(id))
 	for rows.Next() {
@@ -1841,6 +1856,7 @@ func (d *Relay) ListName(ctx context.Context, name string, opt ...ListOption) ([
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Relay, 0)
 	for rows.Next() {
@@ -1893,6 +1909,7 @@ func (d *Relay) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Relay
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Relay, 0)
 	for rows.Next() {
@@ -1980,7 +1997,7 @@ func (d *Relay) Update(ctx context.Context, relay *entity.Relay, opt ...ExecOpti
 
 	changedColumn := relay.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -2021,7 +2038,7 @@ type SerialNumberInterface interface {
 	Delete(ctx context.Context, id int64, opt ...ExecOption) error
 }
 
-var _ SerialNumberInterface = &SerialNumber{}
+var _ SerialNumberInterface = (*SerialNumber)(nil)
 
 func NewSerialNumber(conn *sql.DB) *SerialNumber {
 	return &SerialNumber{
@@ -2070,6 +2087,7 @@ func (d *SerialNumber) SelectMulti(ctx context.Context, id ...int64) ([]*entity.
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.SerialNumber, 0, len(id))
 	for rows.Next() {
@@ -2170,8 +2188,8 @@ func (d *SerialNumber) Update(ctx context.Context, serialNumber *entity.SerialNu
 	}
 
 	changedColumn := serialNumber.ChangedColumn()
-	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	cols := make([]string, len(changedColumn))
+	values := make([]any, len(changedColumn))
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -2213,7 +2231,7 @@ type SignedCertificateInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ SignedCertificateInterface = &SignedCertificate{}
+var _ SignedCertificateInterface = (*SignedCertificate)(nil)
 
 func NewSignedCertificate(conn *sql.DB) *SignedCertificate {
 	return &SignedCertificate{
@@ -2269,6 +2287,7 @@ func (d *SignedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*en
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.SignedCertificate, 0, len(id))
 	for rows.Next() {
@@ -2321,6 +2340,7 @@ func (d *SignedCertificate) ListSerialNumber(ctx context.Context, serialNumberId
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.SignedCertificate, 0)
 	for rows.Next() {
@@ -2373,6 +2393,7 @@ func (d *SignedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]*
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.SignedCertificate, 0)
 	for rows.Next() {
@@ -2475,8 +2496,8 @@ func (d *SignedCertificate) Update(ctx context.Context, signedCertificate *entit
 	}
 
 	changedColumn := signedCertificate.ChangedColumn()
-	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	cols := make([]string, len(changedColumn))
+	values := make([]any, len(changedColumn))
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -2516,7 +2537,7 @@ type RevokedCertificateInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ RevokedCertificateInterface = &RevokedCertificate{}
+var _ RevokedCertificateInterface = (*RevokedCertificate)(nil)
 
 func NewRevokedCertificate(conn *sql.DB) *RevokedCertificate {
 	return &RevokedCertificate{
@@ -2565,6 +2586,7 @@ func (d *RevokedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*e
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RevokedCertificate, 0, len(id))
 	for rows.Next() {
@@ -2601,6 +2623,7 @@ func (d *RevokedCertificate) ListSerialNumber(ctx context.Context, serialNumber 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RevokedCertificate, 0)
 	for rows.Next() {
@@ -2637,6 +2660,7 @@ func (d *RevokedCertificate) ListAll(ctx context.Context, opt ...ListOption) ([]
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.RevokedCertificate, 0)
 	for rows.Next() {
@@ -2724,7 +2748,7 @@ func (d *RevokedCertificate) Update(ctx context.Context, revokedCertificate *ent
 
 	changedColumn := revokedCertificate.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
@@ -2766,7 +2790,7 @@ type NodeInterface interface {
 	Delete(ctx context.Context, id int32, opt ...ExecOption) error
 }
 
-var _ NodeInterface = &Node{}
+var _ NodeInterface = (*Node)(nil)
 
 func NewNode(conn *sql.DB) *Node {
 	return &Node{
@@ -2815,6 +2839,7 @@ func (d *Node) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Node, er
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Node, 0, len(id))
 	for rows.Next() {
@@ -2850,6 +2875,7 @@ func (d *Node) ListAll(ctx context.Context, opt ...ListOption) ([]*entity.Node, 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Node, 0)
 	for rows.Next() {
@@ -2887,6 +2913,7 @@ func (d *Node) ListHostname(ctx context.Context, hostname string, opt ...ListOpt
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	res := make([]*entity.Node, 0)
 	for rows.Next() {
@@ -2974,7 +3001,7 @@ func (d *Node) Update(ctx context.Context, node *entity.Node, opt ...ExecOption)
 
 	changedColumn := node.ChangedColumn()
 	cols := make([]string, len(changedColumn)+1)
-	values := make([]interface{}, len(changedColumn)+1)
+	values := make([]any, len(changedColumn)+1)
 	for i := range changedColumn {
 		cols[i] = "`" + changedColumn[i].Name + "` = ?"
 		values[i] = changedColumn[i].Value
