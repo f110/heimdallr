@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+
+onlyBuiltDependencies: []
+
+catalog:
+  "@bufbuild/protobuf": "2.15.0"

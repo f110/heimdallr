@@ -5,10 +5,13 @@ bazel_dep(name = "rules_oci", version = "2.2.7")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "33.6")
-bazel_dep(name = "bazel_lib", version = "3.0.0")
+bazel_dep(name = "bazel_lib", version = "3.7.0")
 bazel_dep(name = "jq.bzl", version = "0.4.0")
 bazel_dep(name = "protoc_ddl", version = "0.0.0", repo_name = "dev_f110_protoc_ddl")
 bazel_dep(name = "dev_f110_kubeproto")
+bazel_dep(name = "aspect_rules_js", version = "3.4.1")
+bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
+bazel_dep(name = "rules_nodejs", version = "6.7.5")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.from_file(go_mod = "//:go.mod")
@@ -46,6 +49,7 @@ go_deps.gazelle_override(
 )
 use_repo(
     go_deps,
+    "com_connectrpc_connect",
     "com_github_bazelbuild_buildtools",
     "com_github_bradfitz_gomemcache",
     "com_github_bradleyfalzon_ghinstallation_v2",
@@ -145,3 +149,25 @@ use_repo(vault_ext, "vault_110", "vault_latest")
 
 jq_toolchains = use_extension("@jq.bzl//jq:extensions.bzl", "toolchains")
 use_repo(jq_toolchains, "jq_toolchains")
+
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node", dev_dependency = True)
+node.toolchain(node_version = "22.20.0")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+use_repo(pnpm, "pnpm")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm", dev_dependency = True)
+npm.npm_translate_lock(
+    name = "npm",
+    generate_bzl_library_targets = True,
+    npmrc = "//ts:.npmrc",
+    pnpm_lock = "//ts:pnpm-lock.yaml",
+    verify_node_modules_ignored = "//:.bazelignore",
+)
+use_repo(npm, "npm")
+
+register_toolchains("//ts/toolchains:all")
+
+typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript", dev_dependency = True)
+typescript.deps(version_from = "//ts:package.json")
+use_repo(typescript, "npm_typescript")

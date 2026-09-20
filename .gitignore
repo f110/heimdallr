@@ -15,3 +15,5 @@
 /docs/working
 
 /bazel-*
+
+node_modules/

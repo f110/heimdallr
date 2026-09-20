@@ -1,0 +1,17 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("//build/rules/ts:vendor.bzl", "vendor_ts")
+
+js_library(
+    name = "connect",
+    srcs = [
+        "dashboard_pb.d.ts",
+        "dashboard_pb.js",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["//ts:node_modules/@bufbuild/protobuf"],
+)
+
+vendor_ts(
+    name = "vendor_dashboard",
+    src = "//pkg/dashboard:dashboard_es",
+)

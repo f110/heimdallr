@@ -34,6 +34,7 @@ gen:
 	$(BAZEL) run //pkg/database/mysql/entity:vendor_schema
 	$(BAZEL) run //pkg/database/mysql/entity:vendor_entity
 	$(BAZEL) run //pkg/database/mysql/dao:vendor_dao
+	$(BAZEL) run //ts/apps/dashboard/src/connect:vendor_dashboard
 
 gen-operator: third_party_protos
 	$(BAZEL) query 'attr(generator_function, k8s_code_generator, //...)' | xargs -n1 bazel run

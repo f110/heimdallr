@@ -1,1 +1,3 @@
 .sl
+ts/node_modules
+ts/apps/dashboard/node_modules
