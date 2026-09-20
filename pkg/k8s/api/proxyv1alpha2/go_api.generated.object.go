@@ -1049,7 +1049,10 @@ func (in *Location) DeepCopy() *Location {
 type ServiceSelector struct {
 	metav1.LabelSelector `json:",inline"`
 	Namespace            string `json:"namespace,omitempty"`
-	// name selects the Service by name and takes precedence over the label selector.
+	// name selects the Service by name and takes precedence over the label selector. The selector must
+	// resolve to exactly one Service: if the label selector matches more than one Service (or none), the
+	// route that uses this selector is silently dropped from the proxy configuration. Set name, or use
+	// labels unique to the target Service, to keep the match to a single Service.
 	Name   string `json:"name,omitempty"`
 	Port   string `json:"port,omitempty"`
 	Scheme string `json:"scheme,omitempty"`

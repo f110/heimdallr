@@ -4,7 +4,7 @@ bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "rules_oci", version = "2.2.7")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "protobuf", version = "33.1")
+bazel_dep(name = "protobuf", version = "33.6")
 bazel_dep(name = "bazel_lib", version = "3.0.0")
 bazel_dep(name = "jq.bzl", version = "0.4.0")
 bazel_dep(name = "protoc_ddl", version = "0.0.0", repo_name = "dev_f110_protoc_ddl")
@@ -103,7 +103,7 @@ use_repo(
 
 git_override(
     module_name = "protoc_ddl",
-    commit = "0d4d02686e470e43f95d395ac204121103b03f66",
+    commit = "28d15745bb9eceeb98136e20413d32368d8527ad",
     patch_strip = 1,
     patches = ["//patch:protoc-ddl.patch"],
     remote = "https://github.com/f110/protoc-ddl",
@@ -111,7 +111,7 @@ git_override(
 
 git_override(
     module_name = "dev_f110_kubeproto",
-    commit = "1ece9405ca153a93cd9483c83b69cf97e7a62344",
+    commit = "55a1a18121b9de2fd2638ff1d1d24c5f93ac606c",
     remote = "https://github.com/f110/kubeproto",
 )
 

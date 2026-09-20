@@ -834,15 +834,15 @@ type ACMEIssuerDNS01ProviderRFC2136 struct {
 	// This field is required.
 	Nameserver string `json:"nameserver"`
 	// The name of the secret containing the TSIG value.
-	// If “tsigKeyName“ is defined, this field is required.
+	// If ``tsigKeyName`` is defined, this field is required.
 	TSIGSecret *metav1_1.SecretKeySelector `json:"tsigSecretSecretRef,omitempty"`
 	// The TSIG Key name configured in the DNS.
-	// If “tsigSecretSecretRef“ is defined, this field is required.
+	// If ``tsigSecretSecretRef`` is defined, this field is required.
 	TSIGKeyName string `json:"tsigKeyName,omitempty"`
 	// The TSIG Algorithm configured in the DNS supporting RFC2136. Used only
-	// when “tsigSecretSecretRef“ and “tsigKeyName“ are defined.
-	// Supported values are (case-insensitive): “HMACMD5“ (default),
-	// “HMACSHA1“, “HMACSHA256“ or “HMACSHA512“.
+	// when ``tsigSecretSecretRef`` and ``tsigKeyName`` are defined.
+	// Supported values are (case-insensitive): ``HMACMD5`` (default),
+	// ``HMACSHA1``, ``HMACSHA256`` or ``HMACSHA512``.
 	TSIGAlgorithm string `json:"tsigAlgorithm,omitempty"`
 }
 
