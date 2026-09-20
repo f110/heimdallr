@@ -1001,10 +1001,6 @@ func (s *Server) RenderTemplate(w http.ResponseWriter, name string, data interfa
 	}
 }
 
-type verifiedUserIdKey struct{}
-
-var VerifiedUserIdKey = verifiedUserIdKey{}
-
 func (s *Server) verifyRequest(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		if req.Header.Get(authproxy.TokenHeaderName) == "" {
