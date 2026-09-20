@@ -1,5 +1,7 @@
 load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//build/rules/go:grpc.bzl", "vendor_grpc_source")
 
 proto_library(
     name = "dashboard_proto",
@@ -8,9 +10,40 @@ proto_library(
     deps = ["@protobuf//:timestamp_proto"],
 )
 
+go_proto_library(
+    name = "dashboard_go_proto",
+    compilers = ["@rules_go//proto:go_proto"],
+    importpath = "go.f110.dev/heimdallr/pkg/dashboard",
+    protos = [":dashboard_proto"],
+    visibility = ["//visibility:private"],
+)
+
+vendor_grpc_source(
+    name = "vendor_proto_source",
+    src = ":dashboard_go_proto",
+)
+
+go_proto_library(
+    name = "dashboard_proto_connect",
+    compilers = ["//build/rules/proto:connect_go_compiler"],
+    embed = [":dashboard_go_proto"],
+    importpath = "go.f110.dev/heimdallr/pkg/dashboard",
+    protos = [":dashboard_proto"],
+    visibility = ["//visibility:public"],
+)
+
+vendor_grpc_source(
+    name = "vendor_connect_source",
+    src = ":dashboard_proto_connect",
+)
+
 go_library(
     name = "dashboard",
-    srcs = ["server.go"],
+    srcs = [
+        "dashboard.connect.go",
+        "dashboard.pb.go",
+        "server.go",
+    ],
     importpath = "go.f110.dev/heimdallr/pkg/dashboard",
     visibility = ["//visibility:public"],
     deps = [
@@ -22,9 +55,13 @@ go_library(
         "//pkg/rpc/rpcclient",
         "//pkg/template",
         "//tmpl/dashboard",
+        "@com_connectrpc_connect//:connect",
         "@com_github_golang_jwt_jwt_v4//:jwt",
         "@com_github_julienschmidt_httprouter//:httprouter",
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//runtime/protoimpl",
+        "@org_golang_google_protobuf//types/known/timestamppb",
     ],
 )

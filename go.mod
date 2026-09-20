@@ -4,6 +4,7 @@ go 1.27.1
 
 require (
 	cloud.google.com/go/storage v1.36.0
+	connectrpc.com/connect v1.21.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/bazelbuild/buildtools v0.0.0-20260622120422-77b9b380c0a4
 	github.com/bradfitz/gomemcache v0.0.0-20260422231931-4d751bb6e37c
