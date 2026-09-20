@@ -1,4 +1,12 @@
 load("@rules_go//go:def.bzl", "go_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "dashboard_proto",
+    srcs = ["dashboard.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["@protobuf//:timestamp_proto"],
+)
 
 go_library(
     name = "dashboard",

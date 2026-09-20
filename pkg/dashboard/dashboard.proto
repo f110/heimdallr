@@ -1,0 +1,255 @@
+syntax = "proto3";
+package dashboard.bff;
+option go_package = "go.f110.dev/heimdallr/pkg/dashboard";
+
+import "google/protobuf/timestamp.proto";
+
+service MeService {
+    rpc GetMe (GetMeRequest) returns (GetMeResponse);
+    rpc AddDevice (AddDeviceRequest) returns (AddDeviceResponse);
+}
+
+service AdminService {
+    rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+    rpc GetUser (GetUserRequest) returns (GetUserResponse);
+    rpc AddUser (AddUserRequest) returns (AddUserResponse);
+    rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
+    rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
+    rpc BecomeMaintainer (BecomeMaintainerRequest) returns (BecomeMaintainerResponse);
+    rpc ToggleAdmin (ToggleAdminRequest) returns (ToggleAdminResponse);
+
+    rpc ListRoles (ListRolesRequest) returns (ListRolesResponse);
+
+    rpc ListServiceAccounts (ListServiceAccountsRequest) returns (ListServiceAccountsResponse);
+    rpc CreateServiceAccount (CreateServiceAccountRequest) returns (CreateServiceAccountResponse);
+    rpc ListServiceAccountTokens (ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
+    rpc CreateServiceAccountToken (CreateServiceAccountTokenRequest) returns (CreateServiceAccountTokenResponse);
+}
+
+service CertificateService {
+    rpc ListCertificates (ListCertificatesRequest) returns (ListCertificatesResponse);
+    rpc NewClientCertificate (NewClientCertificateRequest) returns (NewClientCertificateResponse);
+    rpc RevokeCertificate (RevokeCertificateRequest) returns (RevokeCertificateResponse);
+
+    rpc ListAgents (ListAgentsRequest) returns (ListAgentsResponse);
+    rpc ListAgentBackends (ListAgentBackendsRequest) returns (ListAgentBackendsResponse);
+    rpc RegisterAgent (RegisterAgentRequest) returns (RegisterAgentResponse);
+}
+
+enum UserType {
+    USER_TYPE_UNSPECIFIED = 0;
+    USER_TYPE_NORMAL = 1;
+    USER_TYPE_SERVICE_ACCOUNT = 2;
+}
+
+enum KeyType {
+    KEY_TYPE_UNSPECIFIED = 0;
+    KEY_TYPE_ECDSA = 1;
+    KEY_TYPE_RSA = 2;
+}
+
+message User {
+             string   id             = 1;
+             UserType type           = 2;
+    repeated string   roles          = 3;
+    repeated string   maintain_roles = 4;
+             bool     admin          = 5;
+             string   comment        = 6;
+             string   login_name     = 7;
+             google.protobuf.Timestamp last_login = 8;
+}
+
+message Role {
+    string name        = 1;
+    string title       = 2;
+    string description = 3;
+}
+
+message Backend {
+    string name        = 1;
+    string host        = 2;
+    string description = 3;
+}
+
+// Certificate carries a serial number as a hexadecimal string. The binary form of rpc.CertItem
+// is not exposed to the browser.
+message Certificate {
+    string serial_number = 1;
+    string common_name   = 2;
+    google.protobuf.Timestamp issued_at  = 3;
+    google.protobuf.Timestamp revoked_at = 4;
+    string comment       = 5;
+    bool   has_p12       = 6;
+}
+
+message Agent {
+    string name      = 1;
+    string from_addr = 2;
+    google.protobuf.Timestamp connected_at = 3;
+}
+
+message AccessToken {
+    string name   = 1;
+    string issuer = 2;
+    google.protobuf.Timestamp issued_at = 3;
+}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+    repeated Certificate devices  = 1;
+    repeated Backend     backends = 2;
+}
+
+message AddDeviceRequest {
+    string name = 1;
+    string csr  = 2;
+}
+
+message AddDeviceResponse {}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+    repeated User users = 1;
+}
+
+message GetUserRequest {
+    string id = 1;
+}
+
+message GetUserResponse {
+             User    user     = 1;
+    repeated Backend backends = 2;
+}
+
+message AddUserRequest {
+    string id   = 1;
+    string role = 2;
+}
+
+message AddUserResponse {}
+
+message UpdateUserRequest {
+    string id         = 1;
+    string login_name = 2;
+}
+
+message UpdateUserResponse {}
+
+message DeleteUserRequest {
+    string id   = 1;
+    string role = 2;
+}
+
+message DeleteUserResponse {}
+
+message BecomeMaintainerRequest {
+    string id   = 1;
+    string role = 2;
+}
+
+message BecomeMaintainerResponse {}
+
+message ToggleAdminRequest {
+    string id = 1;
+}
+
+message ToggleAdminResponse {}
+
+message ListRolesRequest {}
+
+message ListRolesResponse {
+    repeated RoleMembers roles = 1;
+}
+
+message RoleMembers {
+             Role       role    = 1;
+    repeated RoleMember members = 2;
+}
+
+message RoleMember {
+    string   id         = 1;
+    UserType type       = 2;
+    bool     maintainer = 3;
+    bool     admin      = 4;
+}
+
+message ListServiceAccountsRequest {}
+
+message ListServiceAccountsResponse {
+    repeated User accounts = 1;
+}
+
+message CreateServiceAccountRequest {
+    string id      = 1;
+    string comment = 2;
+}
+
+message CreateServiceAccountResponse {}
+
+message ListServiceAccountTokensRequest {
+    string id = 1;
+}
+
+message ListServiceAccountTokensResponse {
+    repeated AccessToken tokens = 1;
+}
+
+message CreateServiceAccountTokenRequest {
+    string id   = 1;
+    string name = 2;
+}
+
+// CreateServiceAccountTokenResponse is the only message that carries a token value.
+// The value can not be read again once the response is discarded.
+message CreateServiceAccountTokenResponse {
+    string name  = 1;
+    string value = 2;
+}
+
+message ListCertificatesRequest {}
+
+message ListCertificatesResponse {
+    repeated Certificate signed  = 1;
+    repeated Certificate revoked = 2;
+}
+
+message NewClientCertificateRequest {
+    string  id       = 1;
+    string  csr      = 2;
+    KeyType key_type = 3;
+    int32   key_bits = 4;
+    string  password = 5;
+    string  comment  = 6;
+}
+
+message NewClientCertificateResponse {}
+
+message RevokeCertificateRequest {
+    string serial_number = 1;
+}
+
+message RevokeCertificateResponse {}
+
+message ListAgentsRequest {}
+
+message ListAgentsResponse {
+    repeated Agent       connected = 1;
+    repeated Certificate signed    = 2;
+    repeated Certificate revoked   = 3;
+}
+
+message ListAgentBackendsRequest {}
+
+message ListAgentBackendsResponse {
+    repeated string names = 1;
+}
+
+message RegisterAgentRequest {
+    string id      = 1;
+    string csr     = 2;
+    string comment = 3;
+}
+
+message RegisterAgentResponse {}
