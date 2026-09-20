@@ -1,0 +1,16 @@
+{
+  "name": "heimdallr",
+  "private": true,
+  "packageManager": "pnpm@10.29.3",
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.15.0",
+    "prettier": "^3.9.8",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
