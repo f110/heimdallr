@@ -10,33 +10,206 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RoleRouteImport } from './routes/role'
+import { Route as AgentIndexRouteImport } from './routes/agent.index'
+import { Route as AgentNewRouteImport } from './routes/agent.new'
+import { Route as CertIndexRouteImport } from './routes/cert.index'
+import { Route as CertNewRouteImport } from './routes/cert.new'
+import { Route as MeIndexRouteImport } from './routes/me.index'
+import { Route as SaIndexRouteImport } from './routes/sa.index'
+import { Route as SaNewRouteImport } from './routes/sa.new'
+import { Route as UserIndexRouteImport } from './routes/user.index'
+import { Route as MeDeviceNewRouteImport } from './routes/me.device.new'
+import { Route as Service_accountIdTokenRouteImport } from './routes/service_account.$id.token'
+import { Route as UserIdIndexRouteImport } from './routes/user.$id.index'
+import { Route as UserIdEditRouteImport } from './routes/user.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoleRoute = RoleRouteImport.update({
+  id: '/role',
+  path: '/role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentIndexRoute = AgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentNewRoute = AgentNewRouteImport.update({
+  id: '/agent/new',
+  path: '/agent/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertIndexRoute = CertIndexRouteImport.update({
+  id: '/cert/',
+  path: '/cert/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertNewRoute = CertNewRouteImport.update({
+  id: '/cert/new',
+  path: '/cert/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeIndexRoute = MeIndexRouteImport.update({
+  id: '/me/',
+  path: '/me/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaIndexRoute = SaIndexRouteImport.update({
+  id: '/sa/',
+  path: '/sa/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaNewRoute = SaNewRouteImport.update({
+  id: '/sa/new',
+  path: '/sa/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserIndexRoute = UserIndexRouteImport.update({
+  id: '/user/',
+  path: '/user/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeDeviceNewRoute = MeDeviceNewRouteImport.update({
+  id: '/me/device/new',
+  path: '/me/device/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Service_accountIdTokenRoute = Service_accountIdTokenRouteImport.update({
+  id: '/service_account/$id/token',
+  path: '/service_account/$id/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserIdIndexRoute = UserIdIndexRouteImport.update({
+  id: '/user/$id/',
+  path: '/user/$id/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserIdEditRoute = UserIdEditRouteImport.update({
+  id: '/user/$id/edit',
+  path: '/user/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/role': typeof RoleRoute
+  '/agent/new': typeof AgentNewRoute
+  '/cert/new': typeof CertNewRoute
+  '/sa/new': typeof SaNewRoute
+  '/agent/': typeof AgentIndexRoute
+  '/cert/': typeof CertIndexRoute
+  '/me/': typeof MeIndexRoute
+  '/sa/': typeof SaIndexRoute
+  '/user/': typeof UserIndexRoute
+  '/me/device/new': typeof MeDeviceNewRoute
+  '/service_account/$id/token': typeof Service_accountIdTokenRoute
+  '/user/$id/edit': typeof UserIdEditRoute
+  '/user/$id/': typeof UserIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/role': typeof RoleRoute
+  '/agent/new': typeof AgentNewRoute
+  '/cert/new': typeof CertNewRoute
+  '/sa/new': typeof SaNewRoute
+  '/agent': typeof AgentIndexRoute
+  '/cert': typeof CertIndexRoute
+  '/me': typeof MeIndexRoute
+  '/sa': typeof SaIndexRoute
+  '/user': typeof UserIndexRoute
+  '/me/device/new': typeof MeDeviceNewRoute
+  '/service_account/$id/token': typeof Service_accountIdTokenRoute
+  '/user/$id/edit': typeof UserIdEditRoute
+  '/user/$id': typeof UserIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/role': typeof RoleRoute
+  '/agent/new': typeof AgentNewRoute
+  '/cert/new': typeof CertNewRoute
+  '/sa/new': typeof SaNewRoute
+  '/agent/': typeof AgentIndexRoute
+  '/cert/': typeof CertIndexRoute
+  '/me/': typeof MeIndexRoute
+  '/sa/': typeof SaIndexRoute
+  '/user/': typeof UserIndexRoute
+  '/me/device/new': typeof MeDeviceNewRoute
+  '/service_account/$id/token': typeof Service_accountIdTokenRoute
+  '/user/$id/edit': typeof UserIdEditRoute
+  '/user/$id/': typeof UserIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/role'
+    | '/agent/new'
+    | '/cert/new'
+    | '/sa/new'
+    | '/agent/'
+    | '/cert/'
+    | '/me/'
+    | '/sa/'
+    | '/user/'
+    | '/me/device/new'
+    | '/service_account/$id/token'
+    | '/user/$id/edit'
+    | '/user/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/role'
+    | '/agent/new'
+    | '/cert/new'
+    | '/sa/new'
+    | '/agent'
+    | '/cert'
+    | '/me'
+    | '/sa'
+    | '/user'
+    | '/me/device/new'
+    | '/service_account/$id/token'
+    | '/user/$id/edit'
+    | '/user/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/role'
+    | '/agent/new'
+    | '/cert/new'
+    | '/sa/new'
+    | '/agent/'
+    | '/cert/'
+    | '/me/'
+    | '/sa/'
+    | '/user/'
+    | '/me/device/new'
+    | '/service_account/$id/token'
+    | '/user/$id/edit'
+    | '/user/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RoleRoute: typeof RoleRoute
+  AgentNewRoute: typeof AgentNewRoute
+  CertNewRoute: typeof CertNewRoute
+  SaNewRoute: typeof SaNewRoute
+  AgentIndexRoute: typeof AgentIndexRoute
+  CertIndexRoute: typeof CertIndexRoute
+  MeIndexRoute: typeof MeIndexRoute
+  SaIndexRoute: typeof SaIndexRoute
+  UserIndexRoute: typeof UserIndexRoute
+  MeDeviceNewRoute: typeof MeDeviceNewRoute
+  Service_accountIdTokenRoute: typeof Service_accountIdTokenRoute
+  UserIdEditRoute: typeof UserIdEditRoute
+  UserIdIndexRoute: typeof UserIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +221,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/role': {
+      id: '/role'
+      path: '/role'
+      fullPath: '/role'
+      preLoaderRoute: typeof RoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/': {
+      id: '/agent/'
+      path: '/agent'
+      fullPath: '/agent/'
+      preLoaderRoute: typeof AgentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/new': {
+      id: '/agent/new'
+      path: '/agent/new'
+      fullPath: '/agent/new'
+      preLoaderRoute: typeof AgentNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cert/': {
+      id: '/cert/'
+      path: '/cert'
+      fullPath: '/cert/'
+      preLoaderRoute: typeof CertIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cert/new': {
+      id: '/cert/new'
+      path: '/cert/new'
+      fullPath: '/cert/new'
+      preLoaderRoute: typeof CertNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me/': {
+      id: '/me/'
+      path: '/me'
+      fullPath: '/me/'
+      preLoaderRoute: typeof MeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sa/': {
+      id: '/sa/'
+      path: '/sa'
+      fullPath: '/sa/'
+      preLoaderRoute: typeof SaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sa/new': {
+      id: '/sa/new'
+      path: '/sa/new'
+      fullPath: '/sa/new'
+      preLoaderRoute: typeof SaNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/': {
+      id: '/user/'
+      path: '/user'
+      fullPath: '/user/'
+      preLoaderRoute: typeof UserIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me/device/new': {
+      id: '/me/device/new'
+      path: '/me/device/new'
+      fullPath: '/me/device/new'
+      preLoaderRoute: typeof MeDeviceNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/service_account/$id/token': {
+      id: '/service_account/$id/token'
+      path: '/service_account/$id/token'
+      fullPath: '/service_account/$id/token'
+      preLoaderRoute: typeof Service_accountIdTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/$id/': {
+      id: '/user/$id/'
+      path: '/user/$id'
+      fullPath: '/user/$id/'
+      preLoaderRoute: typeof UserIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/$id/edit': {
+      id: '/user/$id/edit'
+      path: '/user/$id/edit'
+      fullPath: '/user/$id/edit'
+      preLoaderRoute: typeof UserIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RoleRoute: RoleRoute,
+  AgentNewRoute: AgentNewRoute,
+  CertNewRoute: CertNewRoute,
+  SaNewRoute: SaNewRoute,
+  AgentIndexRoute: AgentIndexRoute,
+  CertIndexRoute: CertIndexRoute,
+  MeIndexRoute: MeIndexRoute,
+  SaIndexRoute: SaIndexRoute,
+  UserIndexRoute: UserIndexRoute,
+  MeDeviceNewRoute: MeDeviceNewRoute,
+  Service_accountIdTokenRoute: Service_accountIdTokenRoute,
+  UserIdEditRoute: UserIdEditRoute,
+  UserIdIndexRoute: UserIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

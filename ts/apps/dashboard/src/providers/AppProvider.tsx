@@ -4,6 +4,8 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { theme } from '../theme'
+
 // The dashboard is served from the same origin as the API, so the browser sends the session
 // cookie and authproxy attaches X-Auth-Token on its own.
 const transport = createConnectTransport({ baseUrl: '/' })
@@ -13,7 +15,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>
-        <MantineProvider>{children}</MantineProvider>
+        <MantineProvider theme={theme}>{children}</MantineProvider>
       </QueryClientProvider>
     </TransportProvider>
   )

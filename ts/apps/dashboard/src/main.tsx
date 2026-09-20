@@ -1,11 +1,13 @@
+// The layered stylesheet puts every rule of Mantine into "@layer mantine", so the CSS modules of
+// this app win no matter in which order the bundler emits them.
+import '@mantine/core/styles.layer.css'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 
 import { AppProvider } from './providers/AppProvider'
 import { router } from './route'
-
-import '@mantine/core/styles.css'
 
 const container = document.getElementById('root')
 if (!container) {

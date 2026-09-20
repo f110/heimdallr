@@ -1,49 +1,70 @@
-import { AppShell, Burger, Group, NavLink, Title } from '@mantine/core'
+import { AppShell, Burger, Container, Group, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { Link, Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
+import {
+  IconCertificate,
+  IconCopy,
+  IconDeviceDesktop,
+  IconFileText,
+  IconHome,
+  IconUser,
+} from '@tabler/icons-react'
+import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 
+import { NavLinkLink } from '../components/Link'
+import classes from '../components/Navbar.module.css'
+import { semantic } from '../theme'
+
+// The same items and icons as the left menu of the server side rendered dashboard.
 const menu = [
-  { to: '/me', label: 'Me' },
-  { to: '/user', label: 'User' },
-  { to: '/role', label: 'Role' },
-  { to: '/sa', label: 'Service Account' },
-  { to: '/cert', label: 'Client Certificate' },
-  { to: '/agent', label: 'Agent' },
+  { to: '/me', label: 'Me', icon: IconHome },
+  { to: '/user', label: 'User', icon: IconUser },
+  { to: '/role', label: 'Role', icon: IconFileText },
+  { to: '/sa', label: 'Service Account', icon: IconDeviceDesktop },
+  { to: '/cert', label: 'Client Certificate', icon: IconCertificate },
+  { to: '/agent', label: 'Agent', icon: IconCopy },
 ]
 
 export const Route = createRootRoute({ component: RootLayout })
 
 function RootLayout() {
-  const [opened, { toggle }] = useDisclosure()
+  const [opened, { toggle, close }] = useDisclosure()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
     <AppShell
-      header={{ height: 56 }}
-      navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
+      header={{ height: 48, collapsed: true }}
+      navbar={{
+        width: semantic.sidebarWidth,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened, desktop: false },
+      }}
+      padding={0}
     >
-      <AppShell.Header>
+      <AppShell.Header withBorder={false} hiddenFrom="sm">
         <Group h="100%" px="md">
-          <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-          <Title order={4}>Heimdallr</Title>
+          <Burger opened={opened} onClick={toggle} size="sm" />
+          <Text fw={700}>Heimdallr</Text>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar>
+      <AppShell.Navbar className={classes.navbar} py={0}>
         {menu.map((v) => (
-          <NavLink
+          <NavLinkLink
             key={v.to}
-            component={Link}
             to={v.to}
             label={v.label}
+            className={classes.link}
+            leftSection={<v.icon size={16} stroke={1.8} />}
+            onClick={close}
             active={pathname === v.to || pathname.startsWith(`${v.to}/`)}
           />
         ))}
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Outlet />
+        <Container size={semantic.containerWidth} pt="2rem" pb="4rem" px="md">
+          <Outlet />
+        </Container>
       </AppShell.Main>
     </AppShell>
   )

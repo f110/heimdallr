@@ -15,7 +15,7 @@ TEST_PATTERNS = [
 
 ASSET_PATTERNS = [
     "index.html",
-    "src/*.css",
+    "src/**/*.css",
 ]
 
 GENERATED_PACKAGES = ["//ts/apps/dashboard/src/connect"]
@@ -26,6 +26,7 @@ NPM_DEPS = [
     "//ts/apps/dashboard:node_modules/@connectrpc/connect-query",
     "//ts/apps/dashboard:node_modules/@connectrpc/connect-web",
     "//ts/apps/dashboard:node_modules/@mantine/core",
+    "//ts/apps/dashboard:node_modules/@tabler/icons-react",
     "//ts/apps/dashboard:node_modules/@mantine/form",
     "//ts/apps/dashboard:node_modules/@mantine/hooks",
     "//ts/apps/dashboard:node_modules/@tanstack/react-query",
