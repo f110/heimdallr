@@ -302,7 +302,7 @@ Continue:
 		if spy != nil {
 			m = node.m.wrapTesting(spy)
 		}
-		h.fn(m)
+		h.fn(ctx, m)
 		success = !m.Failed()
 	}()
 
@@ -398,7 +398,7 @@ func (f *Scenario) Context(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) It(name string, fn func(m *Matcher)) {
+func (f *Scenario) It(name string, fn func(ctx context.Context, m *Matcher)) {
 	s := NewCase(f.t, f, name, f.depth+1, &hook{fn: fn}, f.beforeEach, f.afterEach, f.route+" "+name)
 	f.child = append(f.child, s)
 }
@@ -408,29 +408,29 @@ func (f *Scenario) Step(name string, fn func(s *Scenario)) {
 	f.child = append(f.child, s)
 }
 
-func (f *Scenario) BeforeAll(fn func(m *Matcher)) {
+func (f *Scenario) BeforeAll(fn func(ctx context.Context, m *Matcher)) {
 	f.beforeAll = &hook{fn: fn}
 }
 
-func (f *Scenario) SBeforeAll(fn func(m *Matcher)) {
+func (f *Scenario) SBeforeAll(fn func(ctx context.Context, m *Matcher)) {
 	f.beforeAll = &hook{step: true, fn: fn}
 }
 
-func (f *Scenario) AfterAll(fn func(m *Matcher)) {
+func (f *Scenario) AfterAll(fn func(ctx context.Context, m *Matcher)) {
 	f.afterAll = &hook{fn: fn}
 }
 
-func (f *Scenario) SAfterAll(fn func(m *Matcher)) {
+func (f *Scenario) SAfterAll(fn func(ctx context.Context, m *Matcher)) {
 	f.afterAll = &hook{step: true, fn: fn}
 }
 
-func (f *Scenario) BeforeEach(fn func(m *Matcher)) {
+func (f *Scenario) BeforeEach(fn func(ctx context.Context, m *Matcher)) {
 	if f.beforeEach != nil {
 		b := f.beforeEach
 		f.beforeEach = &hook{
-			fn: func(m *Matcher) {
-				b.fn(m)
-				fn(m)
+			fn: func(ctx context.Context, m *Matcher) {
+				b.fn(ctx, m)
+				fn(ctx, m)
 			},
 		}
 	} else {
@@ -438,14 +438,14 @@ func (f *Scenario) BeforeEach(fn func(m *Matcher)) {
 	}
 }
 
-func (f *Scenario) SBeforeEach(fn func(m *Matcher)) {
+func (f *Scenario) SBeforeEach(fn func(ctx context.Context, m *Matcher)) {
 	if f.beforeEach != nil {
 		b := f.beforeEach
 		f.beforeEach = &hook{
 			step: true,
-			fn: func(m *Matcher) {
-				b.fn(m)
-				fn(m)
+			fn: func(ctx context.Context, m *Matcher) {
+				b.fn(ctx, m)
+				fn(ctx, m)
 			},
 		}
 	} else {
@@ -453,13 +453,13 @@ func (f *Scenario) SBeforeEach(fn func(m *Matcher)) {
 	}
 }
 
-func (f *Scenario) AfterEach(fn func(m *Matcher)) {
+func (f *Scenario) AfterEach(fn func(ctx context.Context, m *Matcher)) {
 	if f.afterEach != nil {
 		a := f.afterEach
 		f.afterEach = &hook{
-			fn: func(m *Matcher) {
-				a.fn(m)
-				fn(m)
+			fn: func(ctx context.Context, m *Matcher) {
+				a.fn(ctx, m)
+				fn(ctx, m)
 			},
 		}
 	} else {
@@ -467,14 +467,14 @@ func (f *Scenario) AfterEach(fn func(m *Matcher)) {
 	}
 }
 
-func (f *Scenario) SAfterEach(fn func(m *Matcher)) {
+func (f *Scenario) SAfterEach(fn func(ctx context.Context, m *Matcher)) {
 	if f.afterEach != nil {
 		a := f.afterEach
 		f.afterEach = &hook{
 			step: true,
-			fn: func(m *Matcher) {
-				a.fn(m)
-				fn(m)
+			fn: func(ctx context.Context, m *Matcher) {
+				a.fn(ctx, m)
+				fn(ctx, m)
 			},
 		}
 	} else {
@@ -486,11 +486,11 @@ func (f *Scenario) Defer(fn func()) {
 	f.deferFunc = fn
 }
 
-func (f *Scenario) Subject(fn func(m *Matcher)) {
+func (f *Scenario) Subject(fn func(ctx context.Context, m *Matcher)) {
 	f.subject = &hook{fn: fn}
 }
 
-func (f *Scenario) SSubject(fn func(m *Matcher)) {
+func (f *Scenario) SSubject(fn func(ctx context.Context, m *Matcher)) {
 	f.subject = &hook{step: true, fn: fn}
 }
 
@@ -559,7 +559,7 @@ type node struct {
 }
 
 type hook struct {
-	fn   func(*Matcher)
+	fn   func(context.Context, *Matcher)
 	done bool
 	step bool
 }

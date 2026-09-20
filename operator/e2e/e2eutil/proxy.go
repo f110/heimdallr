@@ -146,8 +146,8 @@ type RPCClient struct {
 	forwarder *portforward.PortForwarder
 }
 
-func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
-	users, err := rpcClient.ListAllUser()
+func EnsureExistingTestUser(ctx context.Context, rpcClient *RPCClient, id, role string) error {
+	users, err := rpcClient.ListAllUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 		}
 	}
 	if !found {
-		if err := rpcClient.AddUser(id, role); err != nil {
+		if err := rpcClient.AddUser(ctx, id, role); err != nil {
 			return err
 		}
 	}
@@ -167,12 +167,12 @@ func EnsureExistingTestUser(rpcClient *RPCClient, id, role string) error {
 	return nil
 }
 
-func SetupClientCert(rpcClient *RPCClient, id string) (*tls.Certificate, error) {
+func SetupClientCert(ctx context.Context, rpcClient *RPCClient, id string) (*tls.Certificate, error) {
 	csr, privKey, err := cert.CreatePrivateKeyAndCertificateRequest(pkix.Name{CommonName: id}, nil)
 	if err != nil {
 		return nil, err
 	}
-	signedCert, err := rpcClient.NewCertByCSR(string(csr), rpcclient.CommonName(id))
+	signedCert, err := rpcClient.NewCertByCSR(ctx, string(csr), rpcclient.CommonName(id))
 	if err != nil {
 		return nil, err
 	}

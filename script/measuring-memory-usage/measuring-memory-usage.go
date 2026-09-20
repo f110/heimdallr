@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -84,6 +85,7 @@ func memoryUsage(pid string) int {
 }
 
 func main() {
+	ctx := context.Background()
 	host := "local-proxy.f110.dev:4000"
 	max := 10
 	role := "user"
@@ -132,13 +134,13 @@ func main() {
 		panic(err)
 	}
 
-	c, err := rpcclient.NewWithStaticToken(conn)
+	c, err := rpcclient.NewWithStaticToken(ctx, conn)
 	if err != nil {
 		panic(err)
 	}
 	defer c.Close()
 
-	users, err := c.ListUser(role)
+	users, err := c.ListUser(ctx, role)
 	if err != nil {
 		panic(err)
 	}
@@ -146,7 +148,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Delete existing users (%d)\n", len(users))
 		// Remove all existing user
 		for _, v := range users {
-			if err := c.DeleteUser(v.Id, role); err != nil {
+			if err := c.DeleteUser(ctx, v.Id, role); err != nil {
 				panic(err)
 			}
 		}
@@ -160,7 +162,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Create user to %d\n", desiredUserCount)
 		diff := desiredUserCount - currentUserCount
 		for k := 0; k < diff; k++ {
-			if err := c.AddUser(fmt.Sprintf("mesure_%d@example.com", k+currentUserCount), role); err != nil {
+			if err := c.AddUser(ctx, fmt.Sprintf("mesure_%d@example.com", k+currentUserCount), role); err != nil {
 				panic(err)
 			}
 		}

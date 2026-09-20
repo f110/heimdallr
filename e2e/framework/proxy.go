@@ -113,12 +113,12 @@ func NewConnector(name string, m *btesting.MockServer, proxyCACert *x509.Certifi
 	return &Connector{name: name, target: m, privateKey: privateKey, csr: csr, dir: dir}, nil
 }
 
-func (c *Connector) Start(client *rpcclient.ClientWithUserToken, host, serverName string) error {
+func (c *Connector) Start(ctx context.Context, client *rpcclient.ClientWithUserToken, host, serverName string) error {
 	if c.dir == "" {
 		return xerrors.New("already ran and stopped")
 	}
 
-	cer, err := client.NewAgentCertByCSR(string(c.csr), c.name)
+	cer, err := client.NewAgentCertByCSR(ctx, string(c.csr), c.name)
 	if err != nil {
 		return err
 	}
@@ -486,7 +486,7 @@ func (p *Proxy) ClearConf() bool {
 	return true
 }
 
-func (p *Proxy) Reload() error {
+func (p *Proxy) Reload(ctx context.Context) error {
 	if err := p.buildConfig(); err != nil {
 		return err
 	}
@@ -574,7 +574,7 @@ func (p *Proxy) Reload() error {
 		return err
 	}
 
-	if err := p.syncUsers(); err != nil {
+	if err := p.syncUsers(ctx); err != nil {
 		return err
 	}
 
@@ -582,7 +582,7 @@ func (p *Proxy) Reload() error {
 		if *e2eDebug {
 			log.Print("Start connector")
 		}
-		if err := v.Start(p.rpcClient, fmt.Sprintf("127.0.0.1:%d", p.proxyPort), p.DomainHost); err != nil {
+		if err := v.Start(ctx, p.rpcClient, fmt.Sprintf("127.0.0.1:%d", p.proxyPort), p.DomainHost); err != nil {
 			return err
 		}
 	}
@@ -625,7 +625,7 @@ func (p *Proxy) setupRPCClient() error {
 	return nil
 }
 
-func (p *Proxy) syncUsers() error {
+func (p *Proxy) syncUsers(ctx context.Context) error {
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
 		return xerrors.WithStack(err)
@@ -657,7 +657,7 @@ func (p *Proxy) syncUsers() error {
 	}
 
 	client := rpcclient.NewClientWithUserToken(conn).WithToken(token)
-	users, err := client.ListAllUser()
+	users, err := client.ListAllUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -667,7 +667,7 @@ func (p *Proxy) syncUsers() error {
 			continue
 		}
 		for _, r := range user.Roles {
-			if err := client.DeleteUser(user.Id, r); err != nil {
+			if err := client.DeleteUser(ctx, user.Id, r); err != nil {
 				return err
 			}
 		}
@@ -675,7 +675,7 @@ func (p *Proxy) syncUsers() error {
 
 	for _, user := range p.users {
 		for _, r := range user.Roles {
-			if err := client.AddUser(user.Id, r); err != nil {
+			if err := client.AddUser(ctx, user.Id, r); err != nil {
 				return err
 			}
 		}

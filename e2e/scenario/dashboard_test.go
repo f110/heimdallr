@@ -1,6 +1,7 @@
 package scenario
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -15,36 +16,36 @@ func TestDashboard(t *testing.T) {
 	defer f.Execute()
 
 	f.Describe("Dashboard", func(s *btesting.Scenario) {
-		s.BeforeEach(func(m *btesting.Matcher) { m.Must(f.Proxy.Reload()) })
+		s.BeforeEach(func(ctx context.Context, m *btesting.Matcher) { m.Must(f.Proxy.Reload(ctx)) })
 		s.Defer(func() { f.Proxy.Cleanup() })
 
 		s.Context("by root user", func(s *btesting.Scenario) {
-			s.BeforeAll(func(_ *btesting.Matcher) { f.Proxy.Backend(f.Proxy.DashboardBackend()) })
-			s.AfterAll(func(_ *btesting.Matcher) { f.Proxy.ClearConf() })
+			s.BeforeAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.Backend(f.Proxy.DashboardBackend()) })
+			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
 			s.Context("request /", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized(framework.RootUserId).Get(m, f.Proxy.URL("dashboard"))
 				})
 
-				s.It("should return StatusOK", func(m *btesting.Matcher) {
+				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
 				})
 			})
 
 			s.Context("request /user", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized(framework.RootUserId).Get(m, f.Proxy.URL("dashboard", "/user"))
 				})
 
-				s.It("should return StatusOK", func(m *btesting.Matcher) {
+				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
 				})
 			})
 		})
 
 		s.Context("by admin user", func(s *btesting.Scenario) {
-			s.BeforeAll(func(_ *btesting.Matcher) {
+			s.BeforeAll(func(_ context.Context, _ *btesting.Matcher) {
 				dashboard := f.Proxy.DashboardBackend()
 				f.Proxy.Backend(dashboard)
 				f.Proxy.RPCPermission(&configv2.RPCPermission{
@@ -60,31 +61,31 @@ func TestDashboard(t *testing.T) {
 				})
 				f.Proxy.User(&database.User{Id: "admin@f110.dev", Roles: []string{"admin"}})
 			})
-			s.AfterAll(func(_ *btesting.Matcher) { f.Proxy.ClearConf() })
+			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
 			s.Context("request /", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized("admin@f110.dev").Get(m, f.Proxy.URL("dashboard"))
 				})
 
-				s.It("should return StatusOK", func(m *btesting.Matcher) {
+				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
 				})
 			})
 
 			s.Context("request /user", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized("admin@f110.dev").Get(m, f.Proxy.URL("dashboard", "/user"))
 				})
 
-				s.It("should return StatusOK", func(m *btesting.Matcher) {
+				s.It("should return StatusOK", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusOK, m.LastResponse().StatusCode)
 				})
 			})
 		})
 
 		s.Context("by non-admin user", func(s *btesting.Scenario) {
-			s.BeforeAll(func(_ *btesting.Matcher) {
+			s.BeforeAll(func(_ context.Context, _ *btesting.Matcher) {
 				dashboard := f.Proxy.DashboardBackend()
 				f.Proxy.Backend(dashboard)
 				f.Proxy.Role(&configv2.Role{Name: "admin", Bindings: []*configv2.Binding{
@@ -93,24 +94,24 @@ func TestDashboard(t *testing.T) {
 				f.Proxy.Role(&configv2.Role{Name: "user"})
 				f.Proxy.User(&database.User{Id: "test@f110.dev", Roles: []string{"user"}})
 			})
-			s.AfterAll(func(_ *btesting.Matcher) { f.Proxy.ClearConf() })
+			s.AfterAll(func(_ context.Context, _ *btesting.Matcher) { f.Proxy.ClearConf() })
 
 			s.Context("request /", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("dashboard"))
 				})
 
-				s.It("should return StatusUnauthorized", func(m *btesting.Matcher) {
+				s.It("should return StatusUnauthorized", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
 				})
 			})
 
 			s.Context("request /user", func(s *btesting.Scenario) {
-				s.Subject(func(m *btesting.Matcher) {
+				s.Subject(func(_ context.Context, m *btesting.Matcher) {
 					f.Agents.Authorized("test@f110.dev").Get(m, f.Proxy.URL("dashboard", "/user"))
 				})
 
-				s.It("should return StatusUnauthorized", func(m *btesting.Matcher) {
+				s.It("should return StatusUnauthorized", func(_ context.Context, m *btesting.Matcher) {
 					m.Equal(http.StatusUnauthorized, m.LastResponse().StatusCode)
 				})
 			})

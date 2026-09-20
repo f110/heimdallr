@@ -14,6 +14,7 @@ type AdminClient struct {
 
 	PingCall             int
 	UserListCall         int
+	UserListCtx          context.Context
 	UserAddCall          int
 	UserDelCall          int
 	UserGetCall          int
@@ -41,6 +42,7 @@ func (a *AdminClient) UserList(ctx context.Context, in *rpc.RequestUserList, opt
 	a.Lock()
 	defer a.Unlock()
 	a.UserListCall++
+	a.UserListCtx = ctx
 
 	return &rpc.ResponseUserList{}, nil
 }

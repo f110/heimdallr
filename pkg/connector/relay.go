@@ -33,7 +33,7 @@ type Relay struct {
 	accepted map[string]net.Conn
 }
 
-func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.Conn) (*Relay, error) {
+func NewRelay(ctx context.Context, client *rpcclient.Client, name string, server *Server, conn *tls.Conn) (*Relay, error) {
 	hostname, err := netutil.GetHostname()
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func NewRelay(client *rpcclient.Client, name string, server *Server, conn *tls.C
 	if err != nil {
 		return nil, err
 	}
-	c, err := client.NewServerCert(csr)
+	c, err := client.NewServerCert(ctx, csr)
 	if err != nil {
 		return nil, err
 	}

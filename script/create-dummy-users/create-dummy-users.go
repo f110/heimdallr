@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -17,6 +18,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	host := "local-proxy.f110.dev:4000"
 	count := 10
 	role := "user"
@@ -57,14 +59,14 @@ func main() {
 		panic(err)
 	}
 
-	c, err := rpcclient.NewWithStaticToken(conn)
+	c, err := rpcclient.NewWithStaticToken(ctx, conn)
 	if err != nil {
 		panic(err)
 	}
 	defer c.Close()
 
 	for i := 0; i < count; i++ {
-		if err := c.AddUser(fmt.Sprintf(userIdFormat, i+1), role); err != nil {
+		if err := c.AddUser(ctx, fmt.Sprintf(userIdFormat, i+1), role); err != nil {
 			panic(err)
 		}
 	}

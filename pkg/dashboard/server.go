@@ -164,7 +164,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request, _ httproute
 func (s *Server) handleServiceAccount(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	users, err := client.ListServiceAccount()
+	users, err := client.ListServiceAccount(req.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -193,7 +193,7 @@ func (s *Server) handleCreateServiceAccount(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err := client.NewServiceAccount(req.FormValue("id"), req.FormValue("comment"))
+	err := client.NewServiceAccount(req.Context(), req.FormValue("id"), req.FormValue("comment"))
 	if err != nil {
 		logger.Log.Info("Failed create service account", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -206,7 +206,7 @@ func (s *Server) handleCreateServiceAccount(w http.ResponseWriter, req *http.Req
 func (s *Server) handleServiceAccountToken(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	user, err := client.GetUser(params.ByName("id"), true)
+	user, err := client.GetUser(req.Context(), params.ByName("id"), true)
 	if err != nil {
 		logger.Log.Info("Failed get tokens", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -230,7 +230,7 @@ func (s *Server) handleNewServiceAccountToken(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	newToken, err := client.NewToken(req.FormValue("name"), params.ByName("id"))
+	newToken, err := client.NewToken(req.Context(), req.FormValue("name"), params.ByName("id"))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -264,7 +264,7 @@ type agent struct {
 func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	signed, err := client.ListCert()
+	signed, err := client.ListCert(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get signed certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -292,7 +292,7 @@ func (s *Server) handleCertIndex(w http.ResponseWriter, req *http.Request, _ htt
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked, err := client.ListRevokedCert()
+	revoked, err := client.ListRevokedCert(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get revoked certificate", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -341,7 +341,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		_, err := client.NewCertByCSR(req.FormValue("csr"), rpcclient.VerifyCommonName(req.FormValue("id")))
+		_, err := client.NewCertByCSR(req.Context(), req.FormValue("csr"), rpcclient.VerifyCommonName(req.FormValue("id")))
 		if err != nil {
 			logger.Log.Info("Failed sign CSR", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -363,7 +363,7 @@ func (s *Server) handleNewClientCert(w http.ResponseWriter, req *http.Request, _
 			return
 		}
 
-		err = client.NewCert(req.FormValue("id"), req.FormValue("key_type"), int(bit), req.FormValue("password"), req.FormValue("comment"))
+		err = client.NewCert(req.Context(), req.FormValue("id"), req.FormValue("key_type"), int(bit), req.FormValue("password"), req.FormValue("comment"))
 		if err != nil {
 			logger.Log.Info("Failed create new client certificate", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -390,7 +390,7 @@ func (s *Server) handleRevokeCert(w http.ResponseWriter, req *http.Request, _ ht
 		return
 	}
 
-	err := client.RevokeCert(i)
+	err := client.RevokeCert(req.Context(), i)
 	if err != nil {
 		logger.Log.Info("Failed revoke certificate", slog.Any("error", err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -415,7 +415,7 @@ func (s *Server) handleDownloadCert(w http.ResponseWriter, req *http.Request, _ 
 		return
 	}
 
-	cert, err := client.GetCert(i)
+	cert, err := client.GetCert(req.Context(), i)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -480,7 +480,7 @@ type roleAndUser struct {
 func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	users, err := client.ListUser("")
+	users, err := client.ListUser(req.Context(), "")
 	if err != nil {
 		logger.Log.Info("Can't get users", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -497,7 +497,7 @@ func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ htt
 		}
 	}
 
-	roles, err := client.ListRole()
+	roles, err := client.ListRole(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get roles", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -543,7 +543,7 @@ func (s *Server) handleRoleIndex(w http.ResponseWriter, req *http.Request, _ htt
 func (s *Server) handleUsers(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	users, err := client.ListAllUser()
+	users, err := client.ListAllUser(req.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -587,14 +587,14 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 		return
 	}
 
-	u, err := client.GetUser(id, false)
+	u, err := client.GetUser(req.Context(), id, false)
 	if err != nil {
 		logger.Log.Info("User not found", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	allRoles, err := client.ListRole()
+	allRoles, err := client.ListRole(req.Context())
 	if err != nil {
 		logger.Log.Info("Failure fetch roles", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -604,7 +604,7 @@ func (s *Server) handleGetUser(w http.ResponseWriter, req *http.Request, params 
 	for _, v := range allRoles {
 		roleMap[v.Name] = v.Backends
 	}
-	allBackends, err := client.ListAllBackend()
+	allBackends, err := client.ListAllBackend(req.Context())
 	if err != nil {
 		logger.Log.Info("Failure fetch backends", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -656,7 +656,7 @@ func (s *Server) handleEditUserIndex(w http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	u, err := client.GetUser(id, false)
+	u, err := client.GetUser(req.Context(), id, false)
 	if err != nil {
 		logger.Log.Info("User not found", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -685,7 +685,7 @@ func (s *Server) handleAddUser(w http.ResponseWriter, req *http.Request, _ httpr
 		return
 	}
 
-	if err := client.AddUser(req.FormValue("id"), req.FormValue("role")); err != nil {
+	if err := client.AddUser(req.Context(), req.FormValue("id"), req.FormValue("role")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -701,14 +701,14 @@ func (s *Server) handleEditUser(w http.ResponseWriter, req *http.Request, params
 		return
 	}
 
-	u, err := client.GetUser(params.ByName("id"), false)
+	u, err := client.GetUser(req.Context(), params.ByName("id"), false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	u.LoginName = req.FormValue("login_name")
 
-	if err := client.UpdateUser(u.Id, u); err != nil {
+	if err := client.UpdateUser(req.Context(), u.Id, u); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -724,7 +724,7 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, req *http.Request, para
 		return
 	}
 
-	if err := client.DeleteUser(params.ByName("id"), req.FormValue("role")); err != nil {
+	if err := client.DeleteUser(req.Context(), params.ByName("id"), req.FormValue("role")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -745,7 +745,7 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 		return
 	}
 
-	if err := client.UserBecomeMaintainer(params.ByName("id"), req.FormValue("role")); err != nil {
+	if err := client.UserBecomeMaintainer(req.Context(), params.ByName("id"), req.FormValue("role")); err != nil {
 		logger.Log.Info("Failure becoming maintainer", slog.String("id", params.ByName("id")), slog.String("role", req.FormValue("role")))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -757,7 +757,7 @@ func (s *Server) handleMakeMaintainer(w http.ResponseWriter, req *http.Request, 
 func (s *Server) handleMakeAdmin(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	if err := client.ToggleAdmin(params.ByName("id")); err != nil {
+	if err := client.ToggleAdmin(req.Context(), params.ByName("id")); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -768,7 +768,7 @@ func (s *Server) handleMakeAdmin(w http.ResponseWriter, req *http.Request, param
 func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	signed, err := client.ListCert()
+	signed, err := client.ListCert(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get signed certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -796,7 +796,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 		return signedCertificates[i].IssuedAt.After(signedCertificates[j].IssuedAt)
 	})
 
-	revoked, err := client.ListRevokedCert()
+	revoked, err := client.ListRevokedCert(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get revoked certificates", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -823,7 +823,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 		return revokedList[i].RevokedAt.After(revokedList[j].RevokedAt)
 	})
 
-	agents, err := client.ListConnectedAgent()
+	agents, err := client.ListConnectedAgent(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get connected agents", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -854,7 +854,7 @@ func (s *Server) handleAgentIndex(w http.ResponseWriter, req *http.Request, _ ht
 func (s *Server) handleNewAgent(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	client := s.client.WithRequest(req)
 
-	backends, err := client.ListAgentBackend()
+	backends, err := client.ListAgentBackend(req.Context())
 	if err != nil {
 		logger.Log.Info("Can't get backends from rpc server", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -887,14 +887,14 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, req *http.Request, _
 	}
 
 	if req.FormValue("csr") != "" {
-		_, err := client.NewAgentCertByCSR(req.FormValue("csr"), req.FormValue("id"))
+		_, err := client.NewAgentCertByCSR(req.Context(), req.FormValue("csr"), req.FormValue("id"))
 		if err != nil {
 			logger.Log.Info("Failed sign a CSR", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	} else {
-		err := client.NewAgentCert(req.FormValue("id"), req.FormValue("comment"))
+		err := client.NewAgentCert(req.Context(), req.FormValue("id"), req.FormValue("comment"))
 		if err != nil {
 			logger.Log.Info("Failed create a new client certificate", slog.Any("error", err))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -914,7 +914,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 		return
 	}
 
-	signed, err := client.ListCert(rpcclient.CommonName(userId), rpcclient.IsDevice())
+	signed, err := client.ListCert(req.Context(), rpcclient.CommonName(userId), rpcclient.IsDevice())
 	if err != nil {
 		logger.Log.Info("Failed get my certs", slog.Any("error", err))
 	}
@@ -933,7 +933,7 @@ func (s *Server) handleMe(w http.ResponseWriter, req *http.Request, _ httprouter
 		})
 	}
 
-	backends, err := client.GetBackends()
+	backends, err := client.GetBackends(req.Context())
 	if err != nil {
 		logger.Log.Info("Failed get backends", slog.Any("error", err))
 	}
@@ -978,7 +978,7 @@ func (s *Server) handleAddDevice(w http.ResponseWriter, req *http.Request, _ htt
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_, err := client.NewCertByCSR(
+	_, err := client.NewCertByCSR(req.Context(), 
 		req.FormValue("csr"),
 		rpcclient.OverrideCommonName(userId),
 		rpcclient.IsDevice(),

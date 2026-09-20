@@ -17,7 +17,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
-func getClient(confFile string) (*rpcclient.Client, error) {
+func getClient(ctx context.Context, confFile string) (*rpcclient.Client, error) {
 	conf, err := configutil.ReadConfig(confFile)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 		return nil, xerrors.WithStack(err)
 	}
 
-	c, err := rpcclient.NewWithStaticToken(conn)
+	c, err := rpcclient.NewWithStaticToken(ctx, conn)
 	if err != nil {
 		return nil, err
 	}
@@ -42,13 +42,13 @@ func getClient(confFile string) (*rpcclient.Client, error) {
 	return c, nil
 }
 
-func userList(c *rpcclient.Client, role string) error {
+func userList(ctx context.Context, c *rpcclient.Client, role string) error {
 	var userList []*rpc.UserItem
 	var err error
 	if role != "" {
-		userList, err = c.ListUser(role)
+		userList, err = c.ListUser(ctx, role)
 	} else {
-		userList, err = c.ListAllUser()
+		userList, err = c.ListAllUser(ctx)
 	}
 	if err != nil {
 		return err
@@ -70,13 +70,13 @@ func Admin(rootCmd *cmd.Command) {
 
 	userListCmd := &cmd.Command{
 		Use: "user-list",
-		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			c, err := getClient(confFile)
+		Run: func(ctx context.Context, _ *cmd.Command, _ []string) error {
+			c, err := getClient(ctx, confFile)
 			if err != nil {
 				return err
 			}
 
-			return userList(c, role)
+			return userList(ctx, c, role)
 		},
 	}
 	userListCmd.Flags().String("role", "Role").Var(&role)

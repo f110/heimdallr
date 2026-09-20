@@ -28,8 +28,10 @@ go_test(
     srcs = ["client_test.go"],
     embed = [":rpcclient"],
     deps = [
+        "//pkg/rpc",
         "//pkg/rpc/rpctestutil",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
+        "@org_golang_google_grpc//metadata",
     ],
 )
