@@ -57,6 +57,7 @@ const (
 	proxyHttpPort              = 4002
 	internalApiPort            = 4004
 	dashboardPort              = 4100
+	dashboardProbePort         = 4101
 	rpcServerPort              = 4001
 	rpcMetricsServerPort       = 4005
 	configVolumePath           = "/etc/heimdallr"
@@ -799,6 +800,7 @@ func (r *HeimdallrProxy) ConfigForDashboard() (*corev1.ConfigMap, error) {
 		CertificateAuthority: &configv2.CertificateAuthority{},
 		Dashboard: &configv2.Dashboard{
 			Bind:         fmt.Sprintf(":%d", dashboardPort),
+			ProbeBind:    fmt.Sprintf(":%d", dashboardProbePort),
 			RPCServer:    fmt.Sprintf("%s:%d", r.ServiceNameForRPCServer(), rpcServerPort),
 			TokenFile:    fmt.Sprintf("%s/%s", internalTokenMountPath, internalTokenFilename),
 			PublicKeyUrl: fmt.Sprintf("http://%s.%s.svc:%d/internal/publickey", r.ServiceNameForInternalApi(), r.Namespace, internalApiPort),
@@ -1159,8 +1161,8 @@ func (r *HeimdallrProxy) IdealDashboard() (*process, error) {
 		k8sfactory.Image(fmt.Sprintf("%s:%s", DashboardImageRepository, r.Version()), []string{dashboardCommand}),
 		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
 		k8sfactory.PullPolicy(corev1.PullPolicyIfNotPresent),
-		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(dashboardPort, "/liveness")),
-		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(dashboardPort, "/readiness")),
+		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(dashboardProbePort, "/_livez")),
+		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(dashboardProbePort, "/_readyz")),
 		k8sfactory.Requests(map[string]resource.Quantity{
 			string(corev1.ResourceNameCpu):    resource.MustParse("10m"),
 			string(corev1.ResourceNameMemory): resource.MustParse("64Mi"),
