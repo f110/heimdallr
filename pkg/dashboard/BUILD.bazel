@@ -77,9 +77,13 @@ go_library(
 
 go_test(
     name = "dashboard_test",
-    srcs = ["service_test.go"],
+    srcs = [
+        "server_test.go",
+        "service_test.go",
+    ],
     embed = [":dashboard"],
     deps = [
+        "//pkg/config/configv2",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
         "//pkg/rpc/rpctestutil",

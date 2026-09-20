@@ -11,6 +11,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"path"
+	"path/filepath"
 
 	"connectrpc.com/connect"
 	"go.f110.dev/xerrors"
@@ -52,6 +54,9 @@ func NewServer(config *configv2.Config, grpcConn *grpc.ClientConn) (*Server, err
 	mux.Handle(NewCertificateServiceHandler(NewCertificateService(s.client), interceptors))
 	mux.Handle("GET /cert/download", s.verifyRequest(http.HandlerFunc(s.handleDownloadCert)))
 	mux.Handle("GET /cert/ca", s.verifyRequest(http.HandlerFunc(s.handleDownloadCACert)))
+	if config.Dashboard.AssetDir != "" {
+		mux.Handle("/", s.spaHandler())
+	}
 	s.server = &http.Server{Addr: config.Dashboard.Bind, Handler: mux}
 
 	probeMux := http.NewServeMux()
@@ -126,6 +131,28 @@ func (s *Server) handleReadiness(w http.ResponseWriter, _ *http.Request) {
 	if !s.client.Alive() {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
+}
+
+func (s *Server) spaHandler() http.Handler {
+	root := http.Dir(s.Config.Dashboard.AssetDir)
+	fileServer := http.FileServer(root)
+	index := filepath.Join(s.Config.Dashboard.AssetDir, "index.html")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		f, err := root.Open(path.Clean(req.URL.Path))
+		if err != nil {
+			http.ServeFile(w, req, index)
+			return
+		}
+		stat, err := f.Stat()
+		f.Close()
+		if err != nil || (stat.IsDir() && req.URL.Path != "/") {
+			http.ServeFile(w, req, index)
+			return
+		}
+
+		fileServer.ServeHTTP(w, req)
+	})
 }
 
 // verifyRequest gates the endpoints that are not served through Connect. The Connect endpoints

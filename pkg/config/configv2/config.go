@@ -315,6 +315,7 @@ type Dashboard struct {
 	RPCServer    string `json:"rpc_server,omitempty"`
 	TokenFile    string `json:"token_file,omitempty"`
 	PublicKeyUrl string `json:"publickey_url,omitempty"`
+	AssetDir     string `json:"asset_dir,omitempty"`
 
 	InternalToken string `json:"-"`
 }
