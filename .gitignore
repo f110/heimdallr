@@ -12,5 +12,6 @@
 /access.log
 /operator/bin
 /.kubeconfig
+/docs/working
 
 /bazel-*
