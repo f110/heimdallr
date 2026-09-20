@@ -5,3 +5,10 @@ onlyBuiltDependencies: []
 
 catalog:
   "@bufbuild/protobuf": "2.15.0"
+
+# @mantine/hooks imports react-dom but does not declare it as a peer dependency. The hoisted
+# node_modules of pnpm hides it, but the strict layout of rules_js does not.
+packageExtensions:
+  "@mantine/hooks":
+    peerDependencies:
+      react-dom: "*"
