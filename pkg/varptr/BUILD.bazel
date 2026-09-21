@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "varptr",
-    srcs = ["ptr.go"],
-    importpath = "go.f110.dev/heimdallr/pkg/varptr",
-    visibility = ["//visibility:public"],
-)

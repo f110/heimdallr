@@ -42,7 +42,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
-	"go.f110.dev/heimdallr/pkg/varptr"
 	"go.f110.dev/heimdallr/pkg/version"
 )
 
@@ -731,7 +730,7 @@ func (c *EtcdCluster) NeedRepair(pod *corev1.Pod) bool {
 	onceRunning := metav1.HasAnnotation(pod.ObjectMeta, etcd.PodAnnotationKeyRunningAt)
 	creationTimestamp := pod.CreationTimestamp
 	if creationTimestamp == nil {
-		creationTimestamp = varptr.Ptr(metav1.NewTime(time.Time{}))
+		creationTimestamp = new(metav1.NewTime(time.Time{}))
 	}
 	// If the Pod has never been running once, There is no need to repair it.
 	// But there is need to repair if the age of Pod exceeds 5 minutes

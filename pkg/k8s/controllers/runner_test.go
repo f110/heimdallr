@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.f110.dev/heimdallr/pkg/varptr"
 	"go.f110.dev/kubeproto/go/apis/appsv1"
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
@@ -199,7 +198,7 @@ func (f *commonTestRunner) RegisterPodFixture(p ...*corev1.Pod) {
 
 func (f *commonTestRunner) RegisterSecretFixture(s ...*corev1.Secret) {
 	for _, v := range s {
-		v.CreationTimestamp = varptr.Ptr(metav1.Now())
+		v.CreationTimestamp = new(metav1.Now())
 		f.registerCoreObject(v)
 	}
 }

@@ -6,8 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-
-	"go.f110.dev/heimdallr/pkg/varptr"
 )
 
 func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {
@@ -51,7 +49,7 @@ func Ready(v interface{}) {
 	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
 		Type:               corev1.PodConditionTypeReady,
 		Status:             corev1.ConditionStatusTrue,
-		LastTransitionTime: varptr.Ptr(metav1.Now()),
+		LastTransitionTime: new(metav1.Now()),
 	})
 }
 
@@ -67,7 +65,7 @@ func NotReady(v interface{}) {
 	p.Status.Conditions = append(p.Status.Conditions, corev1.PodCondition{
 		Type:               corev1.PodConditionTypeReady,
 		Status:             corev1.ConditionStatusFalse,
-		LastTransitionTime: varptr.Ptr(metav1.Now()),
+		LastTransitionTime: new(metav1.Now()),
 	})
 	containerStatus := make([]corev1.ContainerStatus, 0)
 	for _, v := range p.Spec.Containers {
@@ -446,7 +444,7 @@ func TargetPort(name string, protocol corev1.Protocol, port int, targetPort ints
 				Name:       name,
 				Protocol:   protocol,
 				Port:       port,
-				TargetPort: varptr.Ptr(targetPort),
+				TargetPort: new(targetPort),
 			})
 		}
 	}

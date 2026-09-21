@@ -39,7 +39,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
 	"go.f110.dev/heimdallr/pkg/netutil"
-	"go.f110.dev/heimdallr/pkg/varptr"
 )
 
 const (
@@ -1487,6 +1486,6 @@ func tcpServicePort(name string, port, targetPort int) corev1.ServicePort {
 		Name:       name,
 		Protocol:   corev1.ProtocolTCP,
 		Port:       port,
-		TargetPort: varptr.Ptr(intstr.FromInt32(int32(targetPort))),
+		TargetPort: new(intstr.FromInt32(int32(targetPort))),
 	}
 }

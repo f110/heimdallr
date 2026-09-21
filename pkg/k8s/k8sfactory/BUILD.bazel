@@ -15,7 +15,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s/k8sfactory",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/varptr",
         "@dev_f110_kubeproto//go/apis/appsv1",
         "@dev_f110_kubeproto//go/apis/batchv1",
         "@dev_f110_kubeproto//go/apis/corev1",
