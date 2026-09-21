@@ -50,6 +50,42 @@ func TestProxyController(t *testing.T) {
 		runner.AssertNoUnexpectedAction(t)
 	})
 
+	t.Run("Unknown session type", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Spec.Session = proxyv1alpha2.SessionSpec{Type: "securecookie"}
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseError
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("Memcached session without keySecretRef", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Spec.Session = proxyv1alpha2.SessionSpec{Type: configv2.SessionTypeMemcached}
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseError
+		runner.AssertUpdateAction(t, "status", p)
+		runner.AssertNoUnexpectedAction(t)
+	})
+
 	t.Run("Remove ownerReference in Secret", func(t *testing.T) {
 		t.Parallel()
 

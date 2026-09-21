@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -432,9 +431,7 @@ func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error 
 	}
 
 	if err := c.preCheck(lp); err != nil {
-		if apierrors.IsNotFound(errors.Unwrap(err)) {
-			c.EventRecorder().Eventf(lp.Object, corev1.EventTypeWarning, "InvalidSpec", "Failure pre-check %v", err)
-		}
+		c.EventRecorder().Eventf(lp.Object, corev1.EventTypeWarning, "InvalidSpec", "Failure pre-check %v", err)
 		newP := lp.Object.DeepCopy()
 		newP.Status.Phase = proxyv1alpha2.ProxyPhaseError
 		if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
@@ -498,6 +495,10 @@ func (c *ProxyController) ownedEtcdCluster(lp *HeimdallrProxy) (*etcdv1alpha2.Et
 }
 
 func (c *ProxyController) preCheck(lp *HeimdallrProxy) error {
+	if err := lp.ValidateSession(); err != nil {
+		return err
+	}
+
 	_, err := c.secretLister.Get(lp.Namespace, lp.Spec.IdentityProvider.ClientSecretRef.Name)
 	if err != nil && apierrors.IsNotFound(err) {
 		return xerrors.WithStack(err)
