@@ -75,6 +75,11 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 			return nil, err
 		}
 	}
+	if conf.Dashboard != nil {
+		if err := conf.Dashboard.Load(dir); err != nil {
+			return nil, err
+		}
+	}
 
 	return conf, nil
 }

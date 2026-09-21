@@ -9,6 +9,7 @@ dashboard:
   bind: :4101
   probe_bind: :4103
   rpc_server: 127.0.0.1:4002
+  publickey_url: http://127.0.0.1:4004/internal/publickey
 datastore:
   etcd:
     namespace: /heimdallr/

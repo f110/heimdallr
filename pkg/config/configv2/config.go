@@ -343,6 +343,11 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (d *Dashboard) Load(dir string) error {
+	d.AssetDir = absPath(d.AssetDir, dir)
+	return nil
+}
+
 func (idp *IdentityProvider) Load(dir string) error {
 	if idp.ClientSecretFile != "" {
 		b, err := os.ReadFile(absPath(idp.ClientSecretFile, dir))

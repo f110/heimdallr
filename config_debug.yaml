@@ -51,8 +51,8 @@ datastore:
     data_dir: ./data
 dashboard:
   bind: :4100
+  probe_bind: :4104
   rpc_server: 127.0.0.1:4002
   ca_cert_file: ./ca.crt
   publickey_url: http://127.0.0.1:4004/internal/publickey
-  template:
-    loader: shotgun
+  asset_dir: ./ts/apps/dashboard/dist
