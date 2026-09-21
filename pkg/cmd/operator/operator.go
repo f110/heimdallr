@@ -30,6 +30,7 @@ const (
 	stateInit fsm.State = iota
 	stateSetup
 	stateStartProbe
+	stateStartWebhook
 	stateLeaderElection
 	stateStartWorkers
 	stateShutdown
@@ -61,7 +62,8 @@ type mainProcess struct {
 	thirdPartyClient *thirdpartyclient.Set
 	restCfg          *rest.Config
 
-	probeServer *controllers.Probe
+	probeServer   *controllers.Probe
+	webhookServer *webhook.Server
 
 	e     *controllers.EtcdController
 	proxy *controllers.ProxyController
@@ -86,6 +88,7 @@ func New() *mainProcess {
 		stateInit:           m.init,
 		stateSetup:          m.setup,
 		stateStartProbe:     m.startProbe,
+		stateStartWebhook:   m.startWebhook,
 		stateLeaderElection: m.leaderElection,
 		stateStartWorkers:   m.startWorkers,
 		stateShutdown:       m.shutdown,
@@ -146,6 +149,29 @@ func (m *mainProcess) startProbe() (fsm.State, error) {
 	m.probeServer = controllers.NewProbe(m.probeAddr)
 	go m.probeServer.Start()
 
+	return stateStartWebhook, nil
+}
+
+func (m *mainProcess) startWebhook() (fsm.State, error) {
+	if m.disableWebhook {
+		m.probeServer.Ready()
+		return stateLeaderElection, nil
+	}
+
+	ws := webhook.NewServer(":8080", m.certFile, m.keyFile)
+	if err := ws.Listen(); err != nil {
+		return fsm.UnknownState, err
+	}
+	m.webhookServer = ws
+	go func() {
+		err := ws.Start()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Info("Failed start webhook server", slog.Any("error", err))
+		}
+	}()
+
+	m.probeServer.Ready()
+
 	return stateLeaderElection, nil
 }
 
@@ -187,7 +213,6 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 		return stateShutdown, err
 	}
 	go e.Run(m.ctx)
-	m.probeServer.Ready()
 
 	select {
 	case <-elected:
@@ -234,16 +259,6 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient)
 	m.ic = ic
 
-	if !m.disableWebhook {
-		ws := webhook.NewServer(":8080", m.certFile, m.keyFile)
-		go func() {
-			err := ws.Start()
-			if err != nil && err != http.ErrServerClosed {
-				logger.Log.Info("Failed start webhook server", slog.Any("error", err))
-			}
-		}()
-	}
-
 	coreSharedInformerFactory.Run(m.ctx)
 	factory.Run(m.ctx)
 
@@ -258,6 +273,13 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 func (m *mainProcess) shutdown() (fsm.State, error) {
 	m.cancel()
 
+	if m.webhookServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := m.webhookServer.Shutdown(ctx); err != nil {
+			logger.Log.Info("Failed shutdown webhook server", slog.Any("error", err))
+		}
+		cancel()
+	}
 	if m.e != nil {
 		m.e.Shutdown()
 	}

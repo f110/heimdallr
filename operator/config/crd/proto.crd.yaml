@@ -111,7 +111,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -164,16 +163,11 @@ spec:
                     items:
                       type: string
                     type: array
-                required:
-                - repositories
-                - events
                 type: object
               webhookPath:
                 items:
                   type: string
                 type: array
-            required:
-            - webhookPath
             type: object
           status:
             properties:
@@ -279,7 +273,6 @@ spec:
                             required:
                             - key
                             - operator
-                            - values
                             type: object
                           type: array
                         matchLabels:
@@ -373,9 +366,6 @@ spec:
                               items:
                                 type: string
                               type: array
-                          required:
-                          - repositories
-                          - events
                           type: object
                       type: object
                   type: object
@@ -417,7 +407,6 @@ spec:
                           required:
                           - key
                           - operator
-                          - values
                           type: object
                         type: array
                       matchLabels:
@@ -846,8 +835,6 @@ spec:
                            Read-only.
                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                         type: string
-                    required:
-                    - finalizers
                     type: object
                   spec:
                     properties:
@@ -855,12 +842,14 @@ spec:
                         description: |-
                           accessModes contains the desired access modes the volume should have.
                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
-                        enum:
-                        - ReadWriteOnce
-                        - ReadOnlyMany
-                        - ReadWriteMany
-                        - ReadWriteOncePod
-                        type: string
+                        items:
+                          enum:
+                          - ReadWriteOnce
+                          - ReadOnlyMany
+                          - ReadWriteMany
+                          - ReadWriteOncePod
+                          type: string
+                        type: array
                       dataSource:
                         properties:
                           apiGroup:
@@ -955,7 +944,6 @@ spec:
                               required:
                               - key
                               - operator
-                              - values
                               type: object
                             type: array
                           matchLabels:
@@ -997,8 +985,6 @@ spec:
                         description: volumeName is the binding reference to the PersistentVolume
                           backing this claim.
                         type: string
-                    required:
-                    - accessModes
                     type: object
                 required:
                 - spec
@@ -1464,8 +1450,6 @@ spec:
                            Read-only.
                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
                         type: string
-                    required:
-                    - finalizers
                     type: object
                   spec:
                     properties:
@@ -1473,12 +1457,14 @@ spec:
                         description: |-
                           accessModes contains the desired access modes the volume should have.
                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
-                        enum:
-                        - ReadWriteOnce
-                        - ReadOnlyMany
-                        - ReadWriteMany
-                        - ReadWriteOncePod
-                        type: string
+                        items:
+                          enum:
+                          - ReadWriteOnce
+                          - ReadOnlyMany
+                          - ReadWriteMany
+                          - ReadWriteOncePod
+                          type: string
+                        type: array
                       dataSource:
                         properties:
                           apiGroup:
@@ -1573,7 +1559,6 @@ spec:
                               required:
                               - key
                               - operator
-                              - values
                               type: object
                             type: array
                           matchLabels:
@@ -1615,8 +1600,6 @@ spec:
                         description: volumeName is the binding reference to the PersistentVolume
                           backing this claim.
                         type: string
-                    required:
-                    - accessModes
                     type: object
                 required:
                 - spec
@@ -1811,7 +1794,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2015,7 +1997,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2066,7 +2047,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2146,7 +2126,6 @@ spec:
             - domain
             - issuerRef
             - identityProvider
-            - rootUsers
             - session
             - replicas
             type: object
@@ -2259,7 +2238,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2530,7 +2508,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2581,7 +2558,6 @@ spec:
                       required:
                       - key
                       - operator
-                      - values
                       type: object
                     type: array
                   matchLabels:
@@ -2663,7 +2639,6 @@ spec:
             - domain
             - issuerRef
             - identityProvider
-            - rootUsers
             - session
             - replicas
             type: object
@@ -2749,8 +2724,6 @@ spec:
                     items:
                       type: string
                     type: array
-                required:
-                - allow
                 type: object
               status:
                 type: object
@@ -2794,8 +2767,6 @@ spec:
                 items:
                   type: string
                 type: array
-            required:
-            - backends
             type: object
         type: object
     served: true
@@ -2961,8 +2932,6 @@ spec:
                 items:
                   type: string
                 type: array
-            required:
-            - allow
             type: object
           status:
             type: object

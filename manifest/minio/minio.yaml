@@ -17,26 +17,25 @@ spec:
         v1beta1.min.io/instance: minio
     spec:
       containers:
-      - args:
-        - server
-        - /export
-        env:
+      - env:
         - name: MINIO_BROWSER
           value: "on"
         - name: MINIO_PROMETHEUS_AUTH_TYPE
           value: public
-        - name: MINIO_ACCESS_KEY
+        - name: MINIO_SKIP_CLIENT
+          value: "yes"
+        - name: MINIO_ROOT_USER
           valueFrom:
             secretKeyRef:
               key: accesskey
               name: minio-token
-        - name: MINIO_SECRET_KEY
+        - name: MINIO_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
               key: secretkey
               name: minio-token
-        image: minio/minio:RELEASE.2022-10-21T22-37-48Z
-        imagePullPolicy: Always
+        image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -68,7 +67,7 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /export
+        - mountPath: /bitnami/minio/data
           name: data0
       restartPolicy: Always
       schedulerName: default-scheduler

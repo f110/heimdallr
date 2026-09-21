@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "zot",
+    srcs = ["embed.go"],
+    embedsrcs = ["zot.yaml"],
+    importpath = "go.f110.dev/heimdallr/manifest/zot",
+    visibility = ["//visibility:public"],
+)

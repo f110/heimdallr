@@ -70,6 +70,7 @@ go_library(
         "@io_k8s_sigs_yaml//:yaml",
         "@org_golang_google_api//iterator",
         "@org_golang_google_api//option",
+        "@org_golang_google_grpc//:grpc",
         "@org_uber_go_zap//:zap",
     ],
 )

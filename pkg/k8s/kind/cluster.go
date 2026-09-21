@@ -1,21 +1,18 @@
 package kind
 
 import (
-	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
+	"strings"
 	"time"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	minioclient "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.f110.dev/xerrors"
@@ -23,18 +20,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 	configv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
 	"go.f110.dev/heimdallr/manifest/certmanager"
 	"go.f110.dev/heimdallr/manifest/minio"
 	"go.f110.dev/heimdallr/pkg/k8s"
-	"go.f110.dev/heimdallr/pkg/logger"
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 
@@ -157,6 +151,10 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 		Nodes: []configv1alpha4.Node{
 			{Role: configv1alpha4.ControlPlaneRole, Image: image},
 		},
+		ContainerdConfigPatches: []string{
+			`[plugins."io.containerd.grpc.v1.cri".registry]
+  config_path = "/etc/containerd/certs.d"`,
+		},
 	}
 	for i := 0; i < workerNum; i++ {
 		clusterConf.Nodes = append(clusterConf.Nodes,
@@ -216,63 +214,64 @@ func (c *Cluster) Delete() error {
 	return cmd.Run()
 }
 
-type ContainerImageFile struct {
-	File       string
-	Repository string
-	Tag        string
-
-	repoTags string
+// NodePlatform returns the platform of the node. A node is a container that runs on the host, so
+// the architecture is same as the host but the operating system is always linux.
+func NodePlatform() v1.Platform {
+	return v1.Platform{OS: "linux", Architecture: runtime.GOARCH}
 }
 
-type manifest struct {
-	RepoTags []string `json:"RepoTags"`
-}
-
-func (c *Cluster) LoadImageFiles(images ...*ContainerImageFile) error {
-	for _, v := range images {
-		if err := readImageManifest(v); err != nil {
-			return err
-		}
-
-		log.Printf("Load image file: %s", v.repoTags)
-		cmd := exec.CommandContext(context.TODO(), c.kind, "load", "image-archive", "--name", c.name, v.File)
-		if err := cmd.Run(); err != nil {
-			return err
-		}
-	}
-
-	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "nodes", "--name", c.name)
-	out, err := cmd.CombinedOutput()
+// ConfigureRegistryMirror makes containerd on every node resolve host to the registry that is
+// listening on port of the node itself.
+func (c *Cluster) ConfigureRegistryMirror(host string, port int) error {
+	nodes, err := c.nodes()
 	if err != nil {
 		return err
 	}
-	nodes := make([]string, 0)
-	s := bufio.NewScanner(bytes.NewReader(out))
-	for s.Scan() {
-		nodes = append(nodes, s.Text())
-	}
 
+	dir := fmt.Sprintf("/etc/containerd/certs.d/%s", host)
 	for _, node := range nodes {
-		for _, image := range images {
-			log.Printf("Set an image tag %s:%s on %s", image.Repository, image.Tag, node)
-			cmd = exec.CommandContext(
-				context.TODO(),
-				"docker", "exec", node,
-				"ctr", "-n", "k8s.io",
-				"images", "tag",
-				"--force",
-				image.repoTags,
-				fmt.Sprintf("%s:%s", image.Repository, image.Tag),
-			)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				return err
-			}
+		log.Printf("Configure the registry mirror of %s on %s", host, node)
+		hostsToml := fmt.Sprintf(`server = "https://%s"
+
+[host."http://%s:%d"]
+  capabilities = ["pull", "resolve"]
+`, host, node, port)
+
+		cmd := exec.CommandContext(context.TODO(), "docker", "exec", node, "mkdir", "-p", dir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return xerrors.WithStack(err)
+		}
+
+		cmd = exec.CommandContext(context.TODO(), "docker", "exec", "-i", node, "cp", "/dev/stdin", dir+"/hosts.toml")
+		cmd.Stdin = strings.NewReader(hostsToml)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return xerrors.WithStack(err)
 		}
 	}
 
 	return nil
+}
+
+func (c *Cluster) nodes() ([]string, error) {
+	cmd := exec.CommandContext(context.TODO(), c.kind, "get", "nodes", "--name", c.name)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, xerrors.WithStack(err)
+	}
+
+	var nodes []string
+	s := bufio.NewScanner(bytes.NewReader(out))
+	for s.Scan() {
+		if line := strings.TrimSpace(s.Text()); line != "" {
+			nodes = append(nodes, line)
+		}
+	}
+
+	return nodes, nil
 }
 
 func (c *Cluster) RESTConfig() (*rest.Config, error) {
@@ -380,41 +379,6 @@ func (c *Cluster) Apply(f, fieldManager string) error {
 	return nil
 }
 
-func readImageManifest(image *ContainerImageFile) error {
-	f, err := os.Open(image.File)
-	if err != nil {
-		return err
-	}
-	r := tar.NewReader(f)
-	for {
-		hdr, err := r.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if hdr.Name != "manifest.json" {
-			// Skip reading if the file name is not manifest.json.
-			if _, err := io.Copy(io.Discard, r); err != nil {
-				return err
-			}
-			continue
-		}
-
-		manifests := make([]manifest, 0)
-		if err := json.NewDecoder(r).Decode(&manifests); err != nil {
-			return err
-		}
-		if len(manifests) == 0 {
-			return errors.New("manifest.json is empty")
-		}
-		image.repoTags = manifests[0].RepoTags[0]
-	}
-
-	return nil
-}
-
 func InstallCertManager(cfg *rest.Config, fieldManager string) error {
 	cm, err := certmanager.Data.ReadFile("cert-manager.yaml")
 	if err != nil {
@@ -496,7 +460,7 @@ func createMinIOBucket(cfg *rest.Config) error {
 		}
 
 		var forwarder *portforward.PortForwarder
-		forwarder, err = portForward(ctx, cfg, client, svc, int(svc.Spec.Ports[0].Port))
+		forwarder, err = k8s.PortForward(ctx, cfg, client, svc, int(svc.Spec.Ports[0].Port))
 		if err != nil {
 			return false, nil
 		}
@@ -529,50 +493,4 @@ func createMinIOBucket(cfg *rest.Config) error {
 	}
 
 	return nil
-}
-
-func portForward(ctx context.Context, cfg *rest.Config, client kubernetes.Interface, svc *corev1.Service, port int) (*portforward.PortForwarder, error) {
-	selector := labels.SelectorFromSet(svc.Spec.Selector)
-	podList, err := client.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-	var pod *corev1.Pod
-	for i, v := range podList.Items {
-		if v.Status.Phase == corev1.PodRunning {
-			pod = &podList.Items[i]
-			break
-		}
-	}
-	if pod == nil {
-		return nil, xerrors.NewWithStack("all pods are not running yet")
-	}
-
-	req := client.CoreV1().RESTClient().Post().Resource("pods").Namespace(svc.Namespace).Name(pod.Name).SubResource("portforward")
-	transport, upgrader, err := spdy.RoundTripperFor(cfg)
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
-
-	readyCh := make(chan struct{})
-	pf, err := portforward.New(dialer, []string{fmt.Sprintf(":%d", port)}, context.Background().Done(), readyCh, nil, nil)
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-
-	go func() {
-		err := pf.ForwardPorts()
-		if err != nil {
-			logger.Log.Info("ForwardPorts returns an error", slog.Any("error", err))
-		}
-	}()
-
-	select {
-	case <-readyCh:
-	case <-time.After(5 * time.Second):
-		return nil, xerrors.NewWithStack("timed out")
-	}
-
-	return pf, nil
 }

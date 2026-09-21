@@ -30,6 +30,7 @@ def container_image(name, tags, amd64_tar, arm64_tar, base_amd64 = "@com_google_
             "%s.linux_amd64" % name,
             "%s.linux_arm64" % name,
         ],
+        visibility = ["//visibility:public"],
     )
 
 #     native.genrule(

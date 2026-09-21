@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
+	"go.f110.dev/heimdallr/pkg/k8s/registry"
 )
 
 const (
@@ -76,6 +76,13 @@ func setupCluster(kindPath, name, k8sVersion string, workerNum int, kubeConfig, 
 	if err := kind.InstallMinIO(restCfg, "heimdev"); err != nil {
 		return err
 	}
+	log.Print("Install the container registry")
+	if err := registry.Install(restCfg, "heimdev"); err != nil {
+		return err
+	}
+	if err := kindCluster.ConfigureRegistryMirror(registry.MirrorHost, registry.NodePort); err != nil {
+		return err
+	}
 
 	crds, err := k8s.ReadCRDFile(crdFile)
 	if err != nil {
@@ -118,19 +125,23 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 		return xerrors.NewWithStack("Cluster does not exist. You create the cluster first.")
 	}
 
-	containerImages := []*kind.ContainerImageFile{
+	restCfg, err := kindCluster.RESTConfig()
+	if err != nil {
+		return err
+	}
+	containerImages := []*registry.ContainerImage{
 		{
-			File:       controllerImage,
+			Layout:     controllerImage,
 			Repository: "ghcr.io/f110/heimdallr/operator",
 			Tag:        "latest",
 		},
 		{
-			File:       sidecarImage,
+			Layout:     sidecarImage,
 			Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
 			Tag:        "latest",
 		},
 	}
-	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
+	if err := registry.Push(context.Background(), restCfg, kind.NodePlatform(), containerImages...); err != nil {
 		return err
 	}
 
@@ -211,17 +222,28 @@ func loadImages(kindPath, name string, images []string) error {
 		return xerrors.NewWithStack("Cluster does not exist. You create the cluster first.")
 	}
 
-	containerImages := make([]*kind.ContainerImageFile, 0)
+	containerImages := make([]*registry.ContainerImage, 0)
 	for _, v := range images {
 		s := strings.SplitN(v, "=", 2)
+		if len(s) != 2 {
+			return xerrors.NewfWithStack("Invalid image argument: %s", v)
+		}
 		t := strings.SplitN(s[0], ":", 2)
-		containerImages = append(containerImages, &kind.ContainerImageFile{
-			File:       s[1],
+		if len(t) != 2 {
+			return xerrors.NewfWithStack("Image name must have a tag: %s", s[0])
+		}
+		containerImages = append(containerImages, &registry.ContainerImage{
+			Layout:     s[1],
 			Repository: t[0],
 			Tag:        t[1],
 		})
 	}
-	if err := kindCluster.LoadImageFiles(containerImages...); err != nil {
+
+	restCfg, err := kindCluster.RESTConfig()
+	if err != nil {
+		return err
+	}
+	if err := registry.Push(context.Background(), restCfg, kind.NodePlatform(), containerImages...); err != nil {
 		return err
 	}
 
@@ -318,9 +340,6 @@ func Cluster(rootCmd *cmd.Command) {
 		Use:   "run-operator",
 		Short: "Run the operator",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			if v := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); v != "" && runtime.GOOS != "linux" {
-				return xerrors.NewWithStack("run-operator is only support to run under Bazel on Linux")
-			}
 			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
 		},
 	}

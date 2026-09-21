@@ -17,3 +17,6 @@ patchesJson6902:
       - op: add
         path: /spec/template/spec/containers/0/args/-
         value: --log-level=debug
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
