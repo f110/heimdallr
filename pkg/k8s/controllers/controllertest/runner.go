@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-	"go.f110.dev/heimdallr/pkg/varptr"
 	"go.f110.dev/kubeproto/go/apis/appsv1"
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
@@ -247,7 +246,7 @@ func (r *TestRunner) registerPodFixture(v *corev1.Pod) {
 }
 
 func (r *TestRunner) registerSecretFixture(s *corev1.Secret) {
-	s.CreationTimestamp = varptr.Ptr(metav1.Now())
+	s.CreationTimestamp = new(metav1.Now())
 	r.registerCoreObject(s)
 }
 

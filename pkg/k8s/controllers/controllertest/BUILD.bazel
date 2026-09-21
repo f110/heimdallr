@@ -17,7 +17,6 @@ go_library(
         "//pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1",
         "//pkg/k8s/thirdpartyclient",
         "//pkg/k8s/thirdpartyclient/testingthirdpartyclient",
-        "//pkg/varptr",
         "@com_github_google_go_cmp//cmp",
         "@com_github_stretchr_testify//assert",
         "@dev_f110_kubeproto//go/apis/appsv1",
