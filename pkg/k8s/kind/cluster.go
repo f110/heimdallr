@@ -144,10 +144,8 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
 	image := fmt.Sprintf("kindest/node:%s@sha256:%s", clusterVersion, imageHash)
 
 	clusterConf := &configv1alpha4.Cluster{
-		TypeMeta: configv1alpha4.TypeMeta{
-			APIVersion: "kind.x-k8s.io/v1alpha4",
-			Kind:       "Cluster",
-		},
+		APIVersion: "kind.x-k8s.io/v1alpha4",
+		Kind:       "Cluster",
 		Nodes: []configv1alpha4.Node{
 			{Role: configv1alpha4.ControlPlaneRole, Image: image},
 		},
@@ -156,7 +154,7 @@ func (c *Cluster) Create(clusterVersion string, workerNum int) error {
   config_path = "/etc/containerd/certs.d"`,
 		},
 	}
-	for i := 0; i < workerNum; i++ {
+	for range workerNum {
 		clusterConf.Nodes = append(clusterConf.Nodes,
 			configv1alpha4.Node{Role: configv1alpha4.WorkerRole, Image: image})
 	}
@@ -412,10 +410,8 @@ func InstallCertManager(cfg *rest.Config, fieldManager string) error {
 
 func InstallMinIO(cfg *rest.Config, fieldManager string) error {
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "minio-token",
-			Namespace: metav1.NamespaceDefault,
-		},
+		Name:      "minio-token",
+		Namespace: metav1.NamespaceDefault,
 		StringData: map[string]string{
 			"accesskey": minioAccessKey,
 			"secretkey": minioSecretKey,

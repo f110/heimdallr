@@ -104,7 +104,7 @@ func AuthenticateSocket(ctx context.Context, token, host string) (*configv2.Back
 	return backend, user, nil
 }
 
-func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func UnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	if info == nil {
 		return nil, unauthorizedError.Err()
 	}
@@ -129,7 +129,7 @@ func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(ctx, req)
 }
 
-func StreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+func StreamInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	if info == nil {
 		return unauthorizedError.Err()
 	}

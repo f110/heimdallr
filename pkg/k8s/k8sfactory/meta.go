@@ -2,6 +2,8 @@ package k8sfactory
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"go.f110.dev/kubeproto/go/apis/appsv1"
@@ -13,7 +15,7 @@ import (
 )
 
 func Name(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(interface {
 			SetName(string)
 		})
@@ -34,12 +36,12 @@ func Name(v string) Trait {
 	}
 }
 
-func Namef(format string, a ...interface{}) Trait {
+func Namef(format string, a ...any) Trait {
 	return Name(fmt.Sprintf(format, a...))
 }
 
 func Namespace(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			m.GetObjectMeta().Namespace = v
@@ -49,7 +51,7 @@ func Namespace(v string) Trait {
 }
 
 func UID() Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			m.GetObjectMeta().UID = string(uuid.NewUUID())
@@ -57,7 +59,7 @@ func UID() Trait {
 	}
 }
 
-func Created(object interface{}) {
+func Created(object any) {
 	m, ok := object.(metav1.Object)
 	if ok {
 		now := metav1.Now()
@@ -70,7 +72,7 @@ func Created(object interface{}) {
 }
 
 func CreatedAt(now time.Time) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		Created(object)
 		m, ok := object.(metav1.Object)
 		if ok {
@@ -80,7 +82,7 @@ func CreatedAt(now time.Time) Trait {
 	}
 }
 
-func Delete(object interface{}) {
+func Delete(object any) {
 	m, ok := object.(metav1.Object)
 	if ok {
 		n := metav1.Now()
@@ -89,7 +91,7 @@ func Delete(object interface{}) {
 }
 
 func Annotation(k, v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			a := m.GetObjectMeta().Annotations
@@ -108,14 +110,12 @@ func Annotation(k, v string) Trait {
 }
 
 func Annotations(annotations map[string]string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			a := m.GetObjectMeta().Annotations
 			if a != nil {
-				for k, v := range annotations {
-					a[k] = v
-				}
+				maps.Copy(a, annotations)
 			} else {
 				a = annotations
 			}
@@ -126,7 +126,7 @@ func Annotations(annotations map[string]string) Trait {
 }
 
 func Label(v ...string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			a := m.GetObjectMeta().Labels
@@ -143,14 +143,12 @@ func Label(v ...string) Trait {
 }
 
 func Labels(label map[string]string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
 			a := m.GetObjectMeta().Labels
 			if a != nil {
-				for k, v := range label {
-					a[k] = v
-				}
+				maps.Copy(a, label)
 			} else {
 				a = label
 			}
@@ -161,7 +159,7 @@ func Labels(label map[string]string) Trait {
 }
 
 func ControlledBy(v runtime.Object, s *runtime.Scheme) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		owner, ok := v.(metav1.Object)
 		if !ok {
 			return
@@ -191,7 +189,7 @@ func ControlledBy(v runtime.Object, s *runtime.Scheme) Trait {
 	}
 }
 
-func ClearOwnerReference(object interface{}) {
+func ClearOwnerReference(object any) {
 	objMeta, ok := object.(metav1.Object)
 	if !ok {
 		return
@@ -212,7 +210,7 @@ func MatchExpression(v ...metav1.LabelSelectorRequirement) *metav1.LabelSelector
 }
 
 func MatchLabelSelector(label map[string]string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Service:
 			obj.Spec.Selector = label
@@ -225,16 +223,10 @@ func MatchLabelSelector(label map[string]string) Trait {
 }
 
 func Finalizer(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		m, ok := object.(metav1.Object)
 		if ok {
-			found := false
-			for _, f := range m.GetObjectMeta().Finalizers {
-				if f == v {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(m.GetObjectMeta().Finalizers, v)
 			if found {
 				return
 			}

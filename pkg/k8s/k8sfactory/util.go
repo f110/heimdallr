@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
-type Trait func(object interface{})
+type Trait func(object any)
 
 func Debug(obj runtime.Object, s *runtime.Scheme) string {
 	serializer := json.NewSerializerWithOptions(json.DefaultMetaFactory, s, s, json.SerializerOptions{Yaml: true})
@@ -41,9 +41,7 @@ func NewConfigMapVolumeSource(name, path, configMapName string) *VolumeSource {
 			Name: name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: configMapName,
-					},
+					Name: configMapName,
 				},
 			},
 		},

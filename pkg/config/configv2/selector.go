@@ -30,7 +30,7 @@ func (s *HTTPBackendSelector) Add(b *HTTPBackend) {
 	p := strings.Split(b.Path, "/")[1:]
 
 	n := s.root
-	for i := 0; i < len(p); i++ {
+	for i := range p {
 		nextNode, ok := n.children[p[i]]
 		if !ok {
 			n.children[p[i]] = newNode()
@@ -51,7 +51,7 @@ func (s *HTTPBackendSelector) Find(path string) *HTTPBackend {
 	p := strings.Split(path, "/")[1:]
 
 	n := s.root
-	for i := 0; i < len(p); i++ {
+	for i := range p {
 		nextNode, ok := n.children[p[i]]
 		if !ok {
 			if v, ok := n.children[""]; ok {

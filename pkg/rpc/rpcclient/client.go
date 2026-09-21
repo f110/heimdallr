@@ -25,7 +25,7 @@ const (
 
 var loggerOnce sync.Once
 
-type RequestOpt func(interface{})
+type RequestOpt func(any)
 
 type ClientWithUserToken struct {
 	*Client
@@ -387,7 +387,7 @@ func extractEndpointFromError(err error) (string, error) {
 }
 
 func OverrideCommonName(cn string) RequestOpt {
-	return func(req interface{}) {
+	return func(req any) {
 		v, ok := req.(interface {
 			SetOverrideCommonName(string)
 		})
@@ -400,7 +400,7 @@ func OverrideCommonName(cn string) RequestOpt {
 }
 
 func VerifyCommonName(cn string) RequestOpt {
-	return func(req interface{}) {
+	return func(req any) {
 		v, ok := req.(interface {
 			SetCommonName(string)
 		})
@@ -413,7 +413,7 @@ func VerifyCommonName(cn string) RequestOpt {
 }
 
 func IsDevice() RequestOpt {
-	return func(req interface{}) {
+	return func(req any) {
 		v, ok := req.(interface {
 			SetDevice(bool)
 		})
@@ -430,7 +430,7 @@ func CommonName(cn string) RequestOpt {
 }
 
 func Comment(c string) RequestOpt {
-	return func(req interface{}) {
+	return func(req any) {
 		v, ok := req.(interface {
 			SetComment(string)
 		})

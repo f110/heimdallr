@@ -36,8 +36,8 @@ func TestImageFromLayout(t *testing.T) {
 	t.Run("NestedIndex", func(t *testing.T) {
 		amd64Image, arm64Image := newImage(t), newImage(t)
 		inner := mutate.AppendManifests(empty.Index,
-			mutate.IndexAddendum{Add: amd64Image, Descriptor: v1.Descriptor{Platform: &amd64}},
-			mutate.IndexAddendum{Add: arm64Image, Descriptor: v1.Descriptor{Platform: &arm64}},
+			mutate.IndexAddendum{Add: amd64Image, Platform: &amd64},
+			mutate.IndexAddendum{Add: arm64Image, Platform: &arm64},
 		)
 		dir := writeLayout(t, mutate.AppendManifests(empty.Index, mutate.IndexAddendum{Add: inner}))
 
@@ -49,8 +49,8 @@ func TestImageFromLayout(t *testing.T) {
 	t.Run("Index", func(t *testing.T) {
 		amd64Image, arm64Image := newImage(t), newImage(t)
 		dir := writeLayout(t, mutate.AppendManifests(empty.Index,
-			mutate.IndexAddendum{Add: amd64Image, Descriptor: v1.Descriptor{Platform: &amd64}},
-			mutate.IndexAddendum{Add: arm64Image, Descriptor: v1.Descriptor{Platform: &arm64}},
+			mutate.IndexAddendum{Add: amd64Image, Platform: &amd64},
+			mutate.IndexAddendum{Add: arm64Image, Platform: &arm64},
 		))
 
 		got, err := ImageFromLayout(dir, amd64)
@@ -69,7 +69,7 @@ func TestImageFromLayout(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		dir := writeLayout(t, mutate.AppendManifests(empty.Index,
-			mutate.IndexAddendum{Add: newImage(t), Descriptor: v1.Descriptor{Platform: &amd64}},
+			mutate.IndexAddendum{Add: newImage(t), Platform: &amd64},
 		))
 
 		_, err := ImageFromLayout(dir, arm64)

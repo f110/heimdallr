@@ -17,7 +17,7 @@ type MeService struct {
 var _ MeServiceHandler = &MeService{}
 
 func NewMeService(c *rpcclient.ClientWithUserToken) *MeService {
-	return &MeService{service: service{rpcClient: c}}
+	return &MeService{rpcClient: c}
 }
 
 func (s *MeService) GetMe(ctx context.Context, _ *connect.Request[GetMeRequest]) (*connect.Response[GetMeResponse], error) {

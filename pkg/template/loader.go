@@ -59,7 +59,7 @@ func New(data embed.FS, typ, dir string, funcMap template.FuncMap) *Loader {
 	return loader
 }
 
-func (l *Loader) Render(w io.Writer, name string, data interface{}) error {
+func (l *Loader) Render(w io.Writer, name string, data any) error {
 	var tmpl *template.Template
 	if l.tmpl == nil {
 		t := template.New("")

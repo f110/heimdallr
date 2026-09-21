@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
+	"slices"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -163,13 +164,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, req *http.Request, _param
 		return
 	}
 
-	rootUser := false
-	for _, v := range s.Config.AuthorizationEngine.RootUsers {
-		if v == idToken.Email {
-			rootUser = true
-			break
-		}
-	}
+	rootUser := slices.Contains(s.Config.AuthorizationEngine.RootUsers, idToken.Email)
 
 	user, err := s.database.Get(idToken.Email)
 	if err != nil && !rootUser {

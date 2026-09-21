@@ -28,7 +28,7 @@ var (
 // signature with the public key of the proxy.
 func verifyToken(token string, publicKey crypto.PublicKey) (*authn.TokenClaims, error) {
 	claim := &authn.TokenClaims{}
-	if _, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (interface{}, error) {
+	if _, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodES256 {
 			return nil, xerrors.New("dashboard: invalid signing method")
 		}

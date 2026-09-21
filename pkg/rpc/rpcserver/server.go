@@ -44,12 +44,12 @@ type Server struct {
 	serverMetrics *grpc_prometheus.ServerMetrics
 }
 
-func unaryAccessLogInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func unaryAccessLogInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	logger.Log.Debug("Unary", slog.String("method", info.FullMethod))
 	return handler(ctx, req)
 }
 
-func streamAccessLogInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+func streamAccessLogInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	logger.Log.Debug("Stream", slog.String("method", info.FullMethod))
 	return handler(srv, ss)
 }

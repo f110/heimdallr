@@ -33,7 +33,7 @@ func Factory(base *etcdv1alpha2.EtcdCluster, traits ...k8sfactory.Trait) *etcdv1
 	return e
 }
 
-func Ready(object interface{}) {
+func Ready(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -47,7 +47,7 @@ func Ready(object interface{}) {
 	e.Status.CreatingCompleted = true
 }
 
-func CreatingCompleted(object interface{}) {
+func CreatingCompleted(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -57,7 +57,7 @@ func CreatingCompleted(object interface{}) {
 }
 
 func Member(v int) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -67,7 +67,7 @@ func Member(v int) k8sfactory.Trait {
 }
 
 func Version(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -78,7 +78,7 @@ func Version(v string) k8sfactory.Trait {
 }
 
 func DefragmentSchedule(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -88,7 +88,7 @@ func DefragmentSchedule(v string) k8sfactory.Trait {
 	}
 }
 
-func HighAvailability(object interface{}) {
+func HighAvailability(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -97,7 +97,7 @@ func HighAvailability(object interface{}) {
 	e.Spec.AntiAffinity = true
 }
 
-func EnableAntiAffinity(object interface{}) {
+func EnableAntiAffinity(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -105,7 +105,7 @@ func EnableAntiAffinity(object interface{}) {
 	e.Spec.AntiAffinity = true
 }
 
-func DisableAntiAffinity(object interface{}) {
+func DisableAntiAffinity(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -114,7 +114,7 @@ func DisableAntiAffinity(object interface{}) {
 }
 
 func Phase(p etcdv1alpha2.EtcdClusterPhase) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -123,7 +123,7 @@ func Phase(p etcdv1alpha2.EtcdClusterPhase) k8sfactory.Trait {
 	}
 }
 
-func CreatedStatus(object interface{}) {
+func CreatedStatus(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -133,7 +133,7 @@ func CreatedStatus(object interface{}) {
 }
 
 func Backup(interval, maxBackups int) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -146,7 +146,7 @@ func Backup(interval, maxBackups int) k8sfactory.Trait {
 }
 
 func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds *etcdv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -169,7 +169,7 @@ func BackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace strin
 }
 
 func BackupToGCS(bucket, path string, creds *etcdv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return
@@ -186,7 +186,7 @@ func BackupToGCS(bucket, path string, creds *etcdv1alpha2.GCPCredentialSelector)
 	}
 }
 
-func PersistentData(object interface{}) {
+func PersistentData(object any) {
 	e, ok := object.(*etcdv1alpha2.EtcdCluster)
 	if !ok {
 		return
@@ -205,7 +205,7 @@ func PersistentData(object interface{}) {
 }
 
 func MemberStatus(statuses []etcdv1alpha2.MemberStatus) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		e, ok := object.(*etcdv1alpha2.EtcdCluster)
 		if !ok {
 			return

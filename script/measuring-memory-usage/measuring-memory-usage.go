@@ -29,8 +29,8 @@ func findPid() string {
 	}
 
 	line := ""
-	lines := strings.Split(string(buf), "\n")
-	for _, v := range lines {
+	lines := strings.SplitSeq(string(buf), "\n")
+	for v := range lines {
 		if !strings.Contains(v, "cmd/haimdallr-proxy") {
 			continue
 		}
@@ -44,8 +44,8 @@ func findPid() string {
 		return ""
 	}
 
-	s := strings.Split(line, " ")
-	for _, v := range s {
+	s := strings.SplitSeq(line, " ")
+	for v := range s {
 		if len(v) == 0 {
 			continue
 		}
@@ -62,8 +62,8 @@ func memoryUsage(pid string) int {
 	}
 
 	rss := 0
-	lines := strings.Split(string(b), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(b), "\n")
+	for line := range lines {
 		if !strings.HasPrefix(line, "Rss") {
 			continue
 		}
@@ -161,7 +161,7 @@ func main() {
 	for i := 1; i <= 4; i++ {
 		fmt.Fprintf(os.Stderr, "Create user to %d\n", desiredUserCount)
 		diff := desiredUserCount - currentUserCount
-		for k := 0; k < diff; k++ {
+		for k := range diff {
 			if err := c.AddUser(ctx, fmt.Sprintf("mesure_%d@example.com", k+currentUserCount), role); err != nil {
 				panic(err)
 			}

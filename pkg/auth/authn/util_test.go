@@ -49,10 +49,10 @@ func (t *testServerStream) Context() context.Context {
 	return t.ctx
 }
 
-func (t *testServerStream) SendMsg(m interface{}) error {
+func (t *testServerStream) SendMsg(m any) error {
 	panic("implement me")
 }
 
-func (t *testServerStream) RecvMsg(m interface{}) error {
+func (t *testServerStream) RecvMsg(m any) error {
 	panic("implement me")
 }

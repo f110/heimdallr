@@ -384,12 +384,10 @@ func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
 
 	if user != nil && user.Id != "" {
 		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-			RegisteredClaims: jwt.RegisteredClaims{
-				Subject:   user.Id,
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
-			},
-			Roles: user.Roles,
+			Subject:   user.Id,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
+			Roles:     user.Roles,
 		})
 		token, err := claim.SignedString(p.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {

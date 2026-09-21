@@ -18,7 +18,7 @@ type CertificateService struct {
 var _ CertificateServiceHandler = &CertificateService{}
 
 func NewCertificateService(c *rpcclient.ClientWithUserToken) *CertificateService {
-	return &CertificateService{service: service{rpcClient: c}}
+	return &CertificateService{rpcClient: c}
 }
 
 func (s *CertificateService) ListCertificates(ctx context.Context, _ *connect.Request[ListCertificatesRequest]) (*connect.Response[ListCertificatesResponse], error) {

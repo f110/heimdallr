@@ -30,7 +30,7 @@ func RoleFactory(base *rbacv1.Role, traits ...Trait) *rbacv1.Role {
 }
 
 func PolicyRule(apiGroups, resources, verbs []string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		r, ok := object.(*rbacv1.Role)
 		if !ok {
 			return
@@ -67,7 +67,7 @@ func RoleBindingFactory(base *rbacv1.RoleBinding, traits ...Trait) *rbacv1.RoleB
 }
 
 func Role(r *rbacv1.Role) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		rb, ok := object.(*rbacv1.RoleBinding)
 		if !ok {
 			return
@@ -81,7 +81,7 @@ func Role(r *rbacv1.Role) Trait {
 }
 
 func Subject(v runtime.Object) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		rb, ok := object.(*rbacv1.RoleBinding)
 		if !ok {
 			return

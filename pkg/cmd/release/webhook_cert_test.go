@@ -203,7 +203,7 @@ func TestInjectWebhookCert(t *testing.T) {
 
 	// Verify Secret: cert and key are replaced, annotation is removed
 	secret := docs[0]
-	sd := secret["stringData"].(map[interface{}]interface{})
+	sd := secret["stringData"].(map[any]any)
 	certPEM := sd["webhook.crt"].(string)
 	keyPEM := sd["webhook.key"].(string)
 	assert.NotEqual(t, "old-cert", certPEM)
@@ -230,8 +230,8 @@ func TestInjectWebhookCert(t *testing.T) {
 
 	// Verify ValidatingWebhookConfiguration: caBundle is replaced, annotation is removed
 	vwc := docs[1]
-	webhooks := vwc["webhooks"].([]interface{})
-	cc := webhooks[0].(map[interface{}]interface{})["clientConfig"].(map[interface{}]interface{})
+	webhooks := vwc["webhooks"].([]any)
+	cc := webhooks[0].(map[any]any)["clientConfig"].(map[any]any)
 	caBundle := cc["caBundle"].(string)
 	assert.NotEqual(t, "b2xkLWNhLWJ1bmRsZQ==", caBundle)
 	decoded, err := base64.StdEncoding.DecodeString(caBundle)
@@ -241,7 +241,7 @@ func TestInjectWebhookCert(t *testing.T) {
 
 	// Verify CRD conversion webhook: caBundle is replaced (detected automatically)
 	crd := docs[2]
-	crdCC := crd["spec"].(map[interface{}]interface{})["conversion"].(map[interface{}]interface{})["webhook"].(map[interface{}]interface{})["clientConfig"].(map[interface{}]interface{})
+	crdCC := crd["spec"].(map[any]any)["conversion"].(map[any]any)["webhook"].(map[any]any)["clientConfig"].(map[any]any)
 	crdCABundle := crdCC["caBundle"].(string)
 	assert.NotEqual(t, "b2xkLWNhLWJ1bmRsZQ==", crdCABundle)
 	decoded, err = base64.StdEncoding.DecodeString(crdCABundle)
@@ -271,7 +271,7 @@ func TestMaybeInjectWebhookCert(t *testing.T) {
 	require.Len(t, docs, 3)
 
 	// Secret should have new cert
-	sd := docs[0]["stringData"].(map[interface{}]interface{})
+	sd := docs[0]["stringData"].(map[any]any)
 	assert.Contains(t, sd["webhook.crt"].(string), "BEGIN CERTIFICATE")
 	assert.NotEqual(t, "old-cert", sd["webhook.crt"])
 
@@ -314,12 +314,12 @@ func TestLoadCA(t *testing.T) {
 	assert.True(t, caKey.Equal(loadedKey))
 }
 
-func parseAllDocs(t *testing.T, data []byte) []map[interface{}]interface{} {
+func parseAllDocs(t *testing.T, data []byte) []map[any]any {
 	t.Helper()
-	var docs []map[interface{}]interface{}
+	var docs []map[any]any
 	d := yaml.NewDecoder(bytes.NewReader(data))
 	for {
-		v := make(map[interface{}]interface{})
+		v := make(map[any]any)
 		err := d.Decode(v)
 		if err != nil {
 			break
@@ -329,13 +329,13 @@ func parseAllDocs(t *testing.T, data []byte) []map[interface{}]interface{} {
 	return docs
 }
 
-func assertNoInjectAnnotation(t *testing.T, v map[interface{}]interface{}) {
+func assertNoInjectAnnotation(t *testing.T, v map[any]any) {
 	t.Helper()
-	metadata, ok := v["metadata"].(map[interface{}]interface{})
+	metadata, ok := v["metadata"].(map[any]any)
 	if !ok {
 		return
 	}
-	annotations, ok := metadata["annotations"].(map[interface{}]interface{})
+	annotations, ok := metadata["annotations"].(map[any]any)
 	if !ok {
 		return
 	}

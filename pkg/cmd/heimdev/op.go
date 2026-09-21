@@ -243,11 +243,9 @@ func (a *providerStorage) SignatureAlgorithms(_ context.Context) ([]jose.Signatu
 func (a *providerStorage) KeySet(_ context.Context) ([]op.Key, error) {
 	return []op.Key{
 		&signingPublicKey{
-			signingKey: signingKey{
-				id:   "foobar",
-				algo: jose.RS256,
-			},
-			key: a.SigningPublicKey,
+			id:   "foobar",
+			algo: jose.RS256,
+			key:  a.SigningPublicKey,
 		},
 	}, nil
 }
@@ -295,7 +293,7 @@ func (a *providerStorage) SetIntrospectionFromToken(ctx context.Context, userinf
 	panic("implement me")
 }
 
-func (a *providerStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]interface{}, error) {
+func (a *providerStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]any, error) {
 	// TODO
 	return nil, nil
 }

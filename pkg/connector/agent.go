@@ -23,7 +23,7 @@ const (
 )
 
 type Agent struct {
-	id         uint32
+	id         atomic.Uint32
 	backend    string
 	conn       *tls.Conn
 	cert       *x509.Certificate
@@ -98,7 +98,7 @@ func (a *Agent) Serve() error {
 				logger.Log.Error("Failed dial backend", slog.Any("error", err), slog.String("addr", a.backend))
 				continue
 			}
-			streamId := atomic.AddUint32(&a.id, 1)
+			streamId := a.id.Add(1)
 			a.mu.Lock()
 			a.conns[streamId] = conn
 			a.mu.Unlock()

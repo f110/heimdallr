@@ -167,44 +167,36 @@ func (m *mainProcess) shuttingDown() (fsm.State, error) {
 	done := make(chan struct{})
 	var wg sync.WaitGroup
 	if m.server != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if err := m.server.Shutdown(ctx); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
 			}
-		}()
+		})
 	}
 
 	if m.internalApi != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if err := m.internalApi.Shutdown(ctx); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
 			}
-		}()
+		})
 	}
 
 	if m.dashboard != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if err := m.dashboard.Shutdown(ctx); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
 			}
-		}()
+		})
 	}
 
 	if m.relayLocator != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			v, ok := m.relayLocator.(*etcd.RelayLocator)
 			if ok {
 				v.Close()
 			}
-		}()
+		})
 	}
 
 	go func() {
@@ -249,14 +241,12 @@ func (m *mainProcess) shuttingDownRPCServer() (fsm.State, error) {
 		defer cancelFunc()
 
 		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			if err := m.rpcServer.Shutdown(ctx); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
 			}
-		}()
+		})
 
 		done := make(chan struct{})
 		go func() {
@@ -698,19 +688,15 @@ func (m *mainProcess) startRPCServer() (fsm.State, error) {
 
 func (m *mainProcess) run() (fsm.State, error) {
 	if m.config.AccessProxy.HTTP.Bind != "" {
-		m.wg.Add(1)
-		go func() {
-			defer m.wg.Done()
+		m.wg.Go(func() {
 
 			m.startServer()
-		}()
+		})
 
-		m.wg.Add(1)
-		go func() {
-			defer m.wg.Done()
+		m.wg.Go(func() {
 
 			m.startInternalApiServer()
-		}()
+		})
 
 		if err := netutil.WaitListen(m.config.AccessProxy.HTTP.Bind, time.Second); err != nil {
 			return fsm.UnknownState, err
@@ -721,16 +707,14 @@ func (m *mainProcess) run() (fsm.State, error) {
 	}
 
 	if m.config.Dashboard.Bind != "" {
-		m.wg.Add(1)
-		go func() {
-			defer m.wg.Done()
+		m.wg.Go(func() {
 
 			if err := netutil.WaitListen(m.config.AccessProxy.HTTP.BindInternalApi, 3*time.Second); err != nil {
 				return
 			}
 
 			m.startDashboard()
-		}()
+		})
 
 		if err := netutil.WaitListen(m.config.Dashboard.Bind, 5*time.Second); err != nil {
 			return fsm.UnknownState, err

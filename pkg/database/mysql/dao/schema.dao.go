@@ -127,7 +127,7 @@ func (d *User) Select(ctx context.Context, id int32) (*entity.User, error) {
 func (d *User) SelectMulti(ctx context.Context, id ...int32) ([]*entity.User, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `user` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -394,7 +394,7 @@ func (d *UserState) Select(ctx context.Context, id int32) (*entity.UserState, er
 func (d *UserState) SelectMulti(ctx context.Context, id ...int32) ([]*entity.UserState, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `user_state` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -597,7 +597,7 @@ func (d *RoleBinding) Select(ctx context.Context, id int32) (*entity.RoleBinding
 func (d *RoleBinding) SelectMulti(ctx context.Context, id ...int32) ([]*entity.RoleBinding, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `role_binding` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -934,7 +934,7 @@ func (d *AccessToken) Select(ctx context.Context, id int32) (*entity.AccessToken
 func (d *AccessToken) SelectMulti(ctx context.Context, id ...int32) ([]*entity.AccessToken, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `access_token` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -1237,7 +1237,7 @@ func (d *Token) Select(ctx context.Context, id int32) (*entity.Token, error) {
 func (d *Token) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Token, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `token` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -1545,7 +1545,7 @@ func (d *Code) Select(ctx context.Context, id int32) (*entity.Code, error) {
 func (d *Code) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Code, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `code` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -1812,7 +1812,7 @@ func (d *Relay) Select(ctx context.Context, id int32) (*entity.Relay, error) {
 func (d *Relay) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Relay, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `relay` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -2080,7 +2080,7 @@ func (d *SerialNumber) Select(ctx context.Context, id int64) (*entity.SerialNumb
 func (d *SerialNumber) SelectMulti(ctx context.Context, id ...int64) ([]*entity.SerialNumber, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `serial_number` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -2280,7 +2280,7 @@ func (d *SignedCertificate) Select(ctx context.Context, id int32) (*entity.Signe
 func (d *SignedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*entity.SignedCertificate, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `signed_certificate` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -2579,7 +2579,7 @@ func (d *RevokedCertificate) Select(ctx context.Context, id int32) (*entity.Revo
 func (d *RevokedCertificate) SelectMulti(ctx context.Context, id ...int32) ([]*entity.RevokedCertificate, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `revoked_certificate` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
@@ -2832,7 +2832,7 @@ func (d *Node) Select(ctx context.Context, id int32) (*entity.Node, error) {
 func (d *Node) SelectMulti(ctx context.Context, id ...int32) ([]*entity.Node, error) {
 	inCause := strings.Repeat("?, ", len(id))
 	args := make([]any, len(id))
-	for i := 0; i < len(id); i++ {
+	for i := range id {
 		args[i] = id[i]
 	}
 	rows, err := d.conn.QueryContext(ctx, fmt.Sprintf("SELECT * FROM `node` WHERE `id` IN (%s)", inCause[:len(inCause)-2]), args...)
