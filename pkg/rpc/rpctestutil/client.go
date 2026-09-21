@@ -14,15 +14,25 @@ type AdminClient struct {
 
 	PingCall             int
 	UserListCall         int
+	UserListCtx          context.Context
+	UserListResponse     *rpc.ResponseUserList
 	UserAddCall          int
+	UserAddRequest       *rpc.RequestUserAdd
 	UserDelCall          int
+	UserDelRequest       *rpc.RequestUserDel
 	UserGetCall          int
+	UserGetResponse      *rpc.ResponseUserGet
 	UserEditCall         int
+	UserEditRequest      *rpc.RequestUserEdit
 	BecomeMaintainerCall int
 	ToggleAdminCall      int
 	TokenNewCall         int
+	TokenNewResponse     *rpc.ResponseTokenNew
 	RoleListCall         int
+	RoleListResponse     *rpc.ResponseRoleList
 	BackendListCall      int
+	BackendListRequest   *rpc.RequestBackendList
+	BackendListResponse  *rpc.ResponseBackendList
 }
 
 func NewAdminClient() *AdminClient {
@@ -41,6 +51,10 @@ func (a *AdminClient) UserList(ctx context.Context, in *rpc.RequestUserList, opt
 	a.Lock()
 	defer a.Unlock()
 	a.UserListCall++
+	a.UserListCtx = ctx
+	if a.UserListResponse != nil {
+		return a.UserListResponse, nil
+	}
 
 	return &rpc.ResponseUserList{}, nil
 }
@@ -49,6 +63,7 @@ func (a *AdminClient) UserAdd(ctx context.Context, in *rpc.RequestUserAdd, opts 
 	a.Lock()
 	defer a.Unlock()
 	a.UserAddCall++
+	a.UserAddRequest = in
 
 	return &rpc.ResponseUserAdd{}, nil
 }
@@ -57,6 +72,7 @@ func (a *AdminClient) UserDel(ctx context.Context, in *rpc.RequestUserDel, opts 
 	a.Lock()
 	defer a.Unlock()
 	a.UserDelCall++
+	a.UserDelRequest = in
 
 	return &rpc.ResponseUserDel{}, nil
 }
@@ -65,6 +81,9 @@ func (a *AdminClient) UserGet(ctx context.Context, in *rpc.RequestUserGet, opts 
 	a.Lock()
 	defer a.Unlock()
 	a.UserGetCall++
+	if a.UserGetResponse != nil {
+		return a.UserGetResponse, nil
+	}
 
 	return &rpc.ResponseUserGet{}, nil
 }
@@ -73,6 +92,7 @@ func (a *AdminClient) UserEdit(ctx context.Context, in *rpc.RequestUserEdit, opt
 	a.Lock()
 	defer a.Unlock()
 	a.UserEditCall++
+	a.UserEditRequest = in
 
 	return &rpc.ResponseUserEdit{}, nil
 }
@@ -97,6 +117,9 @@ func (a *AdminClient) TokenNew(ctx context.Context, in *rpc.RequestTokenNew, opt
 	a.Lock()
 	defer a.Unlock()
 	a.TokenNewCall++
+	if a.TokenNewResponse != nil {
+		return a.TokenNewResponse, nil
+	}
 
 	return &rpc.ResponseTokenNew{}, nil
 }
@@ -105,6 +128,9 @@ func (a *AdminClient) RoleList(ctx context.Context, in *rpc.RequestRoleList, opt
 	a.Lock()
 	defer a.Unlock()
 	a.RoleListCall++
+	if a.RoleListResponse != nil {
+		return a.RoleListResponse, nil
+	}
 
 	return &rpc.ResponseRoleList{}, nil
 }
@@ -113,6 +139,10 @@ func (a *AdminClient) BackendList(ctx context.Context, in *rpc.RequestBackendLis
 	a.Lock()
 	defer a.Unlock()
 	a.BackendListCall++
+	a.BackendListRequest = in
+	if a.BackendListResponse != nil {
+		return a.BackendListResponse, nil
+	}
 
 	return &rpc.ResponseBackendList{}, nil
 }
@@ -120,9 +150,10 @@ func (a *AdminClient) BackendList(ctx context.Context, in *rpc.RequestBackendLis
 type ClusterClient struct {
 	sync.Mutex
 
-	MemberListCall int
-	MemberStatCall int
-	AgentListCall  int
+	MemberListCall    int
+	MemberStatCall    int
+	AgentListCall     int
+	AgentListResponse *rpc.ResponseAgentList
 }
 
 func NewClusterClient() *ClusterClient {
@@ -149,6 +180,9 @@ func (c *ClusterClient) AgentList(ctx context.Context, in *rpc.RequestAgentList,
 	c.Lock()
 	defer c.Unlock()
 	c.AgentListCall++
+	if c.AgentListResponse != nil {
+		return c.AgentListResponse, nil
+	}
 
 	return &rpc.ResponseAgentList{}, nil
 }
@@ -156,13 +190,17 @@ func (c *ClusterClient) AgentList(ctx context.Context, in *rpc.RequestAgentList,
 type CertificateAuthorityClient struct {
 	sync.Mutex
 
-	GetSignedListCall    int
-	NewClientCertCall    int
-	NewServerCertCall    int
-	RevokeCall           int
-	GetCall              int
-	GetRevokedListCall   int
-	WatchRevokedListCall int
+	GetSignedListCall      int
+	GetSignedListResponse  *rpc.ResponseGetSignedList
+	NewClientCertCall      int
+	NewClientCertRequest   *rpc.RequestNewClientCert
+	NewServerCertCall      int
+	RevokeCall             int
+	RevokeRequest          *rpc.CARequestRevoke
+	GetCall                int
+	GetRevokedListCall     int
+	GetRevokedListResponse *rpc.ResponseGetRevokedList
+	WatchRevokedListCall   int
 }
 
 func NewCertificateAuthorityClient() *CertificateAuthorityClient {
@@ -173,6 +211,9 @@ func (c *CertificateAuthorityClient) GetSignedList(ctx context.Context, in *rpc.
 	c.Lock()
 	defer c.Unlock()
 	c.GetSignedListCall++
+	if c.GetSignedListResponse != nil {
+		return c.GetSignedListResponse, nil
+	}
 
 	return &rpc.ResponseGetSignedList{}, nil
 }
@@ -181,8 +222,9 @@ func (c *CertificateAuthorityClient) NewClientCert(ctx context.Context, in *rpc.
 	c.Lock()
 	defer c.Unlock()
 	c.NewClientCertCall++
+	c.NewClientCertRequest = in
 
-	return &rpc.ResponseNewClientCert{}, nil
+	return &rpc.ResponseNewClientCert{Certificate: &rpc.CertItem{}}, nil
 }
 
 func (c *CertificateAuthorityClient) NewServerCert(ctx context.Context, in *rpc.RequestNewServerCert, opts ...grpc.CallOption) (*rpc.ResponseNewServerCert, error) {
@@ -197,6 +239,7 @@ func (c *CertificateAuthorityClient) Revoke(ctx context.Context, in *rpc.CAReque
 	c.Lock()
 	defer c.Unlock()
 	c.RevokeCall++
+	c.RevokeRequest = in
 
 	return &rpc.CAResponseRevoke{}, nil
 }
@@ -213,6 +256,9 @@ func (c *CertificateAuthorityClient) GetRevokedList(ctx context.Context, in *rpc
 	c.Lock()
 	defer c.Unlock()
 	c.GetRevokedListCall++
+	if c.GetRevokedListResponse != nil {
+		return c.GetRevokedListResponse, nil
+	}
 
 	return &rpc.ResponseGetRevokedList{}, nil
 }
@@ -225,12 +271,24 @@ func (c *CertificateAuthorityClient) WatchRevokedCert(ctx context.Context, in *r
 	return nil, nil
 }
 
-type UserClient struct{}
+type UserClient struct {
+	sync.Mutex
+
+	GetBackendsCall     int
+	GetBackendsResponse *rpc.ResponseGetBackends
+}
 
 func NewUserClient() *UserClient {
 	return &UserClient{}
 }
 
 func (u *UserClient) GetBackends(ctx context.Context, in *rpc.RequestGetBackends, opts ...grpc.CallOption) (*rpc.ResponseGetBackends, error) {
-	return nil, nil
+	u.Lock()
+	defer u.Unlock()
+	u.GetBackendsCall++
+	if u.GetBackendsResponse != nil {
+		return u.GetBackendsResponse, nil
+	}
+
+	return &rpc.ResponseGetBackends{}, nil
 }

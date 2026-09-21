@@ -39,8 +39,6 @@ const (
 	EmbedEtcdUrlFilename    = "embed_etcd_url"
 	SessionTypeSecureCookie = "secure_cookie"
 	SessionTypeMemcached    = "memcached"
-	TemplateLoaderShotgun   = "shotgun"
-	TemplateLoaderEmbed     = "embed"
 )
 
 var (
@@ -312,18 +310,14 @@ type Session struct {
 }
 
 type Dashboard struct {
-	Bind         string    `json:"bind,omitempty"`
-	RPCServer    string    `json:"rpc_server,omitempty"`
-	TokenFile    string    `json:"token_file,omitempty"`
-	Template     *Template `json:"template,omitempty"`
-	PublicKeyUrl string    `json:"publickey_url,omitempty"`
+	Bind         string `json:"bind,omitempty"`
+	ProbeBind    string `json:"probe_bind,omitempty"`
+	RPCServer    string `json:"rpc_server,omitempty"`
+	TokenFile    string `json:"token_file,omitempty"`
+	PublicKeyUrl string `json:"publickey_url,omitempty"`
+	AssetDir     string `json:"asset_dir,omitempty"`
 
 	InternalToken string `json:"-"`
-}
-
-type Template struct {
-	Loader string `json:"loader"` // shotgun or embed
-	Dir    string `json:"dir"`
 }
 
 type Duration struct {
@@ -350,13 +344,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 }
 
 func (d *Dashboard) Load(dir string) error {
-	return d.Template.inflate(dir)
-}
-
-func (t *Template) inflate(dir string) error {
-	if t.Dir != "" && t.Loader == TemplateLoaderShotgun {
-		t.Dir = filepath.Join(dir, t.Dir)
-	}
+	d.AssetDir = absPath(d.AssetDir, dir)
 	return nil
 }
 

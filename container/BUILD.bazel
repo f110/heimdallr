@@ -1,7 +1,10 @@
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_files")
 load("//:RELEASE.bzl", "RELEASE_MESSAGE", "VERSION")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES", "REGISTRY")
 load("//container:util.bzl", "container_image")
+
+DASHBOARD_ASSET_DIR = "/usr/local/share/heimdallr/dashboard"
 
 pkg_tar(
     name = "bin_proxy_amd64",
@@ -59,12 +62,26 @@ container_image(
     tags = ["latest"],
 )
 
+pkg_files(
+    name = "dashboard_assets_files",
+    srcs = ["//ts/apps/dashboard:vite_build"],
+    prefix = DASHBOARD_ASSET_DIR,
+    strip_prefix = "dist/",
+)
+
+pkg_tar(
+    name = "dashboard_assets",
+    srcs = [":dashboard_assets_files"],
+    mode = "0644",
+)
+
 pkg_tar(
     name = "bin_dashboard_amd64",
     files = {
         "//cmd/heim-dashboard:linux_amd64": "/usr/local/bin/heim-dashboard",
     },
     mode = "0755",
+    deps = [":dashboard_assets"],
 )
 
 pkg_tar(
@@ -73,6 +90,7 @@ pkg_tar(
         "//cmd/heim-dashboard:linux_arm64": "/usr/local/bin/heim-dashboard",
     },
     mode = "0755",
+    deps = [":dashboard_assets"],
 )
 
 container_image(

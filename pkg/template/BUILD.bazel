@@ -18,7 +18,7 @@ go_test(
     deps = [
         "//pkg/config/configv2",
         "//pkg/logger",
-        "//tmpl/dashboard",
+        "//tmpl/ui",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],

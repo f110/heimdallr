@@ -15,5 +15,6 @@
 /docs/working
 
 /bazel-*
+/ts/apps/dashboard/dist/*
 
 node_modules/

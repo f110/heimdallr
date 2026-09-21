@@ -1,7 +1,7 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@rules_go//go:def.bzl", "go_library")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("@rules_go//proto:def.bzl", "go_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build/rules/go:grpc.bzl", "vendor_grpc_source")
 
 proto_library(
@@ -47,9 +47,14 @@ js_library(
 go_library(
     name = "dashboard",
     srcs = [
+        "admin.go",
+        "certificate.go",
         "dashboard.connect.go",
         "dashboard.pb.go",
+        "interceptor.go",
+        "me.go",
         "server.go",
+        "service.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/dashboard",
     visibility = ["//visibility:public"],
@@ -60,15 +65,31 @@ go_library(
         "//pkg/logger",
         "//pkg/rpc",
         "//pkg/rpc/rpcclient",
-        "//pkg/template",
-        "//tmpl/dashboard",
         "@com_connectrpc_connect//:connect",
         "@com_github_golang_jwt_jwt_v4//:jwt",
-        "@com_github_julienschmidt_httprouter//:httprouter",
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_protobuf//reflect/protoreflect",
         "@org_golang_google_protobuf//runtime/protoimpl",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+    ],
+)
+
+go_test(
+    name = "dashboard_test",
+    srcs = [
+        "server_test.go",
+        "service_test.go",
+    ],
+    embed = [":dashboard"],
+    deps = [
+        "//pkg/config/configv2",
+        "//pkg/rpc",
+        "//pkg/rpc/rpcclient",
+        "//pkg/rpc/rpctestutil",
+        "@com_connectrpc_connect//:connect",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@org_golang_google_protobuf//types/known/timestamppb",
     ],
 )

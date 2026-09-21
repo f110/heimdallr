@@ -1,0 +1,23 @@
+/* Reproduces the "ui sidebar inverted vertical menu" of Semantic UI. */
+.navbar {
+  background-color: #1b1c1d;
+  border-right: none;
+}
+
+.link {
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 0;
+  /* Semantic UI used 0.92857143em here. It is shortened because the menu never wraps. */
+  padding: 0.5rem 1.14285714em;
+}
+
+.link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.link[data-active],
+.link[data-active]:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}

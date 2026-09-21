@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -325,6 +326,34 @@ func (a *Agent) Post(m *btesting.Matcher, u, body string) bool {
 	return true
 }
 
+// PostJSON calls a Connect endpoint. The unary protocol of Connect is a POST with a JSON body.
+func (a *Agent) PostJSON(m *btesting.Matcher, u string, body interface{}) bool {
+	buf, err := json.Marshal(body)
+	if err != nil {
+		m.SetLastResponse(nil, err)
+		return false
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(buf))
+	if err != nil {
+		m.SetLastResponse(nil, err)
+		return false
+	}
+	req.Header.Set("Content-Type", "application/json")
+	for _, v := range a.cookies {
+		req.AddCookie(v)
+	}
+
+	res, err := a.client.Do(req)
+	m.SetLastResponse(res, err)
+	m.Done()
+
+	a.lastResponse = res
+	a.lastErr = err
+
+	return err == nil
+}
+
 func (a *Agent) Preflight(m *btesting.Matcher, u string) bool {
 	req, err := http.NewRequest(http.MethodOptions, u, nil)
 	if err != nil {
@@ -550,15 +579,15 @@ func (t *Tunnel) OpenURL(m *btesting.Matcher) bool {
 	return assert.Greater(m.T, len(buf), 1)
 }
 
-func (t *Tunnel) GetFirstCertificate(m *btesting.Matcher, rpcClient *rpcclient.ClientWithUserToken) []byte {
-	certs, err := rpcClient.ListCert()
+func (t *Tunnel) GetFirstCertificate(ctx context.Context, m *btesting.Matcher, rpcClient *rpcclient.ClientWithUserToken) []byte {
+	certs, err := rpcClient.ListCert(ctx)
 	m.Must(err)
 	if len(certs) != 1 {
 		m.Failf("Unexpected the number of certificates: %d", len(certs))
 	}
 	serialNumber := big.NewInt(0)
 	serialNumber.SetBytes(certs[0].SerialNumber)
-	cert, err := rpcClient.GetCert(serialNumber)
+	cert, err := rpcClient.GetCert(ctx, serialNumber)
 	m.Must(err)
 
 	return cert.Certificate

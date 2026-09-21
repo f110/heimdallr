@@ -1,6 +1,7 @@
 package btesting
 
 import (
+	"context"
 	"encoding/xml"
 	"os"
 	"testing"
@@ -45,26 +46,26 @@ func TestTracker(t *testing.T) {
 	f := New(stubT, "", false)
 	f.Describe("About Foo", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
-			s.It("Baz", func(m *Matcher) {
+			s.It("Baz", func(_ context.Context, m *Matcher) {
 				time.Sleep(1 * time.Second)
 				m.True(true)
 			})
 		})
 
 		s.Context("Spam", func(s *Scenario) {
-			s.It("Ham", func(m *Matcher) {
+			s.It("Ham", func(_ context.Context, m *Matcher) {
 				time.Sleep(1 * time.Second)
 				m.True(true)
 			})
 
-			s.It("Eggs", func(m *Matcher) {
+			s.It("Eggs", func(_ context.Context, m *Matcher) {
 				m.True(false)
 			})
 		})
 	})
 	f.Describe("About FooBar", func(s *Scenario) {
 		s.Context("Bar", func(s *Scenario) {
-			s.It("Baz", func(m *Matcher) {
+			s.It("Baz", func(_ context.Context, m *Matcher) {
 				m.True(true)
 			})
 		})

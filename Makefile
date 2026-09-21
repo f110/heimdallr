@@ -15,6 +15,9 @@ run:
 run-dashboard:
 	$(BAZEL) run //cmd/heim-dashboard -- -c $(CURDIR)/dashboard_config_debug.yaml
 
+run-dashboard-front:
+	cd $(CURDIR)/ts/apps/dashboard && pnpm dev
+
 run-rpcserver:
 	$(BAZEL) run //cmd/heim-rpcserver -- -c $(CURDIR)/rpcserver_config_debug.yaml
 
@@ -89,4 +92,4 @@ run-e2e:
 migrate:
 	$(BAZEL) run @dev_f110_protoc_ddl//cmd/migrate -- --schema $(CURDIR)/pkg/database/mysql/entity/schema.sql --driver mysql --dsn "$(DSN)" --execute
 
-.PHONY: run run-dashboard run-operator test update-deps gen generate-deploy-manifests gen-operator push run-e2e migrate
+.PHONY: run run-dashboard run-dashboard-front run-operator test update-deps gen generate-deploy-manifests gen-operator push run-e2e migrate

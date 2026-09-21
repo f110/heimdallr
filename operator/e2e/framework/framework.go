@@ -224,9 +224,9 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 
 	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, proxySpec, testUserId)
 	m.NoError(err)
-	err = e2eutil.EnsureExistingTestUser(rpcClient, testUserId, role.Name)
+	err = e2eutil.EnsureExistingTestUser(context.TODO(), rpcClient, testUserId, role.Name)
 	m.NoError(err)
-	clientCert, err := e2eutil.SetupClientCert(rpcClient, testUserId)
+	clientCert, err := e2eutil.SetupClientCert(context.TODO(), rpcClient, testUserId)
 	p.userClientCert = clientCert
 	return m.Must(err)
 }

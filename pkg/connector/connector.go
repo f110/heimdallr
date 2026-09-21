@@ -342,7 +342,7 @@ func (s *Server) Accept(_ *http.Server, conn *tls.Conn, _ http.Handler) {
 	defer cancelFunc()
 	go s.heartbeat(ctx, conn)
 
-	relay, err := NewRelay(s.client, name, s, conn)
+	relay, err := NewRelay(ctx, s.client, name, s, conn)
 	if err != nil {
 		logger.Log.Warn("Can not start relay", slog.Any("error", err))
 		return

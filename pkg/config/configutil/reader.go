@@ -41,10 +41,6 @@ func ReadConfigV2(filename string) (*configv2.Config, error) {
 		},
 		Dashboard: &configv2.Dashboard{
 			Bind: "",
-			Template: &configv2.Template{
-				Loader: "embed",
-				Dir:    "tmpl/dashboard",
-			},
 		},
 		Datastore: &configv2.Datastore{},
 		IdentityProvider: &configv2.IdentityProvider{

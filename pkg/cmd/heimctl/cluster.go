@@ -8,8 +8,8 @@ import (
 	"go.f110.dev/heimdallr/pkg/rpc/rpcclient"
 )
 
-func memberList(c *rpcclient.Client) error {
-	memberList, err := c.ClusterMemberList()
+func memberList(ctx context.Context, c *rpcclient.Client) error {
+	memberList, err := c.ClusterMemberList(ctx)
 	if err != nil {
 		return err
 	}
@@ -29,12 +29,12 @@ func Cluster(rootCmd *cmd.Command) {
 
 	memberList := &cmd.Command{
 		Use: "member-list",
-		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			c, err := getClient(confFile)
+		Run: func(ctx context.Context, _ *cmd.Command, _ []string) error {
+			c, err := getClient(ctx, confFile)
 			if err != nil {
 				return err
 			}
-			return memberList(c)
+			return memberList(ctx, c)
 		},
 	}
 	clusterCmd.AddCommand(memberList)
