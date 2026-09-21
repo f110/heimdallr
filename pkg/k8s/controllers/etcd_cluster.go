@@ -31,6 +31,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/rbacv1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
+	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
@@ -998,14 +999,16 @@ func (c *EtcdCluster) Client(endpoints []string) (*clientv3.Client, error) {
 		endpoints = []string{fmt.Sprintf("https://%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort)}
 	}
 
+	serverName := fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain)
 	cfg := clientv3.Config{
 		Endpoints: endpoints,
 		TLS: &tls.Config{
 			Certificates: []tls.Certificate{c.serverCertSecret.Certificate},
 			RootCAs:      certPool,
 			ClientCAs:    certPool,
-			ServerName:   fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
+			ServerName:   serverName,
 		},
+		DialOptions: []grpc.DialOption{grpc.WithAuthority(serverName)},
 	}
 	client, err := clientv3.New(cfg)
 	if err != nil {
