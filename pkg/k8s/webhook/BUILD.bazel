@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/logger",
+        "@dev_f110_go_xerrors//:xerrors",
         "@io_k8s_api//admission/v1:admission",
         "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1:apiextensions",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",

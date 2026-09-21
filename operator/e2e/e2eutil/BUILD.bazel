@@ -6,6 +6,7 @@ go_library(
         "etcdcluster.go",
         "id.go",
         "proxy.go",
+        "webhook.go",
     ],
     importpath = "go.f110.dev/heimdallr/operator/e2e/e2eutil",
     visibility = ["//visibility:public"],

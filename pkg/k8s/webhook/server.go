@@ -2,13 +2,17 @@ package webhook
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
+	"log/slog"
+	"net"
+	"net/http"
+
+	"go.f110.dev/xerrors"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"log/slog"
-	"net/http"
 
 	"go.f110.dev/heimdallr/pkg/logger"
 )
@@ -21,6 +25,7 @@ type Server struct {
 	cert string
 	key  string
 
+	listener   net.Listener
 	serializer *json.Serializer
 	converter  *Converter
 }
@@ -122,9 +127,31 @@ func (s *Server) Validate(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (s *Server) Listen() error {
+	cert, err := tls.LoadX509KeyPair(s.cert, s.key)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	s.Server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+
+	l, err := net.Listen("tcp", s.Server.Addr)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	s.listener = l
+
+	return nil
+}
+
 func (s *Server) Start() error {
+	if s.listener == nil {
+		if err := s.Listen(); err != nil {
+			return err
+		}
+	}
+
 	logger.Log.Info("Start webhook server", slog.String("addr", s.Server.Addr))
-	return s.Server.ListenAndServeTLS(s.cert, s.key)
+	return s.Server.ServeTLS(s.listener, "", "")
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

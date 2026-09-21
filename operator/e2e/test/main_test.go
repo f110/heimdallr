@@ -110,6 +110,9 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
 		return nil, err
 	}
+	if err := e2eutil.WaitForWebhookReachable(context.TODO(), cfg); err != nil {
+		return nil, err
+	}
 
 	return k8sCluster, nil
 }
