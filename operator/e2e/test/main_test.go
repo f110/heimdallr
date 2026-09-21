@@ -15,6 +15,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
 	"go.f110.dev/heimdallr/pkg/k8s/kind"
+	"go.f110.dev/heimdallr/pkg/k8s/registry"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -46,39 +47,46 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	if err := k8sCluster.WaitReady(context.TODO()); err != nil {
 		return nil, err
 	}
-	if framework.Config.ProxyImageFile != "" ||
-		framework.Config.RPCImageFile != "" ||
-		framework.Config.DashboardImageFile != "" ||
-		framework.Config.OperatorImageFile != "" ||
-		framework.Config.SidecarImageFile != "" {
-		images := []*kind.ContainerImageFile{
+	if framework.Config.ProxyImage != "" ||
+		framework.Config.RPCImage != "" ||
+		framework.Config.DashboardImage != "" ||
+		framework.Config.OperatorImage != "" ||
+		framework.Config.SidecarImage != "" {
+		if err := registry.Install(cfg, "operator-e2e"); err != nil {
+			return nil, err
+		}
+		if err := k8sCluster.ConfigureRegistryMirror(registry.MirrorHost, registry.NodePort); err != nil {
+			return nil, err
+		}
+
+		images := []*registry.ContainerImage{
 			{
-				File:       framework.Config.ProxyImageFile,
+				Layout:     framework.Config.ProxyImage,
 				Repository: controllers.ProxyImageRepository,
 				Tag:        "e2e",
 			},
 			{
-				File:       framework.Config.RPCImageFile,
+				Layout:     framework.Config.RPCImage,
 				Repository: controllers.RPCServerImageRepository,
 				Tag:        "e2e",
 			},
 			{
-				File:       framework.Config.DashboardImageFile,
+				Layout:     framework.Config.DashboardImage,
 				Repository: controllers.DashboardImageRepository,
 				Tag:        "e2e",
 			},
 			{
-				File:       framework.Config.OperatorImageFile,
+				Layout:     framework.Config.OperatorImage,
 				Repository: "ghcr.io/f110/heimdallr/operator",
 				Tag:        "e2e",
 			},
 			{
-				File:       framework.Config.SidecarImageFile,
+				Layout:     framework.Config.SidecarImage,
 				Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
 				Tag:        framework.Config.BuildVersion,
 			},
 		}
-		if err := k8sCluster.LoadImageFiles(images...); err != nil {
+		if err := registry.Push(context.TODO(), cfg, kind.NodePlatform(), images...); err != nil {
 			log.Fatal(err)
 		}
 

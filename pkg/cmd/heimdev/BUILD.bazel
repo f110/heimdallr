@@ -18,6 +18,7 @@ go_library(
         "//pkg/fsm",
         "//pkg/k8s",
         "//pkg/k8s/kind",
+        "//pkg/k8s/registry",
         "@com_github_go_chi_chi_v5//:chi",
         "@com_github_go_jose_go_jose_v4//:go-jose",
         "@com_github_golang_jwt_jwt_v4//:jwt",

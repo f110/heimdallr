@@ -68,21 +68,21 @@ var EtcdClusterBase = etcd.Factory(nil,
 )
 
 type ConfigStruct struct {
-	RandomSeed         int64
-	ProxyVersion       string
-	CRDDir             string
-	ClusterVersion     string
-	Verbose            bool
-	KindFile           string
-	OperatorImageFile  string
-	ProxyImageFile     string
-	RPCImageFile       string
-	DashboardImageFile string
-	SidecarImageFile   string
-	BuildVersion       string
-	AllInOneManifest   string
-	Step               bool
-	Retain             bool
+	RandomSeed       int64
+	ProxyVersion     string
+	CRDDir           string
+	ClusterVersion   string
+	Verbose          bool
+	KindFile         string
+	OperatorImage    string
+	ProxyImage       string
+	RPCImage         string
+	DashboardImage   string
+	SidecarImage     string
+	BuildVersion     string
+	AllInOneManifest string
+	Step             bool
+	Retain           bool
 }
 
 func Flags(fs *flag.FlagSet) {
@@ -92,11 +92,11 @@ func Flags(fs *flag.FlagSet) {
 	fs.BoolVar(&Config.Verbose, "verbose", false, "View controller's log")
 	fs.StringVar(&Config.ClusterVersion, "cluster-version", "v0.18.8", "Kubernetes cluster version")
 	fs.StringVar(&Config.KindFile, "kind-file", "", "Kind executable file path")
-	fs.StringVar(&Config.OperatorImageFile, "operator-image-file", "", "Operator image file")
-	fs.StringVar(&Config.ProxyImageFile, "proxy-image-file", "", "Proxy image file")
-	fs.StringVar(&Config.RPCImageFile, "rpc-image-file", "", "RPC image file")
-	fs.StringVar(&Config.DashboardImageFile, "dashboard-image-file", "", "Dashboard image file")
-	fs.StringVar(&Config.SidecarImageFile, "sidecar-image-file", "", "Sidecar image file")
+	fs.StringVar(&Config.OperatorImage, "operator-image", "", "OCI layout directory of the operator image")
+	fs.StringVar(&Config.ProxyImage, "proxy-image", "", "OCI layout directory of the proxy image")
+	fs.StringVar(&Config.RPCImage, "rpc-image", "", "OCI layout directory of the rpcserver image")
+	fs.StringVar(&Config.DashboardImage, "dashboard-image", "", "OCI layout directory of the dashboard image")
+	fs.StringVar(&Config.SidecarImage, "sidecar-image", "", "OCI layout directory of the sidecar image")
 	fs.StringVar(&Config.AllInOneManifest, "all-in-one-manifest", "", "Manifest file for operator")
 	fs.StringVar(&Config.BuildVersion, "build-version", "", "Version string")
 	fs.BoolVar(&Config.Step, "step", false, "Step execution")

@@ -8,4 +8,5 @@ jobs: test_all: {
 	cpu_limit: "2000m"
 	memory_limit: "8096Mi"
 	event: ["push", "pull_request"]
+	cache_test_results: true
 }
