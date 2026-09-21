@@ -244,8 +244,26 @@ func (r *HeimdallrProxy) CookieSecretName() string {
 	case configv2.SessionTypeSecureCookie:
 		return r.Name + "-cookie-secret"
 	default:
+		if r.Spec.Session.KeySecretRef == nil {
+			return ""
+		}
 		return r.Spec.Session.KeySecretRef.Name
 	}
+}
+
+// ValidateSession verifies that spec.session is a combination that the operator can handle.
+func (r *HeimdallrProxy) ValidateSession() error {
+	switch r.Spec.Session.Type {
+	case configv2.SessionTypeSecureCookie:
+	case configv2.SessionTypeMemcached:
+		if r.Spec.Session.KeySecretRef == nil || r.Spec.Session.KeySecretRef.Name == "" {
+			return xerrors.Newf("controllers: spec.session.keySecretRef is required when spec.session.type is %s", configv2.SessionTypeMemcached)
+		}
+	default:
+		return xerrors.Newf("controllers: unknown spec.session.type: %q", r.Spec.Session.Type)
+	}
+
+	return nil
 }
 
 func (r *HeimdallrProxy) EtcdHost() string {
