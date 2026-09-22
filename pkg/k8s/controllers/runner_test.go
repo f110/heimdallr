@@ -606,7 +606,7 @@ func (m *MockCluster) AddMember(member *etcdserverpb.Member) {
 	m.members = append(m.members, member)
 }
 
-func (m *MockCluster) MemberList(_ context.Context) (*clientv3.MemberListResponse, error) {
+func (m *MockCluster) MemberList(_ context.Context, _ ...clientv3.OpOption) (*clientv3.MemberListResponse, error) {
 	return &clientv3.MemberListResponse{Members: m.members}, nil
 }
 
@@ -669,6 +669,18 @@ func (m *MockMaintenance) HashKV(ctx context.Context, endpoint string, rev int64
 	panic("implement me")
 }
 
+func (m *MockMaintenance) SnapshotWithVersion(ctx context.Context) (*clientv3.SnapshotResponse, error) {
+	f, err := m.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &clientv3.SnapshotResponse{
+		Header:   &etcdserverpb.ResponseHeader{},
+		Snapshot: f,
+		Version:  defaultEtcdVersion,
+	}, nil
+}
+
 func (m *MockMaintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {
 	f, err := os.Open("testdata/snapshot.db")
 	if err != nil {
@@ -678,6 +690,10 @@ func (m *MockMaintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {
 }
 
 func (m *MockMaintenance) MoveLeader(ctx context.Context, transfereeID uint64) (*clientv3.MoveLeaderResponse, error) {
+	panic("implement me")
+}
+
+func (m *MockMaintenance) Downgrade(ctx context.Context, action clientv3.DowngradeAction, version string) (*clientv3.DowngradeResponse, error) {
 	panic("implement me")
 }
 
