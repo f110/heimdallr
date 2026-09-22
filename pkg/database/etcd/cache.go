@@ -69,6 +69,9 @@ func (c *Cache) Get(key []byte) *mvccpb.KeyValue {
 	return nil
 }
 
+// Notify returns a channel that receives a value each time the cache has been
+// changed by the watch. The change is already visible through Get and All when
+// the value is sent.
 func (c *Cache) Notify() chan struct{} {
 	ch := make(chan struct{}, 1)
 
@@ -153,7 +156,7 @@ func (c *Cache) watch(ctx context.Context) error {
 			close(c.synced)
 		})
 
-		err = c.startWatch(wCtx, res.Header.Revision)
+		err = c.startWatch(wCtx, res.Header.Revision+1)
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil
 		}
@@ -174,6 +177,7 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 				return nil
 			}
 
+			applied := 0
 			for _, event := range res.Events {
 				switch event.Type {
 				case clientv3.EventTypePut:
@@ -190,11 +194,13 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 						c.cache = append(c.cache, event.Kv)
 					}
 					c.mu.Unlock()
+					applied++
 				case clientv3.EventTypeDelete:
 					c.mu.Lock()
 					for i, v := range c.cache {
 						if bytes.Equal(v.Key, event.Kv.Key) {
 							c.cache = append(c.cache[:i], c.cache[i+1:]...)
+							applied++
 							break
 						}
 					}
@@ -202,7 +208,9 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 				}
 			}
 
-			c.sendNotify()
+			if applied > 0 {
+				c.sendNotify()
+			}
 		case <-ctx.Done():
 			return xerrors.WithStack(ctx.Err())
 		}

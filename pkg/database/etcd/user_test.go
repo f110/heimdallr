@@ -21,6 +21,7 @@ func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	Id := "test@example.com"
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
+	waitForSync(t, u.cache)
 	notify := u.cache.Notify()
 
 	err = u.Set(context.Background(), &database.User{
@@ -66,6 +67,7 @@ func TestUserDatabase_SetAndGetUser(t *testing.T) {
 func TestUserDatabase_GetAndSetAccessToken(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
+	waitForSync(t, u.tokenCache)
 	notify := u.tokenCache.Notify()
 
 	err = u.SetAccessToken(context.Background(), &database.AccessToken{
@@ -116,6 +118,7 @@ func TestUserDatabase_GetAndSetState(t *testing.T) {
 func TestUserDatabase_Delete(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
+	waitForSync(t, u.cache)
 	notify := u.cache.Notify()
 
 	err = u.Set(context.Background(), &database.User{
@@ -123,23 +126,21 @@ func TestUserDatabase_Delete(t *testing.T) {
 		Roles: []string{"test"},
 	})
 	require.NoError(t, err)
+	waitNotify(t, notify)
+
 	err = u.Set(context.Background(), &database.User{Id: "test@example.com"})
 	require.NoError(t, err)
 	waitNotify(t, notify)
 
-	_, err = u.Get("test@example")
+	_, err = u.Get("test@example.com")
 	require.ErrorIs(t, err, database.ErrUserNotFound)
 }
 
 func TestUserDatabase_Close(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err = u.cache.WaitForSync(ctx)
-	require.NoError(t, err)
-	err = u.tokenCache.WaitForSync(ctx)
-	require.NoError(t, err)
+	waitForSync(t, u.cache)
+	waitForSync(t, u.tokenCache)
 
 	u.Close()
 	time.Sleep(time.Second)
