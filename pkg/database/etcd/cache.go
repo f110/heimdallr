@@ -72,6 +72,20 @@ func (c *Cache) Notify() chan struct{} {
 	return ch
 }
 
+// StopNotify unregisters the channel that Notify returned.
+// The channel never receives a value after this method returned, so the caller can close it.
+func (c *Cache) StopNotify(ch chan struct{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i, v := range c.notifies {
+		if v == ch {
+			c.notifies = append(c.notifies[:i], c.notifies[i+1:]...)
+			break
+		}
+	}
+}
+
 func (c *Cache) Start(ctx context.Context) {
 	go func() {
 		if err := c.watch(ctx); err != nil && !errors.Is(err, context.Canceled) {

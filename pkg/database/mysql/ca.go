@@ -186,6 +186,18 @@ func (ca *CA) WatchRevokeCertificate() chan struct{} {
 	return ch
 }
 
+func (ca *CA) UnwatchRevokeCertificate(ch chan struct{}) {
+	ca.mu.Lock()
+	defer ca.mu.Unlock()
+
+	for i, v := range ca.ch {
+		if v == ch {
+			ca.ch = append(ca.ch[:i], ca.ch[i+1:]...)
+			break
+		}
+	}
+}
+
 func (ca *CA) NewSerialNumber(ctx context.Context) (*big.Int, error) {
 	var serial *big.Int
 	retry := 0

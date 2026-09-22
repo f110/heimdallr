@@ -177,6 +177,15 @@ func (ca *CertificateAuthority) WatchRevokeCertificate() chan struct{} {
 	return ca.db.WatchRevokeCertificate()
 }
 
+func (ca *CertificateAuthority) UnwatchRevokeCertificate(ch chan struct{}) {
+	if ca.vault != nil {
+		ca.vault.UnwatchRevokeCertificate(ch)
+		return
+	}
+
+	ca.db.UnwatchRevokeCertificate(ch)
+}
+
 func (ca *CertificateAuthority) newClientCertificate(ctx context.Context, name, keyType string, keyBits int, password, comment string, agent, device bool) (*database.SignedCertificate, error) {
 	serial, err := ca.db.NewSerialNumber(ctx)
 	if err != nil {

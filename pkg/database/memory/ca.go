@@ -38,6 +38,18 @@ func (c *CA) WatchRevokeCertificate() chan struct{} {
 	return ch
 }
 
+func (c *CA) UnwatchRevokeCertificate(ch chan struct{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i, v := range c.watcher {
+		if v == ch {
+			c.watcher = append(c.watcher[:i], c.watcher[i+1:]...)
+			break
+		}
+	}
+}
+
 func (c *CA) GetSignedCertificate(_ context.Context, serial *big.Int) ([]*database.SignedCertificate, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

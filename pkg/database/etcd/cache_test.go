@@ -152,6 +152,26 @@ func TestCache(t *testing.T) {
 		require.Len(t, all, 2)
 	})
 
+	t.Run("StopNotify", func(t *testing.T) {
+		t.Parallel()
+
+		watchCh := make(chan clientv3.WatchResponse)
+		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh})
+
+		stopped := cache.Notify()
+		notify := cache.Notify()
+
+		cache.StopNotify(stopped)
+		close(stopped)
+
+		sendEvent(watchCh, clientv3.EventTypePut, &mvccpb.KeyValue{
+			Version: 1,
+			Key:     []byte("test/ok"),
+			Value:   []byte("foobar"),
+		}, nil)
+		waitNotify(t, notify)
+	})
+
 	t.Run("Close", func(t *testing.T) {
 		t.Parallel()
 

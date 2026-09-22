@@ -188,3 +188,7 @@ func (ca *vaultCertificateAuthority) GetRevokedCertificates(ctx context.Context)
 func (ca *vaultCertificateAuthority) WatchRevokeCertificate() chan struct{} {
 	return ca.db.WatchRevokeCertificate()
 }
+
+func (ca *vaultCertificateAuthority) UnwatchRevokeCertificate(ch chan struct{}) {
+	ca.db.UnwatchRevokeCertificate(ch)
+}
