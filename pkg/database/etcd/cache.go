@@ -19,11 +19,11 @@ type Cache struct {
 	client   *clientv3.Client
 	prefix   string
 	initData []*mvccpb.KeyValue
+
+	mu       sync.RWMutex
+	cache    []*mvccpb.KeyValue
 	notifies []chan struct{}
 	cancel   context.CancelFunc
-
-	mu    sync.RWMutex
-	cache []*mvccpb.KeyValue
 
 	once   *sync.Once
 	synced chan struct{}
@@ -50,6 +50,9 @@ func (c *Cache) All() ([]*mvccpb.KeyValue, error) {
 }
 
 func (c *Cache) Len() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	return len(c.cache)
 }
 
@@ -68,7 +71,11 @@ func (c *Cache) Get(key []byte) *mvccpb.KeyValue {
 
 func (c *Cache) Notify() chan struct{} {
 	ch := make(chan struct{}, 1)
+
+	c.mu.Lock()
 	c.notifies = append(c.notifies, ch)
+	c.mu.Unlock()
+
 	return ch
 }
 
@@ -81,13 +88,17 @@ func (c *Cache) Start(ctx context.Context) {
 }
 
 func (c *Cache) Close() {
-	if c.cancel != nil {
-		c.cancel()
+	c.mu.RLock()
+	cancel := c.cancel
+	c.mu.RUnlock()
+
+	if cancel != nil {
+		cancel()
 	}
 }
 
 func (c *Cache) Synced() (chan struct{}, error) {
-	if c.cancel == nil {
+	if c.closed() {
 		return c.synced, database.ErrClosed
 	}
 	return c.synced, nil
@@ -98,7 +109,7 @@ func (c *Cache) WaitForSync(ctx context.Context) error {
 
 	select {
 	case <-synced:
-		if c.cancel == nil {
+		if c.closed() {
 			return database.ErrClosed
 		}
 		return nil
@@ -107,16 +118,27 @@ func (c *Cache) WaitForSync(ctx context.Context) error {
 	}
 }
 
+// closed returns true when the watch channel is not running.
+func (c *Cache) closed() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.cancel == nil
+}
+
 func (c *Cache) watch(ctx context.Context) error {
+	wCtx, cancel := context.WithCancel(ctx)
+	c.mu.Lock()
 	if c.cancel != nil {
 		logger.Log.Info("Already running watch channel. be going to close other")
 		c.cancel()
 	}
-
-	wCtx, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
+	c.mu.Unlock()
 	defer func() {
+		c.mu.Lock()
 		c.cancel = nil
+		c.mu.Unlock()
 	}()
 
 	for {
@@ -188,6 +210,9 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 }
 
 func (c *Cache) sendNotify() {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	for _, v := range c.notifies {
 		select {
 		case v <- struct{}{}:
