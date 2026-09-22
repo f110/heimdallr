@@ -62,7 +62,7 @@ func testServer(port int, publicKeyFile string) error {
 		}
 
 		claim := &authn.TokenClaims{}
-		_, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (interface{}, error) {
+		_, err := jwt.ParseWithClaims(token, claim, func(t *jwt.Token) (any, error) {
 			if t.Method != jwt.SigningMethodES256 {
 				return nil, xerrors.New("heimdev: invalid signing method")
 			}

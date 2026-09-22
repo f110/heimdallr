@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"go.f110.dev/xerrors"
@@ -20,8 +21,8 @@ func newGraphvizFormatter(child []*node) *graphvizFormatter {
 
 func (f *graphvizFormatter) Out(name string) error {
 	st := newStack()
-	for i := len(f.child) - 1; i >= 0; i-- {
-		st.push(f.child[i])
+	for _, v := range slices.Backward(f.child) {
+		st.push(v)
 	}
 	nodes := make(map[*node]*graphvizNode)
 	edges := make([]*graphvizEdge, 0)
@@ -33,8 +34,8 @@ func (f *graphvizFormatter) Out(name string) error {
 			edges = append(edges, &graphvizEdge{Left: nodes[n.parent], Right: gNode})
 		}
 
-		for i := len(n.child) - 1; i >= 0; i-- {
-			st.push(n.child[i])
+		for _, v := range slices.Backward(n.child) {
+			st.push(v)
 		}
 	}
 

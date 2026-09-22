@@ -115,7 +115,7 @@ func githubRelease(opt *githubOpt) error {
 			attachedFiles[v.GetName()] = struct{}{}
 		}
 		if release.GetBody() != body {
-			release.Body = github.String(body)
+			release.Body = new(body)
 			release, res, err = client.Repositories.EditRelease(context.Background(), owner, repo, release.GetID(), release)
 			if err != nil {
 				return xerrors.WithStack(err)
@@ -132,10 +132,10 @@ func githubRelease(opt *githubOpt) error {
 		fmt.Printf("Get commit hash %s\n", branch.Commit.GetSHA())
 
 		r, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
-			TagName:         github.String(opt.Version),
+			TagName:         new(opt.Version),
 			TargetCommitish: branch.Commit.SHA,
-			Body:            github.String(body),
-			Prerelease:      github.Bool(preRelease),
+			Body:            new(body),
+			Prerelease:      new(preRelease),
 		})
 		if err != nil {
 			return xerrors.WithStack(err)

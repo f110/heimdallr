@@ -63,14 +63,10 @@ func generateBackendCommand() *cmd.Command {
 
 			gvk := proxyv1alpha1.SchemeGroupVersion.WithKind("Backend")
 			backend := &proxyv1alpha1.Backend{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gvk.GroupVersion().String(),
-					Kind:       gvk.Kind,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      svc.Name,
-					Namespace: svc.Namespace,
-				},
+				APIVersion: gvk.GroupVersion().String(),
+				Kind:       gvk.Kind,
+				Name:       svc.Name,
+				Namespace:  svc.Namespace,
 				Spec: proxyv1alpha1.BackendSpec{
 					ServiceSelector: proxyv1alpha1.ServiceSelector{
 						LabelSelector: metav1.LabelSelector{

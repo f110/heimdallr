@@ -28,7 +28,7 @@ func DeploymentFactory(base *appsv1.Deployment, traits ...Trait) *appsv1.Deploym
 }
 
 func Replicas(v int) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *appsv1.Deployment:
 			obj.Spec.Replicas = v

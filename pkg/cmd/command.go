@@ -183,7 +183,7 @@ func (c *Command) findCommand(args []string) (*Command, []string) {
 var usageTmpl = template.Must(
 	template.New("").
 		Funcs(
-			map[string]interface{}{
+			map[string]any{
 				"left": func(width int, val string) string {
 					return fmt.Sprintf("%-"+strconv.Itoa(width)+"s", val)
 				},

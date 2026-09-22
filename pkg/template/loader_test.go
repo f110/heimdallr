@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 		ui.Data,
 		LoaderTypeEmbed,
 		"/data",
-		map[string]interface{}{
+		map[string]any{
 			"test": func() bool { return true },
 		},
 	)
@@ -44,7 +44,7 @@ func TestLoader_Render(t *testing.T) {
 		ui.Data,
 		LoaderTypeShotgun,
 		dir,
-		map[string]interface{}{
+		map[string]any{
 			"test": func() bool { return true },
 		},
 	)

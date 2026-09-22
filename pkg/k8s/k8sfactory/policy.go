@@ -29,7 +29,7 @@ func PodDisruptionBudgetFactory(base *policyv1.PodDisruptionBudget, traits ...Tr
 }
 
 func MinAvailable(v int) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *policyv1.PodDisruptionBudget:
 			m := intstr.FromInt(v)

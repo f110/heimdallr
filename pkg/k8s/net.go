@@ -18,7 +18,7 @@ func GetClusterDomain() (string, error) {
 		return "", xerrors.WithStack(err)
 	}
 	searchDomains := ""
-	for _, line := range strings.Split(string(b), "\n") {
+	for line := range strings.SplitSeq(string(b), "\n") {
 		if !strings.HasPrefix(line, "search ") {
 			continue
 		}

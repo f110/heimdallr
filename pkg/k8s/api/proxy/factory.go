@@ -3,7 +3,6 @@ package proxy
 import (
 	"net/http"
 
-	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
@@ -34,7 +33,7 @@ func Factory(base *proxyv1alpha2.Proxy, traits ...k8sfactory.Trait) *proxyv1alph
 }
 
 func Phase(v proxyv1alpha2.ProxyPhase) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -44,7 +43,7 @@ func Phase(v proxyv1alpha2.ProxyPhase) k8sfactory.Trait {
 }
 
 func IdentityProvider(provider, clientId, secretName, key string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -58,7 +57,7 @@ func IdentityProvider(provider, clientId, secretName, key string) k8sfactory.Tra
 	}
 }
 
-func EtcdDataStore(object interface{}) {
+func EtcdDataStore(object any) {
 	p, ok := object.(*proxyv1alpha2.Proxy)
 	if !ok {
 		return
@@ -72,7 +71,7 @@ func EtcdDataStore(object interface{}) {
 }
 
 func EtcdBackup(interval, maxBackups int) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -90,7 +89,7 @@ func EtcdBackup(interval, maxBackups int) k8sfactory.Trait {
 }
 
 func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace string, creds *proxyv1alpha2.AWSCredentialSelector) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -119,7 +118,7 @@ func EtcdBackupToMinIO(bucket, path string, secure bool, svcName, svcNamespace s
 }
 
 func EtcdBackupToGCS(bucket, path string, creds *proxyv1alpha2.GCPCredentialSelector) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -142,7 +141,7 @@ func EtcdBackupToGCS(bucket, path string, creds *proxyv1alpha2.GCPCredentialSele
 	}
 }
 
-func EnableAntiAffinity(object interface{}) {
+func EnableAntiAffinity(object any) {
 	p, ok := object.(*proxyv1alpha2.Proxy)
 	if !ok {
 		return
@@ -151,7 +150,7 @@ func EnableAntiAffinity(object interface{}) {
 }
 
 func ClientSecret(name, key string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -165,7 +164,7 @@ func ClientSecret(name, key string) k8sfactory.Trait {
 }
 
 func Domain(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -176,7 +175,7 @@ func Domain(v string) k8sfactory.Trait {
 }
 
 func RootUsers(users []string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -186,7 +185,7 @@ func RootUsers(users []string) k8sfactory.Trait {
 }
 
 func Version(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
@@ -195,7 +194,7 @@ func Version(v string) k8sfactory.Trait {
 	}
 }
 
-func CookieSession(object interface{}) {
+func CookieSession(object any) {
 	p, ok := object.(*proxyv1alpha2.Proxy)
 	if !ok {
 		return
@@ -207,46 +206,40 @@ func CookieSession(object interface{}) {
 }
 
 func BackendMatchLabelSelector(namespace string, label map[string]string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
 		}
 		p.Spec.BackendSelector = &proxyv1alpha2.LabelSelector{
-			Namespace: namespace,
-			LabelSelector: metav1.LabelSelector{
-				MatchLabels: label,
-			},
+			Namespace:   namespace,
+			MatchLabels: label,
 		}
 	}
 }
 
 func RoleMatchLabelSelector(namespace string, label map[string]string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
 		}
 		p.Spec.RoleSelector = &proxyv1alpha2.LabelSelector{
-			Namespace: namespace,
-			LabelSelector: metav1.LabelSelector{
-				MatchLabels: label,
-			},
+			Namespace:   namespace,
+			MatchLabels: label,
 		}
 	}
 }
 
 func RpcPermissionMatchLabelSelector(namespace string, label map[string]string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Proxy)
 		if !ok {
 			return
 		}
 		p.Spec.RpcPermissionSelector = &proxyv1alpha2.LabelSelector{
-			Namespace: namespace,
-			LabelSelector: metav1.LabelSelector{
-				MatchLabels: label,
-			},
+			Namespace:   namespace,
+			MatchLabels: label,
 		}
 	}
 }
@@ -273,7 +266,7 @@ func BackendFactory(base *proxyv1alpha2.Backend, traits ...k8sfactory.Trait) *pr
 }
 
 func Layer(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		b, ok := object.(*proxyv1alpha2.Backend)
 		if !ok {
 			return
@@ -283,7 +276,7 @@ func Layer(v string) k8sfactory.Trait {
 }
 
 func Permission(perm *proxyv1alpha2.Permission) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		b, ok := object.(*proxyv1alpha2.Backend)
 		if !ok {
 			return
@@ -293,7 +286,7 @@ func Permission(perm *proxyv1alpha2.Permission) k8sfactory.Trait {
 }
 
 func FQDN(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		b, ok := object.(*proxyv1alpha2.Backend)
 		if !ok {
 			return
@@ -302,7 +295,7 @@ func FQDN(v string) k8sfactory.Trait {
 	}
 }
 
-func DisableAuthn(object interface{}) {
+func DisableAuthn(object any) {
 	b, ok := object.(*proxyv1alpha2.Backend)
 	if !ok {
 		return
@@ -311,7 +304,7 @@ func DisableAuthn(object interface{}) {
 }
 
 func HTTP(v []proxyv1alpha2.BackendHTTPSpec) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		b, ok := object.(*proxyv1alpha2.Backend)
 		if !ok {
 			return
@@ -320,7 +313,7 @@ func HTTP(v []proxyv1alpha2.BackendHTTPSpec) k8sfactory.Trait {
 	}
 }
 
-func AllowRootUser(object interface{}) {
+func AllowRootUser(object any) {
 	b, ok := object.(*proxyv1alpha2.Backend)
 	if !ok {
 		return
@@ -344,7 +337,7 @@ func PermissionFactory(base *proxyv1alpha2.Permission, traits ...k8sfactory.Trai
 }
 
 func Name(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Permission)
 		if !ok {
 			return
@@ -354,7 +347,7 @@ func Name(v string) k8sfactory.Trait {
 }
 
 func Location(method, path string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Permission)
 		if !ok {
 			return
@@ -388,7 +381,7 @@ func Location(method, path string) k8sfactory.Trait {
 }
 
 func Webhook(t string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Permission)
 		if !ok {
 			return
@@ -398,7 +391,7 @@ func Webhook(t string) k8sfactory.Trait {
 }
 
 func GitHubWebhookConfiguration(v *proxyv1alpha2.GitHubHookConfiguration) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*proxyv1alpha2.Permission)
 		if !ok {
 			return
@@ -431,7 +424,7 @@ func RoleFactory(base *proxyv1alpha2.Role, traits ...k8sfactory.Trait) *proxyv1a
 }
 
 func Title(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		r, ok := object.(*proxyv1alpha2.Role)
 		if !ok {
 			return
@@ -441,7 +434,7 @@ func Title(v string) k8sfactory.Trait {
 }
 
 func Description(v string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		r, ok := object.(*proxyv1alpha2.Role)
 		if !ok {
 			return
@@ -450,7 +443,7 @@ func Description(v string) k8sfactory.Trait {
 	}
 }
 
-func AllowDashboard(object interface{}) {
+func AllowDashboard(object any) {
 	r, ok := object.(*proxyv1alpha2.Role)
 	if !ok {
 		return
@@ -480,7 +473,7 @@ func RoleBindingFactory(base *proxyv1alpha2.RoleBinding, traits ...k8sfactory.Tr
 }
 
 func Role(v *proxyv1alpha2.Role) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		rb, ok := object.(*proxyv1alpha2.RoleBinding)
 		if !ok {
 			return
@@ -494,7 +487,7 @@ func Role(v *proxyv1alpha2.Role) k8sfactory.Trait {
 }
 
 func Subject(v runtime.Object, permission string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		rb, ok := object.(*proxyv1alpha2.RoleBinding)
 		if !ok {
 			return
@@ -534,7 +527,7 @@ func RpcPermissionFactory(base *proxyv1alpha2.RpcPermission, traits ...k8sfactor
 }
 
 func Allow(rule string) k8sfactory.Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		rp, ok := object.(*proxyv1alpha2.RpcPermission)
 		if !ok {
 			return

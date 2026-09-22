@@ -468,7 +468,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	Init(conf, nil, u, token, nil)
 	_ = u.Set(nil, &database.User{Id: "foobar@example.com", Roles: []string{"test"}})
 
-	okHandler := func(_ context.Context, _ interface{}) (interface{}, error) {
+	okHandler := func(_ context.Context, _ any) (any, error) {
 		return true, nil
 	}
 
@@ -557,7 +557,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 		md := metadata.New(map[string]string{})
 		ctx := metadata.NewIncomingContext(context.Background(), md)
 		for _, m := range methods {
-			v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: m}, func(_ context.Context, _ interface{}) (interface{}, error) {
+			v, err := UnaryInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: m}, func(_ context.Context, _ any) (any, error) {
 				return true, nil
 			})
 			require.NoError(t, err)
@@ -614,7 +614,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	require.NoError(t, err)
 	Init(conf, nil, u, token, nil)
 
-	okHandler := func(srv interface{}, stream grpc.ServerStream) error {
+	okHandler := func(srv any, stream grpc.ServerStream) error {
 		return nil
 	}
 

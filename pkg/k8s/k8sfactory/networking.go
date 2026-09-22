@@ -29,7 +29,7 @@ func IngressClassFactory(base *networkingv1.IngressClass, traits ...Trait) *netw
 }
 
 func Controller(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *networkingv1.IngressClass:
 			obj.Spec.Controller = v
@@ -60,7 +60,7 @@ func IngressFactory(base *networkingv1.Ingress, traits ...Trait) *networkingv1.I
 }
 
 func IngressClass(v *networkingv1.IngressClass) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *networkingv1.Ingress:
 			obj.Spec.IngressClassName = v.Name
@@ -69,7 +69,7 @@ func IngressClass(v *networkingv1.IngressClass) Trait {
 }
 
 func Rule(rule *networkingv1.IngressRule) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *networkingv1.Ingress:
 			obj.Spec.Rules = append(obj.Spec.Rules, *rule)
@@ -93,7 +93,7 @@ func IngressRuleFactory(base *networkingv1.IngressRule, traits ...Trait) *networ
 }
 
 func Host(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *networkingv1.IngressRule:
 			obj.Host = v
@@ -117,7 +117,7 @@ func IngressPathFactory(base *networkingv1.HTTPIngressPath, traits ...Trait) *ne
 }
 
 func Path(path string, pt networkingv1.PathType, svc *corev1.Service, port string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *networkingv1.IngressRule:
 			if obj.IngressRuleValue.HTTP == nil {

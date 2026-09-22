@@ -245,11 +245,9 @@ func (a *Agents) RPCClient(id string) *rpcclient.ClientWithUserToken {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   RootUserId,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
-		},
+		Subject:   RootUserId,
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 	})
 	token, err := claim.SignedString(a.signPrivateKey)
 	if err != nil {
@@ -327,7 +325,7 @@ func (a *Agent) Post(m *btesting.Matcher, u, body string) bool {
 }
 
 // PostJSON calls a Connect endpoint. The unary protocol of Connect is a POST with a JSON body.
-func (a *Agent) PostJSON(m *btesting.Matcher, u string, body interface{}) bool {
+func (a *Agent) PostJSON(m *btesting.Matcher, u string, body any) bool {
 	buf, err := json.Marshal(body)
 	if err != nil {
 		m.SetLastResponse(nil, err)
@@ -407,7 +405,7 @@ func (a *Agent) FollowRedirect(m *btesting.Matcher) error {
 	return nil
 }
 
-func (a *Agent) ParseLastResponseBody(in interface{}) error {
+func (a *Agent) ParseLastResponseBody(in any) error {
 	return json.NewDecoder(a.lastResponse.Body).Decode(in)
 }
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -230,13 +231,7 @@ func (a *authentication) findRootUser(req *http.Request) (*database.User, *sessi
 		return nil, nil, ErrSessionNotFound
 	}
 
-	asRootUser := false
-	for _, v := range a.Config.AuthorizationEngine.RootUsers {
-		if v == s.Id {
-			asRootUser = true
-			break
-		}
-	}
+	asRootUser := slices.Contains(a.Config.AuthorizationEngine.RootUsers, s.Id)
 	if !asRootUser {
 		return nil, nil, ErrUserNotFound
 	}
@@ -267,7 +262,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 		logger.Log.Debug("Found jwt token", slog.String("token", md.Get(rpc.JwtTokenMetadataKey)[0]))
 		j := md.Get(rpc.JwtTokenMetadataKey)[0]
 		claims := &TokenClaims{}
-		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i interface{}, e error) {
+		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i any, e error) {
 			if token.Method != jwt.SigningMethodES256 {
 				return nil, xerrors.New("auth: invalid signing method")
 			}

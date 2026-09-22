@@ -62,7 +62,7 @@ func WithRequestId(ctx context.Context) slog.Attr {
 }
 
 // TypeOf constructs an attribute. value will be converted to type name.
-func TypeOf(key string, val interface{}) slog.Attr {
+func TypeOf(key string, val any) slog.Attr {
 	return slog.String(key, reflect.TypeOf(val).String())
 }
 

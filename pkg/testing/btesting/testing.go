@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -61,15 +62,15 @@ func (b *BehaviorDriven) Execute(format string) {
 		// Output like documentation.
 		w := new(bytes.Buffer)
 		st := newStack()
-		for i := len(child) - 1; i >= 0; i-- {
-			st.push(child[i])
+		for _, c := range slices.Backward(child) {
+			st.push(c)
 		}
 		for !st.isEmpty() {
 			n := st.pop().(*node)
 			fmt.Fprintf(w, "%s%s\n", strings.Repeat("  ", n.depth), n.name)
 
-			for i := len(n.child) - 1; i >= 0; i-- {
-				st.push(n.child[i])
+			for _, v := range slices.Backward(n.child) {
+				st.push(v)
 			}
 		}
 		w.WriteTo(os.Stdout)
@@ -176,8 +177,8 @@ func (e *executionRuntime) findBreakpoint() bool {
 
 func (e *executionRuntime) walkNodes(fn func(n *node) bool) {
 	st := newStack()
-	for i := len(e.nodes) - 1; i >= 0; i-- {
-		st.push(e.nodes[i])
+	for _, v := range slices.Backward(e.nodes) {
+		st.push(v)
 	}
 	for !st.isEmpty() {
 		n := st.pop().(*node)
@@ -186,8 +187,8 @@ func (e *executionRuntime) walkNodes(fn func(n *node) bool) {
 			return
 		}
 
-		for i := len(n.child) - 1; i >= 0; i-- {
-			st.push(n.child[i])
+		for _, v := range slices.Backward(n.child) {
+			st.push(v)
 		}
 	}
 }
@@ -566,17 +567,17 @@ type hook struct {
 
 type execDone struct {
 	Stack   string
-	Err     interface{}
+	Err     any
 	Failure bool
 }
 
 type stack struct {
 	sync.Mutex
-	s []interface{}
+	s []any
 }
 
 func newStack() *stack {
-	return &stack{s: make([]interface{}, 0)}
+	return &stack{s: make([]any, 0)}
 }
 
 func (s *stack) isEmpty() bool {
@@ -586,14 +587,14 @@ func (s *stack) isEmpty() bool {
 	return len(s.s) == 0
 }
 
-func (s *stack) push(n interface{}) {
+func (s *stack) push(n any) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.s = append(s.s, n)
 }
 
-func (s *stack) pop() interface{} {
+func (s *stack) pop() any {
 	if s.isEmpty() {
 		return nil
 	}
@@ -684,18 +685,18 @@ type testingSpy struct {
 
 var _ testingT = &testingSpy{}
 
-func (t *testingSpy) Errorf(format string, args ...interface{}) {
+func (t *testingSpy) Errorf(format string, args ...any) {
 	t.T.Helper()
 	t.message += fmt.Sprintf(format, args...)
 	t.T.Errorf(format, args...)
 }
 
 type testingT interface {
-	Log(...interface{})
-	Logf(string, ...interface{})
-	Error(...interface{})
-	Errorf(string, ...interface{})
-	Fatalf(string, ...interface{})
+	Log(...any)
+	Logf(string, ...any)
+	Error(...any)
+	Errorf(string, ...any)
+	Fatalf(string, ...any)
 	TempDir() string
 	Helper()
 }

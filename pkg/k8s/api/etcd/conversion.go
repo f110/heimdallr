@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"go.f110.dev/xerrors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	etcdv1alpha1 "go.f110.dev/heimdallr/pkg/k8s/api/etcd/v1alpha1"
@@ -47,10 +46,8 @@ func V1Alpha1EtcdClusterToV1Alpha2EtcdCluster(in runtime.Object) (runtime.Object
 	}
 
 	after := &etcdv1alpha2.EtcdCluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: etcdv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: etcdv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: etcdv1alpha2.EtcdClusterSpec{
 			Members:             before.Spec.Members,
@@ -168,10 +165,8 @@ func V1Alpha2EtcdClusterToV1Alpha1EtcdCluster(in runtime.Object) (runtime.Object
 	}
 
 	after := &etcdv1alpha1.EtcdCluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: etcdv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: etcdv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec:       etcdv1alpha1.EtcdClusterSpec{},
 		Status: etcdv1alpha1.EtcdClusterStatus{

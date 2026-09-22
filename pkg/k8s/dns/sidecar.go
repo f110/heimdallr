@@ -147,7 +147,7 @@ func (s *Sidecar) handleReadiness(w dns.ResponseWriter, msg *dns.Msg) {
 	w.WriteMsg(res)
 }
 
-func (s *Sidecar) addPod(obj interface{}) {
+func (s *Sidecar) addPod(obj any) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		logger.Log.Info("Event is not Pod", logger.TypeOf("type", obj))
@@ -164,11 +164,11 @@ func (s *Sidecar) addPod(obj interface{}) {
 	}
 }
 
-func (s *Sidecar) updatePod(_, new interface{}) {
+func (s *Sidecar) updatePod(_, new any) {
 	s.addPod(new)
 }
 
-func (s *Sidecar) deletePod(obj interface{}) {
+func (s *Sidecar) deletePod(obj any) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		logger.Log.Info("Event is not Pod", logger.TypeOf("type", obj))

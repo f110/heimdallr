@@ -136,7 +136,7 @@ func collectWebhookDNSNames(in io.Reader) ([]string, error) {
 
 	d := yaml.NewDecoder(in)
 	for {
-		v := make(map[interface{}]interface{})
+		v := make(map[any]any)
 		err := d.Decode(v)
 		if errors.Is(err, io.EOF) {
 			break
@@ -146,9 +146,9 @@ func collectWebhookDNSNames(in io.Reader) ([]string, error) {
 		}
 
 		// ValidatingWebhookConfiguration / MutatingWebhookConfiguration
-		if webhooks, ok := v["webhooks"].([]interface{}); ok {
+		if webhooks, ok := v["webhooks"].([]any); ok {
 			for _, wh := range webhooks {
-				whMap, ok := wh.(map[interface{}]interface{})
+				whMap, ok := wh.(map[any]any)
 				if !ok {
 					continue
 				}
@@ -162,9 +162,9 @@ func collectWebhookDNSNames(in io.Reader) ([]string, error) {
 		}
 
 		// CRD conversion webhook
-		if spec, ok := v["spec"].(map[interface{}]interface{}); ok {
-			if conv, ok := spec["conversion"].(map[interface{}]interface{}); ok {
-				if wh, ok := conv["webhook"].(map[interface{}]interface{}); ok {
+		if spec, ok := v["spec"].(map[any]any); ok {
+			if conv, ok := spec["conversion"].(map[any]any); ok {
+				if wh, ok := conv["webhook"].(map[any]any); ok {
 					if name := serviceDNSName(wh); name != "" {
 						if _, ok := seen[name]; !ok {
 							seen[name] = struct{}{}
@@ -180,12 +180,12 @@ func collectWebhookDNSNames(in io.Reader) ([]string, error) {
 }
 
 // serviceDNSName extracts "<name>.<namespace>.svc" from a map that has clientConfig.service.
-func serviceDNSName(v map[interface{}]interface{}) string {
-	cc, ok := v["clientConfig"].(map[interface{}]interface{})
+func serviceDNSName(v map[any]any) string {
+	cc, ok := v["clientConfig"].(map[any]any)
 	if !ok {
 		return ""
 	}
-	svc, ok := cc["service"].(map[interface{}]interface{})
+	svc, ok := cc["service"].(map[any]any)
 	if !ok {
 		return ""
 	}
@@ -201,7 +201,7 @@ func injectWebhookCert(in io.Reader, out io.Writer, certs *webhookCerts) error {
 	d := yaml.NewDecoder(in)
 	e := yaml.NewEncoder(out)
 	for {
-		v := make(map[interface{}]interface{})
+		v := make(map[any]any)
 		err := d.Decode(v)
 		if errors.Is(err, io.EOF) {
 			break
@@ -222,12 +222,12 @@ func injectWebhookCert(in io.Reader, out io.Writer, certs *webhookCerts) error {
 	return nil
 }
 
-func getInjectAnnotation(v map[interface{}]interface{}) string {
-	metadata, ok := v["metadata"].(map[interface{}]interface{})
+func getInjectAnnotation(v map[any]any) string {
+	metadata, ok := v["metadata"].(map[any]any)
 	if !ok {
 		return ""
 	}
-	annotations, ok := metadata["annotations"].(map[interface{}]interface{})
+	annotations, ok := metadata["annotations"].(map[any]any)
 	if !ok {
 		return ""
 	}
@@ -238,12 +238,12 @@ func getInjectAnnotation(v map[interface{}]interface{}) string {
 	return val
 }
 
-func removeInjectAnnotation(v map[interface{}]interface{}) {
-	metadata, ok := v["metadata"].(map[interface{}]interface{})
+func removeInjectAnnotation(v map[any]any) {
+	metadata, ok := v["metadata"].(map[any]any)
 	if !ok {
 		return
 	}
-	annotations, ok := metadata["annotations"].(map[interface{}]interface{})
+	annotations, ok := metadata["annotations"].(map[any]any)
 	if !ok {
 		return
 	}
@@ -253,7 +253,7 @@ func removeInjectAnnotation(v map[interface{}]interface{}) {
 	}
 }
 
-func processCertInjection(v map[interface{}]interface{}, certs *webhookCerts) {
+func processCertInjection(v map[any]any, certs *webhookCerts) {
 	inject := getInjectAnnotation(v)
 	switch inject {
 	case injectServerCert:
@@ -269,8 +269,8 @@ func processCertInjection(v map[interface{}]interface{}, certs *webhookCerts) {
 	}
 }
 
-func injectServerCertSecret(v map[interface{}]interface{}, certs *webhookCerts) {
-	sd, ok := v["stringData"].(map[interface{}]interface{})
+func injectServerCertSecret(v map[any]any, certs *webhookCerts) {
+	sd, ok := v["stringData"].(map[any]any)
 	if !ok {
 		return
 	}
@@ -278,19 +278,19 @@ func injectServerCertSecret(v map[interface{}]interface{}, certs *webhookCerts) 
 	sd["webhook.key"] = string(certs.serverKeyPEM)
 }
 
-func injectCABundleField(v map[interface{}]interface{}, certs *webhookCerts) {
+func injectCABundleField(v map[any]any, certs *webhookCerts) {
 	caBundle := base64.StdEncoding.EncodeToString(certs.serverCertPEM)
 
-	webhooks, ok := v["webhooks"].([]interface{})
+	webhooks, ok := v["webhooks"].([]any)
 	if !ok {
 		return
 	}
 	for _, wh := range webhooks {
-		whMap, ok := wh.(map[interface{}]interface{})
+		whMap, ok := wh.(map[any]any)
 		if !ok {
 			continue
 		}
-		cc, ok := whMap["clientConfig"].(map[interface{}]interface{})
+		cc, ok := whMap["clientConfig"].(map[any]any)
 		if !ok {
 			continue
 		}
@@ -298,20 +298,20 @@ func injectCABundleField(v map[interface{}]interface{}, certs *webhookCerts) {
 	}
 }
 
-func injectCRDConversionCABundle(v map[interface{}]interface{}, certs *webhookCerts) {
-	spec, ok := v["spec"].(map[interface{}]interface{})
+func injectCRDConversionCABundle(v map[any]any, certs *webhookCerts) {
+	spec, ok := v["spec"].(map[any]any)
 	if !ok {
 		return
 	}
-	conv, ok := spec["conversion"].(map[interface{}]interface{})
+	conv, ok := spec["conversion"].(map[any]any)
 	if !ok {
 		return
 	}
-	wh, ok := conv["webhook"].(map[interface{}]interface{})
+	wh, ok := conv["webhook"].(map[any]any)
 	if !ok {
 		return
 	}
-	cc, ok := wh["clientConfig"].(map[interface{}]interface{})
+	cc, ok := wh["clientConfig"].(map[any]any)
 	if !ok {
 		return
 	}

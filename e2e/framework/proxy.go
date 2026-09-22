@@ -610,11 +610,9 @@ func (p *Proxy) setupRPCClient() error {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   RootUserId,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
-		},
+		Subject:   RootUserId,
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 	})
 	token, err := claim.SignedString(p.signPrivateKey)
 	if err != nil {
@@ -645,11 +643,9 @@ func (p *Proxy) syncUsers(ctx context.Context) error {
 	}
 
 	claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   RootUserId,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
-		},
+		Subject:   RootUserId,
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(authproxy.TokenExpiration)),
 	})
 	token, err := claim.SignedString(p.signPrivateKey)
 	if err != nil {
@@ -749,12 +745,10 @@ func (p *Proxy) startProcess() error {
 func (p *Proxy) stop() error {
 	var wg sync.WaitGroup
 	if p.proxyCmd != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			p.proxyCmd.Process.Wait()
-		}()
+		})
 
 		if err := p.proxyCmd.Process.Signal(os.Interrupt); err != nil {
 			return xerrors.WithStack(err)

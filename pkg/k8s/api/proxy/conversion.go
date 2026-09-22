@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"go.f110.dev/xerrors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	proxyv1alpha1 "go.f110.dev/heimdallr/pkg/k8s/api/proxy/v1alpha1"
@@ -53,10 +52,8 @@ func V1Alpha1ProxyToV1Alpha2Proxy(in runtime.Object) (runtime.Object, error) {
 	logger.Log.Debug("Covert from v1alpha1.Proxy", slog.String("name", before.Name))
 
 	after := &proxyv1alpha2.Proxy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha2.ProxySpec{
 			Domain:         before.Spec.Domain,
@@ -169,10 +166,8 @@ func V1Alpha2ProxyToV1Alpha1Proxy(in runtime.Object) (runtime.Object, error) {
 	logger.Log.Debug("Covert from v1alpha1.Proxy", slog.String("name", before.Name))
 
 	after := &proxyv1alpha1.Proxy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha1.ProxySpec{
 			Domain:            before.Spec.Domain,
@@ -283,10 +278,8 @@ func V1Alpha1BackendToV1Alpha2Backend(in runtime.Object) (runtime.Object, error)
 	logger.Log.Debug("Covert v1alpha1.Backend", slog.String("name", before.Name))
 
 	after := &proxyv1alpha2.Backend{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha2.BackendSpec{
 			FQDN:               before.Spec.FQDN,
@@ -448,10 +441,8 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 	logger.Log.Debug("Covert v1alpha1.Backend", slog.String("name", before.Name))
 
 	after := &proxyv1alpha1.Backend{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha1.BackendSpec{
 			FQDN:               before.Spec.FQDN,
@@ -536,17 +527,15 @@ func V1Alpha2BackendToV1Alpha1Backend(in runtime.Object) (runtime.Object, error)
 			after.Spec.Webhook = v.Webhook
 			after.Spec.WebhookPath = path
 			after.Spec.WebhookConfiguration = &proxyv1alpha1.WebhookConfiguration{
-				GitHubHookConfiguration: proxyv1alpha1.GitHubHookConfiguration{
-					Repositories:              v.WebhookConfiguration.GitHub.Repositories,
-					Path:                      path[0],
-					Events:                    v.WebhookConfiguration.GitHub.Events,
-					ContentType:               v.WebhookConfiguration.GitHub.ContentType,
-					CredentialSecretName:      v.WebhookConfiguration.GitHub.CredentialSecretName,
-					CredentialSecretNamespace: v.WebhookConfiguration.GitHub.CredentialSecretNamespace,
-					AppIdKey:                  v.WebhookConfiguration.GitHub.AppIdKey,
-					InstallationIdKey:         v.WebhookConfiguration.GitHub.InstallationIdKey,
-					PrivateKeyKey:             v.WebhookConfiguration.GitHub.PrivateKeyKey,
-				},
+				Repositories:              v.WebhookConfiguration.GitHub.Repositories,
+				Path:                      path[0],
+				Events:                    v.WebhookConfiguration.GitHub.Events,
+				ContentType:               v.WebhookConfiguration.GitHub.ContentType,
+				CredentialSecretName:      v.WebhookConfiguration.GitHub.CredentialSecretName,
+				CredentialSecretNamespace: v.WebhookConfiguration.GitHub.CredentialSecretNamespace,
+				AppIdKey:                  v.WebhookConfiguration.GitHub.AppIdKey,
+				InstallationIdKey:         v.WebhookConfiguration.GitHub.InstallationIdKey,
+				PrivateKeyKey:             v.WebhookConfiguration.GitHub.PrivateKeyKey,
 			}
 		}
 	}
@@ -591,10 +580,8 @@ func V1Alpha1RoleToV1Alpha2Role(in runtime.Object) (runtime.Object, error) {
 	}
 
 	return &proxyv1alpha2.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha2.RoleSpec{
 			Title:          before.Spec.Title,
@@ -620,10 +607,8 @@ func V1Alpha2RoleToV1Alpha2Role(in runtime.Object) (runtime.Object, error) {
 	}
 
 	return &proxyv1alpha1.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha1.RoleSpec{
 			Title:          before.Spec.Title,
@@ -649,10 +634,8 @@ func V1Alpha1RpcPermissionToV1Alpha2RpcPermission(in runtime.Object) (runtime.Ob
 	}
 
 	return &proxyv1alpha2.RpcPermission{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha2.RpcPermissionSpec{
 			Allow: before.Spec.Allow,
@@ -676,10 +659,8 @@ func V1Alpha2RpcPermissionToV1Alpha1RpcPermission(in runtime.Object) (runtime.Ob
 	}
 
 	return &proxyv1alpha1.RpcPermission{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Spec: proxyv1alpha1.RpcPermissionSpec{
 			Allow: before.Spec.Allow,
@@ -713,10 +694,8 @@ func V1Alpha1RoleBindingToV1Alpha2RoleBinding(in runtime.Object) (runtime.Object
 	}
 
 	return &proxyv1alpha2.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha2.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Subjects:   subjects,
 		RoleRef: proxyv1alpha2.RoleRef{
@@ -752,10 +731,8 @@ func V1Alpha2RoleBindingToV1Alpha1RoleBinding(in runtime.Object) (runtime.Object
 	}
 
 	return &proxyv1alpha1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
-			Kind:       before.Kind,
-		},
+		APIVersion: proxyv1alpha1.SchemeGroupVersion.String(),
+		Kind:       before.Kind,
 		ObjectMeta: before.ObjectMeta,
 		Subjects:   subjects,
 		RoleRef: proxyv1alpha1.RoleRef{

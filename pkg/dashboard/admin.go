@@ -19,7 +19,7 @@ type AdminService struct {
 var _ AdminServiceHandler = &AdminService{}
 
 func NewAdminService(c *rpcclient.ClientWithUserToken) *AdminService {
-	return &AdminService{service: service{rpcClient: c}}
+	return &AdminService{rpcClient: c}
 }
 
 func (s *AdminService) ListUsers(ctx context.Context, _ *connect.Request[ListUsersRequest]) (*connect.Response[ListUsersResponse], error) {

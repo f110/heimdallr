@@ -22,7 +22,7 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 	d := yaml.NewDecoder(in)
 	e := yaml.NewEncoder(out)
 	for {
-		v := make(map[interface{}]interface{})
+		v := make(map[any]any)
 		err := d.Decode(v)
 		if err == io.EOF {
 			break
@@ -53,7 +53,7 @@ func finalizer(in io.Reader, out io.Writer, version string) error {
 	return nil
 }
 
-func detectKind(v interface{}) (string, error) {
+func detectKind(v any) (string, error) {
 	b, err := yaml.Marshal(v)
 	if err != nil {
 		return "", xerrors.WithStack(err)
@@ -70,17 +70,17 @@ func detectKind(v interface{}) (string, error) {
 	return "", errors.New("failed parse document")
 }
 
-func editCustomResourceDefinition(v map[interface{}]interface{}) {
+func editCustomResourceDefinition(v map[any]any) {
 	delete(v, "status")
 
-	m := v["metadata"].(map[interface{}]interface{})
+	m := v["metadata"].(map[any]any)
 	delete(m, "creationTimestamp")
 }
 
-func editDeployment(v map[interface{}]interface{}, version string) {
-	containers := v["spec"].(map[interface{}]interface{})["template"].(map[interface{}]interface{})["spec"].(map[interface{}]interface{})["containers"].([]interface{})
+func editDeployment(v map[any]any, version string) {
+	containers := v["spec"].(map[any]any)["template"].(map[any]any)["spec"].(map[any]any)["containers"].([]any)
 	for _, c := range containers {
-		v := c.(map[interface{}]interface{})
+		v := c.(map[any]any)
 		if i, ok := v["image"]; ok {
 			image := i.(string)
 			if strings.Contains(image, "heimdallr/operator") {

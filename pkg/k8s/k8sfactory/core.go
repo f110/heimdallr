@@ -30,7 +30,7 @@ func PodFactory(base *corev1.Pod, traits ...Trait) *corev1.Pod {
 	return p
 }
 
-func Ready(v interface{}) {
+func Ready(v any) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
@@ -55,7 +55,7 @@ func Ready(v interface{}) {
 
 // NotReady is the trait function for k8sfactory.
 // The object is created but not ready.
-func NotReady(v interface{}) {
+func NotReady(v any) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
@@ -79,7 +79,7 @@ func NotReady(v interface{}) {
 	p.Status.ContainerStatuses = containerStatus
 }
 
-func PodSucceeded(v interface{}) {
+func PodSucceeded(v any) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
@@ -87,7 +87,7 @@ func PodSucceeded(v interface{}) {
 	p.Status.Phase = corev1.PodPhaseSucceeded
 }
 
-func PodFailed(v interface{}) {
+func PodFailed(v any) {
 	p, ok := v.(*corev1.Pod)
 	if !ok {
 		return
@@ -96,7 +96,7 @@ func PodFailed(v interface{}) {
 }
 
 func RestartPolicy(policy corev1.RestartPolicy) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*corev1.Pod)
 		if !ok {
 			return
@@ -106,7 +106,7 @@ func RestartPolicy(policy corev1.RestartPolicy) Trait {
 }
 
 func Container(c *corev1.Container) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		p, ok := object.(*corev1.Pod)
 		if !ok {
 			return
@@ -116,7 +116,7 @@ func Container(c *corev1.Container) Trait {
 }
 
 func InitContainer(c *corev1.Container) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		if c == nil {
 			return
 		}
@@ -129,7 +129,7 @@ func InitContainer(c *corev1.Container) Trait {
 }
 
 func PreferredInterPodAntiAffinity(weight int, selector *metav1.LabelSelector, key string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Pod:
 			if obj.Spec.Affinity == nil {
@@ -154,7 +154,7 @@ func PreferredInterPodAntiAffinity(weight int, selector *metav1.LabelSelector, k
 }
 
 func ServiceAccount(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Pod:
 			obj.Spec.ServiceAccountName = v
@@ -163,7 +163,7 @@ func ServiceAccount(v string) Trait {
 }
 
 func Subdomain(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Pod:
 			obj.Spec.Subdomain = v
@@ -194,7 +194,7 @@ func ContainerFactory(base *corev1.Container, traits ...Trait) *corev1.Container
 }
 
 func Image(image string, cmd []string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		c, ok := object.(*corev1.Container)
 		if !ok {
 			return
@@ -205,7 +205,7 @@ func Image(image string, cmd []string) Trait {
 }
 
 func Args(args ...string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.Args = args
@@ -214,7 +214,7 @@ func Args(args ...string) Trait {
 }
 
 func PullPolicy(p corev1.PullPolicy) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.ImagePullPolicy = p
@@ -223,7 +223,7 @@ func PullPolicy(p corev1.PullPolicy) Trait {
 }
 
 func EnvVar(k, v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		c, ok := object.(*corev1.Container)
 		if !ok {
 			return
@@ -236,7 +236,7 @@ func EnvVar(k, v string) Trait {
 }
 
 func EnvFromField(k, v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.Env = append(obj.Env, corev1.EnvVar{
@@ -252,7 +252,7 @@ func EnvFromField(k, v string) Trait {
 }
 
 func LivenessProbe(p *corev1.Probe) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.LivenessProbe = p
@@ -261,7 +261,7 @@ func LivenessProbe(p *corev1.Probe) Trait {
 }
 
 func ReadinessProbe(p *corev1.Probe) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			obj.ReadinessProbe = p
@@ -271,45 +271,37 @@ func ReadinessProbe(p *corev1.Probe) Trait {
 
 func TCPProbe(port int) *corev1.Probe {
 	return &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromInt(port),
-			},
+		TCPSocket: &corev1.TCPSocketAction{
+			Port: intstr.FromInt(port),
 		},
 	}
 }
 
 func HTTPProbe(port int, path string) *corev1.Probe {
 	return &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Port: intstr.FromInt(port),
-				Path: path,
-			},
+		HTTPGet: &corev1.HTTPGetAction{
+			Port: intstr.FromInt(port),
+			Path: path,
 		},
 	}
 }
 
 func ExecProbe(command ...string) *corev1.Probe {
 	return &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			Exec: &corev1.ExecAction{Command: command},
-		},
+		Exec: &corev1.ExecAction{Command: command},
 	}
 }
 
 func GRPCProbe(port int) *corev1.Probe {
 	return &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			GRPC: &corev1.GRPCAction{
-				Port: port,
-			},
+		GRPC: &corev1.GRPCAction{
+			Port: port,
 		},
 	}
 }
 
 func Volume(vol *VolumeSource) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		if vol == nil {
 			return
 		}
@@ -367,14 +359,14 @@ func ServiceFactory(base *corev1.Service, traits ...Trait) *corev1.Service {
 	return s
 }
 
-func ClusterIP(object interface{}) {
+func ClusterIP(object any) {
 	switch obj := object.(type) {
 	case *corev1.Service:
 		obj.Spec.Type = corev1.ServiceTypeClusterIP
 	}
 }
 
-func LoadBalancer(object interface{}) {
+func LoadBalancer(object any) {
 	switch obj := object.(type) {
 	case *corev1.Service:
 		obj.Spec.Type = corev1.ServiceTypeLoadBalancer
@@ -382,7 +374,7 @@ func LoadBalancer(object interface{}) {
 }
 
 func LoadBalancerIP(ip string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Service:
 			obj.Spec.LoadBalancerIP = ip
@@ -390,14 +382,14 @@ func LoadBalancerIP(ip string) Trait {
 	}
 }
 
-func TrafficPolicyLocal(object interface{}) {
+func TrafficPolicyLocal(object any) {
 	switch obj := object.(type) {
 	case *corev1.Service:
 		obj.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 	}
 }
 
-func IPNone(object interface{}) {
+func IPNone(object any) {
 	switch obj := object.(type) {
 	case *corev1.Service:
 		obj.Spec.ClusterIP = "None"
@@ -405,7 +397,7 @@ func IPNone(object interface{}) {
 }
 
 func Selector(v ...string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Service:
 			sel := make(map[string]string)
@@ -418,7 +410,7 @@ func Selector(v ...string) Trait {
 }
 
 func Port(name string, protocol corev1.Protocol, port int) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Service:
 			obj.Spec.Ports = append(obj.Spec.Ports, corev1.ServicePort{
@@ -437,7 +429,7 @@ func Port(name string, protocol corev1.Protocol, port int) Trait {
 }
 
 func TargetPort(name string, protocol corev1.Protocol, port int, targetPort intstr.IntOrString) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Service:
 			obj.Spec.Ports = append(obj.Spec.Ports, corev1.ServicePort{
@@ -473,7 +465,7 @@ func SecretFactory(base *corev1.Secret, traits ...Trait) *corev1.Secret {
 }
 
 func Data(key string, value []byte) Trait {
-	return func(v interface{}) {
+	return func(v any) {
 		switch obj := v.(type) {
 		case *corev1.Secret:
 			if obj.Data == nil {
@@ -512,7 +504,7 @@ func ConfigMapFactory(base *corev1.ConfigMap, traits ...Trait) *corev1.ConfigMap
 }
 
 func Requests(req map[string]resource.Quantity) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			if obj.Resources == nil {
@@ -524,7 +516,7 @@ func Requests(req map[string]resource.Quantity) Trait {
 }
 
 func Limits(lim map[string]resource.Quantity) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Container:
 			if obj.Resources == nil {
@@ -558,7 +550,7 @@ func EventFactory(base *corev1.Event, traits ...Trait) *corev1.Event {
 }
 
 func Reason(v string) Trait {
-	return func(object interface{}) {
+	return func(object any) {
 		switch obj := object.(type) {
 		case *corev1.Event:
 			obj.Reason = v

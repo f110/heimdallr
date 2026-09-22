@@ -17,10 +17,8 @@ func TestSidecar_handleQuery(t *testing.T) {
 	coreClient := k8sfake.NewSimpleClientset()
 	sharedInformerFactory := informers.NewSharedInformerFactory(coreClient, 0)
 	sharedInformerFactory.Core().V1().Pods().Informer().GetIndexer().Add(&corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: metav1.NamespaceDefault,
-			Name:      "test",
-		},
+		Namespace: metav1.NamespaceDefault,
+		Name:      "test",
 		Status: corev1.PodStatus{
 			PodIP: "172.17.0.3",
 			PodIPs: []corev1.PodIP{
