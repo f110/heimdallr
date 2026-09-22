@@ -32,11 +32,6 @@ go_deps.gazelle_override(
 )
 go_deps.gazelle_override(
     build_extra_args = ["-proto=disable"],
-    build_file_generation = "clean",
-    path = "github.com/grpc-ecosystem/grpc-gateway",
-)
-go_deps.gazelle_override(
-    build_extra_args = ["-proto=disable"],
     path = "go.etcd.io/etcd/api/v3",
 )
 go_deps.gazelle_override(
@@ -45,7 +40,7 @@ go_deps.gazelle_override(
 )
 go_deps.gazelle_override(
     build_extra_args = ["-proto=disable"],
-    path = "go.etcd.io/etcd/raft/v3",
+    path = "go.etcd.io/raft/v3",
 )
 use_repo(
     go_deps,
