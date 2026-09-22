@@ -16,5 +16,6 @@
 
 /bazel-*
 /ts/apps/dashboard/dist/*
+/.claude/*
 
 node_modules/

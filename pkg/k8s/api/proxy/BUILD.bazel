@@ -19,8 +19,6 @@ go_library(
         "//pkg/k8s/webhook",
         "//pkg/logger",
         "@dev_f110_go_xerrors//:xerrors",
-        "@dev_f110_kubeproto//go/apis/metav1",
-        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
         "@io_k8s_apimachinery//pkg/runtime",
     ],
 )
