@@ -57,7 +57,7 @@ Retry:
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
 			tokenClient := token.NewClient(resolver)
-			t, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
+			t, _, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
 			if err != nil {
 				return err
 			}

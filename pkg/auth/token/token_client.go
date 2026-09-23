@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"go.f110.dev/xerrors"
 )
@@ -35,12 +36,12 @@ func NewClient(resolver *net.Resolver) *Client {
 	return &Client{resolver: resolver}
 }
 
-func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure bool) (string, error) {
+func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure bool) (string, time.Time, error) {
 	verifier := c.newVerifier()
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return "", xerrors.WithStack(err)
+		return "", time.Time{}, xerrors.WithStack(err)
 	}
 	v := &url.Values{}
 	v.Set("challenge", c.challenge(verifier))
@@ -48,28 +49,29 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure 
 	u.RawQuery = v.Encode()
 	u.Path = u.Path + "/authorize"
 	if err := OpenBrowser(u.String(), overrideOpenURLCommand); err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 
 	code, err := c.getCode()
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
-	token, err := c.exchangeToken(endpoint, code, verifier, insecure)
+	now := time.Now()
+	res, err := c.exchangeToken(endpoint, code, verifier, insecure)
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
 
-	return token, nil
+	return res.AccessToken, now.Add(time.Duration(res.ExpiresIn) * time.Second), nil
 }
 
-func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure bool) (string, error) {
+func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure bool) (*ExchangeResponse, error) {
 	v := &url.Values{}
 	v.Set("code", code)
 	v.Set("code_verifier", codeVerifier)
 	req, err := http.NewRequest(http.MethodGet, endpoint+"/exchange?"+v.Encode(), nil)
 	if err != nil {
-		return "", xerrors.WithStack(err)
+		return nil, xerrors.WithStack(err)
 	}
 	dialer := &net.Dialer{Resolver: c.resolver}
 	client := &http.Client{
@@ -82,18 +84,18 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure boo
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return "", xerrors.WithStack(err)
+		return nil, xerrors.WithStack(err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return "", xerrors.NewfWithStack("localproxy: failure exchange token: Code=%d", res.StatusCode)
+		return nil, xerrors.NewfWithStack("localproxy: failure exchange token: Code=%d", res.StatusCode)
 	}
 
 	exchange := &ExchangeResponse{}
 	if err := json.NewDecoder(res.Body).Decode(exchange); err != nil {
-		return "", xerrors.WithStack(err)
+		return nil, xerrors.WithStack(err)
 	}
 
-	return exchange.AccessToken, nil
+	return exchange, nil
 }
 
 func (c *Client) getCode() (string, error) {

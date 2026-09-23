@@ -84,7 +84,7 @@ func NewWithStaticToken(ctx context.Context, conn *grpc.ClientConn) (*Client, er
 			return nil, err
 		}
 		tokenClient := token.NewClient(net.DefaultResolver)
-		newToken, err := tokenClient.RequestToken(endpoint, "", false)
+		newToken, _, err := tokenClient.RequestToken(endpoint, "", false)
 		if err != nil {
 			return nil, err
 		}
