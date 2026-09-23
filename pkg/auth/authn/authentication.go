@@ -339,3 +339,9 @@ func tokenFromAuthorizationHeader(req *http.Request) (string, bool, error) {
 		return "", false, nil
 	}
 }
+
+// HasTokenAuthorization reports whether the Authorization header of req is consumed by heimdallr as a token.
+func HasTokenAuthorization(req *http.Request) bool {
+	_, ok, _ := tokenFromAuthorizationHeader(req)
+	return ok
+}

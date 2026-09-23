@@ -385,6 +385,9 @@ func (p *HttpProxy) director(req *http.Request) {
 }
 
 func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
+	if authn.HasTokenAuthorization(req) {
+		req.Header.Del("Authorization")
+	}
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 

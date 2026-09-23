@@ -345,3 +345,20 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 }
+
+func TestHttpProxy_setHeader(t *testing.T) {
+	p := &HttpProxy{Config: &configv2.Config{AccessProxy: &configv2.AccessProxy{}}}
+
+	cases := map[string]string{
+		"Bearer foobar":      "",
+		"bearer foobar":      "",
+		"Basic Zm9vOmJhcg==": "",
+		"Digest foobar":      "Digest foobar",
+	}
+	for in, expect := range cases {
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+		req.Header.Set("Authorization", in)
+		require.NoError(t, p.setHeader(req, nil))
+		assert.Equal(t, expect, req.Header.Get("Authorization"), in)
+	}
+}
