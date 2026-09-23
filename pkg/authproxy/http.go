@@ -207,7 +207,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 			logger.Log.Info("Session not found", logger.WithRequestId(ctx))
 			p.redirectToIdP(w, req)
 			return
-		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
+		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate, auth.ErrInvalidToken:
 			logger.Log.Info("Unauthorized", slog.Any("error", err), logger.WithRequestId(ctx))
 			w.WriteHeader(http.StatusUnauthorized)
 			return

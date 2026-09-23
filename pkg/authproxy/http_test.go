@@ -110,7 +110,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(roles, rpcPermissions)
 	require.NoError(t, err)
-	auth.Init(conf, s, u, nil, nil)
+	token := memory.NewTokenDatabase()
+	auth.Init(conf, s, u, token, nil)
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 
@@ -142,6 +143,34 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		res := recoder.Result()
 		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	})
+
+	t.Run("Invalid token", func(t *testing.T) {
+		t.Parallel()
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+		req.TLS = newTLSConnectionState()
+		req.Header.Set("Authorization", "Bearer unknown-token")
+		p.ServeHTTP(context.Background(), recorder, req)
+
+		res := recorder.Result()
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	})
+
+	t.Run("Success with token", func(t *testing.T) {
+		t.Parallel()
+
+		tk, err := token.SetUser("foobarbaz@example.com")
+		require.NoError(t, err)
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+		req.TLS = newTLSConnectionState()
+		req.SetBasicAuth("anything", tk.Token)
+		p.ServeHTTP(context.Background(), recorder, req)
+
+		res := recorder.Result()
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 
 	t.Run("Host not found", func(t *testing.T) {

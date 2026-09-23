@@ -32,6 +32,7 @@ func Test_Authenticate(t *testing.T) {
 	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	require.NoError(t, err)
 	u := memory.NewUserDatabase()
+	token := memory.NewTokenDatabase()
 	rc := &testRevokedCertClient{}
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
@@ -105,9 +106,10 @@ func Test_Authenticate(t *testing.T) {
 				CertPool:    cp,
 			},
 		},
-		sessionStore: s,
-		userDatabase: u,
-		revokedCert:  rc,
+		sessionStore:  s,
+		userDatabase:  u,
+		revokedCert:   rc,
+		tokenDatabase: token,
 	}
 	err = a.Config.AccessProxy.Setup(a.Config.AccessProxy.Backends)
 	require.NoError(t, err)
@@ -284,50 +286,65 @@ func Test_Authenticate(t *testing.T) {
 	t.Run("Authorization header", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("normal", func(t *testing.T) {
+		t.Run("Bearer", func(t *testing.T) {
 			t.Parallel()
 
-			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: t.Name(), UserId: "foobar@example.com"})
+			tk, err := token.SetUser("foobar@example.com")
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-TOKEN", t.Name())
-			user, _, err := a.Authenticate(context.TODO(), req)
+			req.Header.Set("Authorization", "Bearer "+tk.Token)
+			user, sess, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
 			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", sess.Id)
 		})
 
-		t.Run("header not found", func(t *testing.T) {
+		t.Run("Basic", func(t *testing.T) {
 			t.Parallel()
 
+			tk, err := token.SetUser("foobar@example.com")
+			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			_, _, err = a.Authenticate(context.TODO(), req)
-			require.Error(t, err)
-			assert.Equal(t, ErrUserNotFound, err)
+			req.SetBasicAuth("anything", tk.Token)
+			user, sess, err := a.Authenticate(context.TODO(), req)
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", sess.Id)
 		})
 
 		t.Run("invalid token", func(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-Token", "unknown-token")
+			req.Header.Set("Authorization", "Bearer unknown-token")
 			_, _, err = a.Authenticate(context.TODO(), req)
-			require.Error(t, err)
-			assert.Equal(t, ErrUserNotFound, err)
+			assert.Equal(t, ErrInvalidToken, err)
+
+			req = httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
+			req.SetBasicAuth("anything", "unknown-token")
+			_, _, err = a.Authenticate(context.TODO(), req)
+			assert.Equal(t, ErrInvalidToken, err)
+		})
+
+		t.Run("malformed", func(t *testing.T) {
+			t.Parallel()
+
+			for _, v := range []string{"Bearer", "Bearer ", "Basic", "Basic !!!", "Basic Zm9vYmFy"} {
+				req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
+				req.Header.Set("Authorization", v)
+				_, _, err = a.Authenticate(context.TODO(), req)
+				assert.Equal(t, ErrInvalidToken, err, v)
+			}
 		})
 
 		t.Run("user not found", func(t *testing.T) {
 			t.Parallel()
 
-			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: "dummy-token", UserId: "piyo@example.com"})
+			tk, err := token.SetUser("piyo@example.com")
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-TOKEN", "dummy-token")
+			req.Header.Set("Authorization", "Bearer "+tk.Token)
 			_, _, err = a.Authenticate(context.TODO(), req)
-			require.Error(t, err)
 			assert.Equal(t, ErrUserNotFound, err)
 		})
 	})
