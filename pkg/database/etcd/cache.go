@@ -19,11 +19,11 @@ type Cache struct {
 	client   *clientv3.Client
 	prefix   string
 	initData []*mvccpb.KeyValue
+
+	mu       sync.RWMutex
+	cache    []*mvccpb.KeyValue
 	notifies []chan struct{}
 	cancel   context.CancelFunc
-
-	mu    sync.RWMutex
-	cache []*mvccpb.KeyValue
 
 	once   *sync.Once
 	synced chan struct{}
@@ -50,6 +50,9 @@ func (c *Cache) All() ([]*mvccpb.KeyValue, error) {
 }
 
 func (c *Cache) Len() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	return len(c.cache)
 }
 
@@ -66,9 +69,16 @@ func (c *Cache) Get(key []byte) *mvccpb.KeyValue {
 	return nil
 }
 
+// Notify returns a channel that receives a value each time the cache has been
+// changed by the watch. The change is already visible through Get and All when
+// the value is sent.
 func (c *Cache) Notify() chan struct{} {
 	ch := make(chan struct{}, 1)
+
+	c.mu.Lock()
 	c.notifies = append(c.notifies, ch)
+	c.mu.Unlock()
+
 	return ch
 }
 
@@ -81,13 +91,17 @@ func (c *Cache) Start(ctx context.Context) {
 }
 
 func (c *Cache) Close() {
-	if c.cancel != nil {
-		c.cancel()
+	c.mu.RLock()
+	cancel := c.cancel
+	c.mu.RUnlock()
+
+	if cancel != nil {
+		cancel()
 	}
 }
 
 func (c *Cache) Synced() (chan struct{}, error) {
-	if c.cancel == nil {
+	if c.closed() {
 		return c.synced, database.ErrClosed
 	}
 	return c.synced, nil
@@ -98,7 +112,7 @@ func (c *Cache) WaitForSync(ctx context.Context) error {
 
 	select {
 	case <-synced:
-		if c.cancel == nil {
+		if c.closed() {
 			return database.ErrClosed
 		}
 		return nil
@@ -107,16 +121,27 @@ func (c *Cache) WaitForSync(ctx context.Context) error {
 	}
 }
 
+// closed returns true when the watch channel is not running.
+func (c *Cache) closed() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.cancel == nil
+}
+
 func (c *Cache) watch(ctx context.Context) error {
+	wCtx, cancel := context.WithCancel(ctx)
+	c.mu.Lock()
 	if c.cancel != nil {
 		logger.Log.Info("Already running watch channel. be going to close other")
 		c.cancel()
 	}
-
-	wCtx, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
+	c.mu.Unlock()
 	defer func() {
+		c.mu.Lock()
 		c.cancel = nil
+		c.mu.Unlock()
 	}()
 
 	for {
@@ -131,7 +156,7 @@ func (c *Cache) watch(ctx context.Context) error {
 			close(c.synced)
 		})
 
-		err = c.startWatch(wCtx, res.Header.Revision)
+		err = c.startWatch(wCtx, res.Header.Revision+1)
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil
 		}
@@ -152,6 +177,7 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 				return nil
 			}
 
+			applied := 0
 			for _, event := range res.Events {
 				switch event.Type {
 				case clientv3.EventTypePut:
@@ -168,11 +194,13 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 						c.cache = append(c.cache, event.Kv)
 					}
 					c.mu.Unlock()
+					applied++
 				case clientv3.EventTypeDelete:
 					c.mu.Lock()
 					for i, v := range c.cache {
 						if bytes.Equal(v.Key, event.Kv.Key) {
 							c.cache = append(c.cache[:i], c.cache[i+1:]...)
+							applied++
 							break
 						}
 					}
@@ -180,7 +208,9 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 				}
 			}
 
-			c.sendNotify()
+			if applied > 0 {
+				c.sendNotify()
+			}
 		case <-ctx.Done():
 			return xerrors.WithStack(ctx.Err())
 		}
@@ -188,6 +218,9 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 }
 
 func (c *Cache) sendNotify() {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	for _, v := range c.notifies {
 		select {
 		case v <- struct{}{}:

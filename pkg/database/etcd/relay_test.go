@@ -21,10 +21,7 @@ func TestRelayLocator(t *testing.T) {
 	t.Run("GetAndSet", func(t *testing.T) {
 		rl, err := NewRelayLocator(context.Background(), client)
 		require.NoError(t, err)
-		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-		defer cancel()
-		err = rl.cache.WaitForSync(ctx)
-		require.NoError(t, err)
+		waitForSync(t, rl.cache)
 
 		notify := rl.cache.Notify()
 
@@ -53,10 +50,7 @@ func TestRelayLocator(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		rl, err := NewRelayLocator(context.Background(), client)
 		require.NoError(t, err)
-		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-		defer cancel()
-		err = rl.cache.WaitForSync(ctx)
-		require.NoError(t, err)
+		waitForSync(t, rl.cache)
 
 		notify := rl.cache.Notify()
 

@@ -188,6 +188,18 @@ func newCache(t *testing.T, fakeKV *fakeKV, fakeWatcher *fakeWatcher) *Cache {
 	return cache
 }
 
+// waitForSync waits until the initial snapshot is stored in the cache.
+// Any change after this function returned is delivered by the watch, so Notify
+// can be used as a barrier for a write that follows.
+func waitForSync(t *testing.T, c *Cache) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	require.NoError(t, c.WaitForSync(ctx))
+}
+
 func waitNotify(t *testing.T, ch chan struct{}) {
 	t.Helper()
 
