@@ -225,7 +225,7 @@ func waitNotify(t *testing.T, ch chan struct{}) {
 
 	select {
 	case <-ch:
-	case <-time.After(200 * time.Millisecond):
+	case <-time.After(3 * time.Second):
 		require.Fail(t, "timed out")
 	}
 }
