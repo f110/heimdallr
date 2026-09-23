@@ -90,14 +90,6 @@ func newUser(in *rpc.UserItem) *User {
 	}
 }
 
-func newAccessToken(in *rpc.AccessTokenItem) *AccessToken {
-	return &AccessToken{
-		Name:     in.Name,
-		Issuer:   in.Issuer,
-		IssuedAt: in.IssuedAt,
-	}
-}
-
 func newAgent(in *rpc.Agent) *Agent {
 	return &Agent{
 		Name:        in.Name,

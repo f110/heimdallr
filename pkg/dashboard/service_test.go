@@ -251,37 +251,6 @@ func TestAdminServiceListRoles(t *testing.T) {
 	assert.False(t, res.Msg.Roles[0].Members[1].Maintainer)
 }
 
-func TestAdminServiceCreateServiceAccountToken(t *testing.T) {
-	m, c := newMockClients()
-	m.admin.TokenNewResponse = &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{Name: "ci", Value: "secret"}}
-
-	res, err := NewAdminService(c).CreateServiceAccountToken(verifiedContext("admin@example.com"),
-		connect.NewRequest(&CreateServiceAccountTokenRequest{Id: "sa@example.com", Name: "ci"}))
-	require.NoError(t, err)
-
-	assert.Equal(t, "ci", res.Msg.Name)
-	assert.Equal(t, "secret", res.Msg.Value)
-}
-
-func TestAdminServiceListServiceAccountTokens(t *testing.T) {
-	m, c := newMockClients()
-	m.admin.UserGetResponse = &rpc.ResponseUserGet{User: &rpc.UserItem{
-		Id: "sa@example.com",
-		Tokens: []*rpc.AccessTokenItem{
-			{Name: "old", Issuer: "admin@example.com", IssuedAt: ts(100)},
-			{Name: "new", Issuer: "admin@example.com", IssuedAt: ts(200)},
-		},
-	}}
-
-	res, err := NewAdminService(c).ListServiceAccountTokens(verifiedContext("admin@example.com"),
-		connect.NewRequest(&ListServiceAccountTokensRequest{Id: "sa@example.com"}))
-	require.NoError(t, err)
-
-	require.Len(t, res.Msg.Tokens, 2)
-	assert.Equal(t, "new", res.Msg.Tokens[0].Name)
-	assert.Equal(t, "old", res.Msg.Tokens[1].Name)
-}
-
 func TestMeServiceGetMe(t *testing.T) {
 	m, c := newMockClients()
 	m.ca.GetSignedListResponse = &rpc.ResponseGetSignedList{Items: []*rpc.CertItem{

@@ -64,12 +64,6 @@ const (
 	// AdminServiceCreateServiceAccountProcedure is the fully-qualified name of the AdminService's
 	// CreateServiceAccount RPC.
 	AdminServiceCreateServiceAccountProcedure = "/dashboard.bff.AdminService/CreateServiceAccount"
-	// AdminServiceListServiceAccountTokensProcedure is the fully-qualified name of the AdminService's
-	// ListServiceAccountTokens RPC.
-	AdminServiceListServiceAccountTokensProcedure = "/dashboard.bff.AdminService/ListServiceAccountTokens"
-	// AdminServiceCreateServiceAccountTokenProcedure is the fully-qualified name of the AdminService's
-	// CreateServiceAccountToken RPC.
-	AdminServiceCreateServiceAccountTokenProcedure = "/dashboard.bff.AdminService/CreateServiceAccountToken"
 	// CertificateServiceListCertificatesProcedure is the fully-qualified name of the
 	// CertificateService's ListCertificates RPC.
 	CertificateServiceListCertificatesProcedure = "/dashboard.bff.CertificateService/ListCertificates"
@@ -198,8 +192,6 @@ type AdminServiceClient interface {
 	ListRoles(context.Context, *connect.Request[ListRolesRequest]) (*connect.Response[ListRolesResponse], error)
 	ListServiceAccounts(context.Context, *connect.Request[ListServiceAccountsRequest]) (*connect.Response[ListServiceAccountsResponse], error)
 	CreateServiceAccount(context.Context, *connect.Request[CreateServiceAccountRequest]) (*connect.Response[CreateServiceAccountResponse], error)
-	ListServiceAccountTokens(context.Context, *connect.Request[ListServiceAccountTokensRequest]) (*connect.Response[ListServiceAccountTokensResponse], error)
-	CreateServiceAccountToken(context.Context, *connect.Request[CreateServiceAccountTokenRequest]) (*connect.Response[CreateServiceAccountTokenResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the dashboard.bff.AdminService service. By default,
@@ -273,35 +265,21 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("CreateServiceAccount")),
 			connect.WithClientOptions(opts...),
 		),
-		listServiceAccountTokens: connect.NewClient[ListServiceAccountTokensRequest, ListServiceAccountTokensResponse](
-			httpClient,
-			baseURL+AdminServiceListServiceAccountTokensProcedure,
-			connect.WithSchema(adminServiceMethods.ByName("ListServiceAccountTokens")),
-			connect.WithClientOptions(opts...),
-		),
-		createServiceAccountToken: connect.NewClient[CreateServiceAccountTokenRequest, CreateServiceAccountTokenResponse](
-			httpClient,
-			baseURL+AdminServiceCreateServiceAccountTokenProcedure,
-			connect.WithSchema(adminServiceMethods.ByName("CreateServiceAccountToken")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	listUsers                 *connect.Client[ListUsersRequest, ListUsersResponse]
-	getUser                   *connect.Client[GetUserRequest, GetUserResponse]
-	addUser                   *connect.Client[AddUserRequest, AddUserResponse]
-	updateUser                *connect.Client[UpdateUserRequest, UpdateUserResponse]
-	deleteUser                *connect.Client[DeleteUserRequest, DeleteUserResponse]
-	becomeMaintainer          *connect.Client[BecomeMaintainerRequest, BecomeMaintainerResponse]
-	toggleAdmin               *connect.Client[ToggleAdminRequest, ToggleAdminResponse]
-	listRoles                 *connect.Client[ListRolesRequest, ListRolesResponse]
-	listServiceAccounts       *connect.Client[ListServiceAccountsRequest, ListServiceAccountsResponse]
-	createServiceAccount      *connect.Client[CreateServiceAccountRequest, CreateServiceAccountResponse]
-	listServiceAccountTokens  *connect.Client[ListServiceAccountTokensRequest, ListServiceAccountTokensResponse]
-	createServiceAccountToken *connect.Client[CreateServiceAccountTokenRequest, CreateServiceAccountTokenResponse]
+	listUsers            *connect.Client[ListUsersRequest, ListUsersResponse]
+	getUser              *connect.Client[GetUserRequest, GetUserResponse]
+	addUser              *connect.Client[AddUserRequest, AddUserResponse]
+	updateUser           *connect.Client[UpdateUserRequest, UpdateUserResponse]
+	deleteUser           *connect.Client[DeleteUserRequest, DeleteUserResponse]
+	becomeMaintainer     *connect.Client[BecomeMaintainerRequest, BecomeMaintainerResponse]
+	toggleAdmin          *connect.Client[ToggleAdminRequest, ToggleAdminResponse]
+	listRoles            *connect.Client[ListRolesRequest, ListRolesResponse]
+	listServiceAccounts  *connect.Client[ListServiceAccountsRequest, ListServiceAccountsResponse]
+	createServiceAccount *connect.Client[CreateServiceAccountRequest, CreateServiceAccountResponse]
 }
 
 // ListUsers calls dashboard.bff.AdminService.ListUsers.
@@ -354,16 +332,6 @@ func (c *adminServiceClient) CreateServiceAccount(ctx context.Context, req *conn
 	return c.createServiceAccount.CallUnary(ctx, req)
 }
 
-// ListServiceAccountTokens calls dashboard.bff.AdminService.ListServiceAccountTokens.
-func (c *adminServiceClient) ListServiceAccountTokens(ctx context.Context, req *connect.Request[ListServiceAccountTokensRequest]) (*connect.Response[ListServiceAccountTokensResponse], error) {
-	return c.listServiceAccountTokens.CallUnary(ctx, req)
-}
-
-// CreateServiceAccountToken calls dashboard.bff.AdminService.CreateServiceAccountToken.
-func (c *adminServiceClient) CreateServiceAccountToken(ctx context.Context, req *connect.Request[CreateServiceAccountTokenRequest]) (*connect.Response[CreateServiceAccountTokenResponse], error) {
-	return c.createServiceAccountToken.CallUnary(ctx, req)
-}
-
 // AdminServiceHandler is an implementation of the dashboard.bff.AdminService service.
 type AdminServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[ListUsersRequest]) (*connect.Response[ListUsersResponse], error)
@@ -376,8 +344,6 @@ type AdminServiceHandler interface {
 	ListRoles(context.Context, *connect.Request[ListRolesRequest]) (*connect.Response[ListRolesResponse], error)
 	ListServiceAccounts(context.Context, *connect.Request[ListServiceAccountsRequest]) (*connect.Response[ListServiceAccountsResponse], error)
 	CreateServiceAccount(context.Context, *connect.Request[CreateServiceAccountRequest]) (*connect.Response[CreateServiceAccountResponse], error)
-	ListServiceAccountTokens(context.Context, *connect.Request[ListServiceAccountTokensRequest]) (*connect.Response[ListServiceAccountTokensResponse], error)
-	CreateServiceAccountToken(context.Context, *connect.Request[CreateServiceAccountTokenRequest]) (*connect.Response[CreateServiceAccountTokenResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -447,18 +413,6 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("CreateServiceAccount")),
 		connect.WithHandlerOptions(opts...),
 	)
-	adminServiceListServiceAccountTokensHandler := connect.NewUnaryHandler(
-		AdminServiceListServiceAccountTokensProcedure,
-		svc.ListServiceAccountTokens,
-		connect.WithSchema(adminServiceMethods.ByName("ListServiceAccountTokens")),
-		connect.WithHandlerOptions(opts...),
-	)
-	adminServiceCreateServiceAccountTokenHandler := connect.NewUnaryHandler(
-		AdminServiceCreateServiceAccountTokenProcedure,
-		svc.CreateServiceAccountToken,
-		connect.WithSchema(adminServiceMethods.ByName("CreateServiceAccountToken")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/dashboard.bff.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListUsersProcedure:
@@ -481,10 +435,6 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListServiceAccountsHandler.ServeHTTP(w, r)
 		case AdminServiceCreateServiceAccountProcedure:
 			adminServiceCreateServiceAccountHandler.ServeHTTP(w, r)
-		case AdminServiceListServiceAccountTokensProcedure:
-			adminServiceListServiceAccountTokensHandler.ServeHTTP(w, r)
-		case AdminServiceCreateServiceAccountTokenProcedure:
-			adminServiceCreateServiceAccountTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -532,14 +482,6 @@ func (UnimplementedAdminServiceHandler) ListServiceAccounts(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) CreateServiceAccount(context.Context, *connect.Request[CreateServiceAccountRequest]) (*connect.Response[CreateServiceAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dashboard.bff.AdminService.CreateServiceAccount is not implemented"))
-}
-
-func (UnimplementedAdminServiceHandler) ListServiceAccountTokens(context.Context, *connect.Request[ListServiceAccountTokensRequest]) (*connect.Response[ListServiceAccountTokensResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dashboard.bff.AdminService.ListServiceAccountTokens is not implemented"))
-}
-
-func (UnimplementedAdminServiceHandler) CreateServiceAccountToken(context.Context, *connect.Request[CreateServiceAccountTokenRequest]) (*connect.Response[CreateServiceAccountTokenResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dashboard.bff.AdminService.CreateServiceAccountToken is not implemented"))
 }
 
 // CertificateServiceClient is a client for the dashboard.bff.CertificateService service.
