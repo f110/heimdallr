@@ -37,6 +37,9 @@ type CertificateAuthority interface {
 	SetSignedCertificate(ctx context.Context, certificate *SignedCertificate) error
 	SetRevokedCertificate(ctx context.Context, certificate *RevokedCertificate) error
 	WatchRevokeCertificate() chan struct{}
+	// UnwatchRevokeCertificate unregisters the channel that WatchRevokeCertificate returned.
+	// The channel never receives a value after this method returned, so the caller can close it.
+	UnwatchRevokeCertificate(ch chan struct{})
 	NewSerialNumber(ctx context.Context) (*big.Int, error)
 }
 

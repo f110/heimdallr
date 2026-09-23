@@ -171,6 +171,10 @@ func (c *CA) WatchRevokeCertificate() chan struct{} {
 	return c.cache.Notify()
 }
 
+func (c *CA) UnwatchRevokeCertificate(ch chan struct{}) {
+	c.cache.StopNotify(ch)
+}
+
 func (c *CA) Close() {
 	c.cache.Close()
 }

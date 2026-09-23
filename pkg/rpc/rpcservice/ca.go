@@ -176,9 +176,7 @@ func (s *CertificateAuthorityService) GetRevokedList(ctx context.Context, _ *rpc
 
 func (s *CertificateAuthorityService) WatchRevokedCert(_ *rpc.RequestWatchRevokedCert, ss rpc.CertificateAuthority_WatchRevokedCertServer) error {
 	ch := s.ca.WatchRevokeCertificate()
-	defer func() {
-		close(ch)
-	}()
+	defer s.ca.UnwatchRevokeCertificate(ch)
 
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
