@@ -64,32 +64,6 @@ func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	require.NotNil(t, u)
 }
 
-func TestUserDatabase_GetAndSetAccessToken(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client)
-	require.NoError(t, err)
-	waitForSync(t, u.tokenCache)
-	notify := u.tokenCache.Notify()
-
-	err = u.SetAccessToken(context.Background(), &database.AccessToken{
-		UserId: "test@example.com",
-		Value:  "test-token",
-	})
-	require.NoError(t, err)
-	waitNotify(t, notify)
-
-	token, err := u.GetAccessToken("test-token")
-	require.NoError(t, err)
-	assert.Equal(t, "test@example.com", token.UserId)
-
-	tokens, err := u.GetAccessTokens("test@example.com")
-	require.NoError(t, err)
-	assert.Len(t, tokens, 1)
-
-	u, err = NewUserDatabase(context.Background(), client)
-	require.NoError(t, err)
-	require.NotNil(t, u)
-}
-
 func TestUserDatabase_GetAndSetState(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
@@ -140,7 +114,6 @@ func TestUserDatabase_Close(t *testing.T) {
 	u, err := NewUserDatabase(context.Background(), client)
 	require.NoError(t, err)
 	waitForSync(t, u.cache)
-	waitForSync(t, u.tokenCache)
 
 	u.Close()
 	time.Sleep(time.Second)
@@ -149,9 +122,5 @@ func TestUserDatabase_Close(t *testing.T) {
 	_, err = u.GetAll()
 	assert.ErrorIs(t, err, database.ErrClosed)
 	_, err = u.GetAllServiceAccount()
-	assert.ErrorIs(t, err, database.ErrClosed)
-	_, err = u.GetAccessTokens("")
-	assert.ErrorIs(t, err, database.ErrClosed)
-	_, err = u.GetAccessToken("")
 	assert.ErrorIs(t, err, database.ErrClosed)
 }

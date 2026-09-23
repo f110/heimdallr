@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	ErrUserNotFound        = xerrors.New("database: user not found")
-	ErrClosed              = xerrors.New("database: closed")
-	ErrAccessTokenNotFound = xerrors.New("database: access token not found")
+	ErrUserNotFound = xerrors.New("database: user not found")
+	ErrClosed       = xerrors.New("database: closed")
 )
 
 const (
@@ -40,23 +39,12 @@ type UserDatabase interface {
 	Get(id string, opts ...UserDatabaseOption) (*User, error)
 	GetAll() ([]*User, error)
 	GetAllServiceAccount() ([]*User, error)
-	GetAccessToken(value string) (*AccessToken, error)
-	GetAccessTokens(id string) ([]*AccessToken, error)
 	GetIdentityByLoginName(ctx context.Context, loginName string) (string, error)
 	Set(ctx context.Context, user *User) error
-	SetAccessToken(ctx context.Context, token *AccessToken) error
 	Delete(ctx context.Context, id string) error
 	SetState(ctx context.Context, unique string) (string, error)
 	GetState(ctx context.Context, state string) (string, error)
 	DeleteState(ctx context.Context, state string) error
-}
-
-type AccessToken struct {
-	Name      string    `json:"name"`
-	Value     string    `json:"value"`
-	UserId    string    `json:"user_id"`
-	Issuer    string    `json:"issuer"`
-	CreatedAt time.Time `json:"created_at"`
 }
 
 type SSHKeys struct {
