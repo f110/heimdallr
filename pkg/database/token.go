@@ -15,8 +15,7 @@ var (
 )
 
 var (
-	CodeExpiration  = 1 * time.Minute
-	TokenExpiration = 24 * time.Hour
+	CodeExpiration = 1 * time.Minute
 )
 
 type TokenDatabase interface {

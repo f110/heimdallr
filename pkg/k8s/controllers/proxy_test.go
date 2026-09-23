@@ -2,10 +2,16 @@ package controllers
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.f110.dev/kubeproto/go/apis/corev1"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
+
+	"go.f110.dev/heimdallr/pkg/config/configv2"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
@@ -115,4 +121,25 @@ func TestHeimdallrProxy_EtcdCluster(t *testing.T) {
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.Namespace, etcdC.Spec.Backup.Storage.GCS.CredentialSelector.Namespace)
 		assert.Equal(t, hp.Spec.DataStore.Etcd.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey, etcdC.Spec.Backup.Storage.GCS.CredentialSelector.ServiceAccountJSONKey)
 	})
+}
+
+func TestHeimdallrProxy_TokenExpiration(t *testing.T) {
+	p := proxy.Factory(nil, proxy.EtcdDataStore, proxy.IdentityProvider("google", "client-id", "client-secret", "secret"), proxy.CookieSession)
+	p.Spec.TokenExpiration = &metav1.Duration{Duration: int64(time.Hour)}
+	hp := NewHeimdallrProxy(HeimdallrProxyParams{Spec: p})
+	hp.Datastore = &etcdv1alpha2.EtcdCluster{Status: etcdv1alpha2.EtcdClusterStatus{ClientEndpoint: "https://etcd.example.com:2379"}}
+
+	for name, fn := range map[string]func() (*corev1.ConfigMap, error){
+		"Main":      hp.ConfigForMain,
+		"RPCServer": hp.ConfigForRPCServer,
+	} {
+		t.Run(name, func(t *testing.T) {
+			configMap, err := fn()
+			require.NoError(t, err)
+
+			conf := &configv2.Config{}
+			require.NoError(t, yaml.Unmarshal([]byte(configMap.Data[configFilename]), conf))
+			assert.Equal(t, time.Hour, conf.AccessProxy.GetTokenExpiration())
+		})
+	}
 }

@@ -2633,6 +2633,9 @@ spec:
                 required:
                 - type
                 type: object
+              tokenExpiration:
+                format: duration
+                type: string
               version:
                 type: string
             required:

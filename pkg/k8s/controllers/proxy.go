@@ -728,6 +728,7 @@ func (r *HeimdallrProxy) ConfigForMain() (*corev1.ConfigMap, error) {
 	}
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
+			TokenExpiration: r.tokenExpiration(),
 			HTTP: &configv2.AuthProxyHTTP{
 				Bind:       fmt.Sprintf(":%d", proxyPort),
 				ServerName: r.Spec.Domain,
@@ -869,7 +870,8 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	}
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
-			ProxyFile: fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			ProxyFile:       fmt.Sprintf("%s/%s", proxyConfigMountPath, proxyFilename),
+			TokenExpiration: r.tokenExpiration(),
 			HTTP: &configv2.AuthProxyHTTP{
 				ServerName: r.Spec.Domain,
 			},
@@ -933,6 +935,14 @@ func (r *HeimdallrProxy) ConfigForRPCServer() (*corev1.ConfigMap, error) {
 	)
 
 	return configMap, nil
+}
+
+func (r *HeimdallrProxy) tokenExpiration() *configv2.Duration {
+	if r.Spec.TokenExpiration == nil {
+		return nil
+	}
+
+	return &configv2.Duration{Duration: r.Spec.TokenExpiration.TimeDuration()}
 }
 
 func (r *HeimdallrProxy) LabelsForMain() map[string]string {

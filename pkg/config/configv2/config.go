@@ -39,6 +39,8 @@ const (
 	EmbedEtcdUrlFilename    = "embed_etcd_url"
 	SessionTypeSecureCookie = "secure_cookie"
 	SessionTypeMemcached    = "memcached"
+
+	DefaultTokenExpiration = 8 * time.Hour
 )
 
 var (
@@ -81,6 +83,8 @@ type AccessProxy struct {
 	HTTP       *AuthProxyHTTP `json:"http,omitempty"`
 	RPCServer  string         `json:"rpc_server,omitempty"`
 	Credential *Credential    `json:"credential,omitempty"`
+	// TokenExpiration is the lifetime of the token which is issued for programs. The default value is DefaultTokenExpiration.
+	TokenExpiration *Duration `json:"token_expiration,omitempty"`
 
 	mu       sync.RWMutex
 	Backends []*Backend `json:"-"`
@@ -544,6 +548,14 @@ func (g *AccessProxy) GetAllBackends() []*Backend {
 	defer g.mu.RUnlock()
 
 	return g.Backends
+}
+
+func (g *AccessProxy) GetTokenExpiration() time.Duration {
+	if g.TokenExpiration == nil {
+		return DefaultTokenExpiration
+	}
+
+	return g.TokenExpiration.Duration
 }
 
 func (g *AccessProxy) Load(dir string) error {

@@ -55,6 +55,7 @@ message ProxySpec {
   optional k8s.io.api.core.v1.ResourceRequirements proxy_resources                         = 21;
   optional k8s.io.api.core.v1.ResourceRequirements rpc_server_resources                    = 22 [(dev.f110.kubeproto.field) = { go_name: "RPCServerResources" }];
   optional bool                                    development                             = 23;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration  token_expiration                        = 24;
 }
 
 message ProxyDataStoreSpec {
