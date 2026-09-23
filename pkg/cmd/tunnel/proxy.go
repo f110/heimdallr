@@ -18,9 +18,13 @@ func proxy(args []string, resolverAddr, overrideOpenURLCommand string, insecure 
 		return err
 	}
 
-	accessToken, err := uc.GetToken()
+	storedToken, err := uc.GetToken()
 	if err != nil {
 		return err
+	}
+	var accessToken string
+	if !storedToken.IsExpired() {
+		accessToken = storedToken.Token
 	}
 	clientCert, err := uc.GetCertificate()
 	if err != nil {
@@ -57,12 +61,12 @@ Retry:
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
 			tokenClient := token.NewClient(resolver)
-			t, _, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
+			t, expiresAt, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
 			if err != nil {
 				return err
 			}
 			accessToken = t
-			if err := uc.SetToken(accessToken); err != nil {
+			if err := uc.SetToken(e.Endpoint, t, expiresAt); err != nil {
 				return err
 			}
 

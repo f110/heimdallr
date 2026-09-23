@@ -76,7 +76,11 @@ func NewWithStaticToken(ctx context.Context, conn *grpc.ClientConn) (*Client, er
 	if err != nil {
 		return nil, err
 	}
-	md := []string{rpc.TokenMetadataKey, t}
+	var accessToken string
+	if !t.IsExpired() {
+		accessToken = t.Token
+	}
+	md := []string{rpc.TokenMetadataKey, accessToken}
 	_, err = adminClient.Ping(metadata.AppendToOutgoingContext(ctx, md...), &rpc.RequestPing{}, grpc.WaitForReady(true))
 	if err != nil {
 		endpoint, err := extractEndpointFromError(err)

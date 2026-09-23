@@ -9,10 +9,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"go.f110.dev/xerrors"
 
@@ -41,17 +43,46 @@ func New() (*UserDir, error) {
 	return &UserDir{home: home}, nil
 }
 
-func (u *UserDir) GetToken() (string, error) {
-	b, err := u.readFile(TokenFilename)
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
+type Token struct {
+	// Endpoint is the URL of the token server which issued the token.
+	Endpoint  string    `json:"endpoint"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
-func (u *UserDir) SetToken(token string) error {
-	if err := u.writeFile(TokenFilename, []byte(token), 0600); err != nil {
+func (t *Token) IsExpired() bool {
+	if t == nil || t.Token == "" {
+		return true
+	}
+
+	return !time.Now().Before(t.ExpiresAt)
+}
+
+// GetToken returns the stored token.
+// GetToken returns nil if the token is not stored or the file is not the JSON format which the older version wrote.
+func (u *UserDir) GetToken() (*Token, error) {
+	b, err := u.readFile(TokenFilename)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) == 0 {
+		return nil, nil
+	}
+
+	t := &Token{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return nil, nil
+	}
+
+	return t, nil
+}
+
+func (u *UserDir) SetToken(endpoint, token string, expiresAt time.Time) error {
+	b, err := json.Marshal(&Token{Endpoint: endpoint, Token: token, ExpiresAt: expiresAt})
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := u.writeFile(TokenFilename, b, 0600); err != nil {
 		return err
 	}
 
