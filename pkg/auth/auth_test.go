@@ -37,7 +37,7 @@ func TestInit(t *testing.T) {
 		&configv2.Config{AccessProxy: &configv2.AccessProxy{}},
 		s,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		&testRevokedCertClient{},
 	)
 }
@@ -46,7 +46,7 @@ func TestAuthenticate(t *testing.T) {
 	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	require.NoError(t, err)
 	u := memory.NewUserDatabase()
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	rc := &testRevokedCertClient{}
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
@@ -323,7 +323,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	require.NoError(t, err)
 	u := memory.NewUserDatabase()
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",
@@ -423,7 +423,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",
@@ -571,7 +571,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",

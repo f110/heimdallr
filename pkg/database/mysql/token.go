@@ -15,13 +15,14 @@ import (
 )
 
 type TokenDatabase struct {
-	dao *dao.Repository
+	dao        *dao.Repository
+	expiration time.Duration
 }
 
 var _ database.TokenDatabase = &TokenDatabase{}
 
-func NewTokenDatabase(dao *dao.Repository) *TokenDatabase {
-	return &TokenDatabase{dao: dao}
+func NewTokenDatabase(dao *dao.Repository, expiration time.Duration) *TokenDatabase {
+	return &TokenDatabase{dao: dao, expiration: expiration}
 }
 
 func (t *TokenDatabase) FindToken(ctx context.Context, token string) (*database.Token, error) {
@@ -31,6 +32,9 @@ func (t *TokenDatabase) FindToken(ctx context.Context, token string) (*database.
 	}
 	if len(tokens) != 1 {
 		return nil, sql.ErrNoRows
+	}
+	if !time.Now().Before(tokens[0].IssuedAt.Add(t.expiration)) {
+		return nil, xerrors.WithStack(database.ErrTokenNotFound)
 	}
 
 	return &database.Token{

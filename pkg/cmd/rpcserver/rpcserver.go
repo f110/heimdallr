@@ -128,7 +128,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
-			m.tokenDatabase = etcd.NewTemporaryToken(client)
+			m.tokenDatabase = etcd.NewTemporaryToken(client, database.TokenExpiration)
 			m.relayLocator, err = etcd.NewRelayLocator(ctx, client)
 			if err != nil {
 				return fsm.UnknownState, err
@@ -151,7 +151,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 		}
 
 		if m.Config.AccessProxy.HTTP.Bind != "" {
-			m.tokenDatabase = mysql.NewTokenDatabase(repository)
+			m.tokenDatabase = mysql.NewTokenDatabase(repository, database.TokenExpiration)
 			m.relayLocator = mysql.NewRelayLocator(repository)
 		}
 	default:

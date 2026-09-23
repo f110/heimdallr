@@ -17,13 +17,14 @@ import (
 )
 
 type TemporaryToken struct {
-	client *clientv3.Client
+	client     *clientv3.Client
+	expiration time.Duration
 }
 
 var _ database.TokenDatabase = &TemporaryToken{}
 
-func NewTemporaryToken(client *clientv3.Client) *TemporaryToken {
-	return &TemporaryToken{client: client}
+func NewTemporaryToken(client *clientv3.Client, expiration time.Duration) *TemporaryToken {
+	return &TemporaryToken{client: client, expiration: expiration}
 }
 
 func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database.Token, error) {
@@ -102,7 +103,7 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	lease, err := t.client.Grant(ctx, int64(database.TokenExpiration.Seconds()))
+	lease, err := t.client.Grant(ctx, int64(t.expiration.Seconds()))
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}

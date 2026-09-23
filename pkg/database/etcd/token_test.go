@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,12 +15,12 @@ import (
 )
 
 func TestNewTemporaryToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 	require.NotNil(t, token)
 }
 
 func TestTemporaryToken_IssueToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
 	require.NoError(t, err)
@@ -69,7 +70,7 @@ func TestTemporaryToken_IssueToken(t *testing.T) {
 }
 
 func TestTemporaryToken_DeleteCode(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
 	require.NoError(t, err)
@@ -78,7 +79,7 @@ func TestTemporaryToken_DeleteCode(t *testing.T) {
 }
 
 func TestTemporaryToken_DeleteToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	s := sha256.New()
 	s.Write([]byte("ch"))

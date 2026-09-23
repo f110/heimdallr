@@ -49,7 +49,7 @@ func TestNewServer(t *testing.T) {
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		ca,
@@ -89,7 +89,7 @@ func TestServer_Start(t *testing.T) {
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		ca,
@@ -170,7 +170,7 @@ func TestServicesViaServer(t *testing.T) {
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	cluster := memory.NewClusterDatabase()
 	relay := memory.NewRelayLocator()
 	auth.Init(conf, nil, u, token, nil)

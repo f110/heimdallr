@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,7 +111,7 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(roles, rpcPermissions)
 	require.NoError(t, err)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	auth.Init(conf, s, u, token, nil)
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)

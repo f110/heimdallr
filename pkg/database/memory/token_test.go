@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestTokenDatabase(t *testing.T) {
-	db := NewTokenDatabase()
+	db := NewTokenDatabase(time.Hour)
 
 	tk, err := db.SetUser("test@example.com")
 	require.NoError(t, err)
@@ -28,6 +29,16 @@ func TestTokenDatabase(t *testing.T) {
 	assert.Empty(t, tokens[0].Token)
 
 	require.NoError(t, db.DeleteToken(context.Background(), tk.Token))
+	_, err = db.FindToken(context.Background(), tk.Token)
+	assert.ErrorIs(t, err, database.ErrTokenNotFound)
+}
+
+func TestTokenDatabase_Expired(t *testing.T) {
+	db := NewTokenDatabase(-time.Second)
+
+	tk, err := db.SetUser("test@example.com")
+	require.NoError(t, err)
+
 	_, err = db.FindToken(context.Background(), tk.Token)
 	assert.ErrorIs(t, err, database.ErrTokenNotFound)
 }
