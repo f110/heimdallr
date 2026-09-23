@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "docker-credential-heimdallr_lib",
+    srcs = ["main.go"],
+    importpath = "go.f110.dev/heimdallr/cmd/docker-credential-heimdallr",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/cmd/dockercredential"],
+)
+
+go_binary(
+    name = "docker-credential-heimdallr",
+    embed = [":docker-credential-heimdallr_lib"],
+    visibility = ["//visibility:public"],
+)

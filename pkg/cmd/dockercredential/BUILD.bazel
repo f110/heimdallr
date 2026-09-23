@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "dockercredential",
+    srcs = ["helper.go"],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/dockercredential",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/auth/token",
+        "//pkg/config/userconfig",
+        "@dev_f110_go_xerrors//:xerrors",
+    ],
+)
+
+go_test(
+    name = "dockercredential_test",
+    srcs = ["helper_test.go"],
+    embed = [":dockercredential"],
+    deps = [
+        "//pkg/config/userconfig",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)
