@@ -64,7 +64,7 @@ func (t *TokenDatabase) IssueToken(_ context.Context, code, _ string) (*database
 	}
 
 	t.mu.Lock()
-	t.tokens[token.Token] = token
+	t.tokens[database.HashToken(s)] = &database.Token{UserId: token.UserId, IssuedAt: token.IssuedAt}
 	t.mu.Unlock()
 
 	return token, nil
@@ -86,7 +86,7 @@ func (t *TokenDatabase) FindToken(_ context.Context, token string) (*database.To
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	v, ok := t.tokens[token]
+	v, ok := t.tokens[database.HashToken(token)]
 	if !ok {
 		return nil, xerrors.WithStack(database.ErrTokenNotFound)
 	}
@@ -117,7 +117,7 @@ func (t *TokenDatabase) DeleteToken(_ context.Context, token string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	delete(t.tokens, token)
+	delete(t.tokens, database.HashToken(token))
 	return nil
 }
 

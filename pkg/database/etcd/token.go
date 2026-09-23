@@ -27,7 +27,7 @@ func NewTemporaryToken(client *clientv3.Client) *TemporaryToken {
 }
 
 func (t *TemporaryToken) FindToken(ctx context.Context, token string) (*database.Token, error) {
-	res, err := t.client.Get(ctx, fmt.Sprintf("token/%s", token))
+	res, err := t.client.Get(ctx, fmt.Sprintf("token/%s", database.HashToken(token)))
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -98,7 +98,7 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 		return nil, err
 	}
 	token := &database.Token{Token: s, UserId: c.UserId, IssuedAt: time.Now()}
-	b, err := yaml.Marshal(token)
+	b, err := yaml.Marshal(&database.Token{UserId: token.UserId, IssuedAt: token.IssuedAt})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -106,7 +106,7 @@ func (t *TemporaryToken) IssueToken(ctx context.Context, code, codeVerifier stri
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	_, err = t.client.Put(ctx, fmt.Sprintf("token/%s", s), string(b), clientv3.WithLease(lease.ID))
+	_, err = t.client.Put(ctx, fmt.Sprintf("token/%s", database.HashToken(s)), string(b), clientv3.WithLease(lease.ID))
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -158,7 +158,7 @@ func (t *TemporaryToken) AllTokens(ctx context.Context) ([]*database.Token, erro
 }
 
 func (t *TemporaryToken) DeleteToken(ctx context.Context, token string) error {
-	_, err := t.client.Delete(ctx, fmt.Sprintf("token/%s", token))
+	_, err := t.client.Delete(ctx, fmt.Sprintf("token/%s", database.HashToken(token)))
 	if err != nil {
 		return xerrors.WithStack(err)
 	}

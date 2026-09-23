@@ -25,7 +25,7 @@ func NewTokenDatabase(dao *dao.Repository) *TokenDatabase {
 }
 
 func (t *TokenDatabase) FindToken(ctx context.Context, token string) (*database.Token, error) {
-	tokens, err := t.dao.Token.ListToken(ctx, token)
+	tokens, err := t.dao.Token.ListToken(ctx, database.HashToken(token))
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -34,7 +34,6 @@ func (t *TokenDatabase) FindToken(ctx context.Context, token string) (*database.
 	}
 
 	return &database.Token{
-		Token:    tokens[0].Token,
 		UserId:   tokens[0].User.Identity,
 		IssuedAt: tokens[0].IssuedAt,
 	}, nil
@@ -95,7 +94,7 @@ func (t *TokenDatabase) IssueToken(ctx context.Context, code, codeVerifier strin
 	}
 
 	newToken, err := t.dao.Token.Create(ctx, &entity.Token{
-		Token:    token,
+		Token:    database.HashToken(token),
 		UserId:   c.User.Id,
 		IssuedAt: time.Now(),
 	})
@@ -153,7 +152,6 @@ func (t *TokenDatabase) AllTokens(ctx context.Context) ([]*database.Token, error
 	result := make([]*database.Token, len(tokens))
 	for i, v := range tokens {
 		result[i] = &database.Token{
-			Token:    v.Token,
 			UserId:   v.User.Identity,
 			IssuedAt: v.IssuedAt,
 		}
@@ -163,7 +161,7 @@ func (t *TokenDatabase) AllTokens(ctx context.Context) ([]*database.Token, error
 }
 
 func (t *TokenDatabase) DeleteToken(ctx context.Context, token string) error {
-	tokens, err := t.dao.Token.ListToken(ctx, token)
+	tokens, err := t.dao.Token.ListToken(ctx, database.HashToken(token))
 	if err != nil {
 		return xerrors.WithStack(err)
 	}

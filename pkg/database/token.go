@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"time"
 
 	"go.f110.dev/xerrors"
@@ -29,7 +30,7 @@ type TokenDatabase interface {
 }
 
 type Token struct {
-	Token    string    `json:"token"`
+	Token    string    `json:"token,omitempty"`
 	UserId   string    `json:"user_id"`
 	IssuedAt time.Time `json:"issued_at"`
 }
@@ -54,4 +55,11 @@ func (c *Code) Verify(verifier string) bool {
 	default:
 		return false
 	}
+}
+
+// HashToken returns the value for storing the token.
+// The token is random enough, so the salt and the key stretching are not required.
+func HashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
 }
