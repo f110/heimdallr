@@ -185,8 +185,8 @@ func (c *Client) NewServiceAccount(ctx context.Context, id, comment string) erro
 	return xerrors.WithStack(err)
 }
 
-func (c *Client) GetUser(ctx context.Context, id string, withToken bool) (*rpc.UserItem, error) {
-	res, err := c.adminClient.UserGet(c.callContext(ctx), &rpc.RequestUserGet{Id: id, WithTokens: withToken})
+func (c *Client) GetUser(ctx context.Context, id string) (*rpc.UserItem, error) {
+	res, err := c.adminClient.UserGet(c.callContext(ctx), &rpc.RequestUserGet{Id: id})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
@@ -215,15 +215,6 @@ func (c *Client) ToggleAdmin(ctx context.Context, id string) error {
 	}
 
 	return nil
-}
-
-func (c *Client) NewToken(ctx context.Context, name, userId string) (*rpc.AccessTokenItem, error) {
-	res, err := c.adminClient.TokenNew(c.callContext(ctx), &rpc.RequestTokenNew{Name: name, UserId: userId})
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-
-	return res.Item, nil
 }
 
 func (c *Client) ClusterMemberList(ctx context.Context) ([]*rpc.ClusterMember, error) {

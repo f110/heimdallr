@@ -50,7 +50,7 @@ func (s *AdminService) GetUser(ctx context.Context, req *connect.Request[GetUser
 	}
 	client := s.client(ctx)
 
-	u, err := client.GetUser(ctx, req.Msg.Id, false)
+	u, err := client.GetUser(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -110,7 +110,7 @@ func (s *AdminService) UpdateUser(ctx context.Context, req *connect.Request[Upda
 	}
 	client := s.client(ctx)
 
-	u, err := client.GetUser(ctx, req.Msg.Id, false)
+	u, err := client.GetUser(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

@@ -5,9 +5,7 @@ import (
 	"log/slog"
 
 	"go.f110.dev/xerrors"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"go.f110.dev/heimdallr/pkg/auth"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -89,26 +87,7 @@ func (s *AdminService) UserGet(_ context.Context, req *rpc.RequestUserGet) (*rpc
 		return &rpc.ResponseUserGet{}, err
 	}
 
-	res := rpc.DatabaseUserToRPCUser(u)
-	if req.GetWithTokens() {
-		t, err := s.userDatabase.GetAccessTokens(req.GetId())
-		if err != nil {
-			return nil, err
-		}
-		tokens := make([]*rpc.AccessTokenItem, len(t))
-		for i, v := range t {
-			issuedAt := timestamppb.New(v.CreatedAt)
-			tokens[i] = &rpc.AccessTokenItem{
-				Name:     v.Name,
-				Value:    v.Value,
-				Issuer:   v.Issuer,
-				IssuedAt: issuedAt,
-			}
-		}
-		res.Tokens = tokens
-	}
-
-	return &rpc.ResponseUserGet{User: res, Ok: true}, nil
+	return &rpc.ResponseUserGet{User: rpc.DatabaseUserToRPCUser(u), Ok: true}, nil
 }
 
 func (s *AdminService) UserAdd(ctx context.Context, req *rpc.RequestUserAdd) (*rpc.ResponseUserAdd, error) {
@@ -238,41 +217,6 @@ func (s *AdminService) ToggleAdmin(ctx context.Context, req *rpc.RequestToggleAd
 
 	logger.Audit.Info("Change admin privilege", slog.String("user", u.Id), slog.Bool("to", u.Admin), auditBy(ctx))
 	return &rpc.ResponseToggleAdmin{Ok: true}, nil
-}
-
-func (s *AdminService) TokenNew(ctx context.Context, req *rpc.RequestTokenNew) (*rpc.ResponseTokenNew, error) {
-	issuer := ""
-	if user, err := extractUser(ctx); err != nil {
-		return nil, err
-	} else {
-		issuer = user.Id
-	}
-
-	if _, err := s.userDatabase.Get(issuer); err != nil {
-		return nil, err
-	}
-	if _, err := s.userDatabase.Get(req.GetUserId()); err != nil {
-		return nil, err
-	}
-
-	newToken, err := auth.NewAccessToken(req.GetName(), req.GetUserId(), issuer)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.userDatabase.SetAccessToken(ctx, newToken); err != nil {
-		logger.Log.Info("Failed set access token", slog.Any("error", err))
-		return nil, err
-	}
-
-	issuedAt := timestamppb.New(newToken.CreatedAt)
-	logger.Audit.Info("Issue token", slog.String("user", req.GetUserId()), auditBy(ctx))
-	return &rpc.ResponseTokenNew{Item: &rpc.AccessTokenItem{
-		Name:     newToken.Name,
-		Value:    newToken.Value,
-		Issuer:   newToken.Issuer,
-		IssuedAt: issuedAt,
-	}}, nil
 }
 
 func (s *AdminService) RoleList(ctx context.Context, _ *rpc.RequestRoleList) (*rpc.ResponseRoleList, error) {

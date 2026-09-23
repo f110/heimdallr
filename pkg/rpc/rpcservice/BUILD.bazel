@@ -13,7 +13,6 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/rpc/rpcservice",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/auth",
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/connector",
