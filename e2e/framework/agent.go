@@ -279,6 +279,7 @@ func (a *Agent) Get(m *btesting.Matcher, u string) bool {
 		m.SetLastResponse(nil, err)
 		return false
 	}
+	req.Header.Set("Accept", "text/html")
 	if len(a.cookies) > 0 {
 		for _, v := range a.cookies {
 			req.AddCookie(v)

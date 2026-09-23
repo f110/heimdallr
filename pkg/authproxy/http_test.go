@@ -121,13 +121,37 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	t.Run("Session not found", func(t *testing.T) {
 		t.Parallel()
 
-		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
-		req.TLS = newTLSConnectionState()
-		p.ServeHTTP(context.Background(), recorder, req)
+		t.Run("Browser", func(t *testing.T) {
+			t.Parallel()
 
-		res := recorder.Result()
-		assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+			req.TLS = newTLSConnectionState()
+			req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+			p.ServeHTTP(context.Background(), recorder, req)
+
+			res := recorder.Result()
+			assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+			assert.Empty(t, res.Header.Get("WWW-Authenticate"))
+		})
+
+		t.Run("Program", func(t *testing.T) {
+			t.Parallel()
+
+			for _, accept := range []string{"", "*/*", "application/json"} {
+				recorder := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+				req.TLS = newTLSConnectionState()
+				if accept != "" {
+					req.Header.Set("Accept", accept)
+				}
+				p.ServeHTTP(context.Background(), recorder, req)
+
+				res := recorder.Result()
+				assert.Equal(t, http.StatusUnauthorized, res.StatusCode, accept)
+				assert.Equal(t, `Basic realm="example.com"`, res.Header.Get("WWW-Authenticate"), accept)
+			}
+		})
 	})
 
 	t.Run("User not found", func(t *testing.T) {
