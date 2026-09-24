@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "memory",
@@ -15,5 +15,16 @@ go_library(
         "//pkg/database",
         "//pkg/netutil",
         "@dev_f110_go_xerrors//:xerrors",
+    ],
+)
+
+go_test(
+    name = "memory_test",
+    srcs = ["token_test.go"],
+    embed = [":memory"],
+    deps = [
+        "//pkg/database",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

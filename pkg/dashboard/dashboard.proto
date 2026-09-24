@@ -22,8 +22,6 @@ service AdminService {
 
     rpc ListServiceAccounts (ListServiceAccountsRequest) returns (ListServiceAccountsResponse);
     rpc CreateServiceAccount (CreateServiceAccountRequest) returns (CreateServiceAccountResponse);
-    rpc ListServiceAccountTokens (ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
-    rpc CreateServiceAccountToken (CreateServiceAccountTokenRequest) returns (CreateServiceAccountTokenResponse);
 }
 
 service CertificateService {
@@ -86,12 +84,6 @@ message Agent {
     string name      = 1;
     string from_addr = 2;
     google.protobuf.Timestamp connected_at = 3;
-}
-
-message AccessToken {
-    string name   = 1;
-    string issuer = 2;
-    google.protobuf.Timestamp issued_at = 3;
 }
 
 message GetMeRequest {}
@@ -187,26 +179,6 @@ message CreateServiceAccountRequest {
 }
 
 message CreateServiceAccountResponse {}
-
-message ListServiceAccountTokensRequest {
-    string id = 1;
-}
-
-message ListServiceAccountTokensResponse {
-    repeated AccessToken tokens = 1;
-}
-
-message CreateServiceAccountTokenRequest {
-    string id   = 1;
-    string name = 2;
-}
-
-// CreateServiceAccountTokenResponse is the only message that carries a token value.
-// The value can not be read again once the response is discarded.
-message CreateServiceAccountTokenResponse {
-    string name  = 1;
-    string value = 2;
-}
 
 message ListCertificatesRequest {}
 

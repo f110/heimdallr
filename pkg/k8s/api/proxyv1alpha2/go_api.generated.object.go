@@ -485,6 +485,7 @@ type ProxySpec struct {
 	ProxyResources        *corev1.ResourceRequirements `json:"proxyResources,omitempty"`
 	RPCServerResources    *corev1.ResourceRequirements `json:"rpcServerResources,omitempty"`
 	Development           bool                         `json:"development,omitempty"`
+	TokenExpiration       *metav1.Duration             `json:"tokenExpiration,omitempty"`
 }
 
 func (in *ProxySpec) DeepCopyInto(out *ProxySpec) {
@@ -540,6 +541,11 @@ func (in *ProxySpec) DeepCopyInto(out *ProxySpec) {
 	if in.RPCServerResources != nil {
 		in, out := &in.RPCServerResources, &out.RPCServerResources
 		*out = new(corev1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.TokenExpiration != nil {
+		in, out := &in.TokenExpiration, &out.TokenExpiration
+		*out = new(metav1.Duration)
 		(*in).DeepCopyInto(*out)
 	}
 }

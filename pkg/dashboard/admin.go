@@ -50,7 +50,7 @@ func (s *AdminService) GetUser(ctx context.Context, req *connect.Request[GetUser
 	}
 	client := s.client(ctx)
 
-	u, err := client.GetUser(ctx, req.Msg.Id, false)
+	u, err := client.GetUser(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -110,7 +110,7 @@ func (s *AdminService) UpdateUser(ctx context.Context, req *connect.Request[Upda
 	}
 	client := s.client(ctx)
 
-	u, err := client.GetUser(ctx, req.Msg.Id, false)
+	u, err := client.GetUser(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -241,39 +241,4 @@ func (s *AdminService) CreateServiceAccount(ctx context.Context, req *connect.Re
 	}
 
 	return connect.NewResponse(&CreateServiceAccountResponse{}), nil
-}
-
-func (s *AdminService) ListServiceAccountTokens(ctx context.Context, req *connect.Request[ListServiceAccountTokensRequest]) (*connect.Response[ListServiceAccountTokensResponse], error) {
-	if req.Msg.Id == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, xerrors.New("dashboard: id is empty"))
-	}
-
-	u, err := s.client(ctx).GetUser(ctx, req.Msg.Id, true)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	tokens := make([]*AccessToken, 0, len(u.Tokens))
-	for _, v := range u.Tokens {
-		tokens = append(tokens, newAccessToken(v))
-	}
-	sort.Slice(tokens, func(i, j int) bool {
-		return timestampSeconds(tokens[i].IssuedAt) > timestampSeconds(tokens[j].IssuedAt)
-	})
-
-	return connect.NewResponse(&ListServiceAccountTokensResponse{Tokens: tokens}), nil
-}
-
-// CreateServiceAccountToken returns the value of the new token. The value can not be read again.
-func (s *AdminService) CreateServiceAccountToken(ctx context.Context, req *connect.Request[CreateServiceAccountTokenRequest]) (*connect.Response[CreateServiceAccountTokenResponse], error) {
-	if req.Msg.Id == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, xerrors.New("dashboard: id is empty"))
-	}
-
-	newToken, err := s.client(ctx).NewToken(ctx, req.Msg.Name, req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	return connect.NewResponse(&CreateServiceAccountTokenResponse{Name: newToken.Name, Value: newToken.Value}), nil
 }

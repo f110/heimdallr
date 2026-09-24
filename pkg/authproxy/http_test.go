@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,7 +111,8 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(roles, rpcPermissions)
 	require.NoError(t, err)
-	auth.Init(conf, s, u, nil, nil)
+	token := memory.NewTokenDatabase(time.Hour)
+	auth.Init(conf, s, u, token, nil)
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 
@@ -120,13 +122,37 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 	t.Run("Session not found", func(t *testing.T) {
 		t.Parallel()
 
-		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
-		req.TLS = newTLSConnectionState()
-		p.ServeHTTP(context.Background(), recorder, req)
+		t.Run("Browser", func(t *testing.T) {
+			t.Parallel()
 
-		res := recorder.Result()
-		assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+			req.TLS = newTLSConnectionState()
+			req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+			p.ServeHTTP(context.Background(), recorder, req)
+
+			res := recorder.Result()
+			assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+			assert.Empty(t, res.Header.Get("WWW-Authenticate"))
+		})
+
+		t.Run("Program", func(t *testing.T) {
+			t.Parallel()
+
+			for _, accept := range []string{"", "*/*", "application/json"} {
+				recorder := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+				req.TLS = newTLSConnectionState()
+				if accept != "" {
+					req.Header.Set("Accept", accept)
+				}
+				p.ServeHTTP(context.Background(), recorder, req)
+
+				res := recorder.Result()
+				assert.Equal(t, http.StatusUnauthorized, res.StatusCode, accept)
+				assert.Equal(t, `Basic realm="example.com"`, res.Header.Get("WWW-Authenticate"), accept)
+			}
+		})
 	})
 
 	t.Run("User not found", func(t *testing.T) {
@@ -142,6 +168,34 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 
 		res := recoder.Result()
 		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	})
+
+	t.Run("Invalid token", func(t *testing.T) {
+		t.Parallel()
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+		req.TLS = newTLSConnectionState()
+		req.Header.Set("Authorization", "Bearer unknown-token")
+		p.ServeHTTP(context.Background(), recorder, req)
+
+		res := recorder.Result()
+		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	})
+
+	t.Run("Success with token", func(t *testing.T) {
+		t.Parallel()
+
+		tk, err := token.SetUser("foobarbaz@example.com")
+		require.NoError(t, err)
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+		req.TLS = newTLSConnectionState()
+		req.SetBasicAuth("anything", tk.Token)
+		p.ServeHTTP(context.Background(), recorder, req)
+
+		res := recorder.Result()
+		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
 
 	t.Run("Host not found", func(t *testing.T) {
@@ -291,4 +345,21 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 		// BadGateway is a normal status in test because backend not found.
 		assert.Equal(t, http.StatusBadGateway, res.StatusCode)
 	})
+}
+
+func TestHttpProxy_setHeader(t *testing.T) {
+	p := &HttpProxy{Config: &configv2.Config{AccessProxy: &configv2.AccessProxy{}}}
+
+	cases := map[string]string{
+		"Bearer foobar":      "",
+		"bearer foobar":      "",
+		"Basic Zm9vOmJhcg==": "",
+		"Digest foobar":      "Digest foobar",
+	}
+	for in, expect := range cases {
+		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+		req.Header.Set("Authorization", in)
+		require.NoError(t, p.setHeader(req, nil))
+		assert.Equal(t, expect, req.Header.Get("Authorization"), in)
+	}
 }

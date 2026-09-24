@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -102,6 +104,15 @@ func (a *authentication) AuthenticateSocket(ctx context.Context, token, host str
 		return nil, nil, ErrHostnameNotFound
 	}
 
+	user, _, err := a.findUserByToken(ctx, token)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return backend, user, nil
+}
+
+func (a *authentication) findUserByToken(ctx context.Context, token string) (*database.User, *database.Token, error) {
 	t, err := a.tokenDatabase.FindToken(ctx, token)
 	if err != nil {
 		return nil, nil, ErrInvalidToken
@@ -111,7 +122,7 @@ func (a *authentication) AuthenticateSocket(ctx context.Context, token, host str
 		return nil, nil, ErrUserNotFound
 	}
 
-	return backend, user, nil
+	return user, t, nil
 }
 
 func (a *authentication) UnaryCall(ctx context.Context) (*database.User, error) {
@@ -185,23 +196,18 @@ func (a *authentication) findUser(ctx context.Context, req *http.Request) (*data
 		return u, s, nil
 	}
 
-	if v := req.Header.Get("Authorization"); v == "LP-TOKEN" {
-		token := req.Header.Get("X-LP-Token")
-		if token == "" {
-			return nil, nil, ErrUserNotFound
-		}
-		at, err := a.userDatabase.GetAccessToken(token)
+	if token, ok, err := tokenFromAuthorizationHeader(req); ok {
 		if err != nil {
-			return nil, nil, ErrUserNotFound
+			return nil, nil, err
 		}
-		user, err := a.userDatabase.Get(at.UserId)
+		user, t, err := a.findUserByToken(ctx, token)
 		if err != nil {
-			return nil, nil, ErrUserNotFound
+			return nil, nil, err
 		}
 
 		return user, &session.Session{
-			Id:       at.UserId,
-			IssuedAt: at.CreatedAt,
+			Id:       t.UserId,
+			IssuedAt: t.IssuedAt,
 		}, nil
 	}
 
@@ -308,4 +314,34 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 	}
 
 	return user, nil
+}
+
+func tokenFromAuthorizationHeader(req *http.Request) (string, bool, error) {
+	v := req.Header.Get("Authorization")
+	scheme, credential, _ := strings.Cut(v, " ")
+	switch {
+	case strings.EqualFold(scheme, "Bearer"):
+		if credential == "" {
+			return "", true, ErrInvalidToken
+		}
+		return credential, true, nil
+	case strings.EqualFold(scheme, "Basic"):
+		b, err := base64.StdEncoding.DecodeString(credential)
+		if err != nil {
+			return "", true, ErrInvalidToken
+		}
+		_, password, ok := strings.Cut(string(b), ":")
+		if !ok || password == "" {
+			return "", true, ErrInvalidToken
+		}
+		return password, true, nil
+	default:
+		return "", false, nil
+	}
+}
+
+// HasTokenAuthorization reports whether the Authorization header of req is consumed by heimdallr as a token.
+func HasTokenAuthorization(req *http.Request) bool {
+	_, ok, _ := tokenFromAuthorizationHeader(req)
+	return ok
 }

@@ -460,7 +460,6 @@ type UserItem struct {
 	Admin         bool                   `protobuf:"varint,4,opt,name=admin,proto3" json:"admin,omitempty"`
 	Type          UserType               `protobuf:"varint,5,opt,name=type,proto3,enum=proxy.rpc.UserType" json:"type,omitempty"`
 	Comment       string                 `protobuf:"bytes,6,opt,name=comment,proto3" json:"comment,omitempty"`
-	Tokens        []*AccessTokenItem     `protobuf:"bytes,7,rep,name=tokens,proto3" json:"tokens,omitempty"`
 	LoginName     string                 `protobuf:"bytes,8,opt,name=login_name,json=loginName,proto3" json:"login_name,omitempty"`
 	LastLogin     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_login,json=lastLogin,proto3" json:"last_login,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -539,13 +538,6 @@ func (x *UserItem) GetComment() string {
 	return ""
 }
 
-func (x *UserItem) GetTokens() []*AccessTokenItem {
-	if x != nil {
-		return x.Tokens
-	}
-	return nil
-}
-
 func (x *UserItem) GetLoginName() string {
 	if x != nil {
 		return x.LoginName
@@ -556,74 +548,6 @@ func (x *UserItem) GetLoginName() string {
 func (x *UserItem) GetLastLogin() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastLogin
-	}
-	return nil
-}
-
-type AccessTokenItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Issuer        string                 `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`
-	IssuedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AccessTokenItem) Reset() {
-	*x = AccessTokenItem{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AccessTokenItem) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AccessTokenItem) ProtoMessage() {}
-
-func (x *AccessTokenItem) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AccessTokenItem.ProtoReflect.Descriptor instead.
-func (*AccessTokenItem) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *AccessTokenItem) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *AccessTokenItem) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
-func (x *AccessTokenItem) GetIssuer() string {
-	if x != nil {
-		return x.Issuer
-	}
-	return ""
-}
-
-func (x *AccessTokenItem) GetIssuedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.IssuedAt
 	}
 	return nil
 }
@@ -641,7 +565,7 @@ type RoleItem struct {
 
 func (x *RoleItem) Reset() {
 	*x = RoleItem{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[11]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -653,7 +577,7 @@ func (x *RoleItem) String() string {
 func (*RoleItem) ProtoMessage() {}
 
 func (x *RoleItem) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[11]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -666,7 +590,7 @@ func (x *RoleItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleItem.ProtoReflect.Descriptor instead.
 func (*RoleItem) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{11}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RoleItem) GetName() string {
@@ -718,7 +642,7 @@ type BackendItem struct {
 
 func (x *BackendItem) Reset() {
 	*x = BackendItem{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[12]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +654,7 @@ func (x *BackendItem) String() string {
 func (*BackendItem) ProtoMessage() {}
 
 func (x *BackendItem) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[12]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +667,7 @@ func (x *BackendItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BackendItem.ProtoReflect.Descriptor instead.
 func (*BackendItem) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{12}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *BackendItem) GetName() string {
@@ -798,7 +722,7 @@ type HTTPBackend struct {
 
 func (x *HTTPBackend) Reset() {
 	*x = HTTPBackend{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[13]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -810,7 +734,7 @@ func (x *HTTPBackend) String() string {
 func (*HTTPBackend) ProtoMessage() {}
 
 func (x *HTTPBackend) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[13]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -823,7 +747,7 @@ func (x *HTTPBackend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTTPBackend.ProtoReflect.Descriptor instead.
 func (*HTTPBackend) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{13}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *HTTPBackend) GetPath() string {
@@ -849,7 +773,7 @@ type SocketBackend struct {
 
 func (x *SocketBackend) Reset() {
 	*x = SocketBackend{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[14]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -861,7 +785,7 @@ func (x *SocketBackend) String() string {
 func (*SocketBackend) ProtoMessage() {}
 
 func (x *SocketBackend) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[14]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -874,7 +798,7 @@ func (x *SocketBackend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SocketBackend.ProtoReflect.Descriptor instead.
 func (*SocketBackend) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{14}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SocketBackend) GetAgent() bool {
@@ -902,7 +826,7 @@ type CertItem struct {
 
 func (x *CertItem) Reset() {
 	*x = CertItem{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[15]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -914,7 +838,7 @@ func (x *CertItem) String() string {
 func (*CertItem) ProtoMessage() {}
 
 func (x *CertItem) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[15]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,7 +851,7 @@ func (x *CertItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CertItem.ProtoReflect.Descriptor instead.
 func (*CertItem) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{15}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CertItem) GetSerialNumber() []byte {
@@ -1011,7 +935,7 @@ type Agent struct {
 
 func (x *Agent) Reset() {
 	*x = Agent{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[16]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1023,7 +947,7 @@ func (x *Agent) String() string {
 func (*Agent) ProtoMessage() {}
 
 func (x *Agent) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[16]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1036,7 +960,7 @@ func (x *Agent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Agent.ProtoReflect.Descriptor instead.
 func (*Agent) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{16}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Agent) GetName() string {
@@ -1070,7 +994,7 @@ type RequestUserList struct {
 
 func (x *RequestUserList) Reset() {
 	*x = RequestUserList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[17]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1082,7 +1006,7 @@ func (x *RequestUserList) String() string {
 func (*RequestUserList) ProtoMessage() {}
 
 func (x *RequestUserList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[17]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1095,7 +1019,7 @@ func (x *RequestUserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserList.ProtoReflect.Descriptor instead.
 func (*RequestUserList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{17}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RequestUserList) GetRole() string {
@@ -1121,7 +1045,7 @@ type ResponseUserList struct {
 
 func (x *ResponseUserList) Reset() {
 	*x = ResponseUserList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[18]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1133,7 +1057,7 @@ func (x *ResponseUserList) String() string {
 func (*ResponseUserList) ProtoMessage() {}
 
 func (x *ResponseUserList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[18]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1146,7 +1070,7 @@ func (x *ResponseUserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserList.ProtoReflect.Descriptor instead.
 func (*ResponseUserList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{18}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ResponseUserList) GetItems() []*UserItem {
@@ -1168,7 +1092,7 @@ type RequestUserAdd struct {
 
 func (x *RequestUserAdd) Reset() {
 	*x = RequestUserAdd{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1180,7 +1104,7 @@ func (x *RequestUserAdd) String() string {
 func (*RequestUserAdd) ProtoMessage() {}
 
 func (x *RequestUserAdd) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1193,7 +1117,7 @@ func (x *RequestUserAdd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserAdd.ProtoReflect.Descriptor instead.
 func (*RequestUserAdd) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{19}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RequestUserAdd) GetId() string {
@@ -1233,7 +1157,7 @@ type ResponseUserAdd struct {
 
 func (x *ResponseUserAdd) Reset() {
 	*x = ResponseUserAdd{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1245,7 +1169,7 @@ func (x *ResponseUserAdd) String() string {
 func (*ResponseUserAdd) ProtoMessage() {}
 
 func (x *ResponseUserAdd) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1258,7 +1182,7 @@ func (x *ResponseUserAdd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserAdd.ProtoReflect.Descriptor instead.
 func (*ResponseUserAdd) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{20}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ResponseUserAdd) GetOk() bool {
@@ -1278,7 +1202,7 @@ type RequestUserEdit struct {
 
 func (x *RequestUserEdit) Reset() {
 	*x = RequestUserEdit{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1290,7 +1214,7 @@ func (x *RequestUserEdit) String() string {
 func (*RequestUserEdit) ProtoMessage() {}
 
 func (x *RequestUserEdit) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1303,7 +1227,7 @@ func (x *RequestUserEdit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserEdit.ProtoReflect.Descriptor instead.
 func (*RequestUserEdit) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{21}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RequestUserEdit) GetId() string {
@@ -1329,7 +1253,7 @@ type ResponseUserEdit struct {
 
 func (x *ResponseUserEdit) Reset() {
 	*x = ResponseUserEdit{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1341,7 +1265,7 @@ func (x *ResponseUserEdit) String() string {
 func (*ResponseUserEdit) ProtoMessage() {}
 
 func (x *ResponseUserEdit) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1354,7 +1278,7 @@ func (x *ResponseUserEdit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserEdit.ProtoReflect.Descriptor instead.
 func (*ResponseUserEdit) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{22}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ResponseUserEdit) GetOk() bool {
@@ -1374,7 +1298,7 @@ type RequestUserDel struct {
 
 func (x *RequestUserDel) Reset() {
 	*x = RequestUserDel{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1386,7 +1310,7 @@ func (x *RequestUserDel) String() string {
 func (*RequestUserDel) ProtoMessage() {}
 
 func (x *RequestUserDel) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1399,7 +1323,7 @@ func (x *RequestUserDel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserDel.ProtoReflect.Descriptor instead.
 func (*RequestUserDel) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{23}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RequestUserDel) GetId() string {
@@ -1425,7 +1349,7 @@ type ResponseUserDel struct {
 
 func (x *ResponseUserDel) Reset() {
 	*x = ResponseUserDel{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1437,7 +1361,7 @@ func (x *ResponseUserDel) String() string {
 func (*ResponseUserDel) ProtoMessage() {}
 
 func (x *ResponseUserDel) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1450,7 +1374,7 @@ func (x *ResponseUserDel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserDel.ProtoReflect.Descriptor instead.
 func (*ResponseUserDel) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{24}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ResponseUserDel) GetOk() bool {
@@ -1463,14 +1387,13 @@ func (x *ResponseUserDel) GetOk() bool {
 type RequestUserGet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	WithTokens    bool                   `protobuf:"varint,2,opt,name=with_tokens,json=withTokens,proto3" json:"with_tokens,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RequestUserGet) Reset() {
 	*x = RequestUserGet{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1482,7 +1405,7 @@ func (x *RequestUserGet) String() string {
 func (*RequestUserGet) ProtoMessage() {}
 
 func (x *RequestUserGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1495,7 +1418,7 @@ func (x *RequestUserGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUserGet.ProtoReflect.Descriptor instead.
 func (*RequestUserGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{25}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *RequestUserGet) GetId() string {
@@ -1503,13 +1426,6 @@ func (x *RequestUserGet) GetId() string {
 		return x.Id
 	}
 	return ""
-}
-
-func (x *RequestUserGet) GetWithTokens() bool {
-	if x != nil {
-		return x.WithTokens
-	}
-	return false
 }
 
 type ResponseUserGet struct {
@@ -1522,7 +1438,7 @@ type ResponseUserGet struct {
 
 func (x *ResponseUserGet) Reset() {
 	*x = ResponseUserGet{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1534,7 +1450,7 @@ func (x *ResponseUserGet) String() string {
 func (*ResponseUserGet) ProtoMessage() {}
 
 func (x *ResponseUserGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1547,7 +1463,7 @@ func (x *ResponseUserGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseUserGet.ProtoReflect.Descriptor instead.
 func (*ResponseUserGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{26}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ResponseUserGet) GetUser() *UserItem {
@@ -1574,7 +1490,7 @@ type RequestBecomeMaintainer struct {
 
 func (x *RequestBecomeMaintainer) Reset() {
 	*x = RequestBecomeMaintainer{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1586,7 +1502,7 @@ func (x *RequestBecomeMaintainer) String() string {
 func (*RequestBecomeMaintainer) ProtoMessage() {}
 
 func (x *RequestBecomeMaintainer) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1599,7 +1515,7 @@ func (x *RequestBecomeMaintainer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestBecomeMaintainer.ProtoReflect.Descriptor instead.
 func (*RequestBecomeMaintainer) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{27}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RequestBecomeMaintainer) GetId() string {
@@ -1625,7 +1541,7 @@ type ResponseBecomeMaintainer struct {
 
 func (x *ResponseBecomeMaintainer) Reset() {
 	*x = ResponseBecomeMaintainer{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1637,7 +1553,7 @@ func (x *ResponseBecomeMaintainer) String() string {
 func (*ResponseBecomeMaintainer) ProtoMessage() {}
 
 func (x *ResponseBecomeMaintainer) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1650,7 +1566,7 @@ func (x *ResponseBecomeMaintainer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseBecomeMaintainer.ProtoReflect.Descriptor instead.
 func (*ResponseBecomeMaintainer) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{28}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ResponseBecomeMaintainer) GetOk() bool {
@@ -1669,7 +1585,7 @@ type RequestToggleAdmin struct {
 
 func (x *RequestToggleAdmin) Reset() {
 	*x = RequestToggleAdmin{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1681,7 +1597,7 @@ func (x *RequestToggleAdmin) String() string {
 func (*RequestToggleAdmin) ProtoMessage() {}
 
 func (x *RequestToggleAdmin) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1694,7 +1610,7 @@ func (x *RequestToggleAdmin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestToggleAdmin.ProtoReflect.Descriptor instead.
 func (*RequestToggleAdmin) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{29}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *RequestToggleAdmin) GetId() string {
@@ -1713,7 +1629,7 @@ type ResponseToggleAdmin struct {
 
 func (x *ResponseToggleAdmin) Reset() {
 	*x = ResponseToggleAdmin{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +1641,7 @@ func (x *ResponseToggleAdmin) String() string {
 func (*ResponseToggleAdmin) ProtoMessage() {}
 
 func (x *ResponseToggleAdmin) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +1654,7 @@ func (x *ResponseToggleAdmin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseToggleAdmin.ProtoReflect.Descriptor instead.
 func (*ResponseToggleAdmin) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{30}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ResponseToggleAdmin) GetOk() bool {
@@ -1746,102 +1662,6 @@ func (x *ResponseToggleAdmin) GetOk() bool {
 		return x.Ok
 	}
 	return false
-}
-
-type RequestTokenNew struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RequestTokenNew) Reset() {
-	*x = RequestTokenNew{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RequestTokenNew) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RequestTokenNew) ProtoMessage() {}
-
-func (x *RequestTokenNew) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RequestTokenNew.ProtoReflect.Descriptor instead.
-func (*RequestTokenNew) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{31}
-}
-
-func (x *RequestTokenNew) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *RequestTokenNew) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type ResponseTokenNew struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Item          *AccessTokenItem       `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ResponseTokenNew) Reset() {
-	*x = ResponseTokenNew{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ResponseTokenNew) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ResponseTokenNew) ProtoMessage() {}
-
-func (x *ResponseTokenNew) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ResponseTokenNew.ProtoReflect.Descriptor instead.
-func (*ResponseTokenNew) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *ResponseTokenNew) GetItem() *AccessTokenItem {
-	if x != nil {
-		return x.Item
-	}
-	return nil
 }
 
 type RequestRoleList struct {
@@ -1852,7 +1672,7 @@ type RequestRoleList struct {
 
 func (x *RequestRoleList) Reset() {
 	*x = RequestRoleList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1864,7 +1684,7 @@ func (x *RequestRoleList) String() string {
 func (*RequestRoleList) ProtoMessage() {}
 
 func (x *RequestRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1877,7 +1697,7 @@ func (x *RequestRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestRoleList.ProtoReflect.Descriptor instead.
 func (*RequestRoleList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{33}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{30}
 }
 
 type ResponseRoleList struct {
@@ -1889,7 +1709,7 @@ type ResponseRoleList struct {
 
 func (x *ResponseRoleList) Reset() {
 	*x = ResponseRoleList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1901,7 +1721,7 @@ func (x *ResponseRoleList) String() string {
 func (*ResponseRoleList) ProtoMessage() {}
 
 func (x *ResponseRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1914,7 +1734,7 @@ func (x *ResponseRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseRoleList.ProtoReflect.Descriptor instead.
 func (*ResponseRoleList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{34}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ResponseRoleList) GetItems() []*RoleItem {
@@ -1933,7 +1753,7 @@ type RequestBackendList struct {
 
 func (x *RequestBackendList) Reset() {
 	*x = RequestBackendList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1945,7 +1765,7 @@ func (x *RequestBackendList) String() string {
 func (*RequestBackendList) ProtoMessage() {}
 
 func (x *RequestBackendList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1958,7 +1778,7 @@ func (x *RequestBackendList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestBackendList.ProtoReflect.Descriptor instead.
 func (*RequestBackendList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{35}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RequestBackendList) GetAgent() bool {
@@ -1977,7 +1797,7 @@ type ResponseBackendList struct {
 
 func (x *ResponseBackendList) Reset() {
 	*x = ResponseBackendList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1989,7 +1809,7 @@ func (x *ResponseBackendList) String() string {
 func (*ResponseBackendList) ProtoMessage() {}
 
 func (x *ResponseBackendList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2002,7 +1822,7 @@ func (x *ResponseBackendList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseBackendList.ProtoReflect.Descriptor instead.
 func (*ResponseBackendList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{36}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ResponseBackendList) GetItems() []*BackendItem {
@@ -2022,7 +1842,7 @@ type RequestGetSignedList struct {
 
 func (x *RequestGetSignedList) Reset() {
 	*x = RequestGetSignedList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2034,7 +1854,7 @@ func (x *RequestGetSignedList) String() string {
 func (*RequestGetSignedList) ProtoMessage() {}
 
 func (x *RequestGetSignedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2047,7 +1867,7 @@ func (x *RequestGetSignedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetSignedList.ProtoReflect.Descriptor instead.
 func (*RequestGetSignedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{37}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *RequestGetSignedList) GetCommonName() string {
@@ -2073,7 +1893,7 @@ type ResponseGetSignedList struct {
 
 func (x *ResponseGetSignedList) Reset() {
 	*x = ResponseGetSignedList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2085,7 +1905,7 @@ func (x *ResponseGetSignedList) String() string {
 func (*ResponseGetSignedList) ProtoMessage() {}
 
 func (x *ResponseGetSignedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2098,7 +1918,7 @@ func (x *ResponseGetSignedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetSignedList.ProtoReflect.Descriptor instead.
 func (*ResponseGetSignedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{38}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ResponseGetSignedList) GetItems() []*CertItem {
@@ -2125,7 +1945,7 @@ type RequestNewClientCert struct {
 
 func (x *RequestNewClientCert) Reset() {
 	*x = RequestNewClientCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2137,7 +1957,7 @@ func (x *RequestNewClientCert) String() string {
 func (*RequestNewClientCert) ProtoMessage() {}
 
 func (x *RequestNewClientCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2150,7 +1970,7 @@ func (x *RequestNewClientCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestNewClientCert.ProtoReflect.Descriptor instead.
 func (*RequestNewClientCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{39}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RequestNewClientCert) GetCommonName() string {
@@ -2226,7 +2046,7 @@ type ResponseNewClientCert struct {
 
 func (x *ResponseNewClientCert) Reset() {
 	*x = ResponseNewClientCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2238,7 +2058,7 @@ func (x *ResponseNewClientCert) String() string {
 func (*ResponseNewClientCert) ProtoMessage() {}
 
 func (x *ResponseNewClientCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2251,7 +2071,7 @@ func (x *ResponseNewClientCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseNewClientCert.ProtoReflect.Descriptor instead.
 func (*ResponseNewClientCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{40}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ResponseNewClientCert) GetOk() bool {
@@ -2277,7 +2097,7 @@ type CARequestRevoke struct {
 
 func (x *CARequestRevoke) Reset() {
 	*x = CARequestRevoke{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2289,7 +2109,7 @@ func (x *CARequestRevoke) String() string {
 func (*CARequestRevoke) ProtoMessage() {}
 
 func (x *CARequestRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2302,7 +2122,7 @@ func (x *CARequestRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CARequestRevoke.ProtoReflect.Descriptor instead.
 func (*CARequestRevoke) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{41}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CARequestRevoke) GetSerialNumber() []byte {
@@ -2321,7 +2141,7 @@ type CAResponseRevoke struct {
 
 func (x *CAResponseRevoke) Reset() {
 	*x = CAResponseRevoke{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2333,7 +2153,7 @@ func (x *CAResponseRevoke) String() string {
 func (*CAResponseRevoke) ProtoMessage() {}
 
 func (x *CAResponseRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2346,7 +2166,7 @@ func (x *CAResponseRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CAResponseRevoke.ProtoReflect.Descriptor instead.
 func (*CAResponseRevoke) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{42}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CAResponseRevoke) GetOk() bool {
@@ -2365,7 +2185,7 @@ type CARequestGet struct {
 
 func (x *CARequestGet) Reset() {
 	*x = CARequestGet{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2377,7 +2197,7 @@ func (x *CARequestGet) String() string {
 func (*CARequestGet) ProtoMessage() {}
 
 func (x *CARequestGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2390,7 +2210,7 @@ func (x *CARequestGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CARequestGet.ProtoReflect.Descriptor instead.
 func (*CARequestGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{43}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CARequestGet) GetSerialNumber() []byte {
@@ -2409,7 +2229,7 @@ type CAResponseGet struct {
 
 func (x *CAResponseGet) Reset() {
 	*x = CAResponseGet{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2421,7 +2241,7 @@ func (x *CAResponseGet) String() string {
 func (*CAResponseGet) ProtoMessage() {}
 
 func (x *CAResponseGet) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2434,7 +2254,7 @@ func (x *CAResponseGet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CAResponseGet.ProtoReflect.Descriptor instead.
 func (*CAResponseGet) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{44}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *CAResponseGet) GetItem() *CertItem {
@@ -2452,7 +2272,7 @@ type RequestGetRevokedList struct {
 
 func (x *RequestGetRevokedList) Reset() {
 	*x = RequestGetRevokedList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2464,7 +2284,7 @@ func (x *RequestGetRevokedList) String() string {
 func (*RequestGetRevokedList) ProtoMessage() {}
 
 func (x *RequestGetRevokedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2477,7 +2297,7 @@ func (x *RequestGetRevokedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetRevokedList.ProtoReflect.Descriptor instead.
 func (*RequestGetRevokedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{45}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{42}
 }
 
 type ResponseGetRevokedList struct {
@@ -2489,7 +2309,7 @@ type ResponseGetRevokedList struct {
 
 func (x *ResponseGetRevokedList) Reset() {
 	*x = ResponseGetRevokedList{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2501,7 +2321,7 @@ func (x *ResponseGetRevokedList) String() string {
 func (*ResponseGetRevokedList) ProtoMessage() {}
 
 func (x *ResponseGetRevokedList) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2514,7 +2334,7 @@ func (x *ResponseGetRevokedList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetRevokedList.ProtoReflect.Descriptor instead.
 func (*ResponseGetRevokedList) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{46}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ResponseGetRevokedList) GetItems() []*CertItem {
@@ -2532,7 +2352,7 @@ type RequestWatchRevokedCert struct {
 
 func (x *RequestWatchRevokedCert) Reset() {
 	*x = RequestWatchRevokedCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2544,7 +2364,7 @@ func (x *RequestWatchRevokedCert) String() string {
 func (*RequestWatchRevokedCert) ProtoMessage() {}
 
 func (x *RequestWatchRevokedCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2557,7 +2377,7 @@ func (x *RequestWatchRevokedCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWatchRevokedCert.ProtoReflect.Descriptor instead.
 func (*RequestWatchRevokedCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{47}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{44}
 }
 
 type ResponseWatchRevokedCert struct {
@@ -2570,7 +2390,7 @@ type ResponseWatchRevokedCert struct {
 
 func (x *ResponseWatchRevokedCert) Reset() {
 	*x = ResponseWatchRevokedCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2582,7 +2402,7 @@ func (x *ResponseWatchRevokedCert) String() string {
 func (*ResponseWatchRevokedCert) ProtoMessage() {}
 
 func (x *ResponseWatchRevokedCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2595,7 +2415,7 @@ func (x *ResponseWatchRevokedCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseWatchRevokedCert.ProtoReflect.Descriptor instead.
 func (*ResponseWatchRevokedCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{48}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ResponseWatchRevokedCert) GetItems() []*CertItem {
@@ -2621,7 +2441,7 @@ type RequestNewServerCert struct {
 
 func (x *RequestNewServerCert) Reset() {
 	*x = RequestNewServerCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2633,7 +2453,7 @@ func (x *RequestNewServerCert) String() string {
 func (*RequestNewServerCert) ProtoMessage() {}
 
 func (x *RequestNewServerCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2646,7 +2466,7 @@ func (x *RequestNewServerCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestNewServerCert.ProtoReflect.Descriptor instead.
 func (*RequestNewServerCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{49}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *RequestNewServerCert) GetSigningRequest() []byte {
@@ -2665,7 +2485,7 @@ type ResponseNewServerCert struct {
 
 func (x *ResponseNewServerCert) Reset() {
 	*x = ResponseNewServerCert{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2677,7 +2497,7 @@ func (x *ResponseNewServerCert) String() string {
 func (*ResponseNewServerCert) ProtoMessage() {}
 
 func (x *ResponseNewServerCert) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2690,7 +2510,7 @@ func (x *ResponseNewServerCert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseNewServerCert.ProtoReflect.Descriptor instead.
 func (*ResponseNewServerCert) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{50}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ResponseNewServerCert) GetCertificate() []byte {
@@ -2709,7 +2529,7 @@ type RequestSignRequest struct {
 
 func (x *RequestSignRequest) Reset() {
 	*x = RequestSignRequest{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2721,7 +2541,7 @@ func (x *RequestSignRequest) String() string {
 func (*RequestSignRequest) ProtoMessage() {}
 
 func (x *RequestSignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2734,7 +2554,7 @@ func (x *RequestSignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestSignRequest.ProtoReflect.Descriptor instead.
 func (*RequestSignRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{51}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *RequestSignRequest) GetUserId() string {
@@ -2753,7 +2573,7 @@ type ResponseSignResponse struct {
 
 func (x *ResponseSignResponse) Reset() {
 	*x = ResponseSignResponse{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2765,7 +2585,7 @@ func (x *ResponseSignResponse) String() string {
 func (*ResponseSignResponse) ProtoMessage() {}
 
 func (x *ResponseSignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2778,7 +2598,7 @@ func (x *ResponseSignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseSignResponse.ProtoReflect.Descriptor instead.
 func (*ResponseSignResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{52}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ResponseSignResponse) GetToken() string {
@@ -2796,7 +2616,7 @@ type RequestGetPublicKey struct {
 
 func (x *RequestGetPublicKey) Reset() {
 	*x = RequestGetPublicKey{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2808,7 +2628,7 @@ func (x *RequestGetPublicKey) String() string {
 func (*RequestGetPublicKey) ProtoMessage() {}
 
 func (x *RequestGetPublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2821,7 +2641,7 @@ func (x *RequestGetPublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetPublicKey.ProtoReflect.Descriptor instead.
 func (*RequestGetPublicKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{53}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{50}
 }
 
 type ResponseGetPublicKey struct {
@@ -2833,7 +2653,7 @@ type ResponseGetPublicKey struct {
 
 func (x *ResponseGetPublicKey) Reset() {
 	*x = ResponseGetPublicKey{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2845,7 +2665,7 @@ func (x *ResponseGetPublicKey) String() string {
 func (*ResponseGetPublicKey) ProtoMessage() {}
 
 func (x *ResponseGetPublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2858,7 +2678,7 @@ func (x *ResponseGetPublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetPublicKey.ProtoReflect.Descriptor instead.
 func (*ResponseGetPublicKey) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{54}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ResponseGetPublicKey) GetPublicKey() []byte {
@@ -2877,7 +2697,7 @@ type ErrorUnauthorized struct {
 
 func (x *ErrorUnauthorized) Reset() {
 	*x = ErrorUnauthorized{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2889,7 +2709,7 @@ func (x *ErrorUnauthorized) String() string {
 func (*ErrorUnauthorized) ProtoMessage() {}
 
 func (x *ErrorUnauthorized) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[55]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2902,7 +2722,7 @@ func (x *ErrorUnauthorized) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorUnauthorized.ProtoReflect.Descriptor instead.
 func (*ErrorUnauthorized) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{55}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ErrorUnauthorized) GetEndpoint() string {
@@ -2920,7 +2740,7 @@ type RequestGetBackends struct {
 
 func (x *RequestGetBackends) Reset() {
 	*x = RequestGetBackends{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2932,7 +2752,7 @@ func (x *RequestGetBackends) String() string {
 func (*RequestGetBackends) ProtoMessage() {}
 
 func (x *RequestGetBackends) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[56]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2945,7 +2765,7 @@ func (x *RequestGetBackends) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGetBackends.ProtoReflect.Descriptor instead.
 func (*RequestGetBackends) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{56}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{53}
 }
 
 type ResponseGetBackends struct {
@@ -2957,7 +2777,7 @@ type ResponseGetBackends struct {
 
 func (x *ResponseGetBackends) Reset() {
 	*x = ResponseGetBackends{}
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2969,7 +2789,7 @@ func (x *ResponseGetBackends) String() string {
 func (*ResponseGetBackends) ProtoMessage() {}
 
 func (x *ResponseGetBackends) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_rpc_rpc_proto_msgTypes[57]
+	mi := &file_pkg_rpc_rpc_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2982,7 +2802,7 @@ func (x *ResponseGetBackends) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseGetBackends.ProtoReflect.Descriptor instead.
 func (*ResponseGetBackends) Descriptor() ([]byte, []int) {
-	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{57}
+	return file_pkg_rpc_rpc_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ResponseGetBackends) GetItems() []*BackendItem {
@@ -3014,24 +2834,18 @@ const file_pkg_rpc_rpc_proto_rawDesc = "" +
 	"\x11ResponseAgentList\x12&\n" +
 	"\x05items\x18\x01 \x03(\v2\x10.proxy.rpc.AgentR\x05items\"\x1f\n" +
 	"\rClusterMember\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xbe\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x90\x02\n" +
 	"\bUserItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05roles\x18\x02 \x03(\tR\x05roles\x12%\n" +
 	"\x0emaintain_roles\x18\x03 \x03(\tR\rmaintainRoles\x12\x14\n" +
 	"\x05admin\x18\x04 \x01(\bR\x05admin\x12'\n" +
 	"\x04type\x18\x05 \x01(\x0e2\x13.proxy.rpc.UserTypeR\x04type\x12\x18\n" +
-	"\acomment\x18\x06 \x01(\tR\acomment\x122\n" +
-	"\x06tokens\x18\a \x03(\v2\x1a.proxy.rpc.AccessTokenItemR\x06tokens\x12\x1d\n" +
+	"\acomment\x18\x06 \x01(\tR\acomment\x12\x1d\n" +
 	"\n" +
 	"login_name\x18\b \x01(\tR\tloginName\x129\n" +
 	"\n" +
-	"last_login\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tlastLogin\"\x8c\x01\n" +
-	"\x0fAccessTokenItem\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
-	"\x06issuer\x18\x03 \x01(\tR\x06issuer\x127\n" +
-	"\tissued_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\"\x8a\x01\n" +
+	"last_login\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tlastLoginJ\x04\b\a\x10\b\"\x8a\x01\n" +
 	"\bRoleItem\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -3089,11 +2903,9 @@ const file_pkg_rpc_rpc_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\"!\n" +
 	"\x0fResponseUserDel\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok\"A\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\"&\n" +
 	"\x0eRequestUserGet\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vwith_tokens\x18\x02 \x01(\bR\n" +
-	"withTokens\"J\n" +
+	"\x02id\x18\x01 \x01(\tR\x02idJ\x04\b\x02\x10\x03\"J\n" +
 	"\x0fResponseUserGet\x12'\n" +
 	"\x04user\x18\x01 \x01(\v2\x13.proxy.rpc.UserItemR\x04user\x12\x0e\n" +
 	"\x02ok\x18\x02 \x01(\bR\x02ok\"=\n" +
@@ -3105,12 +2917,7 @@ const file_pkg_rpc_rpc_proto_rawDesc = "" +
 	"\x12RequestToggleAdmin\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"%\n" +
 	"\x13ResponseToggleAdmin\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok\">\n" +
-	"\x0fRequestTokenNew\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"B\n" +
-	"\x10ResponseTokenNew\x12.\n" +
-	"\x04item\x18\x01 \x01(\v2\x1a.proxy.rpc.AccessTokenItemR\x04item\"\x11\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\"\x11\n" +
 	"\x0fRequestRoleList\"=\n" +
 	"\x10ResponseRoleList\x12)\n" +
 	"\x05items\x18\x01 \x03(\v2\x13.proxy.rpc.RoleItemR\x05items\"*\n" +
@@ -3179,7 +2986,7 @@ const file_pkg_rpc_rpc_proto_rawDesc = "" +
 	"MemberList\x12\x1c.proxy.rpc.RequestMemberList\x1a\x1d.proxy.rpc.ResponseMemberList\x12I\n" +
 	"\n" +
 	"MemberStat\x12\x1c.proxy.rpc.RequestMemberStat\x1a\x1d.proxy.rpc.ResponseMemberStat\x12F\n" +
-	"\tAgentList\x12\x1b.proxy.rpc.RequestAgentList\x1a\x1c.proxy.rpc.ResponseAgentList2\x93\x06\n" +
+	"\tAgentList\x12\x1b.proxy.rpc.RequestAgentList\x1a\x1c.proxy.rpc.ResponseAgentList2\xce\x05\n" +
 	"\x05Admin\x127\n" +
 	"\x04Ping\x12\x16.proxy.rpc.RequestPing\x1a\x17.proxy.rpc.ResponsePong\x12C\n" +
 	"\bUserList\x12\x1a.proxy.rpc.RequestUserList\x1a\x1b.proxy.rpc.ResponseUserList\x12@\n" +
@@ -3189,7 +2996,6 @@ const file_pkg_rpc_rpc_proto_rawDesc = "" +
 	"\aUserGet\x12\x19.proxy.rpc.RequestUserGet\x1a\x1a.proxy.rpc.ResponseUserGet\x12[\n" +
 	"\x10BecomeMaintainer\x12\".proxy.rpc.RequestBecomeMaintainer\x1a#.proxy.rpc.ResponseBecomeMaintainer\x12L\n" +
 	"\vToggleAdmin\x12\x1d.proxy.rpc.RequestToggleAdmin\x1a\x1e.proxy.rpc.ResponseToggleAdmin\x12C\n" +
-	"\bTokenNew\x12\x1a.proxy.rpc.RequestTokenNew\x1a\x1b.proxy.rpc.ResponseTokenNew\x12C\n" +
 	"\bRoleList\x12\x1a.proxy.rpc.RequestRoleList\x1a\x1b.proxy.rpc.ResponseRoleList\x12L\n" +
 	"\vBackendList\x12\x1d.proxy.rpc.RequestBackendList\x1a\x1e.proxy.rpc.ResponseBackendList2\xc5\x04\n" +
 	"\x14CertificateAuthority\x12R\n" +
@@ -3216,7 +3022,7 @@ func file_pkg_rpc_rpc_proto_rawDescGZIP() []byte {
 }
 
 var file_pkg_rpc_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pkg_rpc_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
+var file_pkg_rpc_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_pkg_rpc_rpc_proto_goTypes = []any{
 	(UserType)(0),                    // 0: proxy.rpc.UserType
 	(*RequestPing)(nil),              // 1: proxy.rpc.RequestPing
@@ -3229,130 +3035,122 @@ var file_pkg_rpc_rpc_proto_goTypes = []any{
 	(*ResponseAgentList)(nil),        // 8: proxy.rpc.ResponseAgentList
 	(*ClusterMember)(nil),            // 9: proxy.rpc.ClusterMember
 	(*UserItem)(nil),                 // 10: proxy.rpc.UserItem
-	(*AccessTokenItem)(nil),          // 11: proxy.rpc.AccessTokenItem
-	(*RoleItem)(nil),                 // 12: proxy.rpc.RoleItem
-	(*BackendItem)(nil),              // 13: proxy.rpc.BackendItem
-	(*HTTPBackend)(nil),              // 14: proxy.rpc.HTTPBackend
-	(*SocketBackend)(nil),            // 15: proxy.rpc.SocketBackend
-	(*CertItem)(nil),                 // 16: proxy.rpc.CertItem
-	(*Agent)(nil),                    // 17: proxy.rpc.Agent
-	(*RequestUserList)(nil),          // 18: proxy.rpc.RequestUserList
-	(*ResponseUserList)(nil),         // 19: proxy.rpc.ResponseUserList
-	(*RequestUserAdd)(nil),           // 20: proxy.rpc.RequestUserAdd
-	(*ResponseUserAdd)(nil),          // 21: proxy.rpc.ResponseUserAdd
-	(*RequestUserEdit)(nil),          // 22: proxy.rpc.RequestUserEdit
-	(*ResponseUserEdit)(nil),         // 23: proxy.rpc.ResponseUserEdit
-	(*RequestUserDel)(nil),           // 24: proxy.rpc.RequestUserDel
-	(*ResponseUserDel)(nil),          // 25: proxy.rpc.ResponseUserDel
-	(*RequestUserGet)(nil),           // 26: proxy.rpc.RequestUserGet
-	(*ResponseUserGet)(nil),          // 27: proxy.rpc.ResponseUserGet
-	(*RequestBecomeMaintainer)(nil),  // 28: proxy.rpc.RequestBecomeMaintainer
-	(*ResponseBecomeMaintainer)(nil), // 29: proxy.rpc.ResponseBecomeMaintainer
-	(*RequestToggleAdmin)(nil),       // 30: proxy.rpc.RequestToggleAdmin
-	(*ResponseToggleAdmin)(nil),      // 31: proxy.rpc.ResponseToggleAdmin
-	(*RequestTokenNew)(nil),          // 32: proxy.rpc.RequestTokenNew
-	(*ResponseTokenNew)(nil),         // 33: proxy.rpc.ResponseTokenNew
-	(*RequestRoleList)(nil),          // 34: proxy.rpc.RequestRoleList
-	(*ResponseRoleList)(nil),         // 35: proxy.rpc.ResponseRoleList
-	(*RequestBackendList)(nil),       // 36: proxy.rpc.RequestBackendList
-	(*ResponseBackendList)(nil),      // 37: proxy.rpc.ResponseBackendList
-	(*RequestGetSignedList)(nil),     // 38: proxy.rpc.RequestGetSignedList
-	(*ResponseGetSignedList)(nil),    // 39: proxy.rpc.ResponseGetSignedList
-	(*RequestNewClientCert)(nil),     // 40: proxy.rpc.RequestNewClientCert
-	(*ResponseNewClientCert)(nil),    // 41: proxy.rpc.ResponseNewClientCert
-	(*CARequestRevoke)(nil),          // 42: proxy.rpc.CARequestRevoke
-	(*CAResponseRevoke)(nil),         // 43: proxy.rpc.CAResponseRevoke
-	(*CARequestGet)(nil),             // 44: proxy.rpc.CARequestGet
-	(*CAResponseGet)(nil),            // 45: proxy.rpc.CAResponseGet
-	(*RequestGetRevokedList)(nil),    // 46: proxy.rpc.RequestGetRevokedList
-	(*ResponseGetRevokedList)(nil),   // 47: proxy.rpc.ResponseGetRevokedList
-	(*RequestWatchRevokedCert)(nil),  // 48: proxy.rpc.RequestWatchRevokedCert
-	(*ResponseWatchRevokedCert)(nil), // 49: proxy.rpc.ResponseWatchRevokedCert
-	(*RequestNewServerCert)(nil),     // 50: proxy.rpc.RequestNewServerCert
-	(*ResponseNewServerCert)(nil),    // 51: proxy.rpc.ResponseNewServerCert
-	(*RequestSignRequest)(nil),       // 52: proxy.rpc.RequestSignRequest
-	(*ResponseSignResponse)(nil),     // 53: proxy.rpc.ResponseSignResponse
-	(*RequestGetPublicKey)(nil),      // 54: proxy.rpc.RequestGetPublicKey
-	(*ResponseGetPublicKey)(nil),     // 55: proxy.rpc.ResponseGetPublicKey
-	(*ErrorUnauthorized)(nil),        // 56: proxy.rpc.ErrorUnauthorized
-	(*RequestGetBackends)(nil),       // 57: proxy.rpc.RequestGetBackends
-	(*ResponseGetBackends)(nil),      // 58: proxy.rpc.ResponseGetBackends
-	(*timestamppb.Timestamp)(nil),    // 59: google.protobuf.Timestamp
+	(*RoleItem)(nil),                 // 11: proxy.rpc.RoleItem
+	(*BackendItem)(nil),              // 12: proxy.rpc.BackendItem
+	(*HTTPBackend)(nil),              // 13: proxy.rpc.HTTPBackend
+	(*SocketBackend)(nil),            // 14: proxy.rpc.SocketBackend
+	(*CertItem)(nil),                 // 15: proxy.rpc.CertItem
+	(*Agent)(nil),                    // 16: proxy.rpc.Agent
+	(*RequestUserList)(nil),          // 17: proxy.rpc.RequestUserList
+	(*ResponseUserList)(nil),         // 18: proxy.rpc.ResponseUserList
+	(*RequestUserAdd)(nil),           // 19: proxy.rpc.RequestUserAdd
+	(*ResponseUserAdd)(nil),          // 20: proxy.rpc.ResponseUserAdd
+	(*RequestUserEdit)(nil),          // 21: proxy.rpc.RequestUserEdit
+	(*ResponseUserEdit)(nil),         // 22: proxy.rpc.ResponseUserEdit
+	(*RequestUserDel)(nil),           // 23: proxy.rpc.RequestUserDel
+	(*ResponseUserDel)(nil),          // 24: proxy.rpc.ResponseUserDel
+	(*RequestUserGet)(nil),           // 25: proxy.rpc.RequestUserGet
+	(*ResponseUserGet)(nil),          // 26: proxy.rpc.ResponseUserGet
+	(*RequestBecomeMaintainer)(nil),  // 27: proxy.rpc.RequestBecomeMaintainer
+	(*ResponseBecomeMaintainer)(nil), // 28: proxy.rpc.ResponseBecomeMaintainer
+	(*RequestToggleAdmin)(nil),       // 29: proxy.rpc.RequestToggleAdmin
+	(*ResponseToggleAdmin)(nil),      // 30: proxy.rpc.ResponseToggleAdmin
+	(*RequestRoleList)(nil),          // 31: proxy.rpc.RequestRoleList
+	(*ResponseRoleList)(nil),         // 32: proxy.rpc.ResponseRoleList
+	(*RequestBackendList)(nil),       // 33: proxy.rpc.RequestBackendList
+	(*ResponseBackendList)(nil),      // 34: proxy.rpc.ResponseBackendList
+	(*RequestGetSignedList)(nil),     // 35: proxy.rpc.RequestGetSignedList
+	(*ResponseGetSignedList)(nil),    // 36: proxy.rpc.ResponseGetSignedList
+	(*RequestNewClientCert)(nil),     // 37: proxy.rpc.RequestNewClientCert
+	(*ResponseNewClientCert)(nil),    // 38: proxy.rpc.ResponseNewClientCert
+	(*CARequestRevoke)(nil),          // 39: proxy.rpc.CARequestRevoke
+	(*CAResponseRevoke)(nil),         // 40: proxy.rpc.CAResponseRevoke
+	(*CARequestGet)(nil),             // 41: proxy.rpc.CARequestGet
+	(*CAResponseGet)(nil),            // 42: proxy.rpc.CAResponseGet
+	(*RequestGetRevokedList)(nil),    // 43: proxy.rpc.RequestGetRevokedList
+	(*ResponseGetRevokedList)(nil),   // 44: proxy.rpc.ResponseGetRevokedList
+	(*RequestWatchRevokedCert)(nil),  // 45: proxy.rpc.RequestWatchRevokedCert
+	(*ResponseWatchRevokedCert)(nil), // 46: proxy.rpc.ResponseWatchRevokedCert
+	(*RequestNewServerCert)(nil),     // 47: proxy.rpc.RequestNewServerCert
+	(*ResponseNewServerCert)(nil),    // 48: proxy.rpc.ResponseNewServerCert
+	(*RequestSignRequest)(nil),       // 49: proxy.rpc.RequestSignRequest
+	(*ResponseSignResponse)(nil),     // 50: proxy.rpc.ResponseSignResponse
+	(*RequestGetPublicKey)(nil),      // 51: proxy.rpc.RequestGetPublicKey
+	(*ResponseGetPublicKey)(nil),     // 52: proxy.rpc.ResponseGetPublicKey
+	(*ErrorUnauthorized)(nil),        // 53: proxy.rpc.ErrorUnauthorized
+	(*RequestGetBackends)(nil),       // 54: proxy.rpc.RequestGetBackends
+	(*ResponseGetBackends)(nil),      // 55: proxy.rpc.ResponseGetBackends
+	(*timestamppb.Timestamp)(nil),    // 56: google.protobuf.Timestamp
 }
 var file_pkg_rpc_rpc_proto_depIdxs = []int32{
 	9,  // 0: proxy.rpc.ResponseMemberList.items:type_name -> proxy.rpc.ClusterMember
-	17, // 1: proxy.rpc.ResponseAgentList.items:type_name -> proxy.rpc.Agent
+	16, // 1: proxy.rpc.ResponseAgentList.items:type_name -> proxy.rpc.Agent
 	0,  // 2: proxy.rpc.UserItem.type:type_name -> proxy.rpc.UserType
-	11, // 3: proxy.rpc.UserItem.tokens:type_name -> proxy.rpc.AccessTokenItem
-	59, // 4: proxy.rpc.UserItem.last_login:type_name -> google.protobuf.Timestamp
-	59, // 5: proxy.rpc.AccessTokenItem.issued_at:type_name -> google.protobuf.Timestamp
-	14, // 6: proxy.rpc.BackendItem.http_backends:type_name -> proxy.rpc.HTTPBackend
-	15, // 7: proxy.rpc.BackendItem.socket_backend:type_name -> proxy.rpc.SocketBackend
-	59, // 8: proxy.rpc.CertItem.issued_at:type_name -> google.protobuf.Timestamp
-	59, // 9: proxy.rpc.CertItem.revoked_at:type_name -> google.protobuf.Timestamp
-	59, // 10: proxy.rpc.Agent.connected_at:type_name -> google.protobuf.Timestamp
-	10, // 11: proxy.rpc.ResponseUserList.items:type_name -> proxy.rpc.UserItem
-	0,  // 12: proxy.rpc.RequestUserAdd.type:type_name -> proxy.rpc.UserType
-	10, // 13: proxy.rpc.RequestUserEdit.user:type_name -> proxy.rpc.UserItem
-	10, // 14: proxy.rpc.ResponseUserGet.user:type_name -> proxy.rpc.UserItem
-	11, // 15: proxy.rpc.ResponseTokenNew.item:type_name -> proxy.rpc.AccessTokenItem
-	12, // 16: proxy.rpc.ResponseRoleList.items:type_name -> proxy.rpc.RoleItem
-	13, // 17: proxy.rpc.ResponseBackendList.items:type_name -> proxy.rpc.BackendItem
-	16, // 18: proxy.rpc.ResponseGetSignedList.items:type_name -> proxy.rpc.CertItem
-	16, // 19: proxy.rpc.ResponseNewClientCert.certificate:type_name -> proxy.rpc.CertItem
-	16, // 20: proxy.rpc.CAResponseGet.item:type_name -> proxy.rpc.CertItem
-	16, // 21: proxy.rpc.ResponseGetRevokedList.items:type_name -> proxy.rpc.CertItem
-	16, // 22: proxy.rpc.ResponseWatchRevokedCert.items:type_name -> proxy.rpc.CertItem
-	13, // 23: proxy.rpc.ResponseGetBackends.items:type_name -> proxy.rpc.BackendItem
-	3,  // 24: proxy.rpc.Cluster.MemberList:input_type -> proxy.rpc.RequestMemberList
-	5,  // 25: proxy.rpc.Cluster.MemberStat:input_type -> proxy.rpc.RequestMemberStat
-	7,  // 26: proxy.rpc.Cluster.AgentList:input_type -> proxy.rpc.RequestAgentList
-	1,  // 27: proxy.rpc.Admin.Ping:input_type -> proxy.rpc.RequestPing
-	18, // 28: proxy.rpc.Admin.UserList:input_type -> proxy.rpc.RequestUserList
-	20, // 29: proxy.rpc.Admin.UserAdd:input_type -> proxy.rpc.RequestUserAdd
-	22, // 30: proxy.rpc.Admin.UserEdit:input_type -> proxy.rpc.RequestUserEdit
-	24, // 31: proxy.rpc.Admin.UserDel:input_type -> proxy.rpc.RequestUserDel
-	26, // 32: proxy.rpc.Admin.UserGet:input_type -> proxy.rpc.RequestUserGet
-	28, // 33: proxy.rpc.Admin.BecomeMaintainer:input_type -> proxy.rpc.RequestBecomeMaintainer
-	30, // 34: proxy.rpc.Admin.ToggleAdmin:input_type -> proxy.rpc.RequestToggleAdmin
-	32, // 35: proxy.rpc.Admin.TokenNew:input_type -> proxy.rpc.RequestTokenNew
-	34, // 36: proxy.rpc.Admin.RoleList:input_type -> proxy.rpc.RequestRoleList
-	36, // 37: proxy.rpc.Admin.BackendList:input_type -> proxy.rpc.RequestBackendList
-	38, // 38: proxy.rpc.CertificateAuthority.GetSignedList:input_type -> proxy.rpc.RequestGetSignedList
-	40, // 39: proxy.rpc.CertificateAuthority.NewClientCert:input_type -> proxy.rpc.RequestNewClientCert
-	50, // 40: proxy.rpc.CertificateAuthority.NewServerCert:input_type -> proxy.rpc.RequestNewServerCert
-	42, // 41: proxy.rpc.CertificateAuthority.Revoke:input_type -> proxy.rpc.CARequestRevoke
-	44, // 42: proxy.rpc.CertificateAuthority.Get:input_type -> proxy.rpc.CARequestGet
-	46, // 43: proxy.rpc.CertificateAuthority.GetRevokedList:input_type -> proxy.rpc.RequestGetRevokedList
-	48, // 44: proxy.rpc.CertificateAuthority.WatchRevokedCert:input_type -> proxy.rpc.RequestWatchRevokedCert
-	57, // 45: proxy.rpc.User.GetBackends:input_type -> proxy.rpc.RequestGetBackends
-	4,  // 46: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
-	6,  // 47: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
-	8,  // 48: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
-	2,  // 49: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
-	19, // 50: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
-	21, // 51: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
-	23, // 52: proxy.rpc.Admin.UserEdit:output_type -> proxy.rpc.ResponseUserEdit
-	25, // 53: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
-	27, // 54: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
-	29, // 55: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
-	31, // 56: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
-	33, // 57: proxy.rpc.Admin.TokenNew:output_type -> proxy.rpc.ResponseTokenNew
-	35, // 58: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
-	37, // 59: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
-	39, // 60: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
-	41, // 61: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
-	51, // 62: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
-	43, // 63: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
-	45, // 64: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
-	47, // 65: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
-	49, // 66: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
-	58, // 67: proxy.rpc.User.GetBackends:output_type -> proxy.rpc.ResponseGetBackends
-	46, // [46:68] is the sub-list for method output_type
-	24, // [24:46] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	56, // 3: proxy.rpc.UserItem.last_login:type_name -> google.protobuf.Timestamp
+	13, // 4: proxy.rpc.BackendItem.http_backends:type_name -> proxy.rpc.HTTPBackend
+	14, // 5: proxy.rpc.BackendItem.socket_backend:type_name -> proxy.rpc.SocketBackend
+	56, // 6: proxy.rpc.CertItem.issued_at:type_name -> google.protobuf.Timestamp
+	56, // 7: proxy.rpc.CertItem.revoked_at:type_name -> google.protobuf.Timestamp
+	56, // 8: proxy.rpc.Agent.connected_at:type_name -> google.protobuf.Timestamp
+	10, // 9: proxy.rpc.ResponseUserList.items:type_name -> proxy.rpc.UserItem
+	0,  // 10: proxy.rpc.RequestUserAdd.type:type_name -> proxy.rpc.UserType
+	10, // 11: proxy.rpc.RequestUserEdit.user:type_name -> proxy.rpc.UserItem
+	10, // 12: proxy.rpc.ResponseUserGet.user:type_name -> proxy.rpc.UserItem
+	11, // 13: proxy.rpc.ResponseRoleList.items:type_name -> proxy.rpc.RoleItem
+	12, // 14: proxy.rpc.ResponseBackendList.items:type_name -> proxy.rpc.BackendItem
+	15, // 15: proxy.rpc.ResponseGetSignedList.items:type_name -> proxy.rpc.CertItem
+	15, // 16: proxy.rpc.ResponseNewClientCert.certificate:type_name -> proxy.rpc.CertItem
+	15, // 17: proxy.rpc.CAResponseGet.item:type_name -> proxy.rpc.CertItem
+	15, // 18: proxy.rpc.ResponseGetRevokedList.items:type_name -> proxy.rpc.CertItem
+	15, // 19: proxy.rpc.ResponseWatchRevokedCert.items:type_name -> proxy.rpc.CertItem
+	12, // 20: proxy.rpc.ResponseGetBackends.items:type_name -> proxy.rpc.BackendItem
+	3,  // 21: proxy.rpc.Cluster.MemberList:input_type -> proxy.rpc.RequestMemberList
+	5,  // 22: proxy.rpc.Cluster.MemberStat:input_type -> proxy.rpc.RequestMemberStat
+	7,  // 23: proxy.rpc.Cluster.AgentList:input_type -> proxy.rpc.RequestAgentList
+	1,  // 24: proxy.rpc.Admin.Ping:input_type -> proxy.rpc.RequestPing
+	17, // 25: proxy.rpc.Admin.UserList:input_type -> proxy.rpc.RequestUserList
+	19, // 26: proxy.rpc.Admin.UserAdd:input_type -> proxy.rpc.RequestUserAdd
+	21, // 27: proxy.rpc.Admin.UserEdit:input_type -> proxy.rpc.RequestUserEdit
+	23, // 28: proxy.rpc.Admin.UserDel:input_type -> proxy.rpc.RequestUserDel
+	25, // 29: proxy.rpc.Admin.UserGet:input_type -> proxy.rpc.RequestUserGet
+	27, // 30: proxy.rpc.Admin.BecomeMaintainer:input_type -> proxy.rpc.RequestBecomeMaintainer
+	29, // 31: proxy.rpc.Admin.ToggleAdmin:input_type -> proxy.rpc.RequestToggleAdmin
+	31, // 32: proxy.rpc.Admin.RoleList:input_type -> proxy.rpc.RequestRoleList
+	33, // 33: proxy.rpc.Admin.BackendList:input_type -> proxy.rpc.RequestBackendList
+	35, // 34: proxy.rpc.CertificateAuthority.GetSignedList:input_type -> proxy.rpc.RequestGetSignedList
+	37, // 35: proxy.rpc.CertificateAuthority.NewClientCert:input_type -> proxy.rpc.RequestNewClientCert
+	47, // 36: proxy.rpc.CertificateAuthority.NewServerCert:input_type -> proxy.rpc.RequestNewServerCert
+	39, // 37: proxy.rpc.CertificateAuthority.Revoke:input_type -> proxy.rpc.CARequestRevoke
+	41, // 38: proxy.rpc.CertificateAuthority.Get:input_type -> proxy.rpc.CARequestGet
+	43, // 39: proxy.rpc.CertificateAuthority.GetRevokedList:input_type -> proxy.rpc.RequestGetRevokedList
+	45, // 40: proxy.rpc.CertificateAuthority.WatchRevokedCert:input_type -> proxy.rpc.RequestWatchRevokedCert
+	54, // 41: proxy.rpc.User.GetBackends:input_type -> proxy.rpc.RequestGetBackends
+	4,  // 42: proxy.rpc.Cluster.MemberList:output_type -> proxy.rpc.ResponseMemberList
+	6,  // 43: proxy.rpc.Cluster.MemberStat:output_type -> proxy.rpc.ResponseMemberStat
+	8,  // 44: proxy.rpc.Cluster.AgentList:output_type -> proxy.rpc.ResponseAgentList
+	2,  // 45: proxy.rpc.Admin.Ping:output_type -> proxy.rpc.ResponsePong
+	18, // 46: proxy.rpc.Admin.UserList:output_type -> proxy.rpc.ResponseUserList
+	20, // 47: proxy.rpc.Admin.UserAdd:output_type -> proxy.rpc.ResponseUserAdd
+	22, // 48: proxy.rpc.Admin.UserEdit:output_type -> proxy.rpc.ResponseUserEdit
+	24, // 49: proxy.rpc.Admin.UserDel:output_type -> proxy.rpc.ResponseUserDel
+	26, // 50: proxy.rpc.Admin.UserGet:output_type -> proxy.rpc.ResponseUserGet
+	28, // 51: proxy.rpc.Admin.BecomeMaintainer:output_type -> proxy.rpc.ResponseBecomeMaintainer
+	30, // 52: proxy.rpc.Admin.ToggleAdmin:output_type -> proxy.rpc.ResponseToggleAdmin
+	32, // 53: proxy.rpc.Admin.RoleList:output_type -> proxy.rpc.ResponseRoleList
+	34, // 54: proxy.rpc.Admin.BackendList:output_type -> proxy.rpc.ResponseBackendList
+	36, // 55: proxy.rpc.CertificateAuthority.GetSignedList:output_type -> proxy.rpc.ResponseGetSignedList
+	38, // 56: proxy.rpc.CertificateAuthority.NewClientCert:output_type -> proxy.rpc.ResponseNewClientCert
+	48, // 57: proxy.rpc.CertificateAuthority.NewServerCert:output_type -> proxy.rpc.ResponseNewServerCert
+	40, // 58: proxy.rpc.CertificateAuthority.Revoke:output_type -> proxy.rpc.CAResponseRevoke
+	42, // 59: proxy.rpc.CertificateAuthority.Get:output_type -> proxy.rpc.CAResponseGet
+	44, // 60: proxy.rpc.CertificateAuthority.GetRevokedList:output_type -> proxy.rpc.ResponseGetRevokedList
+	46, // 61: proxy.rpc.CertificateAuthority.WatchRevokedCert:output_type -> proxy.rpc.ResponseWatchRevokedCert
+	55, // 62: proxy.rpc.User.GetBackends:output_type -> proxy.rpc.ResponseGetBackends
+	42, // [42:63] is the sub-list for method output_type
+	21, // [21:42] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_pkg_rpc_rpc_proto_init() }
@@ -3366,7 +3164,7 @@ func file_pkg_rpc_rpc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_rpc_rpc_proto_rawDesc), len(file_pkg_rpc_rpc_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   58,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   4,
 		},
@@ -3544,7 +3342,6 @@ type AdminClient interface {
 	UserGet(ctx context.Context, in *RequestUserGet, opts ...grpc.CallOption) (*ResponseUserGet, error)
 	BecomeMaintainer(ctx context.Context, in *RequestBecomeMaintainer, opts ...grpc.CallOption) (*ResponseBecomeMaintainer, error)
 	ToggleAdmin(ctx context.Context, in *RequestToggleAdmin, opts ...grpc.CallOption) (*ResponseToggleAdmin, error)
-	TokenNew(ctx context.Context, in *RequestTokenNew, opts ...grpc.CallOption) (*ResponseTokenNew, error)
 	RoleList(ctx context.Context, in *RequestRoleList, opts ...grpc.CallOption) (*ResponseRoleList, error)
 	BackendList(ctx context.Context, in *RequestBackendList, opts ...grpc.CallOption) (*ResponseBackendList, error)
 }
@@ -3629,15 +3426,6 @@ func (c *adminClient) ToggleAdmin(ctx context.Context, in *RequestToggleAdmin, o
 	return out, nil
 }
 
-func (c *adminClient) TokenNew(ctx context.Context, in *RequestTokenNew, opts ...grpc.CallOption) (*ResponseTokenNew, error) {
-	out := new(ResponseTokenNew)
-	err := c.cc.Invoke(ctx, "/proxy.rpc.Admin/TokenNew", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *adminClient) RoleList(ctx context.Context, in *RequestRoleList, opts ...grpc.CallOption) (*ResponseRoleList, error) {
 	out := new(ResponseRoleList)
 	err := c.cc.Invoke(ctx, "/proxy.rpc.Admin/RoleList", in, out, opts...)
@@ -3666,7 +3454,6 @@ type AdminServer interface {
 	UserGet(context.Context, *RequestUserGet) (*ResponseUserGet, error)
 	BecomeMaintainer(context.Context, *RequestBecomeMaintainer) (*ResponseBecomeMaintainer, error)
 	ToggleAdmin(context.Context, *RequestToggleAdmin) (*ResponseToggleAdmin, error)
-	TokenNew(context.Context, *RequestTokenNew) (*ResponseTokenNew, error)
 	RoleList(context.Context, *RequestRoleList) (*ResponseRoleList, error)
 	BackendList(context.Context, *RequestBackendList) (*ResponseBackendList, error)
 }
@@ -3698,9 +3485,6 @@ func (*UnimplementedAdminServer) BecomeMaintainer(context.Context, *RequestBecom
 }
 func (*UnimplementedAdminServer) ToggleAdmin(context.Context, *RequestToggleAdmin) (*ResponseToggleAdmin, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ToggleAdmin not implemented")
-}
-func (*UnimplementedAdminServer) TokenNew(context.Context, *RequestTokenNew) (*ResponseTokenNew, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TokenNew not implemented")
 }
 func (*UnimplementedAdminServer) RoleList(context.Context, *RequestRoleList) (*ResponseRoleList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RoleList not implemented")
@@ -3857,24 +3641,6 @@ func _Admin_ToggleAdmin_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Admin_TokenNew_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestTokenNew)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminServer).TokenNew(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proxy.rpc.Admin/TokenNew",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServer).TokenNew(ctx, req.(*RequestTokenNew))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Admin_RoleList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestRoleList)
 	if err := dec(in); err != nil {
@@ -3946,10 +3712,6 @@ var _Admin_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ToggleAdmin",
 			Handler:    _Admin_ToggleAdmin_Handler,
-		},
-		{
-			MethodName: "TokenNew",
-			Handler:    _Admin_TokenNew_Handler,
 		},
 		{
 			MethodName: "RoleList",

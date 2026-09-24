@@ -266,6 +266,7 @@ func (a *Agent) Get(m *btesting.Matcher, backend *proxyv1alpha2.Backend, body io
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://127.0.0.1:%d", port), body)
 	m.Must(err)
+	req.Header.Set("Accept", "text/html")
 	if backend.Spec.Layer != "" {
 		req.Host = fmt.Sprintf("%s.%s.%s", backend.Name, backend.Spec.Layer, a.proxy.Spec.Domain)
 	} else {

@@ -49,7 +49,7 @@ func TestNewServer(t *testing.T) {
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		ca,
@@ -89,7 +89,7 @@ func TestServer_Start(t *testing.T) {
 	v := NewServer(
 		conf,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		memory.NewClusterDatabase(),
 		memory.NewRelayLocator(),
 		ca,
@@ -170,7 +170,7 @@ func TestServicesViaServer(t *testing.T) {
 	err = logger.Init(conf.Logger)
 	require.NoError(t, err)
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	cluster := memory.NewClusterDatabase()
 	relay := memory.NewRelayLocator()
 	auth.Init(conf, nil, u, token, nil)
@@ -255,7 +255,7 @@ func TestServicesViaServer(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, addRes.GetOk())
 
-			getRes, err := adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id, WithTokens: true})
+			getRes, err := adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id})
 			require.NoError(t, err)
 			assert.Equal(t, "test@example.com", getRes.GetUser().GetId())
 			assert.Equal(t, "test-admin", getRes.GetUser().GetRoles()[0])
@@ -286,15 +286,6 @@ func TestServicesViaServer(t *testing.T) {
 			userListRes, err = adminClient.UserList(testUserCtx, &rpc.RequestUserList{})
 			require.NoError(t, err)
 			assert.Len(t, userListRes.GetItems(), 2)
-
-			tokenRes, err := adminClient.TokenNew(systemUserCtx, &rpc.RequestTokenNew{Name: "test", UserId: testUser.Id})
-			require.NoError(t, err)
-			assert.NotEmpty(t, tokenRes.GetItem().GetValue())
-			getRes, err = adminClient.UserGet(systemUserCtx, &rpc.RequestUserGet{Id: testUser.Id, WithTokens: true})
-			require.NoError(t, err)
-			assert.Len(t, getRes.GetUser().GetTokens(), 1)
-			assert.Equal(t, "test", getRes.GetUser().GetTokens()[0].GetName())
-			assert.Equal(t, database.SystemUser.Id, getRes.GetUser().GetTokens()[0].GetIssuer())
 		})
 	})
 

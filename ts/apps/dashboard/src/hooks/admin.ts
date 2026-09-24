@@ -19,10 +19,6 @@ export function useListServiceAccounts() {
   return useQuery(AdminService.method.listServiceAccounts, {})
 }
 
-export function useListServiceAccountTokens(id: string) {
-  return useQuery(AdminService.method.listServiceAccountTokens, { id }, { enabled: id !== '' })
-}
-
 export function useAddUser() {
   const invalidate = useInvalidateUsers()
 
@@ -57,21 +53,6 @@ export function useCreateServiceAccount() {
   const invalidate = useInvalidateUsers()
 
   return useMutation(AdminService.method.createServiceAccount, { onSuccess: invalidate })
-}
-
-export function useCreateServiceAccountToken() {
-  const queryClient = useQueryClient()
-
-  return useMutation(AdminService.method.createServiceAccountToken, {
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: AdminService.method.listServiceAccountTokens,
-          cardinality: 'finite',
-        }),
-      })
-    },
-  })
 }
 
 // A user appears in every listing, so a change to one of them invalidates all of them.

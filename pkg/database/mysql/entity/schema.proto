@@ -85,30 +85,6 @@ message RoleBinding {
     };
 }
 
-message AccessToken {
-    int32  id     = 1 [(dev.f110.ddl.column) = {sequence: true}];
-    string name   = 2;
-    string value  = 3 [(dev.f110.ddl.column) = {unique: true}];
-    User   user   = 4;
-    User   issuer = 5;
-
-    option (dev.f110.ddl.table) = {
-        primary_key: "id"
-        with_timestamp: true
-    };
-
-    option (dev.f110.ddl.dao) = {
-        queries: {
-            name: "AccessToken"
-            query: "select * from `:table_name:` where value = ?"
-        };
-        queries: {
-            name: "ByUser"
-            query: "select * from `:table_name:` where user_id = ?"
-        };
-    };
-}
-
 message Token {
     int32  id    = 1 [(dev.f110.ddl.column) = {sequence: true}];
     string token = 2;

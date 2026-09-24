@@ -26,8 +26,6 @@ type AdminClient struct {
 	UserEditRequest      *rpc.RequestUserEdit
 	BecomeMaintainerCall int
 	ToggleAdminCall      int
-	TokenNewCall         int
-	TokenNewResponse     *rpc.ResponseTokenNew
 	RoleListCall         int
 	RoleListResponse     *rpc.ResponseRoleList
 	BackendListCall      int
@@ -111,17 +109,6 @@ func (a *AdminClient) ToggleAdmin(ctx context.Context, in *rpc.RequestToggleAdmi
 	a.ToggleAdminCall++
 
 	return &rpc.ResponseToggleAdmin{}, nil
-}
-
-func (a *AdminClient) TokenNew(ctx context.Context, in *rpc.RequestTokenNew, opts ...grpc.CallOption) (*rpc.ResponseTokenNew, error) {
-	a.Lock()
-	defer a.Unlock()
-	a.TokenNewCall++
-	if a.TokenNewResponse != nil {
-		return a.TokenNewResponse, nil
-	}
-
-	return &rpc.ResponseTokenNew{}, nil
 }
 
 func (a *AdminClient) RoleList(ctx context.Context, in *rpc.RequestRoleList, opts ...grpc.CallOption) (*rpc.ResponseRoleList, error) {

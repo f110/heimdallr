@@ -99,7 +99,7 @@ func (t *Server) handleExchange(w http.ResponseWriter, req *http.Request, _ http
 
 	res := &token.ExchangeResponse{
 		AccessToken: tk.Token,
-		ExpiresIn:   int(database.TokenExpiration.Seconds()),
+		ExpiresIn:   int(t.Config.AccessProxy.GetTokenExpiration().Seconds()),
 	}
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

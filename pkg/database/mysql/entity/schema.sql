@@ -41,19 +41,6 @@ CREATE TABLE `role_binding` (
 	PRIMARY KEY(`id`)
 ) Engine=InnoDB;
 
-DROP TABLE IF EXISTS `access_token`;
-CREATE TABLE `access_token` (
-	`id` INTEGER NOT NULL AUTO_INCREMENT,
-	`name` VARCHAR(255) NOT NULL,
-	`value` VARCHAR(255) NOT NULL,
-	`user_id` INTEGER NOT NULL,
-	`issuer_id` INTEGER NOT NULL,
-	`created_at` DATETIME NOT NULL,
-	`updated_at` DATETIME NULL,
-	UNIQUE `idx_value` (`value`),
-	PRIMARY KEY(`id`)
-) Engine=InnoDB;
-
 DROP TABLE IF EXISTS `token`;
 CREATE TABLE `token` (
 	`id` INTEGER NOT NULL AUTO_INCREMENT,

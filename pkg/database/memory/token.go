@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"sync"
+	"time"
 
 	"go.f110.dev/xerrors"
 
@@ -12,17 +13,19 @@ import (
 )
 
 type TokenDatabase struct {
-	mu     sync.RWMutex
-	tokens map[string]*database.Token
-	codes  map[string]*database.Code
+	mu         sync.RWMutex
+	tokens     map[string]*database.Token
+	codes      map[string]*database.Code
+	expiration time.Duration
 }
 
 var _ database.TokenDatabase = &TokenDatabase{}
 
-func NewTokenDatabase() *TokenDatabase {
+func NewTokenDatabase(expiration time.Duration) *TokenDatabase {
 	return &TokenDatabase{
-		tokens: make(map[string]*database.Token),
-		codes:  make(map[string]*database.Code),
+		tokens:     make(map[string]*database.Token),
+		codes:      make(map[string]*database.Code),
+		expiration: expiration,
 	}
 }
 
@@ -58,13 +61,13 @@ func (t *TokenDatabase) IssueToken(_ context.Context, code, _ string) (*database
 	if err != nil {
 		return nil, err
 	}
-	token := &database.Token{Token: s}
+	token := &database.Token{Token: s, IssuedAt: time.Now()}
 	if v != nil {
 		token.UserId = v.UserId
 	}
 
 	t.mu.Lock()
-	t.tokens[token.Token] = token
+	t.tokens[database.HashToken(s)] = &database.Token{UserId: token.UserId, IssuedAt: token.IssuedAt}
 	t.mu.Unlock()
 
 	return token, nil
@@ -86,8 +89,8 @@ func (t *TokenDatabase) FindToken(_ context.Context, token string) (*database.To
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	v, ok := t.tokens[token]
-	if !ok {
+	v, ok := t.tokens[database.HashToken(token)]
+	if !ok || !time.Now().Before(v.IssuedAt.Add(t.expiration)) {
 		return nil, xerrors.WithStack(database.ErrTokenNotFound)
 	}
 	return v, nil
@@ -117,7 +120,7 @@ func (t *TokenDatabase) DeleteToken(_ context.Context, token string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	delete(t.tokens, token)
+	delete(t.tokens, database.HashToken(token))
 	return nil
 }
 

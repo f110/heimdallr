@@ -185,32 +185,6 @@ export declare type Agent = Message<"dashboard.bff.Agent"> & {
 export declare const AgentSchema: GenMessage<Agent>;
 
 /**
- * @generated from message dashboard.bff.AccessToken
- */
-export declare type AccessToken = Message<"dashboard.bff.AccessToken"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string issuer = 2;
-   */
-  issuer: string;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp issued_at = 3;
-   */
-  issuedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message dashboard.bff.AccessToken.
- * Use `create(AccessTokenSchema)` to create a new message.
- */
-export declare const AccessTokenSchema: GenMessage<AccessToken>;
-
-/**
  * @generated from message dashboard.bff.GetMeRequest
  */
 export declare type GetMeRequest = Message<"dashboard.bff.GetMeRequest"> & {
@@ -643,83 +617,6 @@ export declare type CreateServiceAccountResponse = Message<"dashboard.bff.Create
 export declare const CreateServiceAccountResponseSchema: GenMessage<CreateServiceAccountResponse>;
 
 /**
- * @generated from message dashboard.bff.ListServiceAccountTokensRequest
- */
-export declare type ListServiceAccountTokensRequest = Message<"dashboard.bff.ListServiceAccountTokensRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-};
-
-/**
- * Describes the message dashboard.bff.ListServiceAccountTokensRequest.
- * Use `create(ListServiceAccountTokensRequestSchema)` to create a new message.
- */
-export declare const ListServiceAccountTokensRequestSchema: GenMessage<ListServiceAccountTokensRequest>;
-
-/**
- * @generated from message dashboard.bff.ListServiceAccountTokensResponse
- */
-export declare type ListServiceAccountTokensResponse = Message<"dashboard.bff.ListServiceAccountTokensResponse"> & {
-  /**
-   * @generated from field: repeated dashboard.bff.AccessToken tokens = 1;
-   */
-  tokens: AccessToken[];
-};
-
-/**
- * Describes the message dashboard.bff.ListServiceAccountTokensResponse.
- * Use `create(ListServiceAccountTokensResponseSchema)` to create a new message.
- */
-export declare const ListServiceAccountTokensResponseSchema: GenMessage<ListServiceAccountTokensResponse>;
-
-/**
- * @generated from message dashboard.bff.CreateServiceAccountTokenRequest
- */
-export declare type CreateServiceAccountTokenRequest = Message<"dashboard.bff.CreateServiceAccountTokenRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-};
-
-/**
- * Describes the message dashboard.bff.CreateServiceAccountTokenRequest.
- * Use `create(CreateServiceAccountTokenRequestSchema)` to create a new message.
- */
-export declare const CreateServiceAccountTokenRequestSchema: GenMessage<CreateServiceAccountTokenRequest>;
-
-/**
- * CreateServiceAccountTokenResponse is the only message that carries a token value.
- * The value can not be read again once the response is discarded.
- *
- * @generated from message dashboard.bff.CreateServiceAccountTokenResponse
- */
-export declare type CreateServiceAccountTokenResponse = Message<"dashboard.bff.CreateServiceAccountTokenResponse"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string value = 2;
-   */
-  value: string;
-};
-
-/**
- * Describes the message dashboard.bff.CreateServiceAccountTokenResponse.
- * Use `create(CreateServiceAccountTokenResponseSchema)` to create a new message.
- */
-export declare const CreateServiceAccountTokenResponseSchema: GenMessage<CreateServiceAccountTokenResponse>;
-
-/**
  * @generated from message dashboard.bff.ListCertificatesRequest
  */
 export declare type ListCertificatesRequest = Message<"dashboard.bff.ListCertificatesRequest"> & {
@@ -1092,22 +989,6 @@ export declare const AdminService: GenService<{
     methodKind: "unary";
     input: typeof CreateServiceAccountRequestSchema;
     output: typeof CreateServiceAccountResponseSchema;
-  },
-  /**
-   * @generated from rpc dashboard.bff.AdminService.ListServiceAccountTokens
-   */
-  listServiceAccountTokens: {
-    methodKind: "unary";
-    input: typeof ListServiceAccountTokensRequestSchema;
-    output: typeof ListServiceAccountTokensResponseSchema;
-  },
-  /**
-   * @generated from rpc dashboard.bff.AdminService.CreateServiceAccountToken
-   */
-  createServiceAccountToken: {
-    methodKind: "unary";
-    input: typeof CreateServiceAccountTokenRequestSchema;
-    output: typeof CreateServiceAccountTokenResponseSchema;
   },
 }>;
 

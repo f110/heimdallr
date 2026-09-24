@@ -9,7 +9,7 @@ import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
  * Describes the file pkg/dashboard/dashboard.proto.
  */
 export const file_pkg_dashboard_dashboard = /*@__PURE__*/
-  fileDesc("Ch1wa2cvZGFzaGJvYXJkL2Rhc2hib2FyZC5wcm90bxINZGFzaGJvYXJkLmJmZiLEAQoEVXNlchIKCgJpZBgBIAEoCRIlCgR0eXBlGAIgASgOMhcuZGFzaGJvYXJkLmJmZi5Vc2VyVHlwZRINCgVyb2xlcxgDIAMoCRIWCg5tYWludGFpbl9yb2xlcxgEIAMoCRINCgVhZG1pbhgFIAEoCBIPCgdjb21tZW50GAYgASgJEhIKCmxvZ2luX25hbWUYByABKAkSLgoKbGFzdF9sb2dpbhgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOAoEUm9sZRIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIjoKB0JhY2tlbmQSDAoEbmFtZRgBIAEoCRIMCgRob3N0GAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIroBCgtDZXJ0aWZpY2F0ZRIVCg1zZXJpYWxfbnVtYmVyGAEgASgJEhMKC2NvbW1vbl9uYW1lGAIgASgJEi0KCWlzc3VlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKcmV2b2tlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHY29tbWVudBgFIAEoCRIPCgdoYXNfcDEyGAYgASgIIloKBUFnZW50EgwKBG5hbWUYASABKAkSEQoJZnJvbV9hZGRyGAIgASgJEjAKDGNvbm5lY3RlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiWgoLQWNjZXNzVG9rZW4SDAoEbmFtZRgBIAEoCRIOCgZpc3N1ZXIYAiABKAkSLQoJaXNzdWVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIOCgxHZXRNZVJlcXVlc3QiZgoNR2V0TWVSZXNwb25zZRIrCgdkZXZpY2VzGAEgAygLMhouZGFzaGJvYXJkLmJmZi5DZXJ0aWZpY2F0ZRIoCghiYWNrZW5kcxgCIAMoCzIWLmRhc2hib2FyZC5iZmYuQmFja2VuZCItChBBZGREZXZpY2VSZXF1ZXN0EgwKBG5hbWUYASABKAkSCwoDY3NyGAIgASgJIhMKEUFkZERldmljZVJlc3BvbnNlIhIKEExpc3RVc2Vyc1JlcXVlc3QiNwoRTGlzdFVzZXJzUmVzcG9uc2USIgoFdXNlcnMYASADKAsyEy5kYXNoYm9hcmQuYmZmLlVzZXIiHAoOR2V0VXNlclJlcXVlc3QSCgoCaWQYASABKAkiXgoPR2V0VXNlclJlc3BvbnNlEiEKBHVzZXIYASABKAsyEy5kYXNoYm9hcmQuYmZmLlVzZXISKAoIYmFja2VuZHMYAiADKAsyFi5kYXNoYm9hcmQuYmZmLkJhY2tlbmQiKgoOQWRkVXNlclJlcXVlc3QSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCSIRCg9BZGRVc2VyUmVzcG9uc2UiMwoRVXBkYXRlVXNlclJlcXVlc3QSCgoCaWQYASABKAkSEgoKbG9naW5fbmFtZRgCIAEoCSIUChJVcGRhdGVVc2VyUmVzcG9uc2UiLQoRRGVsZXRlVXNlclJlcXVlc3QSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCSIUChJEZWxldGVVc2VyUmVzcG9uc2UiMwoXQmVjb21lTWFpbnRhaW5lclJlcXVlc3QSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCSIaChhCZWNvbWVNYWludGFpbmVyUmVzcG9uc2UiIAoSVG9nZ2xlQWRtaW5SZXF1ZXN0EgoKAmlkGAEgASgJIhUKE1RvZ2dsZUFkbWluUmVzcG9uc2UiEgoQTGlzdFJvbGVzUmVxdWVzdCI+ChFMaXN0Um9sZXNSZXNwb25zZRIpCgVyb2xlcxgBIAMoCzIaLmRhc2hib2FyZC5iZmYuUm9sZU1lbWJlcnMiXAoLUm9sZU1lbWJlcnMSIQoEcm9sZRgBIAEoCzITLmRhc2hib2FyZC5iZmYuUm9sZRIqCgdtZW1iZXJzGAIgAygLMhkuZGFzaGJvYXJkLmJmZi5Sb2xlTWVtYmVyImIKClJvbGVNZW1iZXISCgoCaWQYASABKAkSJQoEdHlwZRgCIAEoDjIXLmRhc2hib2FyZC5iZmYuVXNlclR5cGUSEgoKbWFpbnRhaW5lchgDIAEoCBINCgVhZG1pbhgEIAEoCCIcChpMaXN0U2VydmljZUFjY291bnRzUmVxdWVzdCJEChtMaXN0U2VydmljZUFjY291bnRzUmVzcG9uc2USJQoIYWNjb3VudHMYASADKAsyEy5kYXNoYm9hcmQuYmZmLlVzZXIiOgobQ3JlYXRlU2VydmljZUFjY291bnRSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB2NvbW1lbnQYAiABKAkiHgocQ3JlYXRlU2VydmljZUFjY291bnRSZXNwb25zZSItCh9MaXN0U2VydmljZUFjY291bnRUb2tlbnNSZXF1ZXN0EgoKAmlkGAEgASgJIk4KIExpc3RTZXJ2aWNlQWNjb3VudFRva2Vuc1Jlc3BvbnNlEioKBnRva2VucxgBIAMoCzIaLmRhc2hib2FyZC5iZmYuQWNjZXNzVG9rZW4iPAogQ3JlYXRlU2VydmljZUFjY291bnRUb2tlblJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSJACiFDcmVhdGVTZXJ2aWNlQWNjb3VudFRva2VuUmVzcG9uc2USDAoEbmFtZRgBIAEoCRINCgV2YWx1ZRgCIAEoCSIZChdMaXN0Q2VydGlmaWNhdGVzUmVxdWVzdCJzChhMaXN0Q2VydGlmaWNhdGVzUmVzcG9uc2USKgoGc2lnbmVkGAEgAygLMhouZGFzaGJvYXJkLmJmZi5DZXJ0aWZpY2F0ZRIrCgdyZXZva2VkGAIgAygLMhouZGFzaGJvYXJkLmJmZi5DZXJ0aWZpY2F0ZSKVAQobTmV3Q2xpZW50Q2VydGlmaWNhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEgsKA2NzchgCIAEoCRIoCghrZXlfdHlwZRgDIAEoDjIWLmRhc2hib2FyZC5iZmYuS2V5VHlwZRIQCghrZXlfYml0cxgEIAEoBRIQCghwYXNzd29yZBgFIAEoCRIPCgdjb21tZW50GAYgASgJIh4KHE5ld0NsaWVudENlcnRpZmljYXRlUmVzcG9uc2UiMQoYUmV2b2tlQ2VydGlmaWNhdGVSZXF1ZXN0EhUKDXNlcmlhbF9udW1iZXIYASABKAkiGwoZUmV2b2tlQ2VydGlmaWNhdGVSZXNwb25zZSITChFMaXN0QWdlbnRzUmVxdWVzdCKWAQoSTGlzdEFnZW50c1Jlc3BvbnNlEicKCWNvbm5lY3RlZBgBIAMoCzIULmRhc2hib2FyZC5iZmYuQWdlbnQSKgoGc2lnbmVkGAIgAygLMhouZGFzaGJvYXJkLmJmZi5DZXJ0aWZpY2F0ZRIrCgdyZXZva2VkGAMgAygLMhouZGFzaGJvYXJkLmJmZi5DZXJ0aWZpY2F0ZSIaChhMaXN0QWdlbnRCYWNrZW5kc1JlcXVlc3QiKgoZTGlzdEFnZW50QmFja2VuZHNSZXNwb25zZRINCgVuYW1lcxgBIAMoCSJAChRSZWdpc3RlckFnZW50UmVxdWVzdBIKCgJpZBgBIAEoCRILCgNjc3IYAiABKAkSDwoHY29tbWVudBgDIAEoCSIXChVSZWdpc3RlckFnZW50UmVzcG9uc2UqWgoIVXNlclR5cGUSGQoVVVNFUl9UWVBFX1VOU1BFQ0lGSUVEEAASFAoQVVNFUl9UWVBFX05PUk1BTBABEh0KGVVTRVJfVFlQRV9TRVJWSUNFX0FDQ09VTlQQAipJCgdLZXlUeXBlEhgKFEtFWV9UWVBFX1VOU1BFQ0lGSUVEEAASEgoOS0VZX1RZUEVfRUNEU0EQARIQCgxLRVlfVFlQRV9SU0EQAjKfAQoJTWVTZXJ2aWNlEkIKBUdldE1lEhsuZGFzaGJvYXJkLmJmZi5HZXRNZVJlcXVlc3QaHC5kYXNoYm9hcmQuYmZmLkdldE1lUmVzcG9uc2USTgoJQWRkRGV2aWNlEh8uZGFzaGJvYXJkLmJmZi5BZGREZXZpY2VSZXF1ZXN0GiAuZGFzaGJvYXJkLmJmZi5BZGREZXZpY2VSZXNwb25zZTL/CAoMQWRtaW5TZXJ2aWNlEk4KCUxpc3RVc2VycxIfLmRhc2hib2FyZC5iZmYuTGlzdFVzZXJzUmVxdWVzdBogLmRhc2hib2FyZC5iZmYuTGlzdFVzZXJzUmVzcG9uc2USSAoHR2V0VXNlchIdLmRhc2hib2FyZC5iZmYuR2V0VXNlclJlcXVlc3QaHi5kYXNoYm9hcmQuYmZmLkdldFVzZXJSZXNwb25zZRJICgdBZGRVc2VyEh0uZGFzaGJvYXJkLmJmZi5BZGRVc2VyUmVxdWVzdBoeLmRhc2hib2FyZC5iZmYuQWRkVXNlclJlc3BvbnNlElEKClVwZGF0ZVVzZXISIC5kYXNoYm9hcmQuYmZmLlVwZGF0ZVVzZXJSZXF1ZXN0GiEuZGFzaGJvYXJkLmJmZi5VcGRhdGVVc2VyUmVzcG9uc2USUQoKRGVsZXRlVXNlchIgLmRhc2hib2FyZC5iZmYuRGVsZXRlVXNlclJlcXVlc3QaIS5kYXNoYm9hcmQuYmZmLkRlbGV0ZVVzZXJSZXNwb25zZRJjChBCZWNvbWVNYWludGFpbmVyEiYuZGFzaGJvYXJkLmJmZi5CZWNvbWVNYWludGFpbmVyUmVxdWVzdBonLmRhc2hib2FyZC5iZmYuQmVjb21lTWFpbnRhaW5lclJlc3BvbnNlElQKC1RvZ2dsZUFkbWluEiEuZGFzaGJvYXJkLmJmZi5Ub2dnbGVBZG1pblJlcXVlc3QaIi5kYXNoYm9hcmQuYmZmLlRvZ2dsZUFkbWluUmVzcG9uc2USTgoJTGlzdFJvbGVzEh8uZGFzaGJvYXJkLmJmZi5MaXN0Um9sZXNSZXF1ZXN0GiAuZGFzaGJvYXJkLmJmZi5MaXN0Um9sZXNSZXNwb25zZRJsChNMaXN0U2VydmljZUFjY291bnRzEikuZGFzaGJvYXJkLmJmZi5MaXN0U2VydmljZUFjY291bnRzUmVxdWVzdBoqLmRhc2hib2FyZC5iZmYuTGlzdFNlcnZpY2VBY2NvdW50c1Jlc3BvbnNlEm8KFENyZWF0ZVNlcnZpY2VBY2NvdW50EiouZGFzaGJvYXJkLmJmZi5DcmVhdGVTZXJ2aWNlQWNjb3VudFJlcXVlc3QaKy5kYXNoYm9hcmQuYmZmLkNyZWF0ZVNlcnZpY2VBY2NvdW50UmVzcG9uc2USewoYTGlzdFNlcnZpY2VBY2NvdW50VG9rZW5zEi4uZGFzaGJvYXJkLmJmZi5MaXN0U2VydmljZUFjY291bnRUb2tlbnNSZXF1ZXN0Gi8uZGFzaGJvYXJkLmJmZi5MaXN0U2VydmljZUFjY291bnRUb2tlbnNSZXNwb25zZRJ+ChlDcmVhdGVTZXJ2aWNlQWNjb3VudFRva2VuEi8uZGFzaGJvYXJkLmJmZi5DcmVhdGVTZXJ2aWNlQWNjb3VudFRva2VuUmVxdWVzdBowLmRhc2hib2FyZC5iZmYuQ3JlYXRlU2VydmljZUFjY291bnRUb2tlblJlc3BvbnNlMukEChJDZXJ0aWZpY2F0ZVNlcnZpY2USYwoQTGlzdENlcnRpZmljYXRlcxImLmRhc2hib2FyZC5iZmYuTGlzdENlcnRpZmljYXRlc1JlcXVlc3QaJy5kYXNoYm9hcmQuYmZmLkxpc3RDZXJ0aWZpY2F0ZXNSZXNwb25zZRJvChROZXdDbGllbnRDZXJ0aWZpY2F0ZRIqLmRhc2hib2FyZC5iZmYuTmV3Q2xpZW50Q2VydGlmaWNhdGVSZXF1ZXN0GisuZGFzaGJvYXJkLmJmZi5OZXdDbGllbnRDZXJ0aWZpY2F0ZVJlc3BvbnNlEmYKEVJldm9rZUNlcnRpZmljYXRlEicuZGFzaGJvYXJkLmJmZi5SZXZva2VDZXJ0aWZpY2F0ZVJlcXVlc3QaKC5kYXNoYm9hcmQuYmZmLlJldm9rZUNlcnRpZmljYXRlUmVzcG9uc2USUQoKTGlzdEFnZW50cxIgLmRhc2hib2FyZC5iZmYuTGlzdEFnZW50c1JlcXVlc3QaIS5kYXNoYm9hcmQuYmZmLkxpc3RBZ2VudHNSZXNwb25zZRJmChFMaXN0QWdlbnRCYWNrZW5kcxInLmRhc2hib2FyZC5iZmYuTGlzdEFnZW50QmFja2VuZHNSZXF1ZXN0GiguZGFzaGJvYXJkLmJmZi5MaXN0QWdlbnRCYWNrZW5kc1Jlc3BvbnNlEloKDVJlZ2lzdGVyQWdlbnQSIy5kYXNoYm9hcmQuYmZmLlJlZ2lzdGVyQWdlbnRSZXF1ZXN0GiQuZGFzaGJvYXJkLmJmZi5SZWdpc3RlckFnZW50UmVzcG9uc2VCJVojZ28uZjExMC5kZXYvaGVpbWRhbGxyL3BrZy9kYXNoYm9hcmRiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch1wa2cvZGFzaGJvYXJkL2Rhc2hib2FyZC5wcm90bxINZGFzaGJvYXJkLmJmZiLEAQoEVXNlchIKCgJpZBgBIAEoCRIlCgR0eXBlGAIgASgOMhcuZGFzaGJvYXJkLmJmZi5Vc2VyVHlwZRINCgVyb2xlcxgDIAMoCRIWCg5tYWludGFpbl9yb2xlcxgEIAMoCRINCgVhZG1pbhgFIAEoCBIPCgdjb21tZW50GAYgASgJEhIKCmxvZ2luX25hbWUYByABKAkSLgoKbGFzdF9sb2dpbhgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOAoEUm9sZRIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIjoKB0JhY2tlbmQSDAoEbmFtZRgBIAEoCRIMCgRob3N0GAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIroBCgtDZXJ0aWZpY2F0ZRIVCg1zZXJpYWxfbnVtYmVyGAEgASgJEhMKC2NvbW1vbl9uYW1lGAIgASgJEi0KCWlzc3VlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKcmV2b2tlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHY29tbWVudBgFIAEoCRIPCgdoYXNfcDEyGAYgASgIIloKBUFnZW50EgwKBG5hbWUYASABKAkSEQoJZnJvbV9hZGRyGAIgASgJEjAKDGNvbm5lY3RlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiDgoMR2V0TWVSZXF1ZXN0ImYKDUdldE1lUmVzcG9uc2USKwoHZGV2aWNlcxgBIAMoCzIaLmRhc2hib2FyZC5iZmYuQ2VydGlmaWNhdGUSKAoIYmFja2VuZHMYAiADKAsyFi5kYXNoYm9hcmQuYmZmLkJhY2tlbmQiLQoQQWRkRGV2aWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJEgsKA2NzchgCIAEoCSITChFBZGREZXZpY2VSZXNwb25zZSISChBMaXN0VXNlcnNSZXF1ZXN0IjcKEUxpc3RVc2Vyc1Jlc3BvbnNlEiIKBXVzZXJzGAEgAygLMhMuZGFzaGJvYXJkLmJmZi5Vc2VyIhwKDkdldFVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJIl4KD0dldFVzZXJSZXNwb25zZRIhCgR1c2VyGAEgASgLMhMuZGFzaGJvYXJkLmJmZi5Vc2VyEigKCGJhY2tlbmRzGAIgAygLMhYuZGFzaGJvYXJkLmJmZi5CYWNrZW5kIioKDkFkZFVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHJvbGUYAiABKAkiEQoPQWRkVXNlclJlc3BvbnNlIjMKEVVwZGF0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJEhIKCmxvZ2luX25hbWUYAiABKAkiFAoSVXBkYXRlVXNlclJlc3BvbnNlIi0KEURlbGV0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHJvbGUYAiABKAkiFAoSRGVsZXRlVXNlclJlc3BvbnNlIjMKF0JlY29tZU1haW50YWluZXJSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHJvbGUYAiABKAkiGgoYQmVjb21lTWFpbnRhaW5lclJlc3BvbnNlIiAKElRvZ2dsZUFkbWluUmVxdWVzdBIKCgJpZBgBIAEoCSIVChNUb2dnbGVBZG1pblJlc3BvbnNlIhIKEExpc3RSb2xlc1JlcXVlc3QiPgoRTGlzdFJvbGVzUmVzcG9uc2USKQoFcm9sZXMYASADKAsyGi5kYXNoYm9hcmQuYmZmLlJvbGVNZW1iZXJzIlwKC1JvbGVNZW1iZXJzEiEKBHJvbGUYASABKAsyEy5kYXNoYm9hcmQuYmZmLlJvbGUSKgoHbWVtYmVycxgCIAMoCzIZLmRhc2hib2FyZC5iZmYuUm9sZU1lbWJlciJiCgpSb2xlTWVtYmVyEgoKAmlkGAEgASgJEiUKBHR5cGUYAiABKA4yFy5kYXNoYm9hcmQuYmZmLlVzZXJUeXBlEhIKCm1haW50YWluZXIYAyABKAgSDQoFYWRtaW4YBCABKAgiHAoaTGlzdFNlcnZpY2VBY2NvdW50c1JlcXVlc3QiRAobTGlzdFNlcnZpY2VBY2NvdW50c1Jlc3BvbnNlEiUKCGFjY291bnRzGAEgAygLMhMuZGFzaGJvYXJkLmJmZi5Vc2VyIjoKG0NyZWF0ZVNlcnZpY2VBY2NvdW50UmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb21tZW50GAIgASgJIh4KHENyZWF0ZVNlcnZpY2VBY2NvdW50UmVzcG9uc2UiGQoXTGlzdENlcnRpZmljYXRlc1JlcXVlc3QicwoYTGlzdENlcnRpZmljYXRlc1Jlc3BvbnNlEioKBnNpZ25lZBgBIAMoCzIaLmRhc2hib2FyZC5iZmYuQ2VydGlmaWNhdGUSKwoHcmV2b2tlZBgCIAMoCzIaLmRhc2hib2FyZC5iZmYuQ2VydGlmaWNhdGUilQEKG05ld0NsaWVudENlcnRpZmljYXRlUmVxdWVzdBIKCgJpZBgBIAEoCRILCgNjc3IYAiABKAkSKAoIa2V5X3R5cGUYAyABKA4yFi5kYXNoYm9hcmQuYmZmLktleVR5cGUSEAoIa2V5X2JpdHMYBCABKAUSEAoIcGFzc3dvcmQYBSABKAkSDwoHY29tbWVudBgGIAEoCSIeChxOZXdDbGllbnRDZXJ0aWZpY2F0ZVJlc3BvbnNlIjEKGFJldm9rZUNlcnRpZmljYXRlUmVxdWVzdBIVCg1zZXJpYWxfbnVtYmVyGAEgASgJIhsKGVJldm9rZUNlcnRpZmljYXRlUmVzcG9uc2UiEwoRTGlzdEFnZW50c1JlcXVlc3QilgEKEkxpc3RBZ2VudHNSZXNwb25zZRInCgljb25uZWN0ZWQYASADKAsyFC5kYXNoYm9hcmQuYmZmLkFnZW50EioKBnNpZ25lZBgCIAMoCzIaLmRhc2hib2FyZC5iZmYuQ2VydGlmaWNhdGUSKwoHcmV2b2tlZBgDIAMoCzIaLmRhc2hib2FyZC5iZmYuQ2VydGlmaWNhdGUiGgoYTGlzdEFnZW50QmFja2VuZHNSZXF1ZXN0IioKGUxpc3RBZ2VudEJhY2tlbmRzUmVzcG9uc2USDQoFbmFtZXMYASADKAkiQAoUUmVnaXN0ZXJBZ2VudFJlcXVlc3QSCgoCaWQYASABKAkSCwoDY3NyGAIgASgJEg8KB2NvbW1lbnQYAyABKAkiFwoVUmVnaXN0ZXJBZ2VudFJlc3BvbnNlKloKCFVzZXJUeXBlEhkKFVVTRVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEFVTRVJfVFlQRV9OT1JNQUwQARIdChlVU0VSX1RZUEVfU0VSVklDRV9BQ0NPVU5UEAIqSQoHS2V5VHlwZRIYChRLRVlfVFlQRV9VTlNQRUNJRklFRBAAEhIKDktFWV9UWVBFX0VDRFNBEAESEAoMS0VZX1RZUEVfUlNBEAIynwEKCU1lU2VydmljZRJCCgVHZXRNZRIbLmRhc2hib2FyZC5iZmYuR2V0TWVSZXF1ZXN0GhwuZGFzaGJvYXJkLmJmZi5HZXRNZVJlc3BvbnNlEk4KCUFkZERldmljZRIfLmRhc2hib2FyZC5iZmYuQWRkRGV2aWNlUmVxdWVzdBogLmRhc2hib2FyZC5iZmYuQWRkRGV2aWNlUmVzcG9uc2UyggcKDEFkbWluU2VydmljZRJOCglMaXN0VXNlcnMSHy5kYXNoYm9hcmQuYmZmLkxpc3RVc2Vyc1JlcXVlc3QaIC5kYXNoYm9hcmQuYmZmLkxpc3RVc2Vyc1Jlc3BvbnNlEkgKB0dldFVzZXISHS5kYXNoYm9hcmQuYmZmLkdldFVzZXJSZXF1ZXN0Gh4uZGFzaGJvYXJkLmJmZi5HZXRVc2VyUmVzcG9uc2USSAoHQWRkVXNlchIdLmRhc2hib2FyZC5iZmYuQWRkVXNlclJlcXVlc3QaHi5kYXNoYm9hcmQuYmZmLkFkZFVzZXJSZXNwb25zZRJRCgpVcGRhdGVVc2VyEiAuZGFzaGJvYXJkLmJmZi5VcGRhdGVVc2VyUmVxdWVzdBohLmRhc2hib2FyZC5iZmYuVXBkYXRlVXNlclJlc3BvbnNlElEKCkRlbGV0ZVVzZXISIC5kYXNoYm9hcmQuYmZmLkRlbGV0ZVVzZXJSZXF1ZXN0GiEuZGFzaGJvYXJkLmJmZi5EZWxldGVVc2VyUmVzcG9uc2USYwoQQmVjb21lTWFpbnRhaW5lchImLmRhc2hib2FyZC5iZmYuQmVjb21lTWFpbnRhaW5lclJlcXVlc3QaJy5kYXNoYm9hcmQuYmZmLkJlY29tZU1haW50YWluZXJSZXNwb25zZRJUCgtUb2dnbGVBZG1pbhIhLmRhc2hib2FyZC5iZmYuVG9nZ2xlQWRtaW5SZXF1ZXN0GiIuZGFzaGJvYXJkLmJmZi5Ub2dnbGVBZG1pblJlc3BvbnNlEk4KCUxpc3RSb2xlcxIfLmRhc2hib2FyZC5iZmYuTGlzdFJvbGVzUmVxdWVzdBogLmRhc2hib2FyZC5iZmYuTGlzdFJvbGVzUmVzcG9uc2USbAoTTGlzdFNlcnZpY2VBY2NvdW50cxIpLmRhc2hib2FyZC5iZmYuTGlzdFNlcnZpY2VBY2NvdW50c1JlcXVlc3QaKi5kYXNoYm9hcmQuYmZmLkxpc3RTZXJ2aWNlQWNjb3VudHNSZXNwb25zZRJvChRDcmVhdGVTZXJ2aWNlQWNjb3VudBIqLmRhc2hib2FyZC5iZmYuQ3JlYXRlU2VydmljZUFjY291bnRSZXF1ZXN0GisuZGFzaGJvYXJkLmJmZi5DcmVhdGVTZXJ2aWNlQWNjb3VudFJlc3BvbnNlMukEChJDZXJ0aWZpY2F0ZVNlcnZpY2USYwoQTGlzdENlcnRpZmljYXRlcxImLmRhc2hib2FyZC5iZmYuTGlzdENlcnRpZmljYXRlc1JlcXVlc3QaJy5kYXNoYm9hcmQuYmZmLkxpc3RDZXJ0aWZpY2F0ZXNSZXNwb25zZRJvChROZXdDbGllbnRDZXJ0aWZpY2F0ZRIqLmRhc2hib2FyZC5iZmYuTmV3Q2xpZW50Q2VydGlmaWNhdGVSZXF1ZXN0GisuZGFzaGJvYXJkLmJmZi5OZXdDbGllbnRDZXJ0aWZpY2F0ZVJlc3BvbnNlEmYKEVJldm9rZUNlcnRpZmljYXRlEicuZGFzaGJvYXJkLmJmZi5SZXZva2VDZXJ0aWZpY2F0ZVJlcXVlc3QaKC5kYXNoYm9hcmQuYmZmLlJldm9rZUNlcnRpZmljYXRlUmVzcG9uc2USUQoKTGlzdEFnZW50cxIgLmRhc2hib2FyZC5iZmYuTGlzdEFnZW50c1JlcXVlc3QaIS5kYXNoYm9hcmQuYmZmLkxpc3RBZ2VudHNSZXNwb25zZRJmChFMaXN0QWdlbnRCYWNrZW5kcxInLmRhc2hib2FyZC5iZmYuTGlzdEFnZW50QmFja2VuZHNSZXF1ZXN0GiguZGFzaGJvYXJkLmJmZi5MaXN0QWdlbnRCYWNrZW5kc1Jlc3BvbnNlEloKDVJlZ2lzdGVyQWdlbnQSIy5kYXNoYm9hcmQuYmZmLlJlZ2lzdGVyQWdlbnRSZXF1ZXN0GiQuZGFzaGJvYXJkLmJmZi5SZWdpc3RlckFnZW50UmVzcG9uc2VCJVojZ28uZjExMC5kZXYvaGVpbWRhbGxyL3BrZy9kYXNoYm9hcmRiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * Describes the message dashboard.bff.User.
@@ -47,305 +47,270 @@ export const AgentSchema = /*@__PURE__*/
   messageDesc(file_pkg_dashboard_dashboard, 4);
 
 /**
- * Describes the message dashboard.bff.AccessToken.
- * Use `create(AccessTokenSchema)` to create a new message.
- */
-export const AccessTokenSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 5);
-
-/**
  * Describes the message dashboard.bff.GetMeRequest.
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 6);
+  messageDesc(file_pkg_dashboard_dashboard, 5);
 
 /**
  * Describes the message dashboard.bff.GetMeResponse.
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 7);
+  messageDesc(file_pkg_dashboard_dashboard, 6);
 
 /**
  * Describes the message dashboard.bff.AddDeviceRequest.
  * Use `create(AddDeviceRequestSchema)` to create a new message.
  */
 export const AddDeviceRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 8);
+  messageDesc(file_pkg_dashboard_dashboard, 7);
 
 /**
  * Describes the message dashboard.bff.AddDeviceResponse.
  * Use `create(AddDeviceResponseSchema)` to create a new message.
  */
 export const AddDeviceResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 9);
+  messageDesc(file_pkg_dashboard_dashboard, 8);
 
 /**
  * Describes the message dashboard.bff.ListUsersRequest.
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 10);
+  messageDesc(file_pkg_dashboard_dashboard, 9);
 
 /**
  * Describes the message dashboard.bff.ListUsersResponse.
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 11);
+  messageDesc(file_pkg_dashboard_dashboard, 10);
 
 /**
  * Describes the message dashboard.bff.GetUserRequest.
  * Use `create(GetUserRequestSchema)` to create a new message.
  */
 export const GetUserRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 12);
+  messageDesc(file_pkg_dashboard_dashboard, 11);
 
 /**
  * Describes the message dashboard.bff.GetUserResponse.
  * Use `create(GetUserResponseSchema)` to create a new message.
  */
 export const GetUserResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 13);
+  messageDesc(file_pkg_dashboard_dashboard, 12);
 
 /**
  * Describes the message dashboard.bff.AddUserRequest.
  * Use `create(AddUserRequestSchema)` to create a new message.
  */
 export const AddUserRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 14);
+  messageDesc(file_pkg_dashboard_dashboard, 13);
 
 /**
  * Describes the message dashboard.bff.AddUserResponse.
  * Use `create(AddUserResponseSchema)` to create a new message.
  */
 export const AddUserResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 15);
+  messageDesc(file_pkg_dashboard_dashboard, 14);
 
 /**
  * Describes the message dashboard.bff.UpdateUserRequest.
  * Use `create(UpdateUserRequestSchema)` to create a new message.
  */
 export const UpdateUserRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 16);
+  messageDesc(file_pkg_dashboard_dashboard, 15);
 
 /**
  * Describes the message dashboard.bff.UpdateUserResponse.
  * Use `create(UpdateUserResponseSchema)` to create a new message.
  */
 export const UpdateUserResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 17);
+  messageDesc(file_pkg_dashboard_dashboard, 16);
 
 /**
  * Describes the message dashboard.bff.DeleteUserRequest.
  * Use `create(DeleteUserRequestSchema)` to create a new message.
  */
 export const DeleteUserRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 18);
+  messageDesc(file_pkg_dashboard_dashboard, 17);
 
 /**
  * Describes the message dashboard.bff.DeleteUserResponse.
  * Use `create(DeleteUserResponseSchema)` to create a new message.
  */
 export const DeleteUserResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 19);
+  messageDesc(file_pkg_dashboard_dashboard, 18);
 
 /**
  * Describes the message dashboard.bff.BecomeMaintainerRequest.
  * Use `create(BecomeMaintainerRequestSchema)` to create a new message.
  */
 export const BecomeMaintainerRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 20);
+  messageDesc(file_pkg_dashboard_dashboard, 19);
 
 /**
  * Describes the message dashboard.bff.BecomeMaintainerResponse.
  * Use `create(BecomeMaintainerResponseSchema)` to create a new message.
  */
 export const BecomeMaintainerResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 21);
+  messageDesc(file_pkg_dashboard_dashboard, 20);
 
 /**
  * Describes the message dashboard.bff.ToggleAdminRequest.
  * Use `create(ToggleAdminRequestSchema)` to create a new message.
  */
 export const ToggleAdminRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 22);
+  messageDesc(file_pkg_dashboard_dashboard, 21);
 
 /**
  * Describes the message dashboard.bff.ToggleAdminResponse.
  * Use `create(ToggleAdminResponseSchema)` to create a new message.
  */
 export const ToggleAdminResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 23);
+  messageDesc(file_pkg_dashboard_dashboard, 22);
 
 /**
  * Describes the message dashboard.bff.ListRolesRequest.
  * Use `create(ListRolesRequestSchema)` to create a new message.
  */
 export const ListRolesRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 24);
+  messageDesc(file_pkg_dashboard_dashboard, 23);
 
 /**
  * Describes the message dashboard.bff.ListRolesResponse.
  * Use `create(ListRolesResponseSchema)` to create a new message.
  */
 export const ListRolesResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 25);
+  messageDesc(file_pkg_dashboard_dashboard, 24);
 
 /**
  * Describes the message dashboard.bff.RoleMembers.
  * Use `create(RoleMembersSchema)` to create a new message.
  */
 export const RoleMembersSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 26);
+  messageDesc(file_pkg_dashboard_dashboard, 25);
 
 /**
  * Describes the message dashboard.bff.RoleMember.
  * Use `create(RoleMemberSchema)` to create a new message.
  */
 export const RoleMemberSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 27);
+  messageDesc(file_pkg_dashboard_dashboard, 26);
 
 /**
  * Describes the message dashboard.bff.ListServiceAccountsRequest.
  * Use `create(ListServiceAccountsRequestSchema)` to create a new message.
  */
 export const ListServiceAccountsRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 28);
+  messageDesc(file_pkg_dashboard_dashboard, 27);
 
 /**
  * Describes the message dashboard.bff.ListServiceAccountsResponse.
  * Use `create(ListServiceAccountsResponseSchema)` to create a new message.
  */
 export const ListServiceAccountsResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 29);
+  messageDesc(file_pkg_dashboard_dashboard, 28);
 
 /**
  * Describes the message dashboard.bff.CreateServiceAccountRequest.
  * Use `create(CreateServiceAccountRequestSchema)` to create a new message.
  */
 export const CreateServiceAccountRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 30);
+  messageDesc(file_pkg_dashboard_dashboard, 29);
 
 /**
  * Describes the message dashboard.bff.CreateServiceAccountResponse.
  * Use `create(CreateServiceAccountResponseSchema)` to create a new message.
  */
 export const CreateServiceAccountResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 31);
-
-/**
- * Describes the message dashboard.bff.ListServiceAccountTokensRequest.
- * Use `create(ListServiceAccountTokensRequestSchema)` to create a new message.
- */
-export const ListServiceAccountTokensRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 32);
-
-/**
- * Describes the message dashboard.bff.ListServiceAccountTokensResponse.
- * Use `create(ListServiceAccountTokensResponseSchema)` to create a new message.
- */
-export const ListServiceAccountTokensResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 33);
-
-/**
- * Describes the message dashboard.bff.CreateServiceAccountTokenRequest.
- * Use `create(CreateServiceAccountTokenRequestSchema)` to create a new message.
- */
-export const CreateServiceAccountTokenRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 34);
-
-/**
- * Describes the message dashboard.bff.CreateServiceAccountTokenResponse.
- * Use `create(CreateServiceAccountTokenResponseSchema)` to create a new message.
- */
-export const CreateServiceAccountTokenResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 35);
+  messageDesc(file_pkg_dashboard_dashboard, 30);
 
 /**
  * Describes the message dashboard.bff.ListCertificatesRequest.
  * Use `create(ListCertificatesRequestSchema)` to create a new message.
  */
 export const ListCertificatesRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 36);
+  messageDesc(file_pkg_dashboard_dashboard, 31);
 
 /**
  * Describes the message dashboard.bff.ListCertificatesResponse.
  * Use `create(ListCertificatesResponseSchema)` to create a new message.
  */
 export const ListCertificatesResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 37);
+  messageDesc(file_pkg_dashboard_dashboard, 32);
 
 /**
  * Describes the message dashboard.bff.NewClientCertificateRequest.
  * Use `create(NewClientCertificateRequestSchema)` to create a new message.
  */
 export const NewClientCertificateRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 38);
+  messageDesc(file_pkg_dashboard_dashboard, 33);
 
 /**
  * Describes the message dashboard.bff.NewClientCertificateResponse.
  * Use `create(NewClientCertificateResponseSchema)` to create a new message.
  */
 export const NewClientCertificateResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 39);
+  messageDesc(file_pkg_dashboard_dashboard, 34);
 
 /**
  * Describes the message dashboard.bff.RevokeCertificateRequest.
  * Use `create(RevokeCertificateRequestSchema)` to create a new message.
  */
 export const RevokeCertificateRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 40);
+  messageDesc(file_pkg_dashboard_dashboard, 35);
 
 /**
  * Describes the message dashboard.bff.RevokeCertificateResponse.
  * Use `create(RevokeCertificateResponseSchema)` to create a new message.
  */
 export const RevokeCertificateResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 41);
+  messageDesc(file_pkg_dashboard_dashboard, 36);
 
 /**
  * Describes the message dashboard.bff.ListAgentsRequest.
  * Use `create(ListAgentsRequestSchema)` to create a new message.
  */
 export const ListAgentsRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 42);
+  messageDesc(file_pkg_dashboard_dashboard, 37);
 
 /**
  * Describes the message dashboard.bff.ListAgentsResponse.
  * Use `create(ListAgentsResponseSchema)` to create a new message.
  */
 export const ListAgentsResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 43);
+  messageDesc(file_pkg_dashboard_dashboard, 38);
 
 /**
  * Describes the message dashboard.bff.ListAgentBackendsRequest.
  * Use `create(ListAgentBackendsRequestSchema)` to create a new message.
  */
 export const ListAgentBackendsRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 44);
+  messageDesc(file_pkg_dashboard_dashboard, 39);
 
 /**
  * Describes the message dashboard.bff.ListAgentBackendsResponse.
  * Use `create(ListAgentBackendsResponseSchema)` to create a new message.
  */
 export const ListAgentBackendsResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 45);
+  messageDesc(file_pkg_dashboard_dashboard, 40);
 
 /**
  * Describes the message dashboard.bff.RegisterAgentRequest.
  * Use `create(RegisterAgentRequestSchema)` to create a new message.
  */
 export const RegisterAgentRequestSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 46);
+  messageDesc(file_pkg_dashboard_dashboard, 41);
 
 /**
  * Describes the message dashboard.bff.RegisterAgentResponse.
  * Use `create(RegisterAgentResponseSchema)` to create a new message.
  */
 export const RegisterAgentResponseSchema = /*@__PURE__*/
-  messageDesc(file_pkg_dashboard_dashboard, 47);
+  messageDesc(file_pkg_dashboard_dashboard, 42);
 
 /**
  * Describes the enum dashboard.bff.UserType.

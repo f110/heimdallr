@@ -3,6 +3,7 @@ package authproxy
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -205,9 +206,14 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		switch err {
 		case auth.ErrSessionNotFound:
 			logger.Log.Info("Session not found", logger.WithRequestId(ctx))
-			p.redirectToIdP(w, req)
+			if strings.Contains(req.Header.Get("Accept"), "text/html") {
+				p.redirectToIdP(w, req)
+			} else {
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", p.Config.AccessProxy.ServerNameHost))
+				w.WriteHeader(http.StatusUnauthorized)
+			}
 			return
-		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate:
+		case auth.ErrUserNotFound, auth.ErrNotAllowed, auth.ErrInvalidCertificate, auth.ErrInvalidToken:
 			logger.Log.Info("Unauthorized", slog.Any("error", err), logger.WithRequestId(ctx))
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -379,6 +385,9 @@ func (p *HttpProxy) director(req *http.Request) {
 }
 
 func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
+	if authn.HasTokenAuthorization(req) {
+		req.Header.Del("Authorization")
+	}
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 

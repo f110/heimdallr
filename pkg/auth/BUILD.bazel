@@ -2,10 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "auth",
-    srcs = [
-        "access_token.go",
-        "auth.go",
-    ],
+    srcs = ["auth.go"],
     importpath = "go.f110.dev/heimdallr/pkg/auth",
     visibility = ["//visibility:public"],
     deps = [
@@ -26,7 +23,6 @@ go_library(
 go_test(
     name = "auth_test",
     srcs = [
-        "access_token_test.go",
         "auth_test.go",
         "util_test.go",
     ],

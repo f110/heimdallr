@@ -138,45 +138,6 @@ func (u *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	return result, nil
 }
 
-func (u *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
-	at, err := u.dao.AccessToken.SelectAccessToken(context.TODO(), value)
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-
-	return &database.AccessToken{
-		Name:      at.Name,
-		Value:     at.Value,
-		UserId:    at.User.Identity,
-		Issuer:    at.Issuer.Identity,
-		CreatedAt: at.CreatedAt,
-	}, nil
-}
-
-func (u *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
-	user, err := u.dao.User.SelectIdentity(context.TODO(), id)
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-	tokens, err := u.dao.AccessToken.ListByUser(context.TODO(), user.Id)
-	if err != nil {
-		return nil, xerrors.WithStack(err)
-	}
-
-	result := make([]*database.AccessToken, len(tokens))
-	for i, v := range tokens {
-		result[i] = &database.AccessToken{
-			Name:      v.Name,
-			Value:     v.Value,
-			UserId:    v.User.Identity,
-			Issuer:    v.Issuer.Identity,
-			CreatedAt: v.CreatedAt,
-		}
-	}
-
-	return result, nil
-}
-
 func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	existUser, _ := u.dao.User.SelectIdentity(ctx, user.Id)
 	if existUser == nil {
@@ -239,29 +200,6 @@ func (u *UserDatabase) Set(ctx context.Context, user *database.User) error {
 				return xerrors.WithStack(err)
 			}
 		}
-	}
-
-	return nil
-}
-
-func (u *UserDatabase) SetAccessToken(ctx context.Context, token *database.AccessToken) error {
-	user, err := u.dao.User.SelectIdentity(ctx, token.UserId)
-	if err != nil {
-		return xerrors.WithStack(err)
-	}
-	issuer, err := u.dao.User.SelectIdentity(ctx, token.Issuer)
-	if err != nil {
-		return xerrors.WithStack(err)
-	}
-
-	_, err = u.dao.AccessToken.Create(ctx, &entity.AccessToken{
-		Name:     token.Name,
-		Value:    token.Value,
-		UserId:   user.Id,
-		IssuerId: issuer.Id,
-	})
-	if err != nil {
-		return xerrors.WithStack(err)
 	}
 
 	return nil

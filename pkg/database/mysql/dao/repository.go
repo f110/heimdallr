@@ -16,7 +16,6 @@ type Repository struct {
 	User               *User
 	UserState          *UserState
 	RoleBinding        *RoleBinding
-	AccessToken        *AccessToken
 }
 
 func NewRepository(conn *sql.DB) *Repository {
@@ -31,7 +30,6 @@ func NewRepository(conn *sql.DB) *Repository {
 		Code:               NewCode(conn),
 		User:               NewUser(conn),
 		RoleBinding:        NewRoleBinding(conn),
-		AccessToken:        NewAccessToken(conn),
 		UserState:          NewUserState(conn),
 	}
 }

@@ -20,7 +20,6 @@ import { Route as SaIndexRouteImport } from './routes/sa.index'
 import { Route as SaNewRouteImport } from './routes/sa.new'
 import { Route as UserIndexRouteImport } from './routes/user.index'
 import { Route as MeDeviceNewRouteImport } from './routes/me.device.new'
-import { Route as Service_accountIdTokenRouteImport } from './routes/service_account.$id.token'
 import { Route as UserIdIndexRouteImport } from './routes/user.$id.index'
 import { Route as UserIdEditRouteImport } from './routes/user.$id.edit'
 
@@ -79,11 +78,6 @@ const MeDeviceNewRoute = MeDeviceNewRouteImport.update({
   path: '/me/device/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Service_accountIdTokenRoute = Service_accountIdTokenRouteImport.update({
-  id: '/service_account/$id/token',
-  path: '/service_account/$id/token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const UserIdIndexRoute = UserIdIndexRouteImport.update({
   id: '/user/$id/',
   path: '/user/$id/',
@@ -107,7 +101,6 @@ export interface FileRoutesByFullPath {
   '/sa/': typeof SaIndexRoute
   '/user/': typeof UserIndexRoute
   '/me/device/new': typeof MeDeviceNewRoute
-  '/service_account/$id/token': typeof Service_accountIdTokenRoute
   '/user/$id/edit': typeof UserIdEditRoute
   '/user/$id/': typeof UserIdIndexRoute
 }
@@ -123,7 +116,6 @@ export interface FileRoutesByTo {
   '/sa': typeof SaIndexRoute
   '/user': typeof UserIndexRoute
   '/me/device/new': typeof MeDeviceNewRoute
-  '/service_account/$id/token': typeof Service_accountIdTokenRoute
   '/user/$id/edit': typeof UserIdEditRoute
   '/user/$id': typeof UserIdIndexRoute
 }
@@ -140,7 +132,6 @@ export interface FileRoutesById {
   '/sa/': typeof SaIndexRoute
   '/user/': typeof UserIndexRoute
   '/me/device/new': typeof MeDeviceNewRoute
-  '/service_account/$id/token': typeof Service_accountIdTokenRoute
   '/user/$id/edit': typeof UserIdEditRoute
   '/user/$id/': typeof UserIdIndexRoute
 }
@@ -158,7 +149,6 @@ export interface FileRouteTypes {
     | '/sa/'
     | '/user/'
     | '/me/device/new'
-    | '/service_account/$id/token'
     | '/user/$id/edit'
     | '/user/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -174,7 +164,6 @@ export interface FileRouteTypes {
     | '/sa'
     | '/user'
     | '/me/device/new'
-    | '/service_account/$id/token'
     | '/user/$id/edit'
     | '/user/$id'
   id:
@@ -190,7 +179,6 @@ export interface FileRouteTypes {
     | '/sa/'
     | '/user/'
     | '/me/device/new'
-    | '/service_account/$id/token'
     | '/user/$id/edit'
     | '/user/$id/'
   fileRoutesById: FileRoutesById
@@ -207,7 +195,6 @@ export interface RootRouteChildren {
   SaIndexRoute: typeof SaIndexRoute
   UserIndexRoute: typeof UserIndexRoute
   MeDeviceNewRoute: typeof MeDeviceNewRoute
-  Service_accountIdTokenRoute: typeof Service_accountIdTokenRoute
   UserIdEditRoute: typeof UserIdEditRoute
   UserIdIndexRoute: typeof UserIdIndexRoute
 }
@@ -291,13 +278,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeDeviceNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/service_account/$id/token': {
-      id: '/service_account/$id/token'
-      path: '/service_account/$id/token'
-      fullPath: '/service_account/$id/token'
-      preLoaderRoute: typeof Service_accountIdTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/user/$id/': {
       id: '/user/$id/'
       path: '/user/$id'
@@ -327,7 +307,6 @@ const rootRouteChildren: RootRouteChildren = {
   SaIndexRoute: SaIndexRoute,
   UserIndexRoute: UserIndexRoute,
   MeDeviceNewRoute: MeDeviceNewRoute,
-  Service_accountIdTokenRoute: Service_accountIdTokenRoute,
   UserIdEditRoute: UserIdEditRoute,
   UserIdIndexRoute: UserIdIndexRoute,
 }

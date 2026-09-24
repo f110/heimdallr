@@ -484,66 +484,6 @@ func (x *Agent) GetConnectedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type AccessToken struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Issuer        string                 `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
-	IssuedAt      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AccessToken) Reset() {
-	*x = AccessToken{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AccessToken) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AccessToken) ProtoMessage() {}
-
-func (x *AccessToken) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AccessToken.ProtoReflect.Descriptor instead.
-func (*AccessToken) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *AccessToken) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *AccessToken) GetIssuer() string {
-	if x != nil {
-		return x.Issuer
-	}
-	return ""
-}
-
-func (x *AccessToken) GetIssuedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.IssuedAt
-	}
-	return nil
-}
-
 type GetMeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -552,7 +492,7 @@ type GetMeRequest struct {
 
 func (x *GetMeRequest) Reset() {
 	*x = GetMeRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[6]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +504,7 @@ func (x *GetMeRequest) String() string {
 func (*GetMeRequest) ProtoMessage() {}
 
 func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[6]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +517,7 @@ func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMeRequest.ProtoReflect.Descriptor instead.
 func (*GetMeRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{6}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{5}
 }
 
 type GetMeResponse struct {
@@ -590,7 +530,7 @@ type GetMeResponse struct {
 
 func (x *GetMeResponse) Reset() {
 	*x = GetMeResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[7]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +542,7 @@ func (x *GetMeResponse) String() string {
 func (*GetMeResponse) ProtoMessage() {}
 
 func (x *GetMeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[7]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +555,7 @@ func (x *GetMeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMeResponse.ProtoReflect.Descriptor instead.
 func (*GetMeResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{7}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetMeResponse) GetDevices() []*Certificate {
@@ -642,7 +582,7 @@ type AddDeviceRequest struct {
 
 func (x *AddDeviceRequest) Reset() {
 	*x = AddDeviceRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[8]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -654,7 +594,7 @@ func (x *AddDeviceRequest) String() string {
 func (*AddDeviceRequest) ProtoMessage() {}
 
 func (x *AddDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[8]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -667,7 +607,7 @@ func (x *AddDeviceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddDeviceRequest.ProtoReflect.Descriptor instead.
 func (*AddDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{8}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AddDeviceRequest) GetName() string {
@@ -692,7 +632,7 @@ type AddDeviceResponse struct {
 
 func (x *AddDeviceResponse) Reset() {
 	*x = AddDeviceResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[9]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -704,7 +644,7 @@ func (x *AddDeviceResponse) String() string {
 func (*AddDeviceResponse) ProtoMessage() {}
 
 func (x *AddDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[9]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -717,7 +657,7 @@ func (x *AddDeviceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddDeviceResponse.ProtoReflect.Descriptor instead.
 func (*AddDeviceResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{9}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{8}
 }
 
 type ListUsersRequest struct {
@@ -728,7 +668,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[10]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +680,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[10]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +693,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{10}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{9}
 }
 
 type ListUsersResponse struct {
@@ -765,7 +705,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[11]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +717,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[11]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +730,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{11}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListUsersResponse) GetUsers() []*User {
@@ -809,7 +749,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[12]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -821,7 +761,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[12]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -834,7 +774,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{12}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetUserRequest) GetId() string {
@@ -854,7 +794,7 @@ type GetUserResponse struct {
 
 func (x *GetUserResponse) Reset() {
 	*x = GetUserResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[13]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -866,7 +806,7 @@ func (x *GetUserResponse) String() string {
 func (*GetUserResponse) ProtoMessage() {}
 
 func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[13]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -879,7 +819,7 @@ func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
 func (*GetUserResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{13}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetUserResponse) GetUser() *User {
@@ -906,7 +846,7 @@ type AddUserRequest struct {
 
 func (x *AddUserRequest) Reset() {
 	*x = AddUserRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[14]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -918,7 +858,7 @@ func (x *AddUserRequest) String() string {
 func (*AddUserRequest) ProtoMessage() {}
 
 func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[14]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -931,7 +871,7 @@ func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddUserRequest.ProtoReflect.Descriptor instead.
 func (*AddUserRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{14}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AddUserRequest) GetId() string {
@@ -956,7 +896,7 @@ type AddUserResponse struct {
 
 func (x *AddUserResponse) Reset() {
 	*x = AddUserResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[15]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +908,7 @@ func (x *AddUserResponse) String() string {
 func (*AddUserResponse) ProtoMessage() {}
 
 func (x *AddUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[15]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +921,7 @@ func (x *AddUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddUserResponse.ProtoReflect.Descriptor instead.
 func (*AddUserResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{15}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{14}
 }
 
 type UpdateUserRequest struct {
@@ -994,7 +934,7 @@ type UpdateUserRequest struct {
 
 func (x *UpdateUserRequest) Reset() {
 	*x = UpdateUserRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[16]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1006,7 +946,7 @@ func (x *UpdateUserRequest) String() string {
 func (*UpdateUserRequest) ProtoMessage() {}
 
 func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[16]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1019,7 +959,7 @@ func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{16}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateUserRequest) GetId() string {
@@ -1044,7 +984,7 @@ type UpdateUserResponse struct {
 
 func (x *UpdateUserResponse) Reset() {
 	*x = UpdateUserResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[17]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1056,7 +996,7 @@ func (x *UpdateUserResponse) String() string {
 func (*UpdateUserResponse) ProtoMessage() {}
 
 func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[17]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +1009,7 @@ func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserResponse.ProtoReflect.Descriptor instead.
 func (*UpdateUserResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{17}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{16}
 }
 
 type DeleteUserRequest struct {
@@ -1082,7 +1022,7 @@ type DeleteUserRequest struct {
 
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[18]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1094,7 +1034,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[18]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1107,7 +1047,7 @@ func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{18}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteUserRequest) GetId() string {
@@ -1132,7 +1072,7 @@ type DeleteUserResponse struct {
 
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[19]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1084,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[19]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1097,7 @@ func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{19}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{18}
 }
 
 type BecomeMaintainerRequest struct {
@@ -1170,7 +1110,7 @@ type BecomeMaintainerRequest struct {
 
 func (x *BecomeMaintainerRequest) Reset() {
 	*x = BecomeMaintainerRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[20]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1182,7 +1122,7 @@ func (x *BecomeMaintainerRequest) String() string {
 func (*BecomeMaintainerRequest) ProtoMessage() {}
 
 func (x *BecomeMaintainerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[20]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1195,7 +1135,7 @@ func (x *BecomeMaintainerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BecomeMaintainerRequest.ProtoReflect.Descriptor instead.
 func (*BecomeMaintainerRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{20}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *BecomeMaintainerRequest) GetId() string {
@@ -1220,7 +1160,7 @@ type BecomeMaintainerResponse struct {
 
 func (x *BecomeMaintainerResponse) Reset() {
 	*x = BecomeMaintainerResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[21]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1232,7 +1172,7 @@ func (x *BecomeMaintainerResponse) String() string {
 func (*BecomeMaintainerResponse) ProtoMessage() {}
 
 func (x *BecomeMaintainerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[21]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1245,7 +1185,7 @@ func (x *BecomeMaintainerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BecomeMaintainerResponse.ProtoReflect.Descriptor instead.
 func (*BecomeMaintainerResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{21}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{20}
 }
 
 type ToggleAdminRequest struct {
@@ -1257,7 +1197,7 @@ type ToggleAdminRequest struct {
 
 func (x *ToggleAdminRequest) Reset() {
 	*x = ToggleAdminRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[22]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1269,7 +1209,7 @@ func (x *ToggleAdminRequest) String() string {
 func (*ToggleAdminRequest) ProtoMessage() {}
 
 func (x *ToggleAdminRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[22]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1282,7 +1222,7 @@ func (x *ToggleAdminRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleAdminRequest.ProtoReflect.Descriptor instead.
 func (*ToggleAdminRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{22}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ToggleAdminRequest) GetId() string {
@@ -1300,7 +1240,7 @@ type ToggleAdminResponse struct {
 
 func (x *ToggleAdminResponse) Reset() {
 	*x = ToggleAdminResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[23]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1312,7 +1252,7 @@ func (x *ToggleAdminResponse) String() string {
 func (*ToggleAdminResponse) ProtoMessage() {}
 
 func (x *ToggleAdminResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[23]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1325,7 +1265,7 @@ func (x *ToggleAdminResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleAdminResponse.ProtoReflect.Descriptor instead.
 func (*ToggleAdminResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{23}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{22}
 }
 
 type ListRolesRequest struct {
@@ -1336,7 +1276,7 @@ type ListRolesRequest struct {
 
 func (x *ListRolesRequest) Reset() {
 	*x = ListRolesRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[24]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1348,7 +1288,7 @@ func (x *ListRolesRequest) String() string {
 func (*ListRolesRequest) ProtoMessage() {}
 
 func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[24]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1361,7 +1301,7 @@ func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesRequest.ProtoReflect.Descriptor instead.
 func (*ListRolesRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{24}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{23}
 }
 
 type ListRolesResponse struct {
@@ -1373,7 +1313,7 @@ type ListRolesResponse struct {
 
 func (x *ListRolesResponse) Reset() {
 	*x = ListRolesResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[25]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1385,7 +1325,7 @@ func (x *ListRolesResponse) String() string {
 func (*ListRolesResponse) ProtoMessage() {}
 
 func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[25]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1398,7 +1338,7 @@ func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesResponse.ProtoReflect.Descriptor instead.
 func (*ListRolesResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{25}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListRolesResponse) GetRoles() []*RoleMembers {
@@ -1418,7 +1358,7 @@ type RoleMembers struct {
 
 func (x *RoleMembers) Reset() {
 	*x = RoleMembers{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[26]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1430,7 +1370,7 @@ func (x *RoleMembers) String() string {
 func (*RoleMembers) ProtoMessage() {}
 
 func (x *RoleMembers) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[26]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1443,7 +1383,7 @@ func (x *RoleMembers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleMembers.ProtoReflect.Descriptor instead.
 func (*RoleMembers) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{26}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RoleMembers) GetRole() *Role {
@@ -1472,7 +1412,7 @@ type RoleMember struct {
 
 func (x *RoleMember) Reset() {
 	*x = RoleMember{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[27]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1484,7 +1424,7 @@ func (x *RoleMember) String() string {
 func (*RoleMember) ProtoMessage() {}
 
 func (x *RoleMember) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[27]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1497,7 +1437,7 @@ func (x *RoleMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleMember.ProtoReflect.Descriptor instead.
 func (*RoleMember) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{27}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RoleMember) GetId() string {
@@ -1536,7 +1476,7 @@ type ListServiceAccountsRequest struct {
 
 func (x *ListServiceAccountsRequest) Reset() {
 	*x = ListServiceAccountsRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[28]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1548,7 +1488,7 @@ func (x *ListServiceAccountsRequest) String() string {
 func (*ListServiceAccountsRequest) ProtoMessage() {}
 
 func (x *ListServiceAccountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[28]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1561,7 +1501,7 @@ func (x *ListServiceAccountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServiceAccountsRequest.ProtoReflect.Descriptor instead.
 func (*ListServiceAccountsRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{28}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{27}
 }
 
 type ListServiceAccountsResponse struct {
@@ -1573,7 +1513,7 @@ type ListServiceAccountsResponse struct {
 
 func (x *ListServiceAccountsResponse) Reset() {
 	*x = ListServiceAccountsResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[29]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1585,7 +1525,7 @@ func (x *ListServiceAccountsResponse) String() string {
 func (*ListServiceAccountsResponse) ProtoMessage() {}
 
 func (x *ListServiceAccountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[29]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1598,7 +1538,7 @@ func (x *ListServiceAccountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServiceAccountsResponse.ProtoReflect.Descriptor instead.
 func (*ListServiceAccountsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{29}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListServiceAccountsResponse) GetAccounts() []*User {
@@ -1618,7 +1558,7 @@ type CreateServiceAccountRequest struct {
 
 func (x *CreateServiceAccountRequest) Reset() {
 	*x = CreateServiceAccountRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[30]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1630,7 +1570,7 @@ func (x *CreateServiceAccountRequest) String() string {
 func (*CreateServiceAccountRequest) ProtoMessage() {}
 
 func (x *CreateServiceAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[30]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1643,7 +1583,7 @@ func (x *CreateServiceAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServiceAccountRequest.ProtoReflect.Descriptor instead.
 func (*CreateServiceAccountRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{30}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *CreateServiceAccountRequest) GetId() string {
@@ -1668,7 +1608,7 @@ type CreateServiceAccountResponse struct {
 
 func (x *CreateServiceAccountResponse) Reset() {
 	*x = CreateServiceAccountResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[31]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1680,7 +1620,7 @@ func (x *CreateServiceAccountResponse) String() string {
 func (*CreateServiceAccountResponse) ProtoMessage() {}
 
 func (x *CreateServiceAccountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[31]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1693,199 +1633,7 @@ func (x *CreateServiceAccountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServiceAccountResponse.ProtoReflect.Descriptor instead.
 func (*CreateServiceAccountResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{31}
-}
-
-type ListServiceAccountTokensRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListServiceAccountTokensRequest) Reset() {
-	*x = ListServiceAccountTokensRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListServiceAccountTokensRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListServiceAccountTokensRequest) ProtoMessage() {}
-
-func (x *ListServiceAccountTokensRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListServiceAccountTokensRequest.ProtoReflect.Descriptor instead.
-func (*ListServiceAccountTokensRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *ListServiceAccountTokensRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type ListServiceAccountTokensResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tokens        []*AccessToken         `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListServiceAccountTokensResponse) Reset() {
-	*x = ListServiceAccountTokensResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListServiceAccountTokensResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListServiceAccountTokensResponse) ProtoMessage() {}
-
-func (x *ListServiceAccountTokensResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListServiceAccountTokensResponse.ProtoReflect.Descriptor instead.
-func (*ListServiceAccountTokensResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *ListServiceAccountTokensResponse) GetTokens() []*AccessToken {
-	if x != nil {
-		return x.Tokens
-	}
-	return nil
-}
-
-type CreateServiceAccountTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateServiceAccountTokenRequest) Reset() {
-	*x = CreateServiceAccountTokenRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[34]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateServiceAccountTokenRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateServiceAccountTokenRequest) ProtoMessage() {}
-
-func (x *CreateServiceAccountTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[34]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateServiceAccountTokenRequest.ProtoReflect.Descriptor instead.
-func (*CreateServiceAccountTokenRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{34}
-}
-
-func (x *CreateServiceAccountTokenRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *CreateServiceAccountTokenRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type CreateServiceAccountTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateServiceAccountTokenResponse) Reset() {
-	*x = CreateServiceAccountTokenResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[35]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateServiceAccountTokenResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateServiceAccountTokenResponse) ProtoMessage() {}
-
-func (x *CreateServiceAccountTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[35]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateServiceAccountTokenResponse.ProtoReflect.Descriptor instead.
-func (*CreateServiceAccountTokenResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{35}
-}
-
-func (x *CreateServiceAccountTokenResponse) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *CreateServiceAccountTokenResponse) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{30}
 }
 
 type ListCertificatesRequest struct {
@@ -1896,7 +1644,7 @@ type ListCertificatesRequest struct {
 
 func (x *ListCertificatesRequest) Reset() {
 	*x = ListCertificatesRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[36]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1908,7 +1656,7 @@ func (x *ListCertificatesRequest) String() string {
 func (*ListCertificatesRequest) ProtoMessage() {}
 
 func (x *ListCertificatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[36]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1921,7 +1669,7 @@ func (x *ListCertificatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCertificatesRequest.ProtoReflect.Descriptor instead.
 func (*ListCertificatesRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{36}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{31}
 }
 
 type ListCertificatesResponse struct {
@@ -1934,7 +1682,7 @@ type ListCertificatesResponse struct {
 
 func (x *ListCertificatesResponse) Reset() {
 	*x = ListCertificatesResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[37]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +1694,7 @@ func (x *ListCertificatesResponse) String() string {
 func (*ListCertificatesResponse) ProtoMessage() {}
 
 func (x *ListCertificatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[37]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1959,7 +1707,7 @@ func (x *ListCertificatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCertificatesResponse.ProtoReflect.Descriptor instead.
 func (*ListCertificatesResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{37}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListCertificatesResponse) GetSigned() []*Certificate {
@@ -1990,7 +1738,7 @@ type NewClientCertificateRequest struct {
 
 func (x *NewClientCertificateRequest) Reset() {
 	*x = NewClientCertificateRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[38]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2002,7 +1750,7 @@ func (x *NewClientCertificateRequest) String() string {
 func (*NewClientCertificateRequest) ProtoMessage() {}
 
 func (x *NewClientCertificateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[38]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2015,7 +1763,7 @@ func (x *NewClientCertificateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewClientCertificateRequest.ProtoReflect.Descriptor instead.
 func (*NewClientCertificateRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{38}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *NewClientCertificateRequest) GetId() string {
@@ -2068,7 +1816,7 @@ type NewClientCertificateResponse struct {
 
 func (x *NewClientCertificateResponse) Reset() {
 	*x = NewClientCertificateResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[39]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2080,7 +1828,7 @@ func (x *NewClientCertificateResponse) String() string {
 func (*NewClientCertificateResponse) ProtoMessage() {}
 
 func (x *NewClientCertificateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[39]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2093,7 +1841,7 @@ func (x *NewClientCertificateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NewClientCertificateResponse.ProtoReflect.Descriptor instead.
 func (*NewClientCertificateResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{39}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{34}
 }
 
 type RevokeCertificateRequest struct {
@@ -2105,7 +1853,7 @@ type RevokeCertificateRequest struct {
 
 func (x *RevokeCertificateRequest) Reset() {
 	*x = RevokeCertificateRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[40]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2117,7 +1865,7 @@ func (x *RevokeCertificateRequest) String() string {
 func (*RevokeCertificateRequest) ProtoMessage() {}
 
 func (x *RevokeCertificateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[40]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2130,7 +1878,7 @@ func (x *RevokeCertificateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeCertificateRequest.ProtoReflect.Descriptor instead.
 func (*RevokeCertificateRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{40}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RevokeCertificateRequest) GetSerialNumber() string {
@@ -2148,7 +1896,7 @@ type RevokeCertificateResponse struct {
 
 func (x *RevokeCertificateResponse) Reset() {
 	*x = RevokeCertificateResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[41]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2160,7 +1908,7 @@ func (x *RevokeCertificateResponse) String() string {
 func (*RevokeCertificateResponse) ProtoMessage() {}
 
 func (x *RevokeCertificateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[41]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2173,7 +1921,7 @@ func (x *RevokeCertificateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeCertificateResponse.ProtoReflect.Descriptor instead.
 func (*RevokeCertificateResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{41}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{36}
 }
 
 type ListAgentsRequest struct {
@@ -2184,7 +1932,7 @@ type ListAgentsRequest struct {
 
 func (x *ListAgentsRequest) Reset() {
 	*x = ListAgentsRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[42]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2196,7 +1944,7 @@ func (x *ListAgentsRequest) String() string {
 func (*ListAgentsRequest) ProtoMessage() {}
 
 func (x *ListAgentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[42]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2209,7 +1957,7 @@ func (x *ListAgentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentsRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{42}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{37}
 }
 
 type ListAgentsResponse struct {
@@ -2223,7 +1971,7 @@ type ListAgentsResponse struct {
 
 func (x *ListAgentsResponse) Reset() {
 	*x = ListAgentsResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[43]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2235,7 +1983,7 @@ func (x *ListAgentsResponse) String() string {
 func (*ListAgentsResponse) ProtoMessage() {}
 
 func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[43]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2248,7 +1996,7 @@ func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{43}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListAgentsResponse) GetConnected() []*Agent {
@@ -2280,7 +2028,7 @@ type ListAgentBackendsRequest struct {
 
 func (x *ListAgentBackendsRequest) Reset() {
 	*x = ListAgentBackendsRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[44]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2292,7 +2040,7 @@ func (x *ListAgentBackendsRequest) String() string {
 func (*ListAgentBackendsRequest) ProtoMessage() {}
 
 func (x *ListAgentBackendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[44]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2305,7 +2053,7 @@ func (x *ListAgentBackendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentBackendsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentBackendsRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{44}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{39}
 }
 
 type ListAgentBackendsResponse struct {
@@ -2317,7 +2065,7 @@ type ListAgentBackendsResponse struct {
 
 func (x *ListAgentBackendsResponse) Reset() {
 	*x = ListAgentBackendsResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[45]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2329,7 +2077,7 @@ func (x *ListAgentBackendsResponse) String() string {
 func (*ListAgentBackendsResponse) ProtoMessage() {}
 
 func (x *ListAgentBackendsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[45]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2342,7 +2090,7 @@ func (x *ListAgentBackendsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentBackendsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentBackendsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{45}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListAgentBackendsResponse) GetNames() []string {
@@ -2363,7 +2111,7 @@ type RegisterAgentRequest struct {
 
 func (x *RegisterAgentRequest) Reset() {
 	*x = RegisterAgentRequest{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[46]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2375,7 +2123,7 @@ func (x *RegisterAgentRequest) String() string {
 func (*RegisterAgentRequest) ProtoMessage() {}
 
 func (x *RegisterAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[46]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2388,7 +2136,7 @@ func (x *RegisterAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentRequest.ProtoReflect.Descriptor instead.
 func (*RegisterAgentRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{46}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *RegisterAgentRequest) GetId() string {
@@ -2420,7 +2168,7 @@ type RegisterAgentResponse struct {
 
 func (x *RegisterAgentResponse) Reset() {
 	*x = RegisterAgentResponse{}
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[47]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2432,7 +2180,7 @@ func (x *RegisterAgentResponse) String() string {
 func (*RegisterAgentResponse) ProtoMessage() {}
 
 func (x *RegisterAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[47]
+	mi := &file_pkg_dashboard_dashboard_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2445,7 +2193,7 @@ func (x *RegisterAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterAgentResponse.ProtoReflect.Descriptor instead.
 func (*RegisterAgentResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{47}
+	return file_pkg_dashboard_dashboard_proto_rawDescGZIP(), []int{42}
 }
 
 var File_pkg_dashboard_dashboard_proto protoreflect.FileDescriptor
@@ -2484,11 +2232,7 @@ const file_pkg_dashboard_dashboard_proto_rawDesc = "" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tfrom_addr\x18\x02 \x01(\tR\bfromAddr\x12=\n" +
-	"\fconnected_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vconnectedAt\"r\n" +
-	"\vAccessToken\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
-	"\x06issuer\x18\x02 \x01(\tR\x06issuer\x127\n" +
-	"\tissued_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\"\x0e\n" +
+	"\fconnected_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vconnectedAt\"\x0e\n" +
 	"\fGetMeRequest\"y\n" +
 	"\rGetMeResponse\x124\n" +
 	"\adevices\x18\x01 \x03(\v2\x1a.dashboard.bff.CertificateR\adevices\x122\n" +
@@ -2545,17 +2289,7 @@ const file_pkg_dashboard_dashboard_proto_rawDesc = "" +
 	"\x1bCreateServiceAccountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acomment\x18\x02 \x01(\tR\acomment\"\x1e\n" +
-	"\x1cCreateServiceAccountResponse\"1\n" +
-	"\x1fListServiceAccountTokensRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
-	" ListServiceAccountTokensResponse\x122\n" +
-	"\x06tokens\x18\x01 \x03(\v2\x1a.dashboard.bff.AccessTokenR\x06tokens\"F\n" +
-	" CreateServiceAccountTokenRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"M\n" +
-	"!CreateServiceAccountTokenResponse\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\x19\n" +
+	"\x1cCreateServiceAccountResponse\"\x19\n" +
 	"\x17ListCertificatesRequest\"\x84\x01\n" +
 	"\x18ListCertificatesResponse\x122\n" +
 	"\x06signed\x18\x01 \x03(\v2\x1a.dashboard.bff.CertificateR\x06signed\x124\n" +
@@ -2594,7 +2328,7 @@ const file_pkg_dashboard_dashboard_proto_rawDesc = "" +
 	"\fKEY_TYPE_RSA\x10\x022\x9f\x01\n" +
 	"\tMeService\x12B\n" +
 	"\x05GetMe\x12\x1b.dashboard.bff.GetMeRequest\x1a\x1c.dashboard.bff.GetMeResponse\x12N\n" +
-	"\tAddDevice\x12\x1f.dashboard.bff.AddDeviceRequest\x1a .dashboard.bff.AddDeviceResponse2\xff\b\n" +
+	"\tAddDevice\x12\x1f.dashboard.bff.AddDeviceRequest\x1a .dashboard.bff.AddDeviceResponse2\x82\a\n" +
 	"\fAdminService\x12N\n" +
 	"\tListUsers\x12\x1f.dashboard.bff.ListUsersRequest\x1a .dashboard.bff.ListUsersResponse\x12H\n" +
 	"\aGetUser\x12\x1d.dashboard.bff.GetUserRequest\x1a\x1e.dashboard.bff.GetUserResponse\x12H\n" +
@@ -2607,9 +2341,7 @@ const file_pkg_dashboard_dashboard_proto_rawDesc = "" +
 	"\vToggleAdmin\x12!.dashboard.bff.ToggleAdminRequest\x1a\".dashboard.bff.ToggleAdminResponse\x12N\n" +
 	"\tListRoles\x12\x1f.dashboard.bff.ListRolesRequest\x1a .dashboard.bff.ListRolesResponse\x12l\n" +
 	"\x13ListServiceAccounts\x12).dashboard.bff.ListServiceAccountsRequest\x1a*.dashboard.bff.ListServiceAccountsResponse\x12o\n" +
-	"\x14CreateServiceAccount\x12*.dashboard.bff.CreateServiceAccountRequest\x1a+.dashboard.bff.CreateServiceAccountResponse\x12{\n" +
-	"\x18ListServiceAccountTokens\x12..dashboard.bff.ListServiceAccountTokensRequest\x1a/.dashboard.bff.ListServiceAccountTokensResponse\x12~\n" +
-	"\x19CreateServiceAccountToken\x12/.dashboard.bff.CreateServiceAccountTokenRequest\x1a0.dashboard.bff.CreateServiceAccountTokenResponse2\xe9\x04\n" +
+	"\x14CreateServiceAccount\x12*.dashboard.bff.CreateServiceAccountRequest\x1a+.dashboard.bff.CreateServiceAccountResponse2\xe9\x04\n" +
 	"\x12CertificateService\x12c\n" +
 	"\x10ListCertificates\x12&.dashboard.bff.ListCertificatesRequest\x1a'.dashboard.bff.ListCertificatesResponse\x12o\n" +
 	"\x14NewClientCertificate\x12*.dashboard.bff.NewClientCertificateRequest\x1a+.dashboard.bff.NewClientCertificateResponse\x12f\n" +
@@ -2632,129 +2364,118 @@ func file_pkg_dashboard_dashboard_proto_rawDescGZIP() []byte {
 }
 
 var file_pkg_dashboard_dashboard_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_pkg_dashboard_dashboard_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
+var file_pkg_dashboard_dashboard_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_pkg_dashboard_dashboard_proto_goTypes = []any{
-	(UserType)(0),                             // 0: dashboard.bff.UserType
-	(KeyType)(0),                              // 1: dashboard.bff.KeyType
-	(*User)(nil),                              // 2: dashboard.bff.User
-	(*Role)(nil),                              // 3: dashboard.bff.Role
-	(*Backend)(nil),                           // 4: dashboard.bff.Backend
-	(*Certificate)(nil),                       // 5: dashboard.bff.Certificate
-	(*Agent)(nil),                             // 6: dashboard.bff.Agent
-	(*AccessToken)(nil),                       // 7: dashboard.bff.AccessToken
-	(*GetMeRequest)(nil),                      // 8: dashboard.bff.GetMeRequest
-	(*GetMeResponse)(nil),                     // 9: dashboard.bff.GetMeResponse
-	(*AddDeviceRequest)(nil),                  // 10: dashboard.bff.AddDeviceRequest
-	(*AddDeviceResponse)(nil),                 // 11: dashboard.bff.AddDeviceResponse
-	(*ListUsersRequest)(nil),                  // 12: dashboard.bff.ListUsersRequest
-	(*ListUsersResponse)(nil),                 // 13: dashboard.bff.ListUsersResponse
-	(*GetUserRequest)(nil),                    // 14: dashboard.bff.GetUserRequest
-	(*GetUserResponse)(nil),                   // 15: dashboard.bff.GetUserResponse
-	(*AddUserRequest)(nil),                    // 16: dashboard.bff.AddUserRequest
-	(*AddUserResponse)(nil),                   // 17: dashboard.bff.AddUserResponse
-	(*UpdateUserRequest)(nil),                 // 18: dashboard.bff.UpdateUserRequest
-	(*UpdateUserResponse)(nil),                // 19: dashboard.bff.UpdateUserResponse
-	(*DeleteUserRequest)(nil),                 // 20: dashboard.bff.DeleteUserRequest
-	(*DeleteUserResponse)(nil),                // 21: dashboard.bff.DeleteUserResponse
-	(*BecomeMaintainerRequest)(nil),           // 22: dashboard.bff.BecomeMaintainerRequest
-	(*BecomeMaintainerResponse)(nil),          // 23: dashboard.bff.BecomeMaintainerResponse
-	(*ToggleAdminRequest)(nil),                // 24: dashboard.bff.ToggleAdminRequest
-	(*ToggleAdminResponse)(nil),               // 25: dashboard.bff.ToggleAdminResponse
-	(*ListRolesRequest)(nil),                  // 26: dashboard.bff.ListRolesRequest
-	(*ListRolesResponse)(nil),                 // 27: dashboard.bff.ListRolesResponse
-	(*RoleMembers)(nil),                       // 28: dashboard.bff.RoleMembers
-	(*RoleMember)(nil),                        // 29: dashboard.bff.RoleMember
-	(*ListServiceAccountsRequest)(nil),        // 30: dashboard.bff.ListServiceAccountsRequest
-	(*ListServiceAccountsResponse)(nil),       // 31: dashboard.bff.ListServiceAccountsResponse
-	(*CreateServiceAccountRequest)(nil),       // 32: dashboard.bff.CreateServiceAccountRequest
-	(*CreateServiceAccountResponse)(nil),      // 33: dashboard.bff.CreateServiceAccountResponse
-	(*ListServiceAccountTokensRequest)(nil),   // 34: dashboard.bff.ListServiceAccountTokensRequest
-	(*ListServiceAccountTokensResponse)(nil),  // 35: dashboard.bff.ListServiceAccountTokensResponse
-	(*CreateServiceAccountTokenRequest)(nil),  // 36: dashboard.bff.CreateServiceAccountTokenRequest
-	(*CreateServiceAccountTokenResponse)(nil), // 37: dashboard.bff.CreateServiceAccountTokenResponse
-	(*ListCertificatesRequest)(nil),           // 38: dashboard.bff.ListCertificatesRequest
-	(*ListCertificatesResponse)(nil),          // 39: dashboard.bff.ListCertificatesResponse
-	(*NewClientCertificateRequest)(nil),       // 40: dashboard.bff.NewClientCertificateRequest
-	(*NewClientCertificateResponse)(nil),      // 41: dashboard.bff.NewClientCertificateResponse
-	(*RevokeCertificateRequest)(nil),          // 42: dashboard.bff.RevokeCertificateRequest
-	(*RevokeCertificateResponse)(nil),         // 43: dashboard.bff.RevokeCertificateResponse
-	(*ListAgentsRequest)(nil),                 // 44: dashboard.bff.ListAgentsRequest
-	(*ListAgentsResponse)(nil),                // 45: dashboard.bff.ListAgentsResponse
-	(*ListAgentBackendsRequest)(nil),          // 46: dashboard.bff.ListAgentBackendsRequest
-	(*ListAgentBackendsResponse)(nil),         // 47: dashboard.bff.ListAgentBackendsResponse
-	(*RegisterAgentRequest)(nil),              // 48: dashboard.bff.RegisterAgentRequest
-	(*RegisterAgentResponse)(nil),             // 49: dashboard.bff.RegisterAgentResponse
-	(*timestamppb.Timestamp)(nil),             // 50: google.protobuf.Timestamp
+	(UserType)(0),                        // 0: dashboard.bff.UserType
+	(KeyType)(0),                         // 1: dashboard.bff.KeyType
+	(*User)(nil),                         // 2: dashboard.bff.User
+	(*Role)(nil),                         // 3: dashboard.bff.Role
+	(*Backend)(nil),                      // 4: dashboard.bff.Backend
+	(*Certificate)(nil),                  // 5: dashboard.bff.Certificate
+	(*Agent)(nil),                        // 6: dashboard.bff.Agent
+	(*GetMeRequest)(nil),                 // 7: dashboard.bff.GetMeRequest
+	(*GetMeResponse)(nil),                // 8: dashboard.bff.GetMeResponse
+	(*AddDeviceRequest)(nil),             // 9: dashboard.bff.AddDeviceRequest
+	(*AddDeviceResponse)(nil),            // 10: dashboard.bff.AddDeviceResponse
+	(*ListUsersRequest)(nil),             // 11: dashboard.bff.ListUsersRequest
+	(*ListUsersResponse)(nil),            // 12: dashboard.bff.ListUsersResponse
+	(*GetUserRequest)(nil),               // 13: dashboard.bff.GetUserRequest
+	(*GetUserResponse)(nil),              // 14: dashboard.bff.GetUserResponse
+	(*AddUserRequest)(nil),               // 15: dashboard.bff.AddUserRequest
+	(*AddUserResponse)(nil),              // 16: dashboard.bff.AddUserResponse
+	(*UpdateUserRequest)(nil),            // 17: dashboard.bff.UpdateUserRequest
+	(*UpdateUserResponse)(nil),           // 18: dashboard.bff.UpdateUserResponse
+	(*DeleteUserRequest)(nil),            // 19: dashboard.bff.DeleteUserRequest
+	(*DeleteUserResponse)(nil),           // 20: dashboard.bff.DeleteUserResponse
+	(*BecomeMaintainerRequest)(nil),      // 21: dashboard.bff.BecomeMaintainerRequest
+	(*BecomeMaintainerResponse)(nil),     // 22: dashboard.bff.BecomeMaintainerResponse
+	(*ToggleAdminRequest)(nil),           // 23: dashboard.bff.ToggleAdminRequest
+	(*ToggleAdminResponse)(nil),          // 24: dashboard.bff.ToggleAdminResponse
+	(*ListRolesRequest)(nil),             // 25: dashboard.bff.ListRolesRequest
+	(*ListRolesResponse)(nil),            // 26: dashboard.bff.ListRolesResponse
+	(*RoleMembers)(nil),                  // 27: dashboard.bff.RoleMembers
+	(*RoleMember)(nil),                   // 28: dashboard.bff.RoleMember
+	(*ListServiceAccountsRequest)(nil),   // 29: dashboard.bff.ListServiceAccountsRequest
+	(*ListServiceAccountsResponse)(nil),  // 30: dashboard.bff.ListServiceAccountsResponse
+	(*CreateServiceAccountRequest)(nil),  // 31: dashboard.bff.CreateServiceAccountRequest
+	(*CreateServiceAccountResponse)(nil), // 32: dashboard.bff.CreateServiceAccountResponse
+	(*ListCertificatesRequest)(nil),      // 33: dashboard.bff.ListCertificatesRequest
+	(*ListCertificatesResponse)(nil),     // 34: dashboard.bff.ListCertificatesResponse
+	(*NewClientCertificateRequest)(nil),  // 35: dashboard.bff.NewClientCertificateRequest
+	(*NewClientCertificateResponse)(nil), // 36: dashboard.bff.NewClientCertificateResponse
+	(*RevokeCertificateRequest)(nil),     // 37: dashboard.bff.RevokeCertificateRequest
+	(*RevokeCertificateResponse)(nil),    // 38: dashboard.bff.RevokeCertificateResponse
+	(*ListAgentsRequest)(nil),            // 39: dashboard.bff.ListAgentsRequest
+	(*ListAgentsResponse)(nil),           // 40: dashboard.bff.ListAgentsResponse
+	(*ListAgentBackendsRequest)(nil),     // 41: dashboard.bff.ListAgentBackendsRequest
+	(*ListAgentBackendsResponse)(nil),    // 42: dashboard.bff.ListAgentBackendsResponse
+	(*RegisterAgentRequest)(nil),         // 43: dashboard.bff.RegisterAgentRequest
+	(*RegisterAgentResponse)(nil),        // 44: dashboard.bff.RegisterAgentResponse
+	(*timestamppb.Timestamp)(nil),        // 45: google.protobuf.Timestamp
 }
 var file_pkg_dashboard_dashboard_proto_depIdxs = []int32{
 	0,  // 0: dashboard.bff.User.type:type_name -> dashboard.bff.UserType
-	50, // 1: dashboard.bff.User.last_login:type_name -> google.protobuf.Timestamp
-	50, // 2: dashboard.bff.Certificate.issued_at:type_name -> google.protobuf.Timestamp
-	50, // 3: dashboard.bff.Certificate.revoked_at:type_name -> google.protobuf.Timestamp
-	50, // 4: dashboard.bff.Agent.connected_at:type_name -> google.protobuf.Timestamp
-	50, // 5: dashboard.bff.AccessToken.issued_at:type_name -> google.protobuf.Timestamp
-	5,  // 6: dashboard.bff.GetMeResponse.devices:type_name -> dashboard.bff.Certificate
-	4,  // 7: dashboard.bff.GetMeResponse.backends:type_name -> dashboard.bff.Backend
-	2,  // 8: dashboard.bff.ListUsersResponse.users:type_name -> dashboard.bff.User
-	2,  // 9: dashboard.bff.GetUserResponse.user:type_name -> dashboard.bff.User
-	4,  // 10: dashboard.bff.GetUserResponse.backends:type_name -> dashboard.bff.Backend
-	28, // 11: dashboard.bff.ListRolesResponse.roles:type_name -> dashboard.bff.RoleMembers
-	3,  // 12: dashboard.bff.RoleMembers.role:type_name -> dashboard.bff.Role
-	29, // 13: dashboard.bff.RoleMembers.members:type_name -> dashboard.bff.RoleMember
-	0,  // 14: dashboard.bff.RoleMember.type:type_name -> dashboard.bff.UserType
-	2,  // 15: dashboard.bff.ListServiceAccountsResponse.accounts:type_name -> dashboard.bff.User
-	7,  // 16: dashboard.bff.ListServiceAccountTokensResponse.tokens:type_name -> dashboard.bff.AccessToken
-	5,  // 17: dashboard.bff.ListCertificatesResponse.signed:type_name -> dashboard.bff.Certificate
-	5,  // 18: dashboard.bff.ListCertificatesResponse.revoked:type_name -> dashboard.bff.Certificate
-	1,  // 19: dashboard.bff.NewClientCertificateRequest.key_type:type_name -> dashboard.bff.KeyType
-	6,  // 20: dashboard.bff.ListAgentsResponse.connected:type_name -> dashboard.bff.Agent
-	5,  // 21: dashboard.bff.ListAgentsResponse.signed:type_name -> dashboard.bff.Certificate
-	5,  // 22: dashboard.bff.ListAgentsResponse.revoked:type_name -> dashboard.bff.Certificate
-	8,  // 23: dashboard.bff.MeService.GetMe:input_type -> dashboard.bff.GetMeRequest
-	10, // 24: dashboard.bff.MeService.AddDevice:input_type -> dashboard.bff.AddDeviceRequest
-	12, // 25: dashboard.bff.AdminService.ListUsers:input_type -> dashboard.bff.ListUsersRequest
-	14, // 26: dashboard.bff.AdminService.GetUser:input_type -> dashboard.bff.GetUserRequest
-	16, // 27: dashboard.bff.AdminService.AddUser:input_type -> dashboard.bff.AddUserRequest
-	18, // 28: dashboard.bff.AdminService.UpdateUser:input_type -> dashboard.bff.UpdateUserRequest
-	20, // 29: dashboard.bff.AdminService.DeleteUser:input_type -> dashboard.bff.DeleteUserRequest
-	22, // 30: dashboard.bff.AdminService.BecomeMaintainer:input_type -> dashboard.bff.BecomeMaintainerRequest
-	24, // 31: dashboard.bff.AdminService.ToggleAdmin:input_type -> dashboard.bff.ToggleAdminRequest
-	26, // 32: dashboard.bff.AdminService.ListRoles:input_type -> dashboard.bff.ListRolesRequest
-	30, // 33: dashboard.bff.AdminService.ListServiceAccounts:input_type -> dashboard.bff.ListServiceAccountsRequest
-	32, // 34: dashboard.bff.AdminService.CreateServiceAccount:input_type -> dashboard.bff.CreateServiceAccountRequest
-	34, // 35: dashboard.bff.AdminService.ListServiceAccountTokens:input_type -> dashboard.bff.ListServiceAccountTokensRequest
-	36, // 36: dashboard.bff.AdminService.CreateServiceAccountToken:input_type -> dashboard.bff.CreateServiceAccountTokenRequest
-	38, // 37: dashboard.bff.CertificateService.ListCertificates:input_type -> dashboard.bff.ListCertificatesRequest
-	40, // 38: dashboard.bff.CertificateService.NewClientCertificate:input_type -> dashboard.bff.NewClientCertificateRequest
-	42, // 39: dashboard.bff.CertificateService.RevokeCertificate:input_type -> dashboard.bff.RevokeCertificateRequest
-	44, // 40: dashboard.bff.CertificateService.ListAgents:input_type -> dashboard.bff.ListAgentsRequest
-	46, // 41: dashboard.bff.CertificateService.ListAgentBackends:input_type -> dashboard.bff.ListAgentBackendsRequest
-	48, // 42: dashboard.bff.CertificateService.RegisterAgent:input_type -> dashboard.bff.RegisterAgentRequest
-	9,  // 43: dashboard.bff.MeService.GetMe:output_type -> dashboard.bff.GetMeResponse
-	11, // 44: dashboard.bff.MeService.AddDevice:output_type -> dashboard.bff.AddDeviceResponse
-	13, // 45: dashboard.bff.AdminService.ListUsers:output_type -> dashboard.bff.ListUsersResponse
-	15, // 46: dashboard.bff.AdminService.GetUser:output_type -> dashboard.bff.GetUserResponse
-	17, // 47: dashboard.bff.AdminService.AddUser:output_type -> dashboard.bff.AddUserResponse
-	19, // 48: dashboard.bff.AdminService.UpdateUser:output_type -> dashboard.bff.UpdateUserResponse
-	21, // 49: dashboard.bff.AdminService.DeleteUser:output_type -> dashboard.bff.DeleteUserResponse
-	23, // 50: dashboard.bff.AdminService.BecomeMaintainer:output_type -> dashboard.bff.BecomeMaintainerResponse
-	25, // 51: dashboard.bff.AdminService.ToggleAdmin:output_type -> dashboard.bff.ToggleAdminResponse
-	27, // 52: dashboard.bff.AdminService.ListRoles:output_type -> dashboard.bff.ListRolesResponse
-	31, // 53: dashboard.bff.AdminService.ListServiceAccounts:output_type -> dashboard.bff.ListServiceAccountsResponse
-	33, // 54: dashboard.bff.AdminService.CreateServiceAccount:output_type -> dashboard.bff.CreateServiceAccountResponse
-	35, // 55: dashboard.bff.AdminService.ListServiceAccountTokens:output_type -> dashboard.bff.ListServiceAccountTokensResponse
-	37, // 56: dashboard.bff.AdminService.CreateServiceAccountToken:output_type -> dashboard.bff.CreateServiceAccountTokenResponse
-	39, // 57: dashboard.bff.CertificateService.ListCertificates:output_type -> dashboard.bff.ListCertificatesResponse
-	41, // 58: dashboard.bff.CertificateService.NewClientCertificate:output_type -> dashboard.bff.NewClientCertificateResponse
-	43, // 59: dashboard.bff.CertificateService.RevokeCertificate:output_type -> dashboard.bff.RevokeCertificateResponse
-	45, // 60: dashboard.bff.CertificateService.ListAgents:output_type -> dashboard.bff.ListAgentsResponse
-	47, // 61: dashboard.bff.CertificateService.ListAgentBackends:output_type -> dashboard.bff.ListAgentBackendsResponse
-	49, // 62: dashboard.bff.CertificateService.RegisterAgent:output_type -> dashboard.bff.RegisterAgentResponse
-	43, // [43:63] is the sub-list for method output_type
-	23, // [23:43] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	45, // 1: dashboard.bff.User.last_login:type_name -> google.protobuf.Timestamp
+	45, // 2: dashboard.bff.Certificate.issued_at:type_name -> google.protobuf.Timestamp
+	45, // 3: dashboard.bff.Certificate.revoked_at:type_name -> google.protobuf.Timestamp
+	45, // 4: dashboard.bff.Agent.connected_at:type_name -> google.protobuf.Timestamp
+	5,  // 5: dashboard.bff.GetMeResponse.devices:type_name -> dashboard.bff.Certificate
+	4,  // 6: dashboard.bff.GetMeResponse.backends:type_name -> dashboard.bff.Backend
+	2,  // 7: dashboard.bff.ListUsersResponse.users:type_name -> dashboard.bff.User
+	2,  // 8: dashboard.bff.GetUserResponse.user:type_name -> dashboard.bff.User
+	4,  // 9: dashboard.bff.GetUserResponse.backends:type_name -> dashboard.bff.Backend
+	27, // 10: dashboard.bff.ListRolesResponse.roles:type_name -> dashboard.bff.RoleMembers
+	3,  // 11: dashboard.bff.RoleMembers.role:type_name -> dashboard.bff.Role
+	28, // 12: dashboard.bff.RoleMembers.members:type_name -> dashboard.bff.RoleMember
+	0,  // 13: dashboard.bff.RoleMember.type:type_name -> dashboard.bff.UserType
+	2,  // 14: dashboard.bff.ListServiceAccountsResponse.accounts:type_name -> dashboard.bff.User
+	5,  // 15: dashboard.bff.ListCertificatesResponse.signed:type_name -> dashboard.bff.Certificate
+	5,  // 16: dashboard.bff.ListCertificatesResponse.revoked:type_name -> dashboard.bff.Certificate
+	1,  // 17: dashboard.bff.NewClientCertificateRequest.key_type:type_name -> dashboard.bff.KeyType
+	6,  // 18: dashboard.bff.ListAgentsResponse.connected:type_name -> dashboard.bff.Agent
+	5,  // 19: dashboard.bff.ListAgentsResponse.signed:type_name -> dashboard.bff.Certificate
+	5,  // 20: dashboard.bff.ListAgentsResponse.revoked:type_name -> dashboard.bff.Certificate
+	7,  // 21: dashboard.bff.MeService.GetMe:input_type -> dashboard.bff.GetMeRequest
+	9,  // 22: dashboard.bff.MeService.AddDevice:input_type -> dashboard.bff.AddDeviceRequest
+	11, // 23: dashboard.bff.AdminService.ListUsers:input_type -> dashboard.bff.ListUsersRequest
+	13, // 24: dashboard.bff.AdminService.GetUser:input_type -> dashboard.bff.GetUserRequest
+	15, // 25: dashboard.bff.AdminService.AddUser:input_type -> dashboard.bff.AddUserRequest
+	17, // 26: dashboard.bff.AdminService.UpdateUser:input_type -> dashboard.bff.UpdateUserRequest
+	19, // 27: dashboard.bff.AdminService.DeleteUser:input_type -> dashboard.bff.DeleteUserRequest
+	21, // 28: dashboard.bff.AdminService.BecomeMaintainer:input_type -> dashboard.bff.BecomeMaintainerRequest
+	23, // 29: dashboard.bff.AdminService.ToggleAdmin:input_type -> dashboard.bff.ToggleAdminRequest
+	25, // 30: dashboard.bff.AdminService.ListRoles:input_type -> dashboard.bff.ListRolesRequest
+	29, // 31: dashboard.bff.AdminService.ListServiceAccounts:input_type -> dashboard.bff.ListServiceAccountsRequest
+	31, // 32: dashboard.bff.AdminService.CreateServiceAccount:input_type -> dashboard.bff.CreateServiceAccountRequest
+	33, // 33: dashboard.bff.CertificateService.ListCertificates:input_type -> dashboard.bff.ListCertificatesRequest
+	35, // 34: dashboard.bff.CertificateService.NewClientCertificate:input_type -> dashboard.bff.NewClientCertificateRequest
+	37, // 35: dashboard.bff.CertificateService.RevokeCertificate:input_type -> dashboard.bff.RevokeCertificateRequest
+	39, // 36: dashboard.bff.CertificateService.ListAgents:input_type -> dashboard.bff.ListAgentsRequest
+	41, // 37: dashboard.bff.CertificateService.ListAgentBackends:input_type -> dashboard.bff.ListAgentBackendsRequest
+	43, // 38: dashboard.bff.CertificateService.RegisterAgent:input_type -> dashboard.bff.RegisterAgentRequest
+	8,  // 39: dashboard.bff.MeService.GetMe:output_type -> dashboard.bff.GetMeResponse
+	10, // 40: dashboard.bff.MeService.AddDevice:output_type -> dashboard.bff.AddDeviceResponse
+	12, // 41: dashboard.bff.AdminService.ListUsers:output_type -> dashboard.bff.ListUsersResponse
+	14, // 42: dashboard.bff.AdminService.GetUser:output_type -> dashboard.bff.GetUserResponse
+	16, // 43: dashboard.bff.AdminService.AddUser:output_type -> dashboard.bff.AddUserResponse
+	18, // 44: dashboard.bff.AdminService.UpdateUser:output_type -> dashboard.bff.UpdateUserResponse
+	20, // 45: dashboard.bff.AdminService.DeleteUser:output_type -> dashboard.bff.DeleteUserResponse
+	22, // 46: dashboard.bff.AdminService.BecomeMaintainer:output_type -> dashboard.bff.BecomeMaintainerResponse
+	24, // 47: dashboard.bff.AdminService.ToggleAdmin:output_type -> dashboard.bff.ToggleAdminResponse
+	26, // 48: dashboard.bff.AdminService.ListRoles:output_type -> dashboard.bff.ListRolesResponse
+	30, // 49: dashboard.bff.AdminService.ListServiceAccounts:output_type -> dashboard.bff.ListServiceAccountsResponse
+	32, // 50: dashboard.bff.AdminService.CreateServiceAccount:output_type -> dashboard.bff.CreateServiceAccountResponse
+	34, // 51: dashboard.bff.CertificateService.ListCertificates:output_type -> dashboard.bff.ListCertificatesResponse
+	36, // 52: dashboard.bff.CertificateService.NewClientCertificate:output_type -> dashboard.bff.NewClientCertificateResponse
+	38, // 53: dashboard.bff.CertificateService.RevokeCertificate:output_type -> dashboard.bff.RevokeCertificateResponse
+	40, // 54: dashboard.bff.CertificateService.ListAgents:output_type -> dashboard.bff.ListAgentsResponse
+	42, // 55: dashboard.bff.CertificateService.ListAgentBackends:output_type -> dashboard.bff.ListAgentBackendsResponse
+	44, // 56: dashboard.bff.CertificateService.RegisterAgent:output_type -> dashboard.bff.RegisterAgentResponse
+	39, // [39:57] is the sub-list for method output_type
+	21, // [21:39] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_pkg_dashboard_dashboard_proto_init() }
@@ -2768,7 +2489,7 @@ func file_pkg_dashboard_dashboard_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_dashboard_dashboard_proto_rawDesc), len(file_pkg_dashboard_dashboard_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   48,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

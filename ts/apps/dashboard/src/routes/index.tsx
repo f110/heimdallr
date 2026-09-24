@@ -10,7 +10,7 @@ const shortcuts = [
   { to: '/me', title: 'Me', description: 'Your devices and the services you can reach' },
   { to: '/user', title: 'User', description: 'Users and their privileges' },
   { to: '/role', title: 'Role', description: 'Members of each role' },
-  { to: '/sa', title: 'Service Account', description: 'Accounts for machines and their tokens' },
+  { to: '/sa', title: 'Service Account', description: 'Accounts for machines' },
   { to: '/cert', title: 'Client Certificate', description: 'Issued and revoked certificates' },
   { to: '/agent', title: 'Agent', description: 'Connected agents and their certificates' },
 ]

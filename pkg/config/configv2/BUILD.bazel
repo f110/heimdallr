@@ -25,7 +25,10 @@ go_library(
 
 go_test(
     name = "configv2_test",
-    srcs = ["selector_test.go"],
+    srcs = [
+        "config_test.go",
+        "selector_test.go",
+    ],
     embed = [":configv2"],
     deps = [
         "@com_github_stretchr_testify//assert",

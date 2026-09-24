@@ -116,7 +116,7 @@ func TestSocketProxy_Accept(t *testing.T) {
 	require.NoError(t, err)
 
 	user := memory.NewUserDatabase()
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	socketProxy := NewSocketProxy(&configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "example.com",

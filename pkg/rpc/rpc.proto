@@ -21,7 +21,6 @@ service Admin {
     rpc UserGet (RequestUserGet) returns (ResponseUserGet);
     rpc BecomeMaintainer (RequestBecomeMaintainer) returns (ResponseBecomeMaintainer);
     rpc ToggleAdmin (RequestToggleAdmin) returns (ResponseToggleAdmin);
-    rpc TokenNew (RequestTokenNew) returns (ResponseTokenNew);
 
     rpc RoleList (RequestRoleList) returns (ResponseRoleList);
     rpc BackendList (RequestBackendList) returns (ResponseBackendList);
@@ -82,16 +81,9 @@ message UserItem {
              bool            admin          = 4;
              UserType        type           = 5;
              string          comment        = 6;
-    repeated AccessTokenItem tokens         = 7;
+    reserved 7;
              string          login_name     = 8;
              google.protobuf.Timestamp last_login = 9;
-}
-
-message AccessTokenItem {
-    string name = 1;
-    string value = 2;
-    string issuer = 3;
-    google.protobuf.Timestamp issued_at = 4;
 }
 
 message RoleItem {
@@ -179,7 +171,7 @@ message ResponseUserDel {
 
 message RequestUserGet {
     string id = 1;
-    bool with_tokens = 2;
+    reserved 2;
 }
 
 message ResponseUserGet {
@@ -202,15 +194,6 @@ message RequestToggleAdmin {
 
 message ResponseToggleAdmin {
     bool ok = 1;
-}
-
-message RequestTokenNew {
-    string user_id = 1;
-    string name = 2;
-}
-
-message ResponseTokenNew {
-    AccessTokenItem item = 1;
 }
 
 message RequestRoleList {}

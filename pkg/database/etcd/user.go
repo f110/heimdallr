@@ -28,9 +28,8 @@ type state struct {
 }
 
 type UserDatabase struct {
-	client     *clientv3.Client
-	cache      *Cache
-	tokenCache *Cache
+	client *clientv3.Client
+	cache  *Cache
 }
 
 var _ database.UserDatabase = &UserDatabase{}
@@ -51,12 +50,10 @@ func NewUserDatabase(_ context.Context, client *clientv3.Client, systemUsers ...
 	}
 
 	u := &UserDatabase{
-		client:     client,
-		cache:      NewCache(client, "user/", initData),
-		tokenCache: NewCache(client, "user_token/", nil),
+		client: client,
+		cache:  NewCache(client, "user/", initData),
 	}
 	go u.cache.Start(context.Background())
-	go u.tokenCache.Start(context.Background())
 
 	return u, nil
 }
@@ -162,45 +159,6 @@ func (d *UserDatabase) GetAllServiceAccount() ([]*database.User, error) {
 	return users, nil
 }
 
-func (d *UserDatabase) GetAccessTokens(id string) ([]*database.AccessToken, error) {
-	all, err := d.tokenCache.All()
-	if err != nil {
-		return nil, err
-	}
-
-	tokens := make([]*database.AccessToken, 0)
-	for _, v := range all {
-		token := &database.AccessToken{}
-		if err := yaml.Unmarshal(v.Value, token); err != nil {
-			continue
-		}
-		if token.UserId == id {
-			tokens = append(tokens, token)
-		}
-	}
-
-	return tokens, nil
-}
-
-func (d *UserDatabase) GetAccessToken(value string) (*database.AccessToken, error) {
-	all, err := d.tokenCache.All()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, v := range all {
-		token := &database.AccessToken{}
-		if err := yaml.Unmarshal(v.Value, token); err != nil {
-			continue
-		}
-		if token.Value == value {
-			return token, nil
-		}
-	}
-
-	return nil, database.ErrAccessTokenNotFound
-}
-
 func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	if user.Id == "" {
 		return xerrors.NewWithStack("etcd: User.Id is required")
@@ -224,20 +182,6 @@ func (d *UserDatabase) Set(ctx context.Context, user *database.User) error {
 	}
 	if !res.Succeeded {
 		return xerrors.NewWithStack("etcd: Failed update database")
-	}
-
-	return nil
-}
-
-func (d *UserDatabase) SetAccessToken(ctx context.Context, token *database.AccessToken) error {
-	b, err := yaml.Marshal(token)
-	if err != nil {
-		return xerrors.WithStack(err)
-	}
-
-	_, err = d.client.Put(ctx, fmt.Sprintf("user_token/%s", token.Value), string(b))
-	if err != nil {
-		return xerrors.WithStack(err)
 	}
 
 	return nil
@@ -312,5 +256,4 @@ func (d *UserDatabase) key(id string) string {
 
 func (d *UserDatabase) Close() {
 	d.cache.Close()
-	d.tokenCache.Close()
 }

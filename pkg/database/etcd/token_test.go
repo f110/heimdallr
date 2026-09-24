@@ -5,20 +5,22 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"go.f110.dev/heimdallr/pkg/database"
 )
 
 func TestNewTemporaryToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 	require.NotNil(t, token)
 }
 
 func TestTemporaryToken_IssueToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
 	require.NoError(t, err)
@@ -51,17 +53,24 @@ func TestTemporaryToken_IssueToken(t *testing.T) {
 		got, err := token.FindToken(context.Background(), tk.Token)
 		require.NoError(t, err)
 		assert.Equal(t, "test@example.com", got.UserId)
+		assert.Empty(t, got.Token)
 		_, err = token.FindToken(context.Background(), "unknown")
 		assert.ErrorIs(t, err, database.ErrTokenNotFound)
 
 		tokens, err := token.AllTokens(context.Background())
 		require.NoError(t, err)
 		assert.Len(t, tokens, 1)
+
+		res, err := client.Get(context.Background(), "token/", clientv3.WithPrefix())
+		require.NoError(t, err)
+		require.Len(t, res.Kvs, 1)
+		assert.Equal(t, "token/"+database.HashToken(tk.Token), string(res.Kvs[0].Key))
+		assert.NotContains(t, string(res.Kvs[0].Value), tk.Token)
 	})
 }
 
 func TestTemporaryToken_DeleteCode(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	code, err := token.NewCode(context.Background(), "test@example.com", "ch", "plain")
 	require.NoError(t, err)
@@ -70,7 +79,7 @@ func TestTemporaryToken_DeleteCode(t *testing.T) {
 }
 
 func TestTemporaryToken_DeleteToken(t *testing.T) {
-	token := NewTemporaryToken(client)
+	token := NewTemporaryToken(client, time.Hour)
 
 	s := sha256.New()
 	s.Write([]byte("ch"))
@@ -82,4 +91,6 @@ func TestTemporaryToken_DeleteToken(t *testing.T) {
 
 	err = token.DeleteToken(context.Background(), tk.Token)
 	require.NoError(t, err)
+	_, err = token.FindToken(context.Background(), tk.Token)
+	assert.ErrorIs(t, err, database.ErrTokenNotFound)
 }

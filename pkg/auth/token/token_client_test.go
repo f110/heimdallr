@@ -50,14 +50,17 @@ func TestClient_RequestToken(t *testing.T) {
 
 		token := &ExchangeResponse{
 			AccessToken: t.Name(),
+			ExpiresIn:   3600,
 		}
 		require.NoError(t, json.NewEncoder(w).Encode(token))
 	}))
 
 	c := NewClient(net.DefaultResolver)
-	gotToken, err := c.RequestToken(s.URL, "", false)
+	now := time.Now()
+	gotToken, gotExpiresAt, err := c.RequestToken(s.URL, "", false)
 	require.NoError(t, err)
 
 	assert.Equal(t, t.Name(), gotToken)
+	assert.WithinDuration(t, now.Add(time.Hour), gotExpiresAt, 10*time.Second)
 	assert.Equal(t, "test-code", gotCode)
 }

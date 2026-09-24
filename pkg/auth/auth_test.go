@@ -37,7 +37,7 @@ func TestInit(t *testing.T) {
 		&configv2.Config{AccessProxy: &configv2.AccessProxy{}},
 		s,
 		memory.NewUserDatabase(),
-		memory.NewTokenDatabase(),
+		memory.NewTokenDatabase(time.Hour),
 		&testRevokedCertClient{},
 	)
 }
@@ -46,6 +46,7 @@ func TestAuthenticate(t *testing.T) {
 	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	require.NoError(t, err)
 	u := memory.NewUserDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	rc := &testRevokedCertClient{}
 	caCert, caPrivateKey, err := cert.CreateCertificateAuthority("for test", "test", "", "jp", "ecdsa")
 	if err != nil {
@@ -115,7 +116,7 @@ func TestAuthenticate(t *testing.T) {
 	require.NoError(t, err)
 	err = conf.AuthorizationEngine.Setup(conf.AuthorizationEngine.Roles, []*configv2.RPCPermission{})
 	require.NoError(t, err)
-	Init(conf, s, u, nil, rc)
+	Init(conf, s, u, token, rc)
 	_ = u.Set(nil, &database.User{Id: "foobar@example.com", Roles: []string{"test", "unknown"}})
 
 	t.Run("DisableAuthentication", func(t *testing.T) {
@@ -272,50 +273,47 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("Authorization header", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("normal", func(t *testing.T) {
+		t.Run("Bearer", func(t *testing.T) {
 			t.Parallel()
 
-			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: t.Name(), UserId: "foobar@example.com"})
+			tk, err := token.SetUser("foobar@example.com")
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-TOKEN", t.Name())
+			req.Header.Set("Authorization", "Bearer "+tk.Token)
 			user, _, err := Authenticate(context.TODO(), req)
 			require.NoError(t, err)
 			assert.Equal(t, "foobar@example.com", user.Id)
 		})
 
-		t.Run("header not found", func(t *testing.T) {
+		t.Run("Basic", func(t *testing.T) {
 			t.Parallel()
 
+			tk, err := token.SetUser("foobar@example.com")
+			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			_, _, err = Authenticate(context.TODO(), req)
-			require.Error(t, err)
-			assert.Equal(t, ErrUserNotFound, err)
+			req.SetBasicAuth("anything", tk.Token)
+			user, _, err := Authenticate(context.TODO(), req)
+			require.NoError(t, err)
+			assert.Equal(t, "foobar@example.com", user.Id)
 		})
 
 		t.Run("invalid token", func(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-Token", "unknown-token")
+			req.Header.Set("Authorization", "Bearer unknown-token")
 			_, _, err = Authenticate(context.TODO(), req)
-			require.Error(t, err)
-			assert.Equal(t, ErrUserNotFound, err)
+			assert.Equal(t, ErrInvalidToken, err)
 		})
 
 		t.Run("user not found", func(t *testing.T) {
 			t.Parallel()
 
-			err := u.SetAccessToken(context.Background(), &database.AccessToken{Value: "dummy-token", UserId: "piyo@example.com"})
+			tk, err := token.SetUser("piyo@example.com")
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
-			req.Header.Set("Authorization", "LP-TOKEN")
-			req.Header.Set("X-LP-TOKEN", "dummy-token")
+			req.Header.Set("Authorization", "Bearer "+tk.Token)
 			_, _, err = Authenticate(context.TODO(), req)
-			require.Error(t, err)
 			assert.Equal(t, ErrUserNotFound, err)
 		})
 	})
@@ -325,7 +323,7 @@ func TestAuthenticator_AuthenticateForSocket(t *testing.T) {
 	s, err := session.NewSecureCookieStore([]byte("test"), []byte("testtesttesttesttesttesttesttest"), "example.com")
 	require.NoError(t, err)
 	u := memory.NewUserDatabase()
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",
@@ -425,7 +423,7 @@ func TestAuthInterceptor_UnaryInterceptor(t *testing.T) {
 	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",
@@ -573,7 +571,7 @@ func TestAuthInterceptor_StreamInterceptor(t *testing.T) {
 	require.NoError(t, err)
 
 	u := memory.NewUserDatabase(database.SystemUser)
-	token := memory.NewTokenDatabase()
+	token := memory.NewTokenDatabase(time.Hour)
 	conf := &configv2.Config{
 		AccessProxy: &configv2.AccessProxy{
 			ServerNameHost: "proxy.example.com",
