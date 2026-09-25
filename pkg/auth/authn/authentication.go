@@ -256,7 +256,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 	userId := ""
 	if len(md.Get(rpc.TokenMetadataKey)) > 0 {
 		tokenString := md.Get(rpc.TokenMetadataKey)[0]
-		logger.Log.Debug("Found token", slog.String("token", tokenString))
+		logger.Log.Debug("Found token")
 
 		token, err := a.tokenDatabase.FindToken(ctx, tokenString)
 		if err != nil {
@@ -265,7 +265,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 		}
 		userId = token.UserId
 	} else if len(md.Get(rpc.JwtTokenMetadataKey)) > 0 {
-		logger.Log.Debug("Found jwt token", slog.String("token", md.Get(rpc.JwtTokenMetadataKey)[0]))
+		logger.Log.Debug("Found jwt token")
 		j := md.Get(rpc.JwtTokenMetadataKey)[0]
 		claims := &TokenClaims{}
 		_, err := jwt.ParseWithClaims(j, claims, func(token *jwt.Token) (i any, e error) {
@@ -284,7 +284,7 @@ func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata
 		}
 		userId = claims.Subject
 	} else if len(md.Get(rpc.InternalTokenMetadataKey)) > 0 {
-		logger.Log.Debug("Found internal token", slog.String("token", md.Get(rpc.InternalTokenMetadataKey)[0]))
+		logger.Log.Debug("Found internal token")
 		t := md.Get(rpc.InternalTokenMetadataKey)[0]
 		if a.Config.AccessProxy.Credential.InternalToken != t {
 			return nil, ErrInvalidToken
