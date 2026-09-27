@@ -304,8 +304,8 @@
   "moduleExtensions": {
     "//build/rules/kind:module.bzl%kind_extension": {
       "general": {
-        "bzlTransitiveDigest": "nq/cRSgN8mCXYB0+onLc25xpjWwwSbBPff2wJJgKumA=",
-        "usagesDigest": "jMzLw+4sz+qsrl4XGUTwaoutk3Y3lkbBTrMfA3zfR48=",
+        "bzlTransitiveDigest": "n3ejceJqBVZZHsPkEkhHjuJCZnx/OgwTYUc5+l6GDOw=",
+        "usagesDigest": "PsVUFwDAhAbibSXry4VcmLbLL6p0rug9G2hp/eVjRvQ=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -313,7 +313,7 @@
           "kind": {
             "repoRuleId": "@@//build/rules/kind:def.bzl%kind_binary",
             "attributes": {
-              "version": "0.26.0"
+              "version": "0.33.0"
             }
           }
         },
