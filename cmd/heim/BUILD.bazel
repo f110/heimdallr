@@ -1,4 +1,6 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("//:RELEASE.bzl", "PLATFORMS")
+load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 
 go_library(
     name = "heim_lib",
@@ -14,5 +16,12 @@ go_library(
 go_binary(
     name = "heim",
     embed = [":heim_lib"],
+    visibility = ["//visibility:public"],
+)
+
+multiplatform_go_binary(
+    embed = [":heim_lib"],
+    name_prefix = "heim",
+    platforms = PLATFORMS,
     visibility = ["//visibility:public"],
 )
