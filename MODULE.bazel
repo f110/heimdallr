@@ -132,7 +132,7 @@ kustomize_ext.download(version = "v4.5.4")
 use_repo(kustomize_ext, "kustomize")
 
 kind_ext = use_extension("//build/rules/kind:module.bzl", "kind_extension")
-kind_ext.download(version = "0.26.0")
+kind_ext.download(version = "0.33.0")
 use_repo(kind_ext, "kind")
 
 vault_ext = use_extension("//build/rules/vault:module.bzl", "vault_extension")

@@ -13,11 +13,23 @@ def _kind_binary_impl(ctx):
     else:
         fail("%s is not supported" % ctx.os.name)
 
+    arch = ""
+    if ctx.os.arch in ("amd64", "x86_64"):
+        arch = "amd64"
+    elif ctx.os.arch in ("aarch64", "arm64"):
+        arch = "arm64"
+    else:
+        fail("%s is not supported" % ctx.os.arch)
+
     if not ctx.attr.version in KIND_ASSETS:
         fail("%s is not supported version" % ctx.attr.version)
 
+    assets = KIND_ASSETS[ctx.attr.version]
+    if not os in assets or not arch in assets[os]:
+        fail("%s/%s is not supported in %s" % (os, arch, ctx.attr.version))
+
     download_path = ctx.path("kind")
-    url, checksum = KIND_ASSETS[ctx.attr.version][os]
+    url, checksum = assets[os][arch]
     ctx.download(
         url = url,
         output = download_path,
