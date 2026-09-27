@@ -6,8 +6,10 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -612,6 +614,11 @@ func (c *EtcdCluster) ShouldUpdate(pod *corev1.Pod) bool {
 		return true
 	}
 
+	if pod.Annotations[etcd.AnnotationKeyPodSpecHash] != c.podSpecHash(etcdVersion) {
+		c.log.Debug("Pod spec is outdated", slog.String("pod.name", pod.Name))
+		return true
+	}
+
 	if v, ok := pod.Annotations[etcd.AnnotationKeyServerCertificate]; ok {
 		if c.ShouldUpdateServerCertificate([]byte(v)) {
 			c.log.Debug("Certificate is outdated", slog.String("pod.name", pod.Name))
@@ -658,6 +665,7 @@ func (c *EtcdCluster) EqualAnnotation(a, b map[string]string) bool {
 func (c *EtcdCluster) normalizeAnnotation(a map[string]string) {
 	delete(a, etcd.AnnotationKeyServerCertificate)
 	delete(a, etcd.AnnotationKeyTemporaryMember)
+	delete(a, etcd.AnnotationKeyPodSpecHash)
 	delete(a, etcd.PodAnnotationKeyRunningAt)
 }
 
@@ -1097,7 +1105,19 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 		)
 	}
 
-	return c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
+	pod = c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
+	return k8sfactory.PodFactory(pod, k8sfactory.Annotation(etcd.AnnotationKeyPodSpecHash, c.podSpecHash(etcdVersion)))
+}
+
+// podSpecHash returns the hash of the Pod spec that doesn't depend on each member.
+// The Pods that have a different hash have to be recreated.
+func (c *EtcdCluster) podSpecHash(etcdVersion string) string {
+	pod := c.etcdPodSpec(k8sfactory.PodFactory(nil), "", etcdVersion, "existing", nil, c.Spec.AntiAffinity)
+	b, err := json.Marshal(pod.Spec)
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(b))
 }
 
 func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) *corev1.Pod {

@@ -296,6 +296,34 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 	}
 }
 
+func TestEtcdCluster_ShouldUpdate(t *testing.T) {
+	t.Run("Same spec", func(t *testing.T) {
+		c := newTestEtcdCluster(t)
+		pod := k8sfactory.PodFactory(c.newEtcdPod(defaultEtcdVersion, 1, "new", nil, false), k8sfactory.Created)
+		assert.False(t, c.ShouldUpdate(pod))
+
+		pod = k8sfactory.PodFactory(
+			c.newEtcdPod(defaultEtcdVersion, 2, "existing", []string{"test-1=https://10-0-0-1.default.pod.cluster.local:2380"}, false),
+			k8sfactory.Created,
+		)
+		assert.False(t, c.ShouldUpdate(pod))
+	})
+
+	t.Run("Don't have the hash of the spec", func(t *testing.T) {
+		c := newTestEtcdCluster(t)
+		pod := k8sfactory.PodFactory(c.newEtcdPod(defaultEtcdVersion, 1, "new", nil, false), k8sfactory.Created)
+		delete(pod.Annotations, etcd.AnnotationKeyPodSpecHash)
+		assert.True(t, c.ShouldUpdate(pod))
+	})
+
+	t.Run("Spec is changed", func(t *testing.T) {
+		c := newTestEtcdCluster(t)
+		pod := k8sfactory.PodFactory(c.newEtcdPod(defaultEtcdVersion, 1, "new", nil, false), k8sfactory.Created)
+		c.Spec.AntiAffinity = !c.Spec.AntiAffinity
+		assert.True(t, c.ShouldUpdate(pod))
+	})
+}
+
 func newTestEtcdCluster(t *testing.T) *EtcdCluster {
 	e := etcd.Factory(nil,
 		k8sfactory.Name(normalizeName(t.Name())),
