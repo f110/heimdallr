@@ -22,6 +22,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -42,7 +43,6 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/client/versioned/scheme"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
 	"go.f110.dev/heimdallr/pkg/logger"
-	"go.f110.dev/heimdallr/pkg/version"
 )
 
 type InternalState string
@@ -1123,8 +1123,6 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 	if c.Spec.VolumeClaimTemplate != nil {
 		dataVolume = k8sfactory.NewPersistentVolumeClaimVolumeSource("data", "/data", podName)
 	}
-	sidecarVolume := k8sfactory.NewEmptyDirVolumeSource("share", "/var/run/sidecar")
-	runVolume := k8sfactory.NewEmptyDirVolumeSource("run", "/var/run/etcd")
 
 	var addMemberContainer *corev1.Container
 	if clusterState == "existing" {
@@ -1180,22 +1178,11 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 	if initialCluster != nil && len(initialCluster) > 0 {
 		etcdArgs = append(etcdArgs, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
 	}
-	etcdScript := fmt.Sprintf(`
-while ( ! ls /var/run/sidecar/ready )
-do
-	echo "Waiting for booting sidecar"
-	sleep 1
-done
-echo '' > /etc/resolv.conf
-mkdir -p /var/run/etcd
-/usr/local/bin/etcd %s &
-ETCD_PID=$!
-echo $ETCD_PID > /var/run/etcd/pid
-wait $ETCD_PID`, strings.Join(etcdArgs, " "))
+	etcdArgs = append(etcdArgs, skipClientSANVerificationFlag(etcdVersion))
 	etcdContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("etcd"),
 		k8sfactory.Image(fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion), []string{"/bin/sh"}),
-		k8sfactory.Args("-c", etcdScript),
+		k8sfactory.Args("-c", fmt.Sprintf("exec /usr/local/bin/etcd %s", strings.Join(etcdArgs, " "))),
 		k8sfactory.EnvFromField("MY_POD_NAME", "metadata.name"),
 		k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
 		k8sfactory.Port("client", corev1.ProtocolTCP, EtcdClientPort),
@@ -1206,32 +1193,6 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 		k8sfactory.Volume(serverCertVolume),
 		k8sfactory.Volume(caVolume),
 		k8sfactory.Volume(dataVolume),
-		k8sfactory.Volume(sidecarVolume),
-		k8sfactory.Volume(runVolume),
-	)
-
-	sidecarArgs := []string{
-		"--port", "53",
-		"--namespace", c.Namespace,
-		"--cluster-domain", c.ClusterDomain,
-		"--ttl", "5",
-		"--ready-file", "/var/run/sidecar/ready",
-		"--etcd-pid-file", "/var/run/etcd/pid",
-	}
-	if c.Spec.Development {
-		sidecarArgs = append(sidecarArgs, "--log-level", "debug")
-	}
-	sidecarContainer := k8sfactory.ContainerFactory(nil,
-		k8sfactory.Name("sidecar"),
-		k8sfactory.Image(fmt.Sprintf("ghcr.io/f110/heimdallr/discovery-sidecar:%s", version.Version), nil),
-		k8sfactory.PullPolicy(corev1.PullPolicyIfNotPresent),
-		k8sfactory.Args(sidecarArgs...),
-		k8sfactory.LivenessProbe(k8sfactory.HTTPProbe(8080, "/liveness")),
-		k8sfactory.ReadinessProbe(k8sfactory.HTTPProbe(8080, "/readiness")),
-		k8sfactory.Port("dns", corev1.ProtocolUDP, 53),
-		k8sfactory.Port("pprof", corev1.ProtocolTCP, 8080),
-		k8sfactory.Volume(sidecarVolume),
-		k8sfactory.Volume(runVolume),
 	)
 
 	pod = k8sfactory.PodFactory(pod,
@@ -1239,8 +1200,6 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 		k8sfactory.Volume(serverCertVolume),
 		k8sfactory.Volume(clientCertVolume),
 		k8sfactory.Volume(dataVolume),
-		k8sfactory.Volume(sidecarVolume),
-		k8sfactory.Volume(runVolume),
 		k8sfactory.Subdomain(c.ServerDiscoveryServiceName()),
 		k8sfactory.ServiceAccount(c.ServiceAccountName()),
 		k8sfactory.RestartPolicy(corev1.RestartPolicyNever),
@@ -1253,8 +1212,6 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 		),
 		k8sfactory.InitContainer(addMemberContainer),
 		k8sfactory.Container(etcdContainer),
-		k8sfactory.Container(sidecarContainer),
-		k8sfactory.ShareProcessNamespace,
 	)
 	if antiAffinity {
 		pod = k8sfactory.PodFactory(pod,
@@ -1271,6 +1228,18 @@ wait $ETCD_PID`, strings.Join(etcdArgs, " "))
 	}
 
 	return pod
+}
+
+var etcdVersionPeerSkipClientSANVerification = semver.MustParse("v3.6.0")
+
+// skipClientSANVerificationFlag returns the flag that disables the verification of the SAN of the peer's client certificate.
+// The peers are still authenticated by the CA because of --peer-client-cert-auth.
+func skipClientSANVerificationFlag(etcdVersion string) string {
+	v, err := semver.NewVersion(etcdVersion)
+	if err == nil && !v.LessThan(etcdVersionPeerSkipClientSANVerification) {
+		return "--peer-skip-client-san-verification"
+	}
+	return "--experimental-peer-skip-client-san-verification"
 }
 
 func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {

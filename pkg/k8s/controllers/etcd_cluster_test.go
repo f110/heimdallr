@@ -237,6 +237,66 @@ func TestEtcdCluster_EqualLabels(t *testing.T) {
 }
 
 func TestEtcdCluster_MemberPodSpec(t *testing.T) {
+	cases := []struct {
+		Version string
+		Flag    string
+	}{
+		{Version: "v3.4.3", Flag: "--experimental-peer-skip-client-san-verification"},
+		{Version: "v3.5.1", Flag: "--experimental-peer-skip-client-san-verification"},
+		{Version: "v3.6.15", Flag: "--peer-skip-client-san-verification"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Version, func(t *testing.T) {
+			c := newTestEtcdCluster(t)
+			pod := c.newEtcdPod(tc.Version, 1, "existing", nil, false)
+
+			var wipeData, addMember *corev1.Container
+			for i, v := range pod.Spec.InitContainers {
+				switch v.Name {
+				case "wipe-data":
+					wipeData = &pod.Spec.InitContainers[i]
+				case "add-member":
+					addMember = &pod.Spec.InitContainers[i]
+				}
+			}
+			require.NotNil(t, wipeData, "The Pod doesn't have the init container that wipes the data directory")
+			require.NotNil(t, addMember, "The Pod doesn't have the init container that manipulates the member")
+
+			script := addMember.Command[2]
+			assert.NotContains(t, script, "member update")
+			assert.Contains(t, script, "member remove")
+			assert.Contains(t, script, "member add")
+
+			assert.False(t, pod.Spec.ShareProcessNamespace)
+			for _, v := range pod.Spec.Containers {
+				assert.NotEqual(t, "sidecar", v.Name)
+			}
+			for _, v := range pod.Spec.Volumes {
+				assert.NotContains(t, []string{"share", "run"}, v.Name)
+			}
+
+			var etcdContainer *corev1.Container
+			for i, v := range pod.Spec.Containers {
+				if v.Name == "etcd" {
+					etcdContainer = &pod.Spec.Containers[i]
+				}
+			}
+			require.NotNil(t, etcdContainer)
+			script = etcdContainer.Args[1]
+			assert.Contains(t, script, "exec /usr/local/bin/etcd ")
+			assert.Contains(t, script, " "+tc.Flag)
+			assert.NotContains(t, script, "resolv.conf")
+			assert.NotContains(t, script, "/var/run/sidecar")
+			assert.NotContains(t, script, "/var/run/etcd")
+			for _, v := range etcdContainer.VolumeMounts {
+				assert.NotContains(t, []string{"share", "run"}, v.Name)
+			}
+		})
+	}
+}
+
+func newTestEtcdCluster(t *testing.T) *EtcdCluster {
 	e := etcd.Factory(nil,
 		k8sfactory.Name(normalizeName(t.Name())),
 		k8sfactory.Namespace(metav1.NamespaceDefault),
@@ -254,22 +314,5 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 	require.NoError(t, err)
 	c.SetClientCertSecret(clientS)
 
-	pod := c.newEtcdPod(defaultEtcdVersion, 1, "existing", nil, false)
-
-	var wipeData, addMember *corev1.Container
-	for i, v := range pod.Spec.InitContainers {
-		switch v.Name {
-		case "wipe-data":
-			wipeData = &pod.Spec.InitContainers[i]
-		case "add-member":
-			addMember = &pod.Spec.InitContainers[i]
-		}
-	}
-	require.NotNil(t, wipeData, "The Pod doesn't have the init container that wipes the data directory")
-	require.NotNil(t, addMember, "The Pod doesn't have the init container that manipulates the member")
-
-	script := addMember.Command[2]
-	assert.NotContains(t, script, "member update")
-	assert.Contains(t, script, "member remove")
-	assert.Contains(t, script, "member add")
+	return c
 }
