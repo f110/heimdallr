@@ -928,14 +928,24 @@ func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *Etc
 }
 
 func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *EtcdCluster) error {
-	_, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
+	svc, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.coreClient.CoreV1.CreateService(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
+		return nil
 	} else if err != nil {
 		return xerrors.WithStack(err)
+	}
+
+	// The members have to be able to resolve the name of the Pod that isn't ready yet to join the cluster.
+	if !svc.Spec.PublishNotReadyAddresses {
+		updated := svc.DeepCopy()
+		updated.Spec.PublishNotReadyAddresses = true
+		if _, err := ec.coreClient.CoreV1.UpdateService(ctx, updated, metav1.UpdateOptions{}); err != nil {
+			return xerrors.WithStack(err)
+		}
 	}
 
 	return nil

@@ -271,6 +271,8 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 			assert.Contains(t, script, "member add")
 
 			assert.False(t, pod.Spec.ShareProcessNamespace)
+			assert.Equal(t, pod.Name, pod.Spec.Hostname)
+			assert.Equal(t, c.ServerDiscoveryServiceName(), pod.Spec.Subdomain)
 			for _, v := range pod.Spec.Containers {
 				assert.NotEqual(t, "sidecar", v.Name)
 			}
@@ -358,6 +360,14 @@ func TestEtcdCluster_ShouldUpdateServerCertificate(t *testing.T) {
 
 		assert.True(t, c.ShouldUpdateServerCertificate(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})))
 	})
+}
+
+func TestEtcdCluster_DiscoveryService(t *testing.T) {
+	c := newTestEtcdCluster(t)
+
+	svc := c.DiscoveryService()
+	assert.Equal(t, "None", svc.Spec.ClusterIP)
+	assert.True(t, svc.Spec.PublishNotReadyAddresses)
 }
 
 func newTestEtcdCluster(t *testing.T) *EtcdCluster {

@@ -1243,6 +1243,60 @@ func minIOFixtures() (*corev1.Service, *corev1.Secret) {
 	return svc, secret
 }
 
+func TestEtcdController_DiscoveryService(t *testing.T) {
+	runner := controllertest.NewTestRunner()
+	etcdMockCluster := NewMockCluster()
+	mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+	controller, err := NewEtcdController(
+		runner.SharedInformerFactory,
+		runner.CoreSharedInformerFactory,
+		&runner.CoreClient.Set,
+		runner.Client.EtcdV1alpha2,
+		runner.K8sCoreClient,
+		nil,
+		"cluster.local",
+		false,
+		nil,
+		mockOpt,
+	)
+	require.NoError(t, err)
+
+	e := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+		etcd.MemberStatus(nil),
+		etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+		etcd.Ready,
+	)
+	cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+	ca, err := cluster.CA()
+	require.NoError(t, err)
+	cluster.SetCASecret(ca)
+	serverS, err := cluster.ServerCertSecret()
+	require.NoError(t, err)
+	cluster.SetServerCertSecret(serverS)
+	clientS, err := cluster.ClientCertSecret()
+	require.NoError(t, err)
+	// The discovery service that is created by the older operator doesn't publish the addresses of not-ready Pods.
+	svc := cluster.DiscoveryService()
+	svc.Spec.PublishNotReadyAddresses = false
+	runner.RegisterFixtures(ca, serverS, clientS, svc, cluster.ClientService(), cluster.ServiceAccount(), cluster.EtcdRole(), cluster.EtcdRoleBinding())
+	for _, v := range cluster.AllMembers() {
+		runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+		etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+		e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+	}
+
+	err = runner.Reconcile(controller, e)
+	require.NoError(t, err)
+
+	got, err := runner.CoreClient.CoreV1.GetService(context.TODO(), e.Namespace, cluster.ServerDiscoveryServiceName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.True(t, got.Spec.PublishNotReadyAddresses)
+}
+
 func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.TestRunner) {
 	ca, _ := c.CA()
 	serverS, _ := c.ServerCertSecret()
