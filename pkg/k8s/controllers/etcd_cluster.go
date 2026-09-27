@@ -312,6 +312,7 @@ func (c *EtcdCluster) DNSNames() []string {
 		fmt.Sprintf("%s.%s.svc.%s", c.ClientServiceName(), c.Namespace, c.ClusterDomain),
 		fmt.Sprintf("%s.%s.svc", c.ClientServiceName(), c.Namespace),
 		fmt.Sprintf("*.%s.pod.%s", c.Namespace, c.ClusterDomain),
+		fmt.Sprintf("*.%s.%s.svc.%s", c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain),
 	)
 
 	return dnsNames

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/pem"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
 
+	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/k8sfactory"
@@ -321,6 +323,40 @@ func TestEtcdCluster_ShouldUpdate(t *testing.T) {
 		pod := k8sfactory.PodFactory(c.newEtcdPod(defaultEtcdVersion, 1, "new", nil, false), k8sfactory.Created)
 		c.Spec.AntiAffinity = !c.Spec.AntiAffinity
 		assert.True(t, c.ShouldUpdate(pod))
+	})
+}
+
+func TestEtcdCluster_DNSNames(t *testing.T) {
+	c := newTestEtcdCluster(t)
+
+	dnsNames := c.DNSNames()
+	assert.Contains(t, dnsNames, fmt.Sprintf("*.%s-discovery.%s.svc.cluster.local", c.Name, c.Namespace))
+	assert.Contains(t, dnsNames, fmt.Sprintf("*.%s.pod.cluster.local", c.Namespace))
+}
+
+func TestEtcdCluster_ShouldUpdateServerCertificate(t *testing.T) {
+	c := newTestEtcdCluster(t)
+	caPair, err := c.parseCASecret(c.caSecret)
+	require.NoError(t, err)
+
+	t.Run("Up to date", func(t *testing.T) {
+		serverCert, _, err := cert.GenerateMutualTLSCertificate(caPair.Cert, caPair.PrivateKey, c.DNSNames(), []string{"127.0.0.1"})
+		require.NoError(t, err)
+
+		assert.False(t, c.ShouldUpdateServerCertificate(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})))
+	})
+
+	t.Run("Doesn't have the SAN for the discovery service", func(t *testing.T) {
+		dnsNames := []string{
+			fmt.Sprintf("%s-discovery.%s.svc.cluster.local", c.Name, c.Namespace),
+			fmt.Sprintf("%s-client.%s.svc.cluster.local", c.Name, c.Namespace),
+			fmt.Sprintf("%s-client.%s.svc", c.Name, c.Namespace),
+			fmt.Sprintf("*.%s.pod.cluster.local", c.Namespace),
+		}
+		serverCert, _, err := cert.GenerateMutualTLSCertificate(caPair.Cert, caPair.PrivateKey, dnsNames, []string{"127.0.0.1"})
+		require.NoError(t, err)
+
+		assert.True(t, c.ShouldUpdateServerCertificate(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})))
 	})
 }
 
