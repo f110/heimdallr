@@ -1,4 +1,6 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("//:RELEASE.bzl", "PLATFORMS")
+load("//build/rules/go:util.bzl", "multiplatform_go_binary")
 
 go_library(
     name = "docker-credential-heimdallr_lib",
@@ -11,5 +13,12 @@ go_library(
 go_binary(
     name = "docker-credential-heimdallr",
     embed = [":docker-credential-heimdallr_lib"],
+    visibility = ["//visibility:public"],
+)
+
+multiplatform_go_binary(
+    embed = [":docker-credential-heimdallr_lib"],
+    name_prefix = "docker-credential-heimdallr",
+    platforms = PLATFORMS,
     visibility = ["//visibility:public"],
 )
