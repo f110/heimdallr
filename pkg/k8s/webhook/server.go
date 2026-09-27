@@ -3,17 +3,21 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 
+	"github.com/Masterminds/semver/v3"
 	"go.f110.dev/xerrors"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
 	"go.f110.dev/heimdallr/pkg/logger"
 )
 
@@ -26,7 +30,7 @@ type Server struct {
 	key  string
 
 	listener   net.Listener
-	serializer *json.Serializer
+	serializer *k8sjson.Serializer
 	converter  *Converter
 }
 
@@ -34,7 +38,7 @@ func NewServer(addr, cert, key string) *Server {
 	s := &Server{
 		cert:       cert,
 		key:        key,
-		serializer: json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{}),
+		serializer: k8sjson.NewSerializerWithOptions(k8sjson.DefaultMetaFactory, scheme, scheme, k8sjson.SerializerOptions{}),
 		converter:  DefaultConverter,
 	}
 	mux := http.NewServeMux()
@@ -119,6 +123,10 @@ func (s *Server) Validate(w http.ResponseWriter, req *http.Request) {
 			Allowed: true,
 		},
 	}
+	if err := validate(admissionReview.Request); err != nil {
+		res.Response.Allowed = false
+		res.Response.Result = &metav1.Status{Status: metav1.StatusFailure, Message: err.Error()}
+	}
 
 	if err := s.serializer.Encode(res, w); err != nil {
 		logger.Log.Warn("Failed encode response body", slog.Any("error", err))
@@ -156,4 +164,33 @@ func (s *Server) Start() error {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.Server.Shutdown(ctx)
+}
+
+var minimumEtcdVersion = semver.MustParse("v3.4.0")
+
+func validate(req *admissionv1.AdmissionRequest) error {
+	if req.Kind.Group != etcdv1alpha2.GroupName || req.Kind.Kind != "EtcdCluster" || req.SubResource != "" {
+		return nil
+	}
+
+	obj := &struct {
+		Spec struct {
+			Version string `json:"version"`
+		} `json:"spec"`
+	}{}
+	if err := json.Unmarshal(req.Object.Raw, obj); err != nil {
+		return xerrors.WithStack(err)
+	}
+	if obj.Spec.Version == "" {
+		return nil
+	}
+	v, err := semver.NewVersion(obj.Spec.Version)
+	if err != nil {
+		return xerrors.NewfWithStack("invalid etcd version: %s", obj.Spec.Version)
+	}
+	if v.LessThan(minimumEtcdVersion) {
+		return xerrors.NewfWithStack("etcd %s is not supported. %s or later is required", obj.Spec.Version, minimumEtcdVersion.Original())
+	}
+
+	return nil
 }
