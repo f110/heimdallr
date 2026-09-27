@@ -1,5 +1,3 @@
-load("//:RELEASE.bzl", "VERSION")
-
 exports_files(
     [
         "webhook_ca.crt",
@@ -17,27 +15,10 @@ sh_binary(
         "--kind=$(location @kind//:file)",
         "--manifest=$(location //operator/deploy/dev:all-in-one)",
         "--controller-image=$(location //container:operator)",
-        "--sidecar-image=$(location //container:sidecar)",
     ],
     data = [
         "//container:operator",
-        "//container:sidecar",
         "//operator/deploy/dev:all-in-one",
-        "@kind//:file",
-    ],
-)
-
-sh_binary(
-    name = "load",
-    srcs = ["//cmd/heimdev"],
-    args = [
-        "cluster",
-        "load",
-        "--kind=$(location @kind//:file)",
-        "--images=ghcr.io/f110/heimdallr/discovery-sidecar:" + VERSION + "=$(location //container:sidecar)",
-    ],
-    data = [
-        "//container:sidecar",
         "@kind//:file",
     ],
 )

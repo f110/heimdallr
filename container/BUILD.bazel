@@ -161,34 +161,6 @@ container_image(
     tags = ["latest"],
 )
 
-pkg_tar(
-    name = "bin_sidecar_amd64",
-    files = {
-        "//cmd/discovery-sidecar:linux_amd64": "/usr/local/bin/discovery-sidecar",
-    },
-    mode = "0755",
-)
-
-pkg_tar(
-    name = "bin_sidecar_arm64",
-    files = {
-        "//cmd/discovery-sidecar:linux_arm64": "/usr/local/bin/discovery-sidecar",
-    },
-    mode = "0755",
-)
-
-container_image(
-    name = "sidecar",
-    amd64_tar = ":bin_sidecar_amd64",
-    arm64_tar = ":bin_sidecar_arm64",
-    entrypoint = ["/usr/local/bin/discovery-sidecar"],
-    labels = {
-        "org.opencontainers.image.source": "https://github.com/f110/heimdallr",
-    },
-    repository = CONTAINER_IMAGE_REPOSITORIES["sidecar"],
-    tags = ["latest"],
-)
-
 sh_binary(
     name = "tag_proxy",
     srcs = ["//cmd/release"],
@@ -272,20 +244,4 @@ sh_binary(
     data = [
         ":operator.digest",
     ],
-)
-
-sh_binary(
-    name = "tag_sidecar",
-    srcs = ["//cmd/release"],
-    args = [
-        "container",
-        "--repository",
-        CONTAINER_IMAGE_REPOSITORIES["sidecar"],
-        "--sha256",
-        "$(location //container:sidecar.digest)",
-        "--tag",
-        VERSION,
-        "--override",
-    ],
-    data = [":sidecar.digest"],
 )

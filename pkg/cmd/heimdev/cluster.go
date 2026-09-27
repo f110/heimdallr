@@ -114,7 +114,7 @@ func deleteCluster(kindPath, name, kubeConfig string) error {
 	return nil
 }
 
-func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, namespace string) error {
+func runController(kindPath, name, manifestFile, controllerImage, namespace string) error {
 	kindCluster, err := kind.NewCluster(kindPath, name, "")
 	if err != nil {
 		return err
@@ -133,11 +133,6 @@ func runController(kindPath, name, manifestFile, controllerImage, sidecarImage, 
 		{
 			Layout:     controllerImage,
 			Repository: "ghcr.io/f110/heimdallr/operator",
-			Tag:        "latest",
-		},
-		{
-			Layout:     sidecarImage,
-			Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
 			Tag:        "latest",
 		},
 	}
@@ -334,19 +329,17 @@ func Cluster(rootCmd *cmd.Command) {
 
 	manifestFile := ""
 	controllerImage := ""
-	sidecarImage := ""
 	namespace := ""
 	runOperator := &cmd.Command{
 		Use:   "run-operator",
 		Short: "Run the operator",
 		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, sidecarImage, namespace)
+			return runController(opts.KindPath, opts.ClusterName, manifestFile, controllerImage, namespace)
 		},
 	}
 	commonFlags(runOperator.Flags(), opts)
 	runOperator.Flags().String("manifest", "A manifest file for the controller").Var(&manifestFile)
 	runOperator.Flags().String("controller-image", "A path of file of controller").Var(&controllerImage)
-	runOperator.Flags().String("sidecar-image", "A path of file of sidecar").Var(&sidecarImage)
 	runOperator.Flags().String("namespace", "The namespace of operator").Var(&namespace).Shorthand("n").Default("heimdallr")
 	clusterCmd.AddCommand(runOperator)
 

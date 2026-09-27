@@ -78,8 +78,6 @@ type ConfigStruct struct {
 	ProxyImage       string
 	RPCImage         string
 	DashboardImage   string
-	SidecarImage     string
-	BuildVersion     string
 	AllInOneManifest string
 	Step             bool
 	Retain           bool
@@ -96,9 +94,7 @@ func Flags(fs *flag.FlagSet) {
 	fs.StringVar(&Config.ProxyImage, "proxy-image", "", "OCI layout directory of the proxy image")
 	fs.StringVar(&Config.RPCImage, "rpc-image", "", "OCI layout directory of the rpcserver image")
 	fs.StringVar(&Config.DashboardImage, "dashboard-image", "", "OCI layout directory of the dashboard image")
-	fs.StringVar(&Config.SidecarImage, "sidecar-image", "", "OCI layout directory of the sidecar image")
 	fs.StringVar(&Config.AllInOneManifest, "all-in-one-manifest", "", "Manifest file for operator")
-	fs.StringVar(&Config.BuildVersion, "build-version", "", "Version string")
 	fs.BoolVar(&Config.Step, "step", false, "Step execution")
 	fs.BoolVar(&Config.Retain, "retain", false, "Do not delete cluster after test")
 }
