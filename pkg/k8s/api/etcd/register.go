@@ -9,6 +9,7 @@ const (
 	AnnotationKeyServerCertificate = "etcdcluster.f110.dev/servercert"
 	AnnotationKeyRestartedAt       = "etcdcluster.f110.dev/restartedAt"
 	AnnotationKeyPodSpecHash       = "etcdcluster.f110.dev/podspechash"
+	AnnotationKeyPeerURL           = "etcdcluster.f110.dev/peerurl"
 
 	PodAnnotationKeyRunningAt = "etcdcluster.f110.dev/runningAt"
 )
