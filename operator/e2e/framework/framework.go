@@ -63,7 +63,7 @@ var ProxyBase = proxy.Factory(&proxyv1alpha2.Proxy{
 
 var EtcdClusterBase = etcd.Factory(nil,
 	k8sfactory.Namespace(metav1.NamespaceDefault),
-	etcd.Version("v3.4.3"),
+	etcd.Version("v3.5.33"),
 	etcd.HighAvailability,
 )
 
