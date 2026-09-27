@@ -6,5 +6,4 @@ CONTAINER_IMAGE_REPOSITORIES = {
     "dashboard": "ghcr.io/f110/heimdallr/dashboard",
     "ctl": "ghcr.io/f110/heimdallr/heimctl",
     "operator": "ghcr.io/f110/heimdallr/operator",
-    "sidecar": "ghcr.io/f110/heimdallr/discovery-sidecar",
 }

@@ -8,6 +8,7 @@ const (
 	AnnotationKeyTemporaryMember   = "etcdcluster.f110.dev/tempmember"
 	AnnotationKeyServerCertificate = "etcdcluster.f110.dev/servercert"
 	AnnotationKeyRestartedAt       = "etcdcluster.f110.dev/restartedAt"
+	AnnotationKeyPodSpecHash       = "etcdcluster.f110.dev/podspechash"
 
 	PodAnnotationKeyRunningAt = "etcdcluster.f110.dev/runningAt"
 )

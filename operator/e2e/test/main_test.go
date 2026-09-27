@@ -50,8 +50,7 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	if framework.Config.ProxyImage != "" ||
 		framework.Config.RPCImage != "" ||
 		framework.Config.DashboardImage != "" ||
-		framework.Config.OperatorImage != "" ||
-		framework.Config.SidecarImage != "" {
+		framework.Config.OperatorImage != "" {
 		if err := registry.Install(cfg, "operator-e2e"); err != nil {
 			return nil, err
 		}
@@ -79,11 +78,6 @@ func setupSuite(id string) (*kind.Cluster, error) {
 				Layout:     framework.Config.OperatorImage,
 				Repository: "ghcr.io/f110/heimdallr/operator",
 				Tag:        "e2e",
-			},
-			{
-				Layout:     framework.Config.SidecarImage,
-				Repository: "ghcr.io/f110/heimdallr/discovery-sidecar",
-				Tag:        framework.Config.BuildVersion,
 			},
 		}
 		if err := registry.Push(context.TODO(), cfg, kind.NodePlatform(), images...); err != nil {

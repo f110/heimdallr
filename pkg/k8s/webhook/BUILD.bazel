@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "webhook",
@@ -9,7 +9,9 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/k8s/webhook",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/logger",
+        "@com_github_masterminds_semver_v3//:semver",
         "@dev_f110_go_xerrors//:xerrors",
         "@io_k8s_api//admission/v1:admission",
         "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1:apiextensions",
@@ -19,5 +21,18 @@ go_library(
         "@io_k8s_apimachinery//pkg/runtime/schema",
         "@io_k8s_apimachinery//pkg/runtime/serializer/json",
         "@io_k8s_apimachinery//pkg/types",
+    ],
+)
+
+go_test(
+    name = "webhook_test",
+    srcs = ["server_test.go"],
+    embed = [":webhook"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@io_k8s_api//admission/v1:admission",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/runtime",
     ],
 )

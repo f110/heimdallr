@@ -1,5 +1,4 @@
 load("@rules_go//go:def.bzl", "go_test")
-load("//:RELEASE.bzl", "VERSION")
 
 K8S_CLUSTER_VERSION = "v1.35.8"
 
@@ -20,16 +19,13 @@ go_test(
         "-rpc-image=container/rpcserver",
         "-dashboard-image=container/dashboard",
         "-operator-image=container/operator",
-        "-sidecar-image=container/sidecar",
         "-all-in-one-manifest=$(location //operator/deploy/e2e:all-in-one)",
-        "-build-version=" + VERSION,
     ],
     data = [
         "//container:dashboard",
         "//container:operator",
         "//container:proxy",
         "//container:rpcserver",
-        "//container:sidecar",
         "//operator/config/crd",
         "//operator/deploy/e2e:all-in-one",
         "@kind//:file",
