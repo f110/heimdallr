@@ -13,6 +13,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -86,7 +87,7 @@ func TestEtcdController(t *testing.T) {
 		pod, err := runner.CoreClient.CoreV1.GetPod(context.TODO(), e.Namespace, fmt.Sprintf("%s-1", e.Name), metav1.GetOptions{})
 		require.NoError(t, err)
 
-		assert.Contains(t, pod.Spec.Containers[0].Args[1], "--initial-cluster-state=new")
+		assert.Contains(t, pod.Spec.Containers[0].Args, "--initial-cluster-state=new")
 		require.NotNil(t, pod.Spec.Affinity)
 		assert.NotNil(t, pod.Spec.Affinity.PodAntiAffinity)
 	})
@@ -125,6 +126,8 @@ func TestEtcdController(t *testing.T) {
 		updated := e.DeepCopy()
 		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
 		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
+		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "", k8sfactory.PodFactory(member.Pod, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 		runner.AssertUpdateAction(t, "status", updated)
@@ -136,7 +139,7 @@ func TestEtcdController(t *testing.T) {
 
 		found := false
 		for _, v := range pods.Items {
-			if strings.Contains(v.Spec.Containers[0].Args[1], "--initial-cluster-state=existing") {
+			if slices.Contains(v.Spec.Containers[0].Args, "--initial-cluster-state=existing") {
 				if found {
 					assert.Fail(t, "Both nodes has initial-cluster-state=existing")
 				}
@@ -183,7 +186,7 @@ func TestEtcdController(t *testing.T) {
 			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
 			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
 		}
-		e = etcd.Factory(e, etcd.Version("v3.3.0"))
+		e = etcd.Factory(e, etcd.Version("v3.6.15"))
 
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
@@ -191,6 +194,8 @@ func TestEtcdController(t *testing.T) {
 		updated := e.DeepCopy()
 		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
 		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
+		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertNoUnexpectedAction(t)
@@ -207,7 +212,7 @@ func TestEtcdController(t *testing.T) {
 			}
 		}
 		require.NotNil(t, temporaryMember, "Could not find temporary member")
-		assert.Contains(t, temporaryMember.Spec.Containers[0].Args[1], "--initial-cluster-state=existing")
+		assert.Contains(t, temporaryMember.Spec.Containers[0].Args, "--initial-cluster-state=existing")
 		assert.Contains(t, temporaryMember.Annotations, etcd.AnnotationKeyTemporaryMember)
 		assert.Nil(t, temporaryMember.Spec.Affinity)
 	})
@@ -306,6 +311,8 @@ func TestEtcdController(t *testing.T) {
 			require.NoError(t, err)
 
 			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
+		// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
+		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 			runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -975,6 +982,135 @@ func TestEtcdController_Restore(t *testing.T) {
 	assert.True(t, updatedEC.Status.Restored.Completed)
 }
 
+func TestEtcdController_StartMember(t *testing.T) {
+	type etcdMember struct {
+		Name    string
+		PeerURL string
+	}
+	cases := []struct {
+		Name    string
+		Version string
+		// Members is the members that belong to the cluster before starting the new member.
+		// "new" in PeerURL is replaced with the peer url of the new member.
+		Members []etcdMember
+		// Remain is the names of the members that have to remain after starting the new member.
+		Remain []string
+		// Added is true if the new member has to be added to the cluster by the operator.
+		Added bool
+	}{
+		{
+			Name:    "AddTheMember",
+			Version: "v3.6.15",
+			Members: []etcdMember{{"other", "https://other:2380"}},
+			Remain:  []string{"other"},
+			Added:   true,
+		},
+		{
+			Name:    "ReplaceTheMemberThatHasTheSameName",
+			Version: "v3.6.15",
+			Members: []etcdMember{{"other", "https://other:2380"}, {"self", "https://10-0-0-1.default.pod.cluster.local:2380"}},
+			Remain:  []string{"other"},
+			Added:   true,
+		},
+		{
+			Name:    "ReplaceTheMemberThatHasTheSamePeerURL",
+			Version: "v3.6.15",
+			Members: []etcdMember{{"other", "https://other:2380"}, {"", "new"}},
+			Remain:  []string{"other"},
+			Added:   true,
+		},
+		{
+			Name:    "InitContainerAddsTheMember",
+			Version: "v3.4.3",
+			Members: []etcdMember{{"other", "https://other:2380"}},
+			Remain:  []string{"other"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			runner := controllertest.NewTestRunner()
+			etcdMockCluster := NewMockCluster()
+			mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+			controller, err := NewEtcdController(
+				runner.SharedInformerFactory,
+				runner.CoreSharedInformerFactory,
+				&runner.CoreClient.Set,
+				runner.Client.EtcdV1alpha2,
+				runner.K8sCoreClient,
+				nil,
+				"cluster.local",
+				false,
+				nil,
+				mockOpt,
+			)
+			require.NoError(t, err)
+
+			e := etcd.Factory(nil,
+				k8sfactory.Name(normalizeName(t.Name())),
+				k8sfactory.Namespace(metav1.NamespaceDefault),
+				k8sfactory.Created,
+				etcd.Member(3),
+				etcd.MemberStatus(nil),
+				etcd.Version(tc.Version),
+				etcd.Phase(etcdv1alpha2.EtcdClusterPhaseCreating),
+			)
+			cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, mockOpt)
+			cluster.registerBasicObjectOfEtcdCluster(runner)
+			first := k8sfactory.PodFactory(cluster.newEtcdPod(tc.Version, 1, "new", nil, false), k8sfactory.Created, k8sfactory.Ready)
+			first.Status.PodIP = "10.0.0.2"
+			cluster.SetOwnedPods([]*corev1.Pod{first})
+
+			var member *EtcdMember
+			for _, v := range cluster.AllMembers() {
+				if v.Pod.CreationTimestamp.IsZero() {
+					member = v
+					break
+				}
+			}
+			require.NotNil(t, member)
+			peerURL := member.Pod.Annotations[etcd.AnnotationKeyPeerURL]
+			for _, v := range tc.Members {
+				m := &etcdserverpb.Member{Name: v.Name, PeerURLs: []string{v.PeerURL}}
+				if v.Name == "self" {
+					m.Name = member.Pod.Name
+				}
+				if v.PeerURL == "new" {
+					m.PeerURLs = []string{peerURL}
+				}
+				etcdMockCluster.AddMember(m)
+			}
+
+			err = controller.startMember(context.Background(), cluster, member)
+			require.NoError(t, err)
+
+			_, err = runner.CoreClient.CoreV1.GetPod(context.Background(), member.Pod.Namespace, member.Pod.Name, metav1.GetOptions{})
+			require.NoError(t, err)
+
+			res, err := etcdMockCluster.MemberList(context.Background())
+			require.NoError(t, err)
+			var remain []string
+			var added []*etcdserverpb.Member
+			for _, v := range res.Members {
+				if v.Name != "" {
+					remain = append(remain, v.Name)
+				} else {
+					added = append(added, v)
+				}
+			}
+			assert.ElementsMatch(t, tc.Remain, remain)
+			if tc.Added {
+				require.Len(t, added, 1)
+				assert.Equal(t, []string{peerURL}, added[0].PeerURLs)
+			} else {
+				assert.Len(t, added, 0)
+			}
+		})
+	}
+}
+
 func TestEtcdController_DeleteMember(t *testing.T) {
 	etcdClusterBase := etcd.Factory(nil,
 		k8sfactory.Name(normalizeName(t.Name())),
@@ -982,6 +1118,8 @@ func TestEtcdController_DeleteMember(t *testing.T) {
 		k8sfactory.Created,
 		etcd.Member(3),
 		etcd.MemberStatus(nil),
+		// The Pods of etcd v3.4 use the peer url that is derived from the ip address of the Pod.
+		etcd.Version("v3.4.3"),
 	)
 
 	peerURL := func(podIP string) string {
@@ -1082,6 +1220,47 @@ func TestEtcdController_DeleteMember(t *testing.T) {
 			assert.ElementsMatch(t, expect, got)
 		})
 	}
+
+	t.Run("RemoveTheMemberThatHasNameBasedURL", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
+
+		e := etcd.Factory(etcdClusterBase, etcd.Version("v3.6.15"), etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning), etcd.Ready)
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, mockOpt)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
+
+		member := cluster.AllMembers()[0]
+		member.Pod = k8sfactory.PodFactory(member.Pod, k8sfactory.Created)
+		member.Pod.Status.PodIP = "10.0.0.1"
+		runner.RegisterFixtures(member.Pod)
+		// The member hasn't joined the cluster yet.
+		etcdMockCluster.AddMember(&etcdserverpb.Member{PeerURLs: []string{member.Pod.Annotations[etcd.AnnotationKeyPeerURL]}})
+		etcdMockCluster.AddMember(&etcdserverpb.Member{Name: "other", PeerURLs: []string{peerURL("10.0.0.2")}})
+
+		err = controller.deleteMember(context.Background(), cluster, member)
+		require.NoError(t, err)
+
+		res, err := etcdMockCluster.MemberList(context.Background())
+		require.NoError(t, err)
+		require.Len(t, res.Members, 1)
+		assert.Equal(t, "other", res.Members[0].Name)
+	})
 }
 
 func TestEtcdController_RotateCertificate(t *testing.T) {
@@ -1241,6 +1420,60 @@ func minIOFixtures() (*corev1.Service, *corev1.Secret) {
 	)
 
 	return svc, secret
+}
+
+func TestEtcdController_DiscoveryService(t *testing.T) {
+	runner := controllertest.NewTestRunner()
+	etcdMockCluster := NewMockCluster()
+	mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+	controller, err := NewEtcdController(
+		runner.SharedInformerFactory,
+		runner.CoreSharedInformerFactory,
+		&runner.CoreClient.Set,
+		runner.Client.EtcdV1alpha2,
+		runner.K8sCoreClient,
+		nil,
+		"cluster.local",
+		false,
+		nil,
+		mockOpt,
+	)
+	require.NoError(t, err)
+
+	e := etcd.Factory(nil,
+		k8sfactory.Name(normalizeName(t.Name())),
+		k8sfactory.Namespace(metav1.NamespaceDefault),
+		k8sfactory.Created,
+		etcd.Member(3),
+		etcd.MemberStatus(nil),
+		etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+		etcd.Ready,
+	)
+	cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+	ca, err := cluster.CA()
+	require.NoError(t, err)
+	cluster.SetCASecret(ca)
+	serverS, err := cluster.ServerCertSecret()
+	require.NoError(t, err)
+	cluster.SetServerCertSecret(serverS)
+	clientS, err := cluster.ClientCertSecret()
+	require.NoError(t, err)
+	// The discovery service that is created by the older operator doesn't publish the addresses of not-ready Pods.
+	svc := cluster.DiscoveryService()
+	svc.Spec.PublishNotReadyAddresses = false
+	runner.RegisterFixtures(ca, serverS, clientS, svc, cluster.ClientService(), cluster.ServiceAccount(), cluster.EtcdRole(), cluster.EtcdRoleBinding())
+	for _, v := range cluster.AllMembers() {
+		runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+		etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+		e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+	}
+
+	err = runner.Reconcile(controller, e)
+	require.NoError(t, err)
+
+	got, err := runner.CoreClient.CoreV1.GetService(context.TODO(), e.Namespace, cluster.ServerDiscoveryServiceName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.True(t, got.Spec.PublishNotReadyAddresses)
 }
 
 func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.TestRunner) {

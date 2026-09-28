@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -761,6 +762,12 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 	}
 
 	if member.Pod.CreationTimestamp.IsZero() {
+		if member.AddMember {
+			if err := ec.addMember(ctx, cluster, member); err != nil {
+				return err
+			}
+		}
+
 		cluster.SetAnnotationForPod(member.Pod)
 		_, err := ec.coreClient.CoreV1.CreatePod(ctx, resetPod(member.Pod), metav1.CreateOptions{})
 		if err != nil {
@@ -770,6 +777,46 @@ func (ec *EtcdController) startMember(ctx context.Context, cluster *EtcdCluster,
 
 	ec.EventRecorder().Event(cluster.EtcdCluster, corev1.EventTypeNormal, "MemberCreated", "The new member has been created")
 	return nil
+}
+
+// addMember adds the member of the Pod to the cluster.
+//
+// The data directory of the Pod is always wiped by the init container before starting etcd.
+// So the member can't take over the member id that is already registered to the cluster.
+// The member that has the same name or the same peer url is removed before adding the member.
+func (ec *EtcdController) addMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {
+	peerURL := cluster.MemberPeerURL(member.Pod)
+	ec.Log(ctx).Debug("Add the member", slog.String("pod.name", member.Pod.Name), slog.String("peerURL", peerURL))
+
+	eClient, forwarder, err := ec.etcdClient(ctx, cluster)
+	if forwarder != nil {
+		defer forwarder.Close()
+	}
+	if err != nil {
+		return err
+	}
+	defer eClient.Close()
+
+	return eClient.WithTimeout(ctx, 3*time.Second, func(ctx context.Context) error {
+		mList, err := eClient.MemberList(ctx)
+		if err != nil {
+			return xerrors.WithStack(err)
+		}
+		for _, v := range mList.Members {
+			if v.Name != member.Pod.Name && !slices.Contains(v.PeerURLs, peerURL) {
+				continue
+			}
+			if _, err := eClient.MemberRemove(ctx, v.ID); err != nil {
+				return xerrors.WithStack(err)
+			}
+			ec.Log(ctx).Debug("Remove the member that is left behind", slog.String("name", v.Name), slog.Any("peerURLs", v.PeerURLs))
+		}
+
+		if _, err := eClient.MemberAdd(ctx, []string{peerURL}); err != nil {
+			return xerrors.WithStack(err)
+		}
+		return nil
+	})
 }
 
 func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster, member *EtcdMember) error {
@@ -794,7 +841,8 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 		}
 
 		// The member doesn't have the name until it joins the cluster.
-		// In that case, the member is identified by the peer url that is derived from the ip address of the Pod.
+		// In that case, the member is identified by the peer url.
+		peerURL := cluster.MemberPeerURL(member.Pod)
 		var memberStatus *etcdserverpb.Member
 		for _, v := range mList.Members {
 			ec.Log(ctx).Debug("Found the member", slog.String("name", v.Name), slog.Any("peerURLs", v.PeerURLs))
@@ -806,7 +854,7 @@ func (ec *EtcdController) deleteMember(ctx context.Context, cluster *EtcdCluster
 				ec.Log(ctx).Warn("The member hasn't any peer url", slog.Uint64("id", v.ID), slog.String("name", v.Name))
 				continue
 			}
-			if v.Name == "" && member.Pod.Status.PodIP != "" && v.PeerURLs[0] == cluster.PodPeerURL(member.Pod.Status.PodIP) {
+			if v.Name == "" && peerURL != "" && v.PeerURLs[0] == peerURL {
 				memberStatus = v
 			}
 		}
@@ -928,14 +976,24 @@ func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *Etc
 }
 
 func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *EtcdCluster) error {
-	_, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
+	svc, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
 	if err != nil && apierrors.IsNotFound(err) {
 		_, err = ec.coreClient.CoreV1.CreateService(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
+		return nil
 	} else if err != nil {
 		return xerrors.WithStack(err)
+	}
+
+	// The members have to be able to resolve the name of the Pod that isn't ready yet to join the cluster.
+	if !svc.Spec.PublishNotReadyAddresses {
+		updated := svc.DeepCopy()
+		updated.Spec.PublishNotReadyAddresses = true
+		if _, err := ec.coreClient.CoreV1.UpdateService(ctx, updated, metav1.UpdateOptions{}); err != nil {
+			return xerrors.WithStack(err)
+		}
 	}
 
 	return nil

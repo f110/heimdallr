@@ -166,7 +166,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.Server.Shutdown(ctx)
 }
 
-var minimumEtcdVersion = semver.MustParse("v3.4.0")
+var (
+	minimumEtcdVersion = semver.MustParse("v3.4.0")
+	// etcd v3.4.24 and later v3.4 are distroless images. The Pods of etcd v3.4 require the shell.
+	distrolessEtcdV34Version = semver.MustParse("v3.4.24")
+	nameBasedURLEtcdVersion  = semver.MustParse("v3.5.0")
+)
 
 func validate(req *admissionv1.AdmissionRequest) error {
 	if req.Kind.Group != etcdv1alpha2.GroupName || req.Kind.Kind != "EtcdCluster" || req.SubResource != "" {
@@ -190,6 +195,9 @@ func validate(req *admissionv1.AdmissionRequest) error {
 	}
 	if v.LessThan(minimumEtcdVersion) {
 		return xerrors.NewfWithStack("etcd %s is not supported. %s or later is required", obj.Spec.Version, minimumEtcdVersion.Original())
+	}
+	if !v.LessThan(distrolessEtcdV34Version) && v.LessThan(nameBasedURLEtcdVersion) {
+		return xerrors.NewfWithStack("etcd %s is not supported because the image does not have the shell. Use earlier than %s, or %s or later", obj.Spec.Version, distrolessEtcdV34Version.Original(), nameBasedURLEtcdVersion.Original())
 	}
 
 	return nil

@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -514,7 +515,7 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 
 			result = append(result, &EtcdMember{Pod: v, PersistentVolumeClaim: pvc, OldVersion: oldVersion})
 			if !v.CreationTimestamp.IsZero() && v.Status.Phase == corev1.PodPhaseRunning {
-				initialClusters = append(initialClusters, fmt.Sprintf("%s=https://%s.%s.pod.%s:%d", v.Name, strings.Replace(v.Status.PodIP, ".", "-", -1), c.Namespace, c.ClusterDomain, EtcdPeerPort))
+				initialClusters = append(initialClusters, fmt.Sprintf("%s=%s", v.Name, c.MemberPeerURL(v)))
 			}
 		}
 
@@ -529,25 +530,22 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 				initialClusters = []string{}
 			}
 
-			newPod := c.newEtcdPod(
-				etcdVersion,
-				i,
-				clusterState,
-				append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
-				false,
-			)
+			newPod := c.newEtcdPod(etcdVersion, i, clusterState, initialClusters, false)
 			if _, ok := pods[newPod.Name]; ok {
 				continue
 			}
 
-			result = append(result, c.newEtcdMember(newPod))
+			member := c.newEtcdMember(newPod)
+			member.AddMember = clusterState == "existing" && useNameBasedURL(etcdVersion)
+			result = append(result, member)
 		}
 
 		switch c.CurrentInternalState() {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
 			if !c.HasTemporaryMember() {
-				temporaryMemberPod := c.newTemporaryMemberPodSpec(etcdVersion, initialClusters)
-				result = append(result, c.newEtcdMember(temporaryMemberPod))
+				member := c.newEtcdMember(c.newTemporaryMemberPodSpec(etcdVersion, initialClusters))
+				member.AddMember = useNameBasedURL(etcdVersion)
+				result = append(result, member)
 			}
 		}
 
@@ -667,6 +665,7 @@ func (c *EtcdCluster) normalizeAnnotation(a map[string]string) {
 	delete(a, etcd.AnnotationKeyServerCertificate)
 	delete(a, etcd.AnnotationKeyTemporaryMember)
 	delete(a, etcd.AnnotationKeyPodSpecHash)
+	delete(a, etcd.AnnotationKeyPeerURL)
 	delete(a, etcd.PodAnnotationKeyRunningAt)
 }
 
@@ -778,6 +777,39 @@ func (c *EtcdCluster) PodPeerURL(podIP string) string {
 	return c.peerURL(strings.Replace(podIP, ".", "-", -1))
 }
 
+// shellPeerURL returns the url that the shell in the Pod derives from the ip address of the Pod.
+func (c *EtcdCluster) shellPeerURL(port int) string {
+	return fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, port)
+}
+
+// podURL returns the url that consists of the name of the Pod.
+// The name is resolved by the discovery service because the Pod has the hostname and the subdomain.
+func (c *EtcdCluster) podURL(podName string, port int) string {
+	return fmt.Sprintf("https://%s.%s.%s.svc.%s:%d", podName, c.ServerDiscoveryServiceName(), c.Namespace, c.ClusterDomain, port)
+}
+
+// MemberPeerURL returns the peer url that the member of the Pod is registered with.
+// The Pod that uses the name-based url has the url in the annotation.
+// Otherwise, the url is derived from the ip address of the Pod.
+func (c *EtcdCluster) MemberPeerURL(pod *corev1.Pod) string {
+	if v, ok := pod.Annotations[etcd.AnnotationKeyPeerURL]; ok {
+		return v
+	}
+	if pod.Status.PodIP == "" {
+		return ""
+	}
+	return c.PodPeerURL(pod.Status.PodIP)
+}
+
+var etcdVersionNameBasedURL = semver.MustParse("v3.5.0")
+
+// useNameBasedURL reports whether the Pod of etcdVersion uses the URLs that consist of the name of the Pod.
+// etcd v3.5.7 and later don't have the shell, so the Pod can't derive the URLs from its ip address.
+func useNameBasedURL(etcdVersion string) bool {
+	v, err := semver.NewVersion(etcdVersion)
+	return err == nil && !v.LessThan(etcdVersionNameBasedURL)
+}
+
 func (c *EtcdCluster) DiscoveryService() *corev1.Service {
 	return k8sfactory.ServiceFactory(nil,
 		k8sfactory.Name(c.ServerDiscoveryServiceName()),
@@ -786,6 +818,7 @@ func (c *EtcdCluster) DiscoveryService() *corev1.Service {
 		k8sfactory.Label(etcd.LabelNameClusterName, c.Name),
 		k8sfactory.ClusterIP,
 		k8sfactory.IPNone,
+		k8sfactory.PublishNotReadyAddresses,
 		k8sfactory.Selector(etcd.LabelNameClusterName, c.Name),
 		k8sfactory.Port("etcd-server-ssl", corev1.ProtocolTCP, EtcdPeerPort),
 		k8sfactory.Port("etcd-client-ssl", corev1.ProtocolTCP, EtcdClientPort),
@@ -1060,13 +1093,7 @@ func (c *EtcdCluster) SetAnnotationForPod(pod *corev1.Pod) {
 }
 
 func (c *EtcdCluster) newTemporaryMemberPodSpec(etcdVersion string, initialClusters []string) *corev1.Pod {
-	pod := c.newEtcdPod(
-		etcdVersion,
-		c.Spec.Members+1,
-		"existing",
-		append(initialClusters, fmt.Sprintf("$(MY_POD_NAME)=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort)),
-		true,
-	)
+	pod := c.newEtcdPod(etcdVersion, c.Spec.Members+1, "existing", initialClusters, true)
 	pod = k8sfactory.PodFactory(pod,
 		k8sfactory.Annotation(etcd.AnnotationKeyTemporaryMember, "true"),
 	)
@@ -1086,6 +1113,8 @@ func (c *EtcdCluster) DefaultAnnotations() map[string]string {
 	return map[string]string{etcd.AnnotationKeyServerCertificate: string(c.serverCertSecret.MarshalCertificate())}
 }
 
+// newEtcdPod returns the Pod of the member.
+// initialCluster is the members that the new member joins. The new member itself is added to it.
 func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState string, initialCluster []string, temporaryMember bool) *corev1.Pod {
 	antiAffinity := c.Spec.AntiAffinity
 	if antiAffinity && temporaryMember {
@@ -1106,6 +1135,13 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 		)
 	}
 
+	peerURL := c.shellPeerURL(EtcdPeerPort)
+	if useNameBasedURL(etcdVersion) {
+		peerURL = c.podURL(podName, EtcdPeerPort)
+		pod = k8sfactory.PodFactory(pod, k8sfactory.Annotation(etcd.AnnotationKeyPeerURL, peerURL))
+	}
+	initialCluster = append(slices.Clone(initialCluster), fmt.Sprintf("%s=%s", podName, peerURL))
+
 	pod = c.etcdPodSpec(pod, podName, etcdVersion, clusterState, initialCluster, antiAffinity)
 	return k8sfactory.PodFactory(pod, k8sfactory.Annotation(etcd.AnnotationKeyPodSpecHash, c.podSpecHash(etcdVersion)))
 }
@@ -1122,8 +1158,6 @@ func (c *EtcdCluster) podSpecHash(etcdVersion string) string {
 }
 
 func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, clusterState string, initialCluster []string, antiAffinity bool) *corev1.Pod {
-	memberManipulateScript := template.Must(template.New("").Parse(addMemberScript))
-
 	caVolume := k8sfactory.NewSecretVolumeSource(
 		"ca",
 		"/etc/etcd-ca",
@@ -1145,45 +1179,26 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 		dataVolume = k8sfactory.NewPersistentVolumeClaimVolumeSource("data", "/data", podName)
 	}
 
-	var addMemberContainer *corev1.Container
-	if clusterState == "existing" {
-		buf := new(bytes.Buffer)
-		err := memberManipulateScript.Execute(buf, struct {
-			Name     string
-			CACert   string
-			Cert     string
-			Key      string
-			Endpoint string
-			PeerUrl  string
-		}{
-			Name:     podName,
-			CACert:   clientCertVolume.PathJoin(clientCertSecretCACertName),
-			Cert:     clientCertVolume.PathJoin(clientCertSecretCertName),
-			Key:      clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
-			Endpoint: fmt.Sprintf("%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
-			PeerUrl:  fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
-		})
-		if err != nil {
-			panic(err)
+	nameBasedURL := useNameBasedURL(etcdVersion)
+	var etcdArgs []string
+	if nameBasedURL {
+		etcdArgs = []string{
+			"--name=" + podName,
+			fmt.Sprintf("--data-dir=/data/%s.etcd", podName),
+			fmt.Sprintf("--initial-cluster-state=%s", clusterState),
+			fmt.Sprintf("--initial-advertise-peer-urls=%s", c.podURL(podName, EtcdPeerPort)),
+			fmt.Sprintf("--advertise-client-urls=%s", c.podURL(podName, EtcdClientPort)),
 		}
-
-		addMemberContainer = k8sfactory.ContainerFactory(nil,
-			k8sfactory.Name("add-member"),
-			k8sfactory.Image(
-				fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion),
-				[]string{"/bin/sh", "-c", buf.String()},
-			),
-			k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
-			k8sfactory.Volume(clientCertVolume),
-		)
+	} else {
+		etcdArgs = []string{
+			"--name=$(MY_POD_NAME)",
+			"--data-dir=/data/$(MY_POD_NAME).etcd",
+			fmt.Sprintf("--initial-cluster-state=%s", clusterState),
+			fmt.Sprintf("--initial-advertise-peer-urls=%s", c.shellPeerURL(EtcdPeerPort)),
+			fmt.Sprintf("--advertise-client-urls=%s", c.shellPeerURL(EtcdClientPort)),
+		}
 	}
-
-	etcdArgs := []string{
-		"--name=$(MY_POD_NAME)",
-		"--data-dir=/data/$(MY_POD_NAME).etcd",
-		fmt.Sprintf("--initial-cluster-state=%s", clusterState),
-		fmt.Sprintf("--initial-advertise-peer-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
-		fmt.Sprintf("--advertise-client-urls=https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdClientPort),
+	etcdArgs = append(etcdArgs,
 		fmt.Sprintf("--listen-client-urls=https://0.0.0.0:%d", EtcdClientPort),
 		fmt.Sprintf("--listen-peer-urls=https://0.0.0.0:%d", EtcdPeerPort),
 		fmt.Sprintf("--listen-metrics-urls=http://0.0.0.0:%d", EtcdMetricsPort),
@@ -1195,17 +1210,15 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 		fmt.Sprintf("--peer-key-file=%s", serverCertVolume.PathJoin(serverCertSecretPrivateKeyName)),
 		fmt.Sprintf("--peer-trusted-ca-file=%s", caVolume.PathJoin(caSecretCertName)),
 		"--peer-client-cert-auth",
-	}
-	if initialCluster != nil && len(initialCluster) > 0 {
+	)
+	if len(initialCluster) > 0 {
 		etcdArgs = append(etcdArgs, fmt.Sprintf("--initial-cluster=%s", strings.Join(initialCluster, ",")))
 	}
 	etcdArgs = append(etcdArgs, skipClientSANVerificationFlag(etcdVersion))
+
+	image := fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion)
 	etcdContainer := k8sfactory.ContainerFactory(nil,
 		k8sfactory.Name("etcd"),
-		k8sfactory.Image(fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion), []string{"/bin/sh"}),
-		k8sfactory.Args("-c", fmt.Sprintf("exec /usr/local/bin/etcd %s", strings.Join(etcdArgs, " "))),
-		k8sfactory.EnvFromField("MY_POD_NAME", "metadata.name"),
-		k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
 		k8sfactory.Port("client", corev1.ProtocolTCP, EtcdClientPort),
 		k8sfactory.Port("peer", corev1.ProtocolTCP, EtcdPeerPort),
 		k8sfactory.Port("metrics", corev1.ProtocolTCP, EtcdMetricsPort),
@@ -1215,12 +1228,31 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 		k8sfactory.Volume(caVolume),
 		k8sfactory.Volume(dataVolume),
 	)
+	var addMemberContainer *corev1.Container
+	if nameBasedURL {
+		// The operator adds the member to the cluster before creating the Pod.
+		etcdContainer = k8sfactory.ContainerFactory(etcdContainer,
+			k8sfactory.Image(image, []string{"/usr/local/bin/etcd"}),
+			k8sfactory.Args(etcdArgs...),
+		)
+	} else {
+		etcdContainer = k8sfactory.ContainerFactory(etcdContainer,
+			k8sfactory.Image(image, []string{"/bin/sh"}),
+			k8sfactory.Args("-c", fmt.Sprintf("exec /usr/local/bin/etcd %s", strings.Join(etcdArgs, " "))),
+			k8sfactory.EnvFromField("MY_POD_NAME", "metadata.name"),
+			k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
+		)
+		if clusterState == "existing" {
+			addMemberContainer = c.addMemberContainer(podName, image, clientCertVolume)
+		}
+	}
 
 	pod = k8sfactory.PodFactory(pod,
 		k8sfactory.Volume(caVolume),
 		k8sfactory.Volume(serverCertVolume),
 		k8sfactory.Volume(clientCertVolume),
 		k8sfactory.Volume(dataVolume),
+		k8sfactory.Hostname(podName),
 		k8sfactory.Subdomain(c.ServerDiscoveryServiceName()),
 		k8sfactory.ServiceAccount(c.ServiceAccountName()),
 		k8sfactory.RestartPolicy(corev1.RestartPolicyNever),
@@ -1249,6 +1281,37 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 	}
 
 	return pod
+}
+
+// addMemberContainer returns the init container that adds the member to the cluster by the shell script.
+// This is used for the Pods that use the URLs that are derived from the ip address of the Pod.
+func (c *EtcdCluster) addMemberContainer(podName, image string, clientCertVolume *k8sfactory.VolumeSource) *corev1.Container {
+	buf := new(bytes.Buffer)
+	err := template.Must(template.New("").Parse(addMemberScript)).Execute(buf, struct {
+		Name     string
+		CACert   string
+		Cert     string
+		Key      string
+		Endpoint string
+		PeerUrl  string
+	}{
+		Name:     podName,
+		CACert:   clientCertVolume.PathJoin(clientCertSecretCACertName),
+		Cert:     clientCertVolume.PathJoin(clientCertSecretCertName),
+		Key:      clientCertVolume.PathJoin(clientCertSecretPrivateKeyName),
+		Endpoint: fmt.Sprintf("%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
+		PeerUrl:  c.shellPeerURL(EtcdPeerPort),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return k8sfactory.ContainerFactory(nil,
+		k8sfactory.Name("add-member"),
+		k8sfactory.Image(image, []string{"/bin/sh", "-c", buf.String()}),
+		k8sfactory.EnvFromField("MY_POD_IP", "status.podIP"),
+		k8sfactory.Volume(clientCertVolume),
+	)
 }
 
 var etcdVersionPeerSkipClientSANVerification = semver.MustParse("v3.6.0")
@@ -1280,6 +1343,24 @@ func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
 	}
 	pod.Spec.InitContainers = append(pod.Spec.InitContainers, receiverContainer)
 
+	image := fmt.Sprintf("gcr.io/etcd-development/etcd:%s", c.EtcdVersion())
+	if peerURL, ok := pod.Annotations[etcd.AnnotationKeyPeerURL]; ok {
+		// etcdctl of v3.6 doesn't have "snapshot restore".
+		pod.Spec.InitContainers = append(pod.Spec.InitContainers, corev1.Container{
+			Name:  "restore-data",
+			Image: image,
+			Command: []string{
+				"/usr/local/bin/etcdutl", "snapshot", "restore", "/data/backup.db",
+				fmt.Sprintf("--data-dir=/data/%s.etcd", pod.Name),
+				"--name=" + pod.Name,
+				fmt.Sprintf("--initial-cluster=%s=%s", pod.Name, peerURL),
+				"--initial-advertise-peer-urls=" + peerURL,
+			},
+			VolumeMounts: []corev1.VolumeMount{dataVolume.ToMount()},
+		})
+		return
+	}
+
 	clientCertVolume := &podVolume{
 		Name: "client-cert",
 		Path: "/etc/etcd-client-cert",
@@ -1308,21 +1389,17 @@ func (c *EtcdCluster) InjectRestoreContainer(pod *corev1.Pod) {
 		Endpoint:         fmt.Sprintf("%s.%s.svc.%s:%d", c.ClientServiceName(), c.Namespace, c.ClusterDomain, EtcdClientPort),
 		DataFile:         "/data/backup.db",
 		Name:             pod.Name,
-		PeerUrl:          fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
-		AdvertisePeerUrl: fmt.Sprintf("https://$(echo $MY_POD_IP | tr . -).%s.pod.%s:%d", c.Namespace, c.ClusterDomain, EtcdPeerPort),
+		PeerUrl:          c.shellPeerURL(EtcdPeerPort),
+		AdvertisePeerUrl: c.shellPeerURL(EtcdPeerPort),
 	})
 	if err != nil {
 		logger.Log.Error("Failed render script", slog.Any("error", err))
 		return
 	}
-	etcdVersion := c.Spec.Version
-	if etcdVersion == "" {
-		etcdVersion = defaultEtcdVersion
-	}
 
 	restoreContainer := corev1.Container{
 		Name:    "restore-data",
-		Image:   fmt.Sprintf("gcr.io/etcd-development/etcd:%s", etcdVersion),
+		Image:   image,
 		Command: []string{"/bin/sh", "-c", buf.String()},
 		Env: []corev1.EnvVar{
 			{
@@ -1480,6 +1557,8 @@ func (c *Certificate) MarshalCertificate() []byte {
 type EtcdMember struct {
 	Pod                   *corev1.Pod
 	PersistentVolumeClaim *corev1.PersistentVolumeClaim
+	// AddMember is true if the operator has to add the member to the cluster before creating the Pod.
+	AddMember bool
 	// TODO: Remove after v0.12
 	OldVersion bool
 }

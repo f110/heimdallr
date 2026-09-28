@@ -35,6 +35,24 @@ func TestServer_Validate(t *testing.T) {
 			Allowed: true,
 		},
 		{
+			Name:    "v3.4 that has the shell",
+			Kind:    metav1.GroupVersionKind{Group: "etcd.f110.dev", Version: "v1alpha2", Kind: "EtcdCluster"},
+			Object:  `{"spec":{"version":"v3.4.23"}}`,
+			Allowed: true,
+		},
+		{
+			Name:    "v3.4 that doesn't have the shell",
+			Kind:    metav1.GroupVersionKind{Group: "etcd.f110.dev", Version: "v1alpha2", Kind: "EtcdCluster"},
+			Object:  `{"spec":{"version":"v3.4.24"}}`,
+			Allowed: false,
+		},
+		{
+			Name:    "v3.5",
+			Kind:    metav1.GroupVersionKind{Group: "etcd.f110.dev", Version: "v1alpha2", Kind: "EtcdCluster"},
+			Object:  `{"spec":{"version":"v3.5.0"}}`,
+			Allowed: true,
+		},
+		{
 			Name:    "v3.6",
 			Kind:    metav1.GroupVersionKind{Group: "etcd.f110.dev", Version: "v1alpha2", Kind: "EtcdCluster"},
 			Object:  `{"spec":{"version":"v3.6.15"}}`,

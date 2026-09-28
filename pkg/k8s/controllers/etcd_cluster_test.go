@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,10 +243,12 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 	cases := []struct {
 		Version string
 		Flag    string
+		// NameBasedURL is true if the Pod uses the URLs that consist of the name of the Pod.
+		NameBasedURL bool
 	}{
 		{Version: "v3.4.3", Flag: "--experimental-peer-skip-client-san-verification"},
-		{Version: "v3.5.1", Flag: "--experimental-peer-skip-client-san-verification"},
-		{Version: "v3.6.15", Flag: "--peer-skip-client-san-verification"},
+		{Version: "v3.5.1", Flag: "--experimental-peer-skip-client-san-verification", NameBasedURL: true},
+		{Version: "v3.6.15", Flag: "--peer-skip-client-san-verification", NameBasedURL: true},
 	}
 
 	for _, tc := range cases {
@@ -253,7 +256,14 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 			c := newTestEtcdCluster(t)
 			pod := c.newEtcdPod(tc.Version, 1, "existing", nil, false)
 
-			var wipeData, addMember *corev1.Container
+			assert.False(t, pod.Spec.ShareProcessNamespace)
+			assert.Equal(t, pod.Name, pod.Spec.Hostname)
+			assert.Equal(t, c.ServerDiscoveryServiceName(), pod.Spec.Subdomain)
+			for _, v := range pod.Spec.Volumes {
+				assert.NotContains(t, []string{"share", "run"}, v.Name)
+			}
+
+			var wipeData, addMember, etcdContainer *corev1.Container
 			for i, v := range pod.Spec.InitContainers {
 				switch v.Name {
 				case "wipe-data":
@@ -262,40 +272,130 @@ func TestEtcdCluster_MemberPodSpec(t *testing.T) {
 					addMember = &pod.Spec.InitContainers[i]
 				}
 			}
-			require.NotNil(t, wipeData, "The Pod doesn't have the init container that wipes the data directory")
-			require.NotNil(t, addMember, "The Pod doesn't have the init container that manipulates the member")
-
-			script := addMember.Command[2]
-			assert.NotContains(t, script, "member update")
-			assert.Contains(t, script, "member remove")
-			assert.Contains(t, script, "member add")
-
-			assert.False(t, pod.Spec.ShareProcessNamespace)
-			for _, v := range pod.Spec.Containers {
-				assert.NotEqual(t, "sidecar", v.Name)
-			}
-			for _, v := range pod.Spec.Volumes {
-				assert.NotContains(t, []string{"share", "run"}, v.Name)
-			}
-
-			var etcdContainer *corev1.Container
 			for i, v := range pod.Spec.Containers {
+				assert.NotEqual(t, "sidecar", v.Name)
 				if v.Name == "etcd" {
 					etcdContainer = &pod.Spec.Containers[i]
 				}
 			}
+			require.NotNil(t, wipeData, "The Pod doesn't have the init container that wipes the data directory")
 			require.NotNil(t, etcdContainer)
-			script = etcdContainer.Args[1]
-			assert.Contains(t, script, "exec /usr/local/bin/etcd ")
-			assert.Contains(t, script, " "+tc.Flag)
-			assert.NotContains(t, script, "resolv.conf")
-			assert.NotContains(t, script, "/var/run/sidecar")
-			assert.NotContains(t, script, "/var/run/etcd")
 			for _, v := range etcdContainer.VolumeMounts {
 				assert.NotContains(t, []string{"share", "run"}, v.Name)
 			}
+
+			if tc.NameBasedURL {
+				peerURL := fmt.Sprintf("https://%s.%s.default.svc.cluster.local:2380", pod.Name, c.ServerDiscoveryServiceName())
+				clientURL := fmt.Sprintf("https://%s.%s.default.svc.cluster.local:2379", pod.Name, c.ServerDiscoveryServiceName())
+				assert.Nil(t, addMember, "The member has to be added by the operator")
+				assert.Equal(t, peerURL, pod.Annotations[etcd.AnnotationKeyPeerURL])
+
+				assert.Equal(t, []string{"/usr/local/bin/etcd"}, etcdContainer.Command)
+				assert.Contains(t, etcdContainer.Args, "--name="+pod.Name)
+				assert.Contains(t, etcdContainer.Args, fmt.Sprintf("--data-dir=/data/%s.etcd", pod.Name))
+				assert.Contains(t, etcdContainer.Args, "--initial-cluster-state=existing")
+				assert.Contains(t, etcdContainer.Args, "--initial-advertise-peer-urls="+peerURL)
+				assert.Contains(t, etcdContainer.Args, "--advertise-client-urls="+clientURL)
+				assert.Contains(t, etcdContainer.Args, fmt.Sprintf("--initial-cluster=%s=%s", pod.Name, peerURL))
+				assert.Contains(t, etcdContainer.Args, tc.Flag)
+
+				for _, v := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
+					if strings.HasPrefix(v.Image, "gcr.io/etcd-development/etcd:") {
+						assert.NotContains(t, v.Command, "/bin/sh", "%s uses the shell", v.Name)
+					}
+				}
+			} else {
+				require.NotNil(t, addMember, "The Pod doesn't have the init container that manipulates the member")
+				assert.NotContains(t, pod.Annotations, etcd.AnnotationKeyPeerURL)
+
+				script := addMember.Command[2]
+				assert.NotContains(t, script, "member update")
+				assert.Contains(t, script, "member remove")
+				assert.Contains(t, script, "member add")
+
+				script = etcdContainer.Args[1]
+				assert.Contains(t, script, "exec /usr/local/bin/etcd ")
+				assert.Contains(t, script, " "+tc.Flag)
+				assert.Contains(t, script, fmt.Sprintf("--initial-cluster=%s=https://$(echo $MY_POD_IP | tr . -).default.pod.cluster.local:2380", pod.Name))
+				assert.NotContains(t, script, "resolv.conf")
+				assert.NotContains(t, script, "/var/run/sidecar")
+				assert.NotContains(t, script, "/var/run/etcd")
+			}
 		})
 	}
+}
+
+func TestEtcdCluster_AllMembers(t *testing.T) {
+	c := newTestEtcdCluster(t)
+	// The member that is created by the older operator or runs etcd v3.4 uses the URL that is derived from the IP address.
+	ipBasedPod := k8sfactory.PodFactory(c.newEtcdPod("v3.4.3", 1, "new", nil, false), k8sfactory.Created, k8sfactory.Ready)
+	ipBasedPod.Status.PodIP = "10.0.0.1"
+	nameBasedPod := k8sfactory.PodFactory(c.newEtcdPod(defaultEtcdVersion, 2, "existing", nil, false), k8sfactory.Created, k8sfactory.Ready)
+	nameBasedPod.Status.PodIP = "10.0.0.2"
+	c.SetOwnedPods([]*corev1.Pod{ipBasedPod, nameBasedPod})
+
+	var newMember *EtcdMember
+	for _, v := range c.AllMembers() {
+		if v.Pod.CreationTimestamp.IsZero() {
+			newMember = v
+		}
+	}
+	require.NotNil(t, newMember)
+	assert.True(t, newMember.AddMember)
+
+	var etcdContainer *corev1.Container
+	for i, v := range newMember.Pod.Spec.Containers {
+		if v.Name == "etcd" {
+			etcdContainer = &newMember.Pod.Spec.Containers[i]
+		}
+	}
+	require.NotNil(t, etcdContainer)
+	assert.Contains(t, etcdContainer.Args, fmt.Sprintf("--initial-cluster=%s=%s,%s=%s,%s=%s",
+		ipBasedPod.Name, "https://10-0-0-1.default.pod.cluster.local:2380",
+		nameBasedPod.Name, nameBasedPod.Annotations[etcd.AnnotationKeyPeerURL],
+		newMember.Pod.Name, newMember.Pod.Annotations[etcd.AnnotationKeyPeerURL],
+	))
+}
+
+func TestEtcdCluster_InjectRestoreContainer(t *testing.T) {
+	t.Run("IP based URL", func(t *testing.T) {
+		c := newTestEtcdCluster(t)
+		c.Spec.Version = "v3.4.3"
+		pod := c.newEtcdPod(c.Spec.Version, 1, "new", nil, false)
+		c.InjectRestoreContainer(pod)
+
+		restoreData := findContainer(pod.Spec.InitContainers, "restore-data")
+		require.NotNil(t, restoreData)
+		assert.Equal(t, "/bin/sh", restoreData.Command[0])
+		assert.Contains(t, restoreData.Command[2], "snapshot restore /data/backup.db")
+	})
+
+	t.Run("Name based URL", func(t *testing.T) {
+		c := newTestEtcdCluster(t)
+		c.Spec.Version = "v3.6.15"
+		pod := c.newEtcdPod(c.Spec.Version, 1, "new", nil, false)
+		c.InjectRestoreContainer(pod)
+
+		restoreData := findContainer(pod.Spec.InitContainers, "restore-data")
+		require.NotNil(t, restoreData)
+		peerURL := pod.Annotations[etcd.AnnotationKeyPeerURL]
+		assert.Equal(t, []string{
+			"/usr/local/bin/etcdutl", "snapshot", "restore", "/data/backup.db",
+			fmt.Sprintf("--data-dir=/data/%s.etcd", pod.Name),
+			"--name=" + pod.Name,
+			fmt.Sprintf("--initial-cluster=%s=%s", pod.Name, peerURL),
+			"--initial-advertise-peer-urls=" + peerURL,
+		}, restoreData.Command)
+	})
+}
+
+func findContainer(containers []corev1.Container, name string) *corev1.Container {
+	for i, v := range containers {
+		if v.Name == name {
+			return &containers[i]
+		}
+	}
+	return nil
 }
 
 func TestEtcdCluster_ShouldUpdate(t *testing.T) {
@@ -358,6 +458,14 @@ func TestEtcdCluster_ShouldUpdateServerCertificate(t *testing.T) {
 
 		assert.True(t, c.ShouldUpdateServerCertificate(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})))
 	})
+}
+
+func TestEtcdCluster_DiscoveryService(t *testing.T) {
+	c := newTestEtcdCluster(t)
+
+	svc := c.DiscoveryService()
+	assert.Equal(t, "None", svc.Spec.ClusterIP)
+	assert.True(t, svc.Spec.PublishNotReadyAddresses)
 }
 
 func newTestEtcdCluster(t *testing.T) *EtcdCluster {
