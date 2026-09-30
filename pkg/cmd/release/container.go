@@ -44,7 +44,7 @@ func containerReleaseCmd(repository, sha256File, tag string, override bool) erro
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
-	desc, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
