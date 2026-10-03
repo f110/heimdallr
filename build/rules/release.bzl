@@ -24,6 +24,7 @@ def _github_release_impl(ctx):
     else:
         substitutions["@@CA_CERT@@"] = ""
         substitutions["@@CA_KEY@@"] = ""
+    substitutions["@@INJECT_WEBHOOK_CERT@@"] = shell.array_literal(["--inject-webhook-cert=%s" % x.short_path for x in ctx.files.webhook_cert_assets])
 
     out = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.expand_template(
@@ -55,6 +56,7 @@ github_release = rule(
         "body": attr.label(allow_single_file = True),
         "ca_cert": attr.label(allow_single_file = True),
         "ca_key": attr.label(allow_single_file = True),
+        "webhook_cert_assets": attr.label_list(allow_files = True),
         "_bin": attr.label(
             executable = True,
             cfg = "host",
