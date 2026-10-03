@@ -9,6 +9,7 @@ ASSETS=@@ASSETS@@
 BODY=@@BODY@@
 CA_CERT=@@CA_CERT@@
 CA_KEY=@@CA_KEY@@
+INJECT_WEBHOOK_CERT=@@INJECT_WEBHOOK_CERT@@
 
 CA_ARG=""
 if [ -n "$CA_CERT" ] && [ -n "$CA_KEY" ]; then
@@ -20,4 +21,4 @@ if [ -n "$GITHUB_PRIVATE_KEY" ] && [ -n "$GITHUB_APP_ID" ] && [ -n "$GITHUB_INST
     GITHUB_APP_ARG="--github-app-id $GITHUB_APP_ID --github-installation-id $GITHUB_INSTALLATION_ID --github-private-key $GITHUB_PRIVATE_KEY"
 fi
 
-$BIN github --version $VERSION --repo $REPO --from $BRANCH --body "$BODY" $CA_ARG $GITHUB_APP_ARG "${ASSETS[@]}"
+$BIN github --version $VERSION --repo $REPO --from $BRANCH --body "$BODY" $CA_ARG $GITHUB_APP_ARG "${ASSETS[@]}" "${INJECT_WEBHOOK_CERT[@]}"

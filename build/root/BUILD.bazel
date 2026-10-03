@@ -38,6 +38,7 @@ github_release(
     ca_key = "//operator:webhook_ca.key",
     repository = "f110/heimdallr",
     version = VERSION,
+    webhook_cert_assets = ["//operator/deploy/prod:all-in-one"],
 )
 
 sh_binary(

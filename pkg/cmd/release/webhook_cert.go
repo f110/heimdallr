@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 
 	"go.f110.dev/xerrors"
 	"gopkg.in/yaml.v2"
@@ -84,6 +85,22 @@ func (c *webhookCerts) generateServerCert(dnsNames []string) error {
 	c.serverCertPEM = certBuf.Bytes()
 	c.serverKeyPEM = keyBuf.Bytes()
 	return nil
+}
+
+// uploadFilePath returns the path of the file to upload for the asset.
+// Webhook certificates are injected only into the files listed in injectTargets.
+func uploadFilePath(path string, certs *webhookCerts, injectTargets []string) (string, error) {
+	if certs == nil || !slices.Contains(injectTargets, path) {
+		return path, nil
+	}
+	injected, err := maybeInjectWebhookCert(path, certs)
+	if err != nil {
+		return "", err
+	}
+	if injected == "" {
+		return path, nil
+	}
+	return injected, nil
 }
 
 // maybeInjectWebhookCert checks if the file contains webhook inject annotations.
