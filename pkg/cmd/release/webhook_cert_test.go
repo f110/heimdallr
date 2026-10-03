@@ -304,6 +304,31 @@ data:
 	assert.Empty(t, injected, "should return empty string when no webhooks found")
 }
 
+func TestUploadFilePath(t *testing.T) {
+	caCert, caKey := setupTestCA(t)
+	certs := &webhookCerts{caCert: caCert, caKey: caKey}
+
+	dir := t.TempDir()
+	manifestFile := dir + "/all-in-one.yaml"
+	require.NoError(t, os.WriteFile(manifestFile, []byte(testManifest), 0644))
+	binaryFile := dir + "/heim_darwin_amd64"
+	require.NoError(t, os.WriteFile(binaryFile, []byte{0xcf, 0xfa, 0xed, 0xfe, 0x07, 0x00, 0x00, 0x01}, 0644))
+	injectTargets := []string{manifestFile}
+
+	got, err := uploadFilePath(binaryFile, certs, injectTargets)
+	require.NoError(t, err)
+	assert.Equal(t, binaryFile, got)
+
+	got, err = uploadFilePath(manifestFile, certs, injectTargets)
+	require.NoError(t, err)
+	defer os.Remove(got)
+	assert.NotEqual(t, manifestFile, got)
+
+	got, err = uploadFilePath(manifestFile, nil, injectTargets)
+	require.NoError(t, err)
+	assert.Equal(t, manifestFile, got)
+}
+
 func TestLoadCA(t *testing.T) {
 	caCert, caKey := setupTestCA(t)
 	certFile, keyFile := writeCAFiles(t, caCert, caKey)

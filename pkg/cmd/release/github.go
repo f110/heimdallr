@@ -31,6 +31,7 @@ type githubOpt struct {
 	GitHubAppPrivateKeyFile     string
 	CACert                      string
 	CAKey                       string
+	InjectWebhookCert           []string
 }
 
 func githubRelease(opt *githubOpt) error {
@@ -160,16 +161,12 @@ func githubRelease(opt *githubOpt) error {
 			continue
 		}
 
-		uploadPath := v
-		if certs != nil {
-			injected, err := maybeInjectWebhookCert(v, certs)
-			if err != nil {
-				return err
-			}
-			if injected != "" {
-				uploadPath = injected
-				defer os.Remove(injected)
-			}
+		uploadPath, err := uploadFilePath(v, certs, opt.InjectWebhookCert)
+		if err != nil {
+			return err
+		}
+		if uploadPath != v {
+			defer os.Remove(uploadPath)
 		}
 
 		f, err := os.Open(uploadPath)
@@ -218,5 +215,6 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
 	ghRelease.Flags().String("ca-cert", "Path to CA certificate PEM file for webhook cert injection").Var(&opt.CACert)
 	ghRelease.Flags().String("ca-key", "Path to CA private key PEM file for webhook cert injection").Var(&opt.CAKey)
+	ghRelease.Flags().StringArray("inject-webhook-cert", "Path to an attached manifest file to inject webhook certificates").Var(&opt.InjectWebhookCert)
 	rootCmd.AddCommand(ghRelease)
 }
