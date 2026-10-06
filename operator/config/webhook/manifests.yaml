@@ -2,6 +2,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: heimdallr-operator-webhook
+  annotations:
+    internal.heimdallr.f110.dev/inject: webhook-ca-bundle
 webhooks:
   - admissionReviewVersions: ["v1"]
     clientConfig:
