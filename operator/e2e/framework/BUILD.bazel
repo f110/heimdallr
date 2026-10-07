@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "framework",
-    srcs = ["framework.go"],
+    srcs = [
+        "etcd_discovery_sidecar.go",
+        "framework.go",
+    ],
     importpath = "go.f110.dev/heimdallr/operator/e2e/framework",
     visibility = ["//visibility:public"],
     deps = [
@@ -12,10 +15,16 @@ go_library(
         "//pkg/k8s/api/proxy",
         "//pkg/k8s/api/proxyv1alpha2",
         "//pkg/k8s/client",
+        "//pkg/k8s/controllers",
         "//pkg/k8s/k8sfactory",
         "//pkg/k8s/thirdpartyapi/cert-manager/metav1",
+        "//pkg/logger",
+        "//pkg/poll",
         "//pkg/testing/btesting",
+        "@dev_f110_go_xerrors//:xerrors",
+        "@dev_f110_kubeproto//go/apis/corev1",
         "@dev_f110_kubeproto//go/apis/metav1",
+        "@dev_f110_kubeproto//go/k8sclient",
         "@io_k8s_api//core/v1:core",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
         "@io_k8s_client_go//kubernetes",

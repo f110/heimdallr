@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "etcdcluster.go",
         "id.go",
+        "operator.go",
         "proxy.go",
         "webhook.go",
     ],
@@ -25,6 +26,7 @@ go_library(
         "@dev_f110_kubeproto//go/apis/metav1",
         "@io_etcd_go_etcd_client_v3//:client",
         "@io_k8s_api//apps/v1:apps",
+        "@io_k8s_api//coordination/v1:coordination",
         "@io_k8s_api//core/v1:core",
         "@io_k8s_apimachinery//pkg/api/errors",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
