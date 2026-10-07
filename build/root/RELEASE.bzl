@@ -1,4 +1,4 @@
-VERSION = "v0.17.0-alpha.2"
+VERSION = "v0.17.0-alpha.3"
 RELEASE_BRANCH = "release-v0.17"
 
 PLATFORMS = [
