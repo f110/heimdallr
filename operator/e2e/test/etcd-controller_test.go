@@ -166,53 +166,6 @@ func TestEtcdController(t *testing.T) {
 					})
 				})
 			})
-
-			// TODO: Remove this in v0.18.
-			s.Context("from the cluster that the operator v0.16 created", func(s *btesting.Scenario) {
-				s.Defer(func() {
-					_ = f.EtcdClusters.ResumeOperator()
-					f.EtcdClusters.EtcdCluster("update-v016").Destroy(f.Client())
-				})
-
-				s.Step("create the cluster that has discovery-sidecar", func(s *btesting.Scenario) {
-					s.Subject(func(_ context.Context, m *btesting.Matcher) {
-						f.EtcdClusters.SetupWithDiscoverySidecar(m, k8sfactory.Name("update-v016"), etcd.Version("v3.5.1"))
-					})
-
-					s.It("should have discovery-sidecar", func(_ context.Context, m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update-v016").HaveDiscoverySidecar(m, true)
-					})
-				})
-
-				s.Step("resume the operator", func(s *btesting.Scenario) {
-					s.Subject(func(_ context.Context, m *btesting.Matcher) {
-						m.Must(f.EtcdClusters.ResumeOperator())
-						f.EtcdClusters.EtcdCluster("update-v016").WaitBecome(m, f.Client(), etcdv1alpha2.EtcdClusterPhaseUpdating)
-						f.EtcdClusters.EtcdCluster("update-v016").Reload()
-					})
-
-					s.It("should be ready", func(_ context.Context, m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update-v016").Ready(m)
-					})
-				})
-
-				s.Step("wait for running", func(s *btesting.Scenario) {
-					s.Subject(func(_ context.Context, m *btesting.Matcher) {
-						ec := f.EtcdClusters.EtcdCluster("update-v016").EtcdCluster
-						m.NotNil(ec)
-						// The Pods are replaced twice. The first is to remove discovery-sidecar and the second is to use the name based URL.
-						m.Must(e2eutil.WaitForStatusOfEtcdClusterBecome(f.Client(), ec, etcdv1alpha2.EtcdClusterPhaseRunning, 20*time.Minute))
-					})
-
-					s.It("should not have discovery-sidecar", func(_ context.Context, m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update-v016").HaveDiscoverySidecar(m, false)
-					})
-
-					s.It("all pods should use the name based URL", func(_ context.Context, m *btesting.Matcher) {
-						f.EtcdClusters.EtcdCluster("update-v016").UseNameBasedURL(m)
-					})
-				})
-			})
 		})
 
 		s.Context("restore from backup", func(s *btesting.Scenario) {
