@@ -350,16 +350,27 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 func TestHttpProxy_setHeader(t *testing.T) {
 	p := &HttpProxy{Config: &configv2.Config{AccessProxy: &configv2.AccessProxy{}}}
 
-	cases := map[string]string{
-		"Bearer foobar":      "",
-		"bearer foobar":      "",
-		"Basic Zm9vOmJhcg==": "",
-		"Digest foobar":      "Digest foobar",
-	}
-	for in, expect := range cases {
-		req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
-		req.Header.Set("Authorization", in)
-		require.NoError(t, p.setHeader(req, nil))
-		assert.Equal(t, expect, req.Header.Get("Authorization"), in)
-	}
+	t.Run("Authn", func(t *testing.T) {
+		cases := map[string]string{
+			"Bearer foobar":      "",
+			"bearer foobar":      "",
+			"Basic Zm9vOmJhcg==": "",
+			"Digest foobar":      "Digest foobar",
+		}
+		for in, expect := range cases {
+			req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+			req.Header.Set("Authorization", in)
+			require.NoError(t, p.setHeader(req, &configv2.Backend{}, nil))
+			assert.Equal(t, expect, req.Header.Get("Authorization"), in)
+		}
+	})
+
+	t.Run("DisableAuthn", func(t *testing.T) {
+		for _, in := range []string{"Bearer foobar", "Basic Zm9vOmJhcg==", "Digest foobar"} {
+			req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+			req.Header.Set("Authorization", in)
+			require.NoError(t, p.setHeader(req, &configv2.Backend{DisableAuthn: true}, nil))
+			assert.Equal(t, in, req.Header.Get("Authorization"), in)
+		}
+	})
 }
