@@ -240,7 +240,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		return
 	}
 
-	if err := p.setHeader(req, user); err != nil {
+	if err := p.setHeader(req, backend, user); err != nil {
 		logger.Log.Warn("Failed to set headers to request of backend", slog.Any("error", err), logger.WithRequestId(ctx))
 		return
 	}
@@ -384,8 +384,8 @@ func (p *HttpProxy) director(req *http.Request) {
 	}
 }
 
-func (p *HttpProxy) setHeader(req *http.Request, user *database.User) error {
-	if authn.HasTokenAuthorization(req) {
+func (p *HttpProxy) setHeader(req *http.Request, backend *configv2.Backend, user *database.User) error {
+	if !backend.DisableAuthn && authn.HasTokenAuthorization(req) {
 		req.Header.Del("Authorization")
 	}
 	req.Header.Set("X-Forwarded-Host", req.Host)
