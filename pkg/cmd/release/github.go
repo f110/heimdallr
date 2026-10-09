@@ -34,7 +34,7 @@ type githubOpt struct {
 	InjectWebhookCert           []string
 }
 
-func githubRelease(opt *githubOpt) error {
+func githubRelease(ctx context.Context, opt *githubOpt) error {
 	if v := os.Getenv("GITHUB_APP_ID_FILE"); v != "" {
 		buf, err := os.ReadFile(v)
 		if err != nil {
@@ -69,7 +69,7 @@ func githubRelease(opt *githubOpt) error {
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
-		httpClient = oauth2.NewClient(context.Background(), ts)
+		httpClient = oauth2.NewClient(ctx, ts)
 	} else {
 		ghApp, err := githubutil.NewApp(opt.GitHubAppId, opt.GitHubAppInstallationId, opt.GitHubAppPrivateKeyFile)
 		if err != nil {
@@ -78,8 +78,10 @@ func githubRelease(opt *githubOpt) error {
 		t := githubutil.NewTransportWithApp(http.DefaultTransport, ghApp)
 		httpClient = &http.Client{Transport: t}
 	}
-	client := github.NewClient(httpClient)
+	return releaseOnGitHub(ctx, github.NewClient(httpClient), opt)
+}
 
+func releaseOnGitHub(ctx context.Context, client *github.Client, opt *githubOpt) error {
 	if !strings.Contains(opt.GithubRepo, "/") {
 		return xerrors.NewfWithStack("invalid repo name: %s", opt.GithubRepo)
 	}
@@ -104,7 +106,7 @@ func githubRelease(opt *githubOpt) error {
 	r := strings.Split(opt.GithubRepo, "/")
 	owner, repo := r[0], r[1]
 
-	release, res, err := client.Repositories.GetReleaseByTag(context.Background(), owner, repo, opt.Version)
+	release, res, err := client.Repositories.GetReleaseByTag(ctx, owner, repo, opt.Version)
 	if err != nil && res == nil {
 		return xerrors.WithStack(err)
 	}
@@ -117,13 +119,13 @@ func githubRelease(opt *githubOpt) error {
 		}
 		if release.GetBody() != body {
 			release.Body = new(body)
-			release, res, err = client.Repositories.EditRelease(context.Background(), owner, repo, release.GetID(), release)
+			release, res, err = client.Repositories.EditRelease(ctx, owner, repo, release.GetID(), release)
 			if err != nil {
 				return xerrors.WithStack(err)
 			}
 		}
 	} else {
-		branch, _, err := client.Repositories.GetBranch(context.Background(), owner, repo, opt.From, true)
+		branch, _, err := client.Repositories.GetBranch(ctx, owner, repo, opt.From, true)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -132,7 +134,7 @@ func githubRelease(opt *githubOpt) error {
 		}
 		fmt.Printf("Get commit hash %s\n", branch.Commit.GetSHA())
 
-		r, _, err := client.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
+		r, _, err := client.Repositories.CreateRelease(ctx, owner, repo, &github.RepositoryRelease{
 			TagName:         new(opt.Version),
 			TargetCommitish: branch.Commit.SHA,
 			Body:            new(body),
@@ -180,7 +182,7 @@ func githubRelease(opt *githubOpt) error {
 			continue
 		}
 
-		assets, _, err := client.Repositories.UploadReleaseAsset(context.Background(), owner, repo, release.GetID(), &github.UploadOptions{Name: filename}, f)
+		assets, _, err := client.Repositories.UploadReleaseAsset(ctx, owner, repo, release.GetID(), &github.UploadOptions{Name: filename}, f)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -199,8 +201,8 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease := &cmd.Command{
 		Use:   "github",
 		Short: "Create GitHub Release",
-		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
-			return githubRelease(&opt)
+		Run: func(ctx context.Context, _ *cmd.Command, _ []string) error {
+			return githubRelease(ctx, &opt)
 		},
 	}
 	ghRelease.Flags().String("version", "").Var(&opt.Version)

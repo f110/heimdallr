@@ -31,6 +31,10 @@ go_deps.gazelle_override(
     path = "github.com/jetstack/cert-manager",
 )
 go_deps.gazelle_override(
+    build_file_generation = "clean",
+    path = "go.f110.dev/githubmock",
+)
+go_deps.gazelle_override(
     build_extra_args = ["-proto=disable"],
     path = "go.etcd.io/etcd/api/v3",
 )
@@ -77,6 +81,7 @@ use_repo(
     "com_github_zitadel_oidc_v3",
     "com_google_cloud_go_storage",
     "com_sslmate_software_src_go_pkcs12",
+    "dev_f110_go_githubmock",
     "dev_f110_go_xerrors",
     "in_gopkg_yaml_v2",
     "io_etcd_go_etcd_api_v3",
