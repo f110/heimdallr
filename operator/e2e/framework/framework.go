@@ -313,8 +313,7 @@ type EtcdClusters struct {
 	coreClient *kubernetes.Clientset
 	client     *client.Set
 
-	clusters       map[string]*etcdv1alpha2.EtcdCluster
-	resumeOperator func(context.Context) error
+	clusters map[string]*etcdv1alpha2.EtcdCluster
 }
 
 func (e *EtcdClusters) Setup(m *btesting.Matcher, traits ...k8sfactory.Trait) bool {
@@ -418,20 +417,6 @@ func (c *EtcdCluster) EqualVersion(m *btesting.Matcher, version string) {
 	}
 	for _, pod := range pods.Items {
 		m.Equal(version, pod.Labels[etcd.LabelNameEtcdVersion])
-	}
-}
-
-func (c *EtcdCluster) UseNameBasedURL(m *btesting.Matcher) {
-	if c.EtcdCluster == nil {
-		m.Fail("EtcdCluster is not found")
-	}
-	pods, err := c.coreClient.CoreV1().Pods(c.EtcdCluster.Namespace).List(context.TODO(), k8smetav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", etcd.LabelNameClusterName, c.EtcdCluster.Name)})
-	m.NoError(err)
-	if len(pods.Items) == 0 {
-		m.Fail("Pod is not found")
-	}
-	for _, pod := range pods.Items {
-		m.Contains(pod.Annotations, etcd.AnnotationKeyPeerURL, pod.Name)
 	}
 }
 

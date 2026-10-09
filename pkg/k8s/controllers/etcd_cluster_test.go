@@ -426,58 +426,6 @@ func TestEtcdCluster_ShouldUpdate(t *testing.T) {
 	})
 }
 
-func TestEtcdCluster_MigrateFromDiscoverySidecar(t *testing.T) {
-	const etcdVersion = "v3.5.1"
-	newSidecarPod := func(c *EtcdCluster, index int) *corev1.Pod {
-		pod := k8sfactory.PodFactory(nil,
-			k8sfactory.Name(fmt.Sprintf("%s-%d", c.Name, index)),
-			k8sfactory.Namespace(c.Namespace),
-			k8sfactory.Labels(c.DefaultLabels(etcdVersion)),
-			k8sfactory.Container(k8sfactory.ContainerFactory(nil, k8sfactory.Name("etcd"))),
-			k8sfactory.Container(k8sfactory.ContainerFactory(nil, k8sfactory.Name("sidecar"))),
-			k8sfactory.Created,
-			k8sfactory.Ready,
-		)
-		pod.Status.PodIP = fmt.Sprintf("10.0.0.%d", index)
-		return pod
-	}
-
-	t.Run("Use IP based URL while the Pod that has the sidecar exists", func(t *testing.T) {
-		c := newTestEtcdCluster(t)
-		c.Spec.Version = etcdVersion
-		sidecarPod := newSidecarPod(c, 1)
-		c.SetOwnedPods([]*corev1.Pod{sidecarPod, newSidecarPod(c, 2)})
-
-		pod := c.newEtcdPod(etcdVersion, 3, "existing", nil, false)
-		assert.NotContains(t, pod.Annotations, etcd.AnnotationKeyPeerURL)
-		assert.NotNil(t, findContainer(pod.Spec.InitContainers, "add-member"))
-		etcdContainer := findContainer(pod.Spec.Containers, "etcd")
-		require.NotNil(t, etcdContainer)
-		assert.Equal(t, []string{"/bin/sh"}, etcdContainer.Command)
-		assert.Contains(t, etcdContainer.Args[1], " --experimental-peer-skip-client-san-verification")
-
-		assert.True(t, c.ShouldUpdate(sidecarPod))
-		assert.False(t, c.ShouldUpdate(k8sfactory.PodFactory(pod, k8sfactory.Created)))
-
-		for _, v := range c.AllMembers() {
-			assert.False(t, v.AddMember, "%s is added by the operator", v.Pod.Name)
-		}
-	})
-
-	t.Run("Use name based URL after all Pods that have the sidecar are gone", func(t *testing.T) {
-		c := newTestEtcdCluster(t)
-		c.Spec.Version = etcdVersion
-		c.SetOwnedPods([]*corev1.Pod{newSidecarPod(c, 1)})
-		ipBasedPod := k8sfactory.PodFactory(c.newEtcdPod(etcdVersion, 2, "existing", nil, false), k8sfactory.Created, k8sfactory.Ready)
-		ipBasedPod.Status.PodIP = "10.0.0.2"
-
-		c.SetOwnedPods([]*corev1.Pod{ipBasedPod})
-		assert.True(t, c.ShouldUpdate(ipBasedPod))
-		pod := c.newEtcdPod(etcdVersion, 3, "existing", nil, false)
-		assert.Contains(t, pod.Annotations, etcd.AnnotationKeyPeerURL)
-	})
-}
-
 func TestEtcdCluster_DNSNames(t *testing.T) {
 	c := newTestEtcdCluster(t)
 

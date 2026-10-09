@@ -536,7 +536,7 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 			}
 
 			member := c.newEtcdMember(newPod)
-			member.AddMember = clusterState == "existing" && c.useNameBasedURL(etcdVersion)
+			member.AddMember = clusterState == "existing" && useNameBasedURL(etcdVersion)
 			result = append(result, member)
 		}
 
@@ -544,7 +544,7 @@ func (c *EtcdCluster) AllMembers() []*EtcdMember {
 		case InternalStatePreparingUpdate, InternalStateUpdatingMember:
 			if !c.HasTemporaryMember() {
 				member := c.newEtcdMember(c.newTemporaryMemberPodSpec(etcdVersion, initialClusters))
-				member.AddMember = c.useNameBasedURL(etcdVersion)
+				member.AddMember = useNameBasedURL(etcdVersion)
 				result = append(result, member)
 			}
 		}
@@ -805,29 +805,9 @@ var etcdVersionNameBasedURL = semver.MustParse("v3.5.0")
 
 // useNameBasedURL reports whether the Pod of etcdVersion uses the URLs that consist of the name of the Pod.
 // etcd v3.5.7 and later don't have the shell, so the Pod can't derive the URLs from its ip address.
-// While the cluster is migrating from discovery-sidecar, the Pod uses the URLs that are derived from its ip address
-// because the Pod that has discovery-sidecar can't resolve the name-based URLs.
-func (c *EtcdCluster) useNameBasedURL(etcdVersion string) bool {
-	if c.migratingFromDiscoverySidecar() {
-		return false
-	}
+func useNameBasedURL(etcdVersion string) bool {
 	v, err := semver.NewVersion(etcdVersion)
 	return err == nil && !v.LessThan(etcdVersionNameBasedURL)
-}
-
-// migratingFromDiscoverySidecar reports whether the cluster has the Pod that has discovery-sidecar.
-// The Pod was created by the operator v0.16 or earlier.
-//
-// TODO: Remove this in v0.18.
-func (c *EtcdCluster) migratingFromDiscoverySidecar() bool {
-	for _, p := range c.ownedPods {
-		for _, v := range p.Spec.Containers {
-			if v.Name == "sidecar" {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (c *EtcdCluster) DiscoveryService() *corev1.Service {
@@ -1156,7 +1136,7 @@ func (c *EtcdCluster) newEtcdPod(etcdVersion string, index int, clusterState str
 	}
 
 	peerURL := c.shellPeerURL(EtcdPeerPort)
-	if c.useNameBasedURL(etcdVersion) {
+	if useNameBasedURL(etcdVersion) {
 		peerURL = c.podURL(podName, EtcdPeerPort)
 		pod = k8sfactory.PodFactory(pod, k8sfactory.Annotation(etcd.AnnotationKeyPeerURL, peerURL))
 	}
@@ -1199,7 +1179,7 @@ func (c *EtcdCluster) etcdPodSpec(pod *corev1.Pod, podName, etcdVersion, cluster
 		dataVolume = k8sfactory.NewPersistentVolumeClaimVolumeSource("data", "/data", podName)
 	}
 
-	nameBasedURL := c.useNameBasedURL(etcdVersion)
+	nameBasedURL := useNameBasedURL(etcdVersion)
 	var etcdArgs []string
 	if nameBasedURL {
 		etcdArgs = []string{
