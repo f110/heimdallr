@@ -1,6 +1,15 @@
 load("@rules_go//go:def.bzl", "go_test")
+load("//build/rules:release.bzl", "prepare_release_assets")
 
 K8S_CLUSTER_VERSION = "v1.35.8"
+
+prepare_release_assets(
+    name = "release_assets",
+    srcs = ["//operator/deploy/e2e:all-in-one"],
+    ca_cert = "//operator:webhook_ca.crt",
+    ca_key = "//operator:webhook_ca.key",
+    webhook_cert_assets = ["//operator/deploy/e2e:all-in-one"],
+)
 
 go_test(
     name = "test_test",
@@ -19,15 +28,15 @@ go_test(
         "-rpc-image=container/rpcserver",
         "-dashboard-image=container/dashboard",
         "-operator-image=container/operator",
-        "-all-in-one-manifest=$(location //operator/deploy/e2e:all-in-one)",
+        "-all-in-one-manifest=$(location :release_assets)",
     ],
     data = [
+        ":release_assets",
         "//container:dashboard",
         "//container:operator",
         "//container:proxy",
         "//container:rpcserver",
         "//operator/config/crd",
-        "//operator/deploy/e2e:all-in-one",
         "@kind//:file",
     ],
     rundir = ".",

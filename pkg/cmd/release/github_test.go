@@ -1,8 +1,6 @@
 package release
 
 import (
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"net/http"
 	"os"
@@ -52,17 +50,12 @@ func TestGithubRelease(t *testing.T) {
 }
 
 func TestReleaseOnGitHub(t *testing.T) {
-	caCert, caKey := setupTestCA(t)
-	caCertFile, caKeyFile := writeCAFiles(t, caCert, caKey)
-
 	dir := t.TempDir()
 	binaryFile := filepath.Join(dir, "heim_linux_amd64")
 	binary := []byte{0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0xff, 0xfe}
 	require.NoError(t, os.WriteFile(binaryFile, binary, 0644))
 	manifestFile := filepath.Join(dir, "all-in-one.yaml")
 	require.NoError(t, os.WriteFile(manifestFile, []byte(testManifest), 0644))
-	otherManifestFile := filepath.Join(dir, "other.yaml")
-	require.NoError(t, os.WriteFile(otherManifestFile, []byte(testManifest), 0644))
 	bodyFile := filepath.Join(dir, "body.md")
 	require.NoError(t, os.WriteFile(bodyFile, []byte("release body"), 0644))
 
@@ -75,14 +68,11 @@ func TestReleaseOnGitHub(t *testing.T) {
 	}
 	newOpt := func(version string) *githubOpt {
 		return &githubOpt{
-			Version:           version,
-			From:              "master",
-			Attach:            []string{binaryFile, manifestFile, otherManifestFile},
-			GithubRepo:        "f110/heimdallr",
-			BodyFile:          bodyFile,
-			CACert:            caCertFile,
-			CAKey:             caKeyFile,
-			InjectWebhookCert: []string{manifestFile},
+			Version:    version,
+			From:       "master",
+			Attach:     []string{binaryFile, manifestFile},
+			GithubRepo: "f110/heimdallr",
+			BodyFile:   bodyFile,
 		}
 	}
 
@@ -99,18 +89,9 @@ func TestReleaseOnGitHub(t *testing.T) {
 		assert.True(t, release.IsPrerelease())
 
 		assets := releaseAssets(release)
-		require.Len(t, assets, 3)
+		require.Len(t, assets, 2)
 		assert.Equal(t, binary, assets["heim_linux_amd64"])
-		assert.Equal(t, testManifest, string(assets["other.yaml"]))
-
-		docs := parseAllDocs(t, assets["all-in-one.yaml"])
-		require.Len(t, docs, 3)
-		certPEM := docs[0]["stringData"].(map[any]any)["webhook.crt"].(string)
-		block, _ := pem.Decode([]byte(certPEM))
-		require.NotNil(t, block)
-		serverCert, err := x509.ParseCertificate(block.Bytes)
-		require.NoError(t, err)
-		assert.NoError(t, serverCert.CheckSignatureFrom(caCert))
+		assert.Equal(t, testManifest, string(assets["all-in-one.yaml"]))
 	})
 
 	t.Run("UpdateRelease", func(t *testing.T) {
@@ -131,10 +112,9 @@ func TestReleaseOnGitHub(t *testing.T) {
 		assert.False(t, release.IsPrerelease())
 
 		assets := releaseAssets(release)
-		require.Len(t, assets, 3)
+		require.Len(t, assets, 2)
 		assert.Equal(t, []byte("uploaded"), assets["heim_linux_amd64"])
-		assert.Equal(t, testManifest, string(assets["other.yaml"]))
-		assert.NotEqual(t, testManifest, string(assets["all-in-one.yaml"]))
+		assert.Equal(t, testManifest, string(assets["all-in-one.yaml"]))
 	})
 }
 

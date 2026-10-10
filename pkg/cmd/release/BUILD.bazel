@@ -6,7 +6,7 @@ go_library(
         "container.go",
         "github.go",
         "manifest.go",
-        "webhook_cert.go",
+        "prepare.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/release",
     visibility = ["//visibility:public"],
@@ -30,7 +30,7 @@ go_test(
     srcs = [
         "container_test.go",
         "github_test.go",
-        "webhook_cert_test.go",
+        "prepare_test.go",
     ],
     embed = [":release"],
     deps = [
