@@ -136,6 +136,23 @@ func TestHttpProxy_ServeHTTP(t *testing.T) {
 			assert.Empty(t, res.Header.Get("WWW-Authenticate"))
 		})
 
+		t.Run("Browser API request", func(t *testing.T) {
+			t.Parallel()
+
+			for _, accept := range []string{"*/*", "application/json"} {
+				recorder := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, "https://test.example.com", nil)
+				req.TLS = newTLSConnectionState()
+				req.Header.Set("Accept", accept)
+				req.Header.Set("Sec-Fetch-Mode", "cors")
+				p.ServeHTTP(context.Background(), recorder, req)
+
+				res := recorder.Result()
+				assert.Equal(t, http.StatusUnauthorized, res.StatusCode, accept)
+				assert.Equal(t, `Bearer realm="example.com"`, res.Header.Get("WWW-Authenticate"), accept)
+			}
+		})
+
 		t.Run("Program", func(t *testing.T) {
 			t.Parallel()
 

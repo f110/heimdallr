@@ -208,6 +208,9 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 			logger.Log.Info("Session not found", logger.WithRequestId(ctx))
 			if strings.Contains(req.Header.Get("Accept"), "text/html") {
 				p.redirectToIdP(w, req)
+			} else if req.Header.Get("Sec-Fetch-Mode") != "" {
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer realm=%q", p.Config.AccessProxy.ServerNameHost))
+				w.WriteHeader(http.StatusUnauthorized)
 			} else {
 				w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", p.Config.AccessProxy.ServerNameHost))
 				w.WriteHeader(http.StatusUnauthorized)
