@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,6 +18,75 @@ import (
 
 	"go.f110.dev/heimdallr/pkg/cert"
 )
+
+func TestPrepareAssets(t *testing.T) {
+	caCert, caKey := setupTestCA(t)
+	caCertFile, caKeyFile := writeCAFiles(t, caCert, caKey)
+
+	dir := t.TempDir()
+	binaryFile := filepath.Join(dir, "heim_linux_amd64")
+	binary := []byte{0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0xff, 0xfe}
+	require.NoError(t, os.WriteFile(binaryFile, binary, 0644))
+	manifestFile := filepath.Join(dir, "all-in-one.yaml")
+	require.NoError(t, os.WriteFile(manifestFile, []byte(testManifest), 0644))
+	otherManifestFile := filepath.Join(dir, "other.yaml")
+	require.NoError(t, os.WriteFile(otherManifestFile, []byte(testManifest), 0644))
+
+	t.Run("InjectWebhookCert", func(t *testing.T) {
+		outputDir := filepath.Join(t.TempDir(), "assets")
+		err := prepareAssets(&prepareOpt{
+			Assets:            []string{binaryFile, manifestFile, otherManifestFile},
+			OutputDir:         outputDir,
+			CACert:            caCertFile,
+			CAKey:             caKeyFile,
+			InjectWebhookCert: []string{manifestFile},
+		})
+		require.NoError(t, err)
+
+		b, err := os.ReadFile(filepath.Join(outputDir, "heim_linux_amd64"))
+		require.NoError(t, err)
+		assert.Equal(t, binary, b)
+		b, err = os.ReadFile(filepath.Join(outputDir, "other.yaml"))
+		require.NoError(t, err)
+		assert.Equal(t, testManifest, string(b))
+
+		b, err = os.ReadFile(filepath.Join(outputDir, "all-in-one.yaml"))
+		require.NoError(t, err)
+		docs := parseAllDocs(t, b)
+		require.Len(t, docs, 3)
+		certPEM := docs[0]["stringData"].(map[any]any)["webhook.crt"].(string)
+		block, _ := pem.Decode([]byte(certPEM))
+		require.NotNil(t, block)
+		serverCert, err := x509.ParseCertificate(block.Bytes)
+		require.NoError(t, err)
+		assert.NoError(t, serverCert.CheckSignatureFrom(caCert))
+	})
+
+	t.Run("WithoutCA", func(t *testing.T) {
+		outputDir := t.TempDir()
+		err := prepareAssets(&prepareOpt{
+			Assets:            []string{manifestFile},
+			OutputDir:         outputDir,
+			InjectWebhookCert: []string{manifestFile},
+		})
+		require.NoError(t, err)
+
+		b, err := os.ReadFile(filepath.Join(outputDir, "all-in-one.yaml"))
+		require.NoError(t, err)
+		assert.Equal(t, testManifest, string(b))
+	})
+
+	t.Run("DuplicateName", func(t *testing.T) {
+		sameNameFile := filepath.Join(t.TempDir(), "all-in-one.yaml")
+		require.NoError(t, os.WriteFile(sameNameFile, []byte(testManifest), 0644))
+
+		err := prepareAssets(&prepareOpt{
+			Assets:    []string{manifestFile, sameNameFile},
+			OutputDir: t.TempDir(),
+		})
+		require.Error(t, err)
+	})
+}
 
 func setupTestCA(t *testing.T) (*x509.Certificate, *ecdsa.PrivateKey) {
 	t.Helper()
@@ -249,22 +319,18 @@ func TestInjectWebhookCert(t *testing.T) {
 	assert.Equal(t, string(certs.serverCertPEM), string(decoded))
 }
 
-func TestMaybeInjectWebhookCert(t *testing.T) {
+func TestInjectWebhookCertFile(t *testing.T) {
 	caCert, caKey := setupTestCA(t)
 
-	// Write test manifest to a temp file
 	dir := t.TempDir()
 	manifestFile := dir + "/all-in-one.yaml"
 	require.NoError(t, os.WriteFile(manifestFile, []byte(testManifest), 0644))
+	outputFile := dir + "/injected.yaml"
 
 	certs := &webhookCerts{caCert: caCert, caKey: caKey}
-	injected, err := maybeInjectWebhookCert(manifestFile, certs)
-	require.NoError(t, err)
-	require.NotEmpty(t, injected)
-	defer os.Remove(injected)
+	require.NoError(t, injectWebhookCertFile(manifestFile, outputFile, certs))
 
-	// Read the injected file and verify
-	result, err := os.ReadFile(injected)
+	result, err := os.ReadFile(outputFile)
 	require.NoError(t, err)
 
 	docs := parseAllDocs(t, result)
@@ -284,7 +350,7 @@ func TestMaybeInjectWebhookCert(t *testing.T) {
 	assert.Equal(t, []string{"webhook.mynamespace.svc"}, serverCert.DNSNames)
 }
 
-func TestMaybeInjectWebhookCert_NoWebhooks(t *testing.T) {
+func TestInjectWebhookCertFile_NoWebhooks(t *testing.T) {
 	caCert, caKey := setupTestCA(t)
 
 	manifest := `apiVersion: v1
@@ -297,36 +363,15 @@ data:
 	dir := t.TempDir()
 	manifestFile := dir + "/no-webhook.yaml"
 	require.NoError(t, os.WriteFile(manifestFile, []byte(manifest), 0644))
+	outputFile := dir + "/output.yaml"
 
 	certs := &webhookCerts{caCert: caCert, caKey: caKey}
-	injected, err := maybeInjectWebhookCert(manifestFile, certs)
+	require.NoError(t, injectWebhookCertFile(manifestFile, outputFile, certs))
+
+	result, err := os.ReadFile(outputFile)
 	require.NoError(t, err)
-	assert.Empty(t, injected, "should return empty string when no webhooks found")
-}
-
-func TestUploadFilePath(t *testing.T) {
-	caCert, caKey := setupTestCA(t)
-	certs := &webhookCerts{caCert: caCert, caKey: caKey}
-
-	dir := t.TempDir()
-	manifestFile := dir + "/all-in-one.yaml"
-	require.NoError(t, os.WriteFile(manifestFile, []byte(testManifest), 0644))
-	binaryFile := dir + "/heim_darwin_amd64"
-	require.NoError(t, os.WriteFile(binaryFile, []byte{0xcf, 0xfa, 0xed, 0xfe, 0x07, 0x00, 0x00, 0x01}, 0644))
-	injectTargets := []string{manifestFile}
-
-	got, err := uploadFilePath(binaryFile, certs, injectTargets)
-	require.NoError(t, err)
-	assert.Equal(t, binaryFile, got)
-
-	got, err = uploadFilePath(manifestFile, certs, injectTargets)
-	require.NoError(t, err)
-	defer os.Remove(got)
-	assert.NotEqual(t, manifestFile, got)
-
-	got, err = uploadFilePath(manifestFile, nil, injectTargets)
-	require.NoError(t, err)
-	assert.Equal(t, manifestFile, got)
+	assert.Equal(t, manifest, string(result))
+	assert.Nil(t, certs.serverCertPEM)
 }
 
 func TestLoadCA(t *testing.T) {

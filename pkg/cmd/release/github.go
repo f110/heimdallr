@@ -29,9 +29,6 @@ type githubOpt struct {
 	GitHubAppId                 int64
 	GitHubAppInstallationId     int64
 	GitHubAppPrivateKeyFile     string
-	CACert                      string
-	CAKey                       string
-	InjectWebhookCert           []string
 }
 
 func githubRelease(ctx context.Context, opt *githubOpt) error {
@@ -147,31 +144,13 @@ func releaseOnGitHub(ctx context.Context, client *github.Client, opt *githubOpt)
 		release = r
 	}
 
-	// Inject webhook certificates if CA cert/key are provided
-	var certs *webhookCerts
-	if opt.CACert != "" && opt.CAKey != "" {
-		caCert, caKey, err := loadCA(opt.CACert, opt.CAKey)
-		if err != nil {
-			return err
-		}
-		certs = &webhookCerts{caCert: caCert, caKey: caKey}
-	}
-
 	for _, v := range opt.Attach {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "%s is not found", v)
 			continue
 		}
 
-		uploadPath, err := uploadFilePath(v, certs, opt.InjectWebhookCert)
-		if err != nil {
-			return err
-		}
-		if uploadPath != v {
-			defer os.Remove(uploadPath)
-		}
-
-		f, err := os.Open(uploadPath)
+		f, err := os.Open(v)
 		if err != nil {
 			return xerrors.WithStack(err)
 		}
@@ -215,8 +194,5 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
 	ghRelease.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
 	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
-	ghRelease.Flags().String("ca-cert", "Path to CA certificate PEM file for webhook cert injection").Var(&opt.CACert)
-	ghRelease.Flags().String("ca-key", "Path to CA private key PEM file for webhook cert injection").Var(&opt.CAKey)
-	ghRelease.Flags().StringArray("inject-webhook-cert", "Path to an attached manifest file to inject webhook certificates").Var(&opt.InjectWebhookCert)
 	rootCmd.AddCommand(ghRelease)
 }

@@ -13,6 +13,7 @@ func releaseCmd(args []string) error {
 		Use: "release",
 	}
 
+	release.Prepare(rootCmd)
 	release.GitHub(rootCmd)
 	release.Container(rootCmd)
 	release.ManifestCleaner(rootCmd)

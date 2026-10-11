@@ -1,6 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("//:RELEASE.bzl", "ASSET_FILES", "RELEASE_BRANCH", "RELEASE_MESSAGE", "VERSION")
-load("//build/rules:release.bzl", "github_release", "template_string")
+load("//build/rules:release.bzl", "github_release", "prepare_release_assets", "template_string")
 load("//container:repo.bzl", "CONTAINER_IMAGE_REPOSITORIES")
 
 gazelle(name = "gazelle")
@@ -29,16 +29,21 @@ template_string(
     template = RELEASE_MESSAGE,
 )
 
-github_release(
-    name = "github_release",
-    assets = ASSET_FILES,
-    body = ":release_message",
-    branch = RELEASE_BRANCH,
+prepare_release_assets(
+    name = "release_assets",
+    srcs = ASSET_FILES,
     ca_cert = "//operator:webhook_ca.crt",
     ca_key = "//operator:webhook_ca.key",
+    webhook_cert_assets = ["//operator/deploy/prod:all-in-one"],
+)
+
+github_release(
+    name = "github_release",
+    assets = ":release_assets",
+    body = ":release_message",
+    branch = RELEASE_BRANCH,
     repository = "f110/heimdallr",
     version = VERSION,
-    webhook_cert_assets = ["//operator/deploy/prod:all-in-one"],
 )
 
 sh_binary(

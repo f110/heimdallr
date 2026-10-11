@@ -2,6 +2,7 @@ package release
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -10,13 +11,85 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"go.f110.dev/xerrors"
 	"gopkg.in/yaml.v2"
 
 	"go.f110.dev/heimdallr/pkg/cert"
+	"go.f110.dev/heimdallr/pkg/cmd"
 )
+
+type prepareOpt struct {
+	Assets            []string
+	OutputDir         string
+	CACert            string
+	CAKey             string
+	InjectWebhookCert []string
+}
+
+// prepareAssets writes the release assets to OutputDir with the same file names.
+// Every processing of the assets that isn't specific to the publishing destination belongs here
+// so that e2e can verify the same assets as the release.
+func prepareAssets(opt *prepareOpt) error {
+	var certs *webhookCerts
+	if opt.CACert != "" && opt.CAKey != "" {
+		caCert, caKey, err := loadCA(opt.CACert, opt.CAKey)
+		if err != nil {
+			return err
+		}
+		certs = &webhookCerts{caCert: caCert, caKey: caKey}
+	}
+
+	if err := os.MkdirAll(opt.OutputDir, 0755); err != nil {
+		return xerrors.WithStack(err)
+	}
+
+	names := make(map[string]struct{})
+	for _, v := range opt.Assets {
+		name := filepath.Base(v)
+		if _, ok := names[name]; ok {
+			return xerrors.NewfWithStack("duplicate asset name: %s", name)
+		}
+		names[name] = struct{}{}
+
+		dst := filepath.Join(opt.OutputDir, name)
+		if certs != nil && slices.Contains(opt.InjectWebhookCert, v) {
+			if err := injectWebhookCertFile(v, dst, certs); err != nil {
+				return err
+			}
+			continue
+		}
+		buf, err := os.ReadFile(v)
+		if err != nil {
+			return xerrors.WithStack(err)
+		}
+		if err := os.WriteFile(dst, buf, 0644); err != nil {
+			return xerrors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
+func Prepare(rootCmd *cmd.Command) {
+	opt := prepareOpt{}
+
+	prepare := &cmd.Command{
+		Use:   "prepare",
+		Short: "Prepare release assets",
+		Run: func(_ context.Context, _ *cmd.Command, _ []string) error {
+			return prepareAssets(&opt)
+		},
+	}
+	prepare.Flags().StringArray("asset", "Path to an asset file").Var(&opt.Assets)
+	prepare.Flags().String("output-dir", "Directory to write the prepared assets").Var(&opt.OutputDir)
+	prepare.Flags().String("ca-cert", "Path to CA certificate PEM file for webhook cert injection").Var(&opt.CACert)
+	prepare.Flags().String("ca-key", "Path to CA private key PEM file for webhook cert injection").Var(&opt.CAKey)
+	prepare.Flags().StringArray("inject-webhook-cert", "Path to an asset file to inject webhook certificates").Var(&opt.InjectWebhookCert)
+	rootCmd.AddCommand(prepare)
+}
 
 const (
 	injectAnnotationKey = "internal.heimdallr.f110.dev/inject"
@@ -87,63 +160,42 @@ func (c *webhookCerts) generateServerCert(dnsNames []string) error {
 	return nil
 }
 
-// uploadFilePath returns the path of the file to upload for the asset.
-// Webhook certificates are injected only into the files listed in injectTargets.
-func uploadFilePath(path string, certs *webhookCerts, injectTargets []string) (string, error) {
-	if certs == nil || !slices.Contains(injectTargets, path) {
-		return path, nil
-	}
-	injected, err := maybeInjectWebhookCert(path, certs)
+// injectWebhookCertFile generates a server certificate for the webhooks referenced in src
+// and writes the manifest that the certificate is injected to dst.
+// If src doesn't reference any webhook, src is written to dst as is.
+func injectWebhookCertFile(src, dst string, certs *webhookCerts) error {
+	buf, err := os.ReadFile(src)
 	if err != nil {
-		return "", err
+		return xerrors.WithStack(err)
 	}
-	if injected == "" {
-		return path, nil
-	}
-	return injected, nil
-}
 
-// maybeInjectWebhookCert checks if the file contains webhook inject annotations.
-// If it does, it generates a server certificate, injects it, and returns the path
-// to a temporary file with the injected content. Returns "" if no injection was needed.
-func maybeInjectWebhookCert(path string, certs *webhookCerts) (string, error) {
-	f, err := os.Open(path)
+	dnsNames, err := collectWebhookDNSNames(bytes.NewReader(buf))
 	if err != nil {
-		return "", xerrors.WithStack(err)
-	}
-	defer f.Close()
-
-	// First pass: collect DNS names from webhook service references
-	dnsNames, err := collectWebhookDNSNames(f)
-	if err != nil {
-		return "", err
+		return err
 	}
 	if len(dnsNames) == 0 {
-		return "", nil
+		if err := os.WriteFile(dst, buf, 0644); err != nil {
+			return xerrors.WithStack(err)
+		}
+		return nil
 	}
 
-	// Generate certificate with collected DNS names
 	if err := certs.generateServerCert(dnsNames); err != nil {
-		return "", err
+		return err
 	}
 
-	// Second pass: inject certificates
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		return "", xerrors.WithStack(err)
-	}
-
-	tmp, err := os.CreateTemp("", "webhook-cert-injected-*.yaml")
+	out, err := os.Create(dst)
 	if err != nil {
-		return "", xerrors.WithStack(err)
+		return xerrors.WithStack(err)
 	}
-	defer tmp.Close()
-
-	if err := injectWebhookCert(f, tmp, certs); err != nil {
-		os.Remove(tmp.Name())
-		return "", err
+	if err := injectWebhookCert(bytes.NewReader(buf), out, certs); err != nil {
+		out.Close()
+		return err
 	}
-
-	return tmp.Name(), nil
+	if err := out.Close(); err != nil {
+		return xerrors.WithStack(err)
+	}
+	return nil
 }
 
 // collectWebhookDNSNames parses the manifest and collects DNS names from webhook service references.
