@@ -51,16 +51,17 @@ type GitHubController struct {
 func NewGitHubController(
 	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory *k8sclient.InformerFactory,
+	namespace string,
 	coreClient *k8sclient.Set,
 	proxyClient *client.ProxyV1alpha2,
 	k8sClient kubernetes.Interface,
 	transport http.RoundTripper,
 ) (*GitHubController, error) {
-	proxyInformers := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, metav1.NamespaceAll, 30*time.Second)
+	proxyInformers := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), proxyClient, namespace, 30*time.Second)
 	backendInformer := proxyInformers.BackendInformer()
 	proxyInformer := proxyInformers.ProxyInformer()
 
-	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, namespace, 30*time.Second)
 
 	c := &GitHubController{
 		client:              proxyClient,

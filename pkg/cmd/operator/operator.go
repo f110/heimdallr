@@ -44,6 +44,7 @@ type mainProcess struct {
 	kubeconfigPath     string
 	leaseLockName      string
 	leaseLockNamespace string
+	watchNamespace     string
 	clusterDomain      string
 	probeAddr          string
 	workers            int
@@ -224,10 +225,10 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 }
 
 func (m *mainProcess) startWorkers() (fsm.State, error) {
-	coreSharedInformerFactory := k8sclient.NewInformerFactory(m.coreClient, k8sclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
-	factory := client.NewInformerFactory(m.client, client.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
+	coreSharedInformerFactory := k8sclient.NewInformerFactory(m.coreClient, k8sclient.NewInformerCache(), m.watchNamespace, 30*time.Second)
+	factory := client.NewInformerFactory(m.client, client.NewInformerCache(), m.watchNamespace, 30*time.Second)
 
-	c, err := controllers.NewProxyController(m.ctx, factory, coreSharedInformerFactory, m.coreClient, m.client, m.thirdPartyClient, m.k8sCoreClient)
+	c, err := controllers.NewProxyController(m.ctx, factory, coreSharedInformerFactory, m.watchNamespace, m.coreClient, m.client, m.thirdPartyClient, m.k8sCoreClient)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
@@ -236,6 +237,7 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	e, err := controllers.NewEtcdController(
 		factory,
 		coreSharedInformerFactory,
+		m.watchNamespace,
 		m.coreClient,
 		m.client.EtcdV1alpha2,
 		m.k8sCoreClient,
@@ -250,13 +252,13 @@ func (m *mainProcess) startWorkers() (fsm.State, error) {
 	}
 	m.e = e
 
-	g, err := controllers.NewGitHubController(factory, coreSharedInformerFactory, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient, http.DefaultTransport)
+	g, err := controllers.NewGitHubController(factory, coreSharedInformerFactory, m.watchNamespace, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient, http.DefaultTransport)
 	if err != nil {
 		return fsm.UnknownState, err
 	}
 	m.g = g
 
-	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient)
+	ic := controllers.NewIngressController(coreSharedInformerFactory, factory, m.watchNamespace, m.coreClient, m.client.ProxyV1alpha2, m.k8sCoreClient)
 	m.ic = ic
 
 	coreSharedInformerFactory.Run(m.ctx)
@@ -302,6 +304,7 @@ func (m *mainProcess) Flags(fs *cmd.FlagSet) {
 	fs.String("metrics-addr", "The address the metric endpoint binds to.").Var(&m.metricsAddr).Default(m.metricsAddr)
 	fs.String("lease-lock-name", "the lease lock resource name").Var(&m.leaseLockName).Default(m.leaseLockName)
 	fs.String("lease-lock-namespace", "the lease lock resource namespace").Var(&m.leaseLockNamespace).Default(m.leaseLockNamespace)
+	fs.String("namespace", "The namespace that the operator watches. All namespaces are watched if empty").Var(&m.watchNamespace).Default(m.watchNamespace)
 	fs.String("cluster-domain", "Cluster domain").Var(&m.clusterDomain).Default(m.clusterDomain)
 	fs.String("probe-addr", "Listen addr that provides readiness probe").Var(&m.probeAddr).Default(m.probeAddr)
 	fs.Int("workers", "The number of workers on each controller").Var(&m.workers).Default(m.workers)

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
@@ -32,6 +33,7 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
 			runner.K8sCoreClient,
@@ -80,6 +82,7 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
 			runner.K8sCoreClient,
@@ -129,6 +132,7 @@ func TestGitHubController(t *testing.T) {
 		controller, err := NewGitHubController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
 			runner.K8sCoreClient,
@@ -168,6 +172,31 @@ func TestGitHubController(t *testing.T) {
 		runner.AssertUpdateAction(t, "", backend)
 		runner.AssertUpdateAction(t, "status", backend)
 		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		controller, err := NewGitHubController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			"watched",
+			&runner.CoreClient.Set,
+			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+		)
+		require.NoError(t, err)
+		for _, ns := range []string{"watched", "unwatched"} {
+			require.NoError(t, runner.Client.Tracker().Add(proxy.BackendFactory(nil, k8sfactory.Name("test"), k8sfactory.Namespace(ns))))
+		}
+		startInformers(t, runner, controller.ListerSynced())
+
+		backends, err := controller.backendLister.List(metav1.NamespaceAll, labels.Everything())
+		require.NoError(t, err)
+		require.Len(t, backends, 1)
+		require.Equal(t, "watched", backends[0].Namespace)
 	})
 }
 

@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
 	"go.f110.dev/heimdallr/operator/e2e/e2eutil"
@@ -104,7 +105,7 @@ func setupSuite(id string) (*kind.Cluster, error) {
 	if err := k8s.WaitForReadyWebhook(cfg, crds); err != nil {
 		return nil, err
 	}
-	if err := e2eutil.WaitForWebhookReachable(context.TODO(), cfg); err != nil {
+	if err := e2eutil.WaitForWebhookReachable(context.TODO(), cfg, metav1.NamespaceDefault); err != nil {
 		return nil, err
 	}
 

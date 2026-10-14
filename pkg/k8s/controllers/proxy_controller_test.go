@@ -18,6 +18,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestProxyController(t *testing.T) {
@@ -361,6 +362,32 @@ func TestProxyController(t *testing.T) {
 			assert.Equal(t, updatedB.Status.DeployedBy[0].Url, fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, p.Spec.Domain))
 		}
 	})
+
+	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		controller, err := NewProxyController(
+			context.Background(),
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			"watched",
+			&runner.CoreClient.Set,
+			&runner.Client.Set,
+			&runner.ThirdPartyClient.Set,
+			runner.K8sCoreClient,
+		)
+		require.NoError(t, err)
+		for _, ns := range []string{"watched", "unwatched"} {
+			require.NoError(t, runner.Client.Tracker().Add(proxy.Factory(nil, k8sfactory.Name("test"), k8sfactory.Namespace(ns))))
+		}
+		startInformers(t, runner, controller.ListerSynced())
+
+		proxies, err := controller.proxyLister.List(metav1.NamespaceAll, labels.Everything())
+		require.NoError(t, err)
+		require.Len(t, proxies, 1)
+		assert.Equal(t, "watched", proxies[0].Namespace)
+	})
 }
 
 func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyController) {
@@ -369,6 +396,7 @@ func newProxyController(t *testing.T) (*controllertest.TestRunner, *ProxyControl
 		context.Background(),
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
+		metav1.NamespaceAll,
 		&runner.CoreClient.Set,
 		&runner.Client.Set,
 		&runner.ThirdPartyClient.Set,

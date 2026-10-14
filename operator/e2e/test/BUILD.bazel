@@ -17,6 +17,7 @@ go_test(
     srcs = [
         "etcd-controller_test.go",
         "main_test.go",
+        "namespaced-operator_test.go",
         "proxy-controller_test.go",
     ],
     args = [

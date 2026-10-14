@@ -9,6 +9,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/kubeproto/go/apis/networkingv1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllertest"
@@ -23,6 +24,7 @@ func TestIngressController(t *testing.T) {
 		controller := NewIngressController(
 			runner.CoreSharedInformerFactory,
 			runner.SharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.ProxyV1alpha2,
 			runner.K8sCoreClient,
@@ -46,6 +48,29 @@ func TestIngressController(t *testing.T) {
 		//runner.AssertUpdateAction(t, "status", ing)
 		runner.AssertCreateAction(t, proxy.BackendFactory(nil, k8sfactory.Namef("%s", ing.Name), k8sfactory.Namespace(ing.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		controller := NewIngressController(
+			runner.CoreSharedInformerFactory,
+			runner.SharedInformerFactory,
+			"watched",
+			&runner.CoreClient.Set,
+			runner.Client.ProxyV1alpha2,
+			runner.K8sCoreClient,
+		)
+		for _, ns := range []string{"watched", "unwatched"} {
+			require.NoError(t, runner.CoreClient.Tracker().Add(k8sfactory.IngressFactory(nil, k8sfactory.Name("test"), k8sfactory.Namespace(ns))))
+		}
+		startInformers(t, runner, controller.ListerSynced())
+
+		ingresses, err := controller.ingressLister.List(metav1.NamespaceAll, labels.Everything())
+		require.NoError(t, err)
+		require.Len(t, ingresses, 1)
+		assert.Equal(t, "watched", ingresses[0].Namespace)
 	})
 }
 

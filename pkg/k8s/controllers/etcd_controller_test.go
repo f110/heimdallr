@@ -24,6 +24,7 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	"go.f110.dev/kubeproto/go/apis/corev1"
 	"go.f110.dev/kubeproto/go/apis/metav1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcd"
 	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
@@ -52,6 +53,7 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -102,6 +104,7 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -166,6 +169,7 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -230,6 +234,7 @@ func TestEtcdController(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
+				metav1.NamespaceAll,
 				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
 				runner.K8sCoreClient,
@@ -279,6 +284,7 @@ func TestEtcdController(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
+				metav1.NamespaceAll,
 				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
 				runner.K8sCoreClient,
@@ -311,8 +317,8 @@ func TestEtcdController(t *testing.T) {
 			require.NoError(t, err)
 
 			updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
-		// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
-		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
+			// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
+			updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 			runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
 			runner.AssertNoUnexpectedAction(t)
@@ -329,6 +335,7 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -423,6 +430,7 @@ func TestEtcdController(t *testing.T) {
 				controller, err := NewEtcdController(
 					runner.SharedInformerFactory,
 					runner.CoreSharedInformerFactory,
+					metav1.NamespaceAll,
 					&runner.CoreClient.Set,
 					runner.Client.EtcdV1alpha2,
 					runner.K8sCoreClient,
@@ -476,6 +484,7 @@ func TestEtcdController(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -539,6 +548,35 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertDeleteAction(t, tempMemberPod)
 		runner.AssertNoUnexpectedAction(t)
 	})
+
+	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			"watched",
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			nil,
+		)
+		require.NoError(t, err)
+		for _, ns := range []string{"watched", "unwatched"} {
+			require.NoError(t, runner.Client.Tracker().Add(etcd.Factory(nil, k8sfactory.Name("test"), k8sfactory.Namespace(ns))))
+		}
+		startInformers(t, runner, controller.ListerSynced())
+
+		clusters, err := controller.clusterLister.List(metav1.NamespaceAll, labels.Everything())
+		require.NoError(t, err)
+		require.Len(t, clusters, 1)
+		assert.Equal(t, "watched", clusters[0].Namespace)
+	})
 }
 
 func TestEtcdController_Backup(t *testing.T) {
@@ -562,6 +600,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -643,6 +682,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -713,6 +753,7 @@ func TestEtcdController_RotateBackup(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -898,6 +939,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	controller, err := NewEtcdController(
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
+		metav1.NamespaceAll,
 		&runner.CoreClient.Set,
 		runner.Client.EtcdV1alpha2,
 		runner.K8sCoreClient,
@@ -1037,6 +1079,7 @@ func TestEtcdController_StartMember(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
+				metav1.NamespaceAll,
 				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
 				runner.K8sCoreClient,
@@ -1177,6 +1220,7 @@ func TestEtcdController_DeleteMember(t *testing.T) {
 			controller, err := NewEtcdController(
 				runner.SharedInformerFactory,
 				runner.CoreSharedInformerFactory,
+				metav1.NamespaceAll,
 				&runner.CoreClient.Set,
 				runner.Client.EtcdV1alpha2,
 				runner.K8sCoreClient,
@@ -1230,6 +1274,7 @@ func TestEtcdController_DeleteMember(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -1314,6 +1359,7 @@ func TestEtcdController_RotateCertificate(t *testing.T) {
 		controller, err := NewEtcdController(
 			runner.SharedInformerFactory,
 			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
 			&runner.CoreClient.Set,
 			runner.Client.EtcdV1alpha2,
 			runner.K8sCoreClient,
@@ -1429,6 +1475,7 @@ func TestEtcdController_DiscoveryService(t *testing.T) {
 	controller, err := NewEtcdController(
 		runner.SharedInformerFactory,
 		runner.CoreSharedInformerFactory,
+		metav1.NamespaceAll,
 		&runner.CoreClient.Set,
 		runner.Client.EtcdV1alpha2,
 		runner.K8sCoreClient,

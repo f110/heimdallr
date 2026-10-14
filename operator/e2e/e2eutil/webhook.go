@@ -14,18 +14,18 @@ import (
 	"go.f110.dev/heimdallr/pkg/poll"
 )
 
-// WaitForWebhookReachable waits until the apiserver is able to reach the webhook of the operator.
+// WaitForWebhookReachable waits until the apiserver is able to reach the webhook of the operator that validates namespace.
 // The Endpoints of the webhook gets an address before kube-proxy configures the route to that
 // address. Sending the actual request is the only way to confirm that the path from the apiserver
 // to the webhook is established.
-func WaitForWebhookReachable(ctx context.Context, cfg *rest.Config) error {
+func WaitForWebhookReachable(ctx context.Context, cfg *rest.Config, namespace string) error {
 	c, err := client.NewSet(cfg)
 	if err != nil {
 		return err
 	}
 
 	backend := &proxyv1alpha2.Backend{
-		ObjectMeta: metav1.ObjectMeta{Name: "webhook-probe", Namespace: metav1.NamespaceDefault},
+		ObjectMeta: metav1.ObjectMeta{Name: "webhook-probe", Namespace: namespace},
 		Spec: proxyv1alpha2.BackendSpec{
 			Layer: "probe",
 			HTTP: []proxyv1alpha2.BackendHTTPSpec{
