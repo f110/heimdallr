@@ -15,6 +15,7 @@ func releaseCmd(args []string) error {
 
 	release.Prepare(rootCmd)
 	release.GitHub(rootCmd)
+	release.Create(rootCmd)
 	release.Container(rootCmd)
 	release.ManifestCleaner(rootCmd)
 

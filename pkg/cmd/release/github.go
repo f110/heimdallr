@@ -19,11 +19,15 @@ import (
 )
 
 type githubOpt struct {
-	Version                     string
-	From                        string
-	Attach                      []string
-	GithubRepo                  string
-	BodyFile                    string
+	githubAppOpt
+	Version    string
+	From       string
+	Attach     []string
+	GithubRepo string
+	BodyFile   string
+}
+
+type githubAppOpt struct {
 	GitHubAppIdFile             string
 	GitHubAppInstallationIdFile string
 	GitHubAppId                 int64
@@ -31,26 +35,43 @@ type githubOpt struct {
 	GitHubAppPrivateKeyFile     string
 }
 
+func (opt *githubAppOpt) flags(c *cmd.Command) {
+	c.Flags().String("github-app-id-file", "The file that contains GitHub App ID").Var(&opt.GitHubAppIdFile)
+	c.Flags().String("github-installation-id-file", "The file that contains GitHub App Installation ID").Var(&opt.GitHubAppInstallationIdFile)
+	c.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
+	c.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
+	c.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
+}
+
 func githubRelease(ctx context.Context, opt *githubOpt) error {
+	client, err := newGitHubClient(ctx, &opt.githubAppOpt)
+	if err != nil {
+		return err
+	}
+	return releaseOnGitHub(ctx, client, opt)
+}
+
+// newGitHubClient returns the client authenticated as GitHub App, or with GITHUB_APITOKEN when the App is not configured.
+func newGitHubClient(ctx context.Context, opt *githubAppOpt) (*github.Client, error) {
 	if v := os.Getenv("GITHUB_APP_ID_FILE"); v != "" {
 		buf, err := os.ReadFile(v)
 		if err != nil {
-			return xerrors.WithStack(err)
+			return nil, xerrors.WithStack(err)
 		}
 		appId, err := strconv.ParseInt(string(buf), 10, 64)
 		if err != nil {
-			return xerrors.WithStack(err)
+			return nil, xerrors.WithStack(err)
 		}
 		opt.GitHubAppId = appId
 	}
 	if v := os.Getenv("GITHUB_INSTALLATION_ID_FILE"); v != "" {
 		buf, err := os.ReadFile(v)
 		if err != nil {
-			return xerrors.WithStack(err)
+			return nil, xerrors.WithStack(err)
 		}
 		installationId, err := strconv.ParseInt(string(buf), 10, 64)
 		if err != nil {
-			return xerrors.WithStack(err)
+			return nil, xerrors.WithStack(err)
 		}
 		opt.GitHubAppInstallationId = installationId
 	}
@@ -61,7 +82,7 @@ func githubRelease(ctx context.Context, opt *githubOpt) error {
 	if opt.GitHubAppId == 0 || opt.GitHubAppInstallationId == 0 || opt.GitHubAppPrivateKeyFile == "" {
 		token := os.Getenv("GITHUB_APITOKEN")
 		if token == "" {
-			return xerrors.NewWithStack("GITHUB_APITOKEN is mandatory")
+			return nil, xerrors.NewWithStack("GITHUB_APITOKEN is mandatory")
 		}
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
@@ -70,12 +91,12 @@ func githubRelease(ctx context.Context, opt *githubOpt) error {
 	} else {
 		ghApp, err := githubutil.NewApp(opt.GitHubAppId, opt.GitHubAppInstallationId, opt.GitHubAppPrivateKeyFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		t := githubutil.NewTransportWithApp(http.DefaultTransport, ghApp)
 		httpClient = &http.Client{Transport: t}
 	}
-	return releaseOnGitHub(ctx, github.NewClient(httpClient), opt)
+	return github.NewClient(httpClient), nil
 }
 
 func releaseOnGitHub(ctx context.Context, client *github.Client, opt *githubOpt) error {
@@ -189,10 +210,6 @@ func GitHub(rootCmd *cmd.Command) {
 	ghRelease.Flags().StringArray("attach", "").Var(&opt.Attach)
 	ghRelease.Flags().String("repo", "").Var(&opt.GithubRepo)
 	ghRelease.Flags().String("body", "Release body").Var(&opt.BodyFile)
-	ghRelease.Flags().String("github-app-id-file", "The file that contains GitHub App ID").Var(&opt.GitHubAppIdFile)
-	ghRelease.Flags().String("github-installation-id-file", "The file that contains GitHub App Installation ID").Var(&opt.GitHubAppInstallationIdFile)
-	ghRelease.Flags().Int64("github-app-id", "GitHub App ID").Var(&opt.GitHubAppId)
-	ghRelease.Flags().Int64("github-installation-id", "GitHub App Installation ID").Var(&opt.GitHubAppInstallationId)
-	ghRelease.Flags().String("github-private-key", "The file path of the private key for GitHub App").Var(&opt.GitHubAppPrivateKeyFile)
+	opt.githubAppOpt.flags(ghRelease)
 	rootCmd.AddCommand(ghRelease)
 }
