@@ -4,6 +4,7 @@ go_library(
     name = "release",
     srcs = [
         "container.go",
+        "create.go",
         "github.go",
         "manifest.go",
         "prepare.go",
@@ -29,6 +30,7 @@ go_test(
     name = "release_test",
     srcs = [
         "container_test.go",
+        "create_test.go",
         "github_test.go",
         "prepare_test.go",
     ],
