@@ -351,6 +351,7 @@ func TestProxyController(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, updatedP.Status.Ready)
 		assert.Equal(t, updatedP.Status.Phase, proxyv1alpha2.ProxyPhaseRunning)
+		assert.Empty(t, updatedP.Status.OperatorVersion)
 
 		for _, backend := range backends {
 			updatedB, err := runner.Client.ProxyV1alpha2.GetBackend(context.Background(), backend.Namespace, backend.Name, metav1.GetOptions{})
@@ -361,6 +362,83 @@ func TestProxyController(t *testing.T) {
 			assert.Equal(t, updatedB.Status.DeployedBy[0].Namespace, p.Namespace)
 			assert.Equal(t, updatedB.Status.DeployedBy[0].Url, fmt.Sprintf("https://%s.%s.%s", backend.Name, backend.Spec.Layer, p.Spec.Domain))
 		}
+	})
+
+	t.Run("Record operator version when the proxy is running and ready", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+		controller.operatorVersion = "v0.10.0"
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, services := newProxy("test")
+		p.Status.OperatorVersion = "v0.9.0"
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, services)
+
+		hp := newHeimdallrProxy(controller.serviceLister, p, backends, roles, roleBindings, rpcPermissions)
+		ec, _ := hp.EtcdCluster()
+		ec = etcd.Factory(ec, etcd.Ready)
+		runner.RegisterFixtures(hp.PrepareCompleted(ec)...)
+		hp.Datastore = ec
+		runner.RegisterFixtures(ec)
+		for _, v := range hp.Secrets() {
+			s, err := v.Create()
+			require.NoError(t, err)
+			runner.RegisterFixtures(s)
+		}
+		err := hp.Init(controller.secretLister)
+		require.NoError(t, err)
+		pcs, err := hp.IdealRPCServer()
+		require.NoError(t, err)
+		pcs.Deployment.Status.ReadyReplicas = pcs.Deployment.Spec.Replicas
+		registerFixtureFromProcess(runner, pcs)
+		for _, f := range []func() (*process, error){hp.IdealProxyProcess, hp.IdealDashboard} {
+			pcs, err := f()
+			require.NoError(t, err)
+			pcs.Deployment.Status.ReadyReplicas = pcs.Deployment.Spec.Replicas
+			runner.RegisterFixtures(pcs.Deployment)
+		}
+
+		err = runner.Reconcile(controller, p)
+		require.NoError(t, err)
+
+		updatedP, err := runner.Client.ProxyV1alpha2.GetProxy(context.Background(), p.Namespace, p.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.True(t, updatedP.Status.Ready)
+		assert.Equal(t, proxyv1alpha2.ProxyPhaseRunning, updatedP.Status.Phase)
+		assert.Equal(t, "v0.10.0", updatedP.Status.OperatorVersion)
+	})
+
+	t.Run("Skip reconciling the proxy which is reconciled by a newer operator", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+		controller.operatorVersion = "v0.9.0"
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Status.OperatorVersion = "v0.10.0"
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		err := runner.Reconcile(controller, p)
+		require.NoError(t, err)
+		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("Development operator reconciles the proxy which is reconciled by a release operator", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller := newProxyController(t)
+		controller.operatorVersion = "latest"
+
+		p, clientSecret, backends, roles, rpcPermissions, roleBindings, _ := newProxy("test")
+		p.Status.OperatorVersion = "v0.10.0"
+		registerFixtures(runner, clientSecret, backends, roles, rpcPermissions, roleBindings, nil)
+
+		err := runner.Reconcile(controller, p)
+		require.Error(t, err)
+		controllertest.AssertRetry(t, err)
+
+		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
+		runner.AssertUpdateAction(t, "status", p)
 	})
 
 	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {

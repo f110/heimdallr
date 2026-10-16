@@ -116,6 +116,7 @@ type EtcdClusterStatus struct {
 	ClientCertSecretName    string           `json:"clientCertSecretName,omitempty"`
 	Backup                  *BackupStatus    `json:"backup,omitempty"`
 	Restored                *RestoredStatus  `json:"restored,omitempty"`
+	OperatorVersion         string           `json:"operatorVersion,omitempty"`
 }
 
 type MemberStatus struct {

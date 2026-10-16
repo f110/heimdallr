@@ -32,6 +32,7 @@ go_library(
         "//pkg/k8s/thirdpartyclient",
         "//pkg/logger",
         "//pkg/netutil",
+        "//pkg/version",
         "@com_github_bradleyfalzon_ghinstallation_v2//:ghinstallation",
         "@com_github_google_go_cmp//cmp",
         "@com_github_google_go_github_v41//github",
