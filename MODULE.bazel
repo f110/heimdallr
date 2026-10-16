@@ -107,7 +107,7 @@ use_repo(
 
 git_override(
     module_name = "protoc_ddl",
-    commit = "28d15745bb9eceeb98136e20413d32368d8527ad",
+    commit = "aa8bde19f76e41da809ec74b7a2271e4606c2775",
     patch_strip = 1,
     patches = ["//patch:protoc-ddl.patch"],
     remote = "https://github.com/f110/protoc-ddl",
