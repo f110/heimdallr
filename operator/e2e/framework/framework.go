@@ -105,8 +105,10 @@ type Framework struct {
 	Proxy        *Proxy
 	EtcdClusters *EtcdClusters
 
+	restConfig *rest.Config
 	client     *client.Set
 	coreClient *kubernetes.Clientset
+	operators  map[string]*e2eutil.NamespacedOperator
 }
 
 func New(t *testing.T, conf *rest.Config) *Framework {
@@ -128,8 +130,10 @@ func New(t *testing.T, conf *rest.Config) *Framework {
 			client:     c,
 			clusters:   make(map[string]*etcdv1alpha2.EtcdCluster),
 		},
+		restConfig: conf,
 		client:     c,
 		coreClient: coreClient,
+		operators:  make(map[string]*e2eutil.NamespacedOperator),
 	}
 }
 
@@ -458,4 +462,23 @@ func (c *EtcdCluster) haveDataVolume(m *btesting.Matcher, source string) {
 	if !found {
 		m.Fail("could not found data volume")
 	}
+}
+
+// DeployNamespacedOperator deploys the operator that watches only namespace.
+// The operator shares the CustomResourceDefinitions with the operator that is deployed by the suite.
+func (f *Framework) DeployNamespacedOperator(m *btesting.Matcher, namespace string) bool {
+	op, err := e2eutil.DeployNamespacedOperator(context.TODO(), f.restConfig, Config.AllInOneManifest, namespace)
+	if op != nil {
+		f.operators[namespace] = op
+	}
+	return m.Must(err)
+}
+
+func (f *Framework) DeleteNamespacedOperator(namespace string) {
+	op, ok := f.operators[namespace]
+	if !ok {
+		return
+	}
+	_ = op.Delete(context.TODO(), f.restConfig)
+	delete(f.operators, namespace)
 }

@@ -88,6 +88,7 @@ type EtcdController struct {
 func NewEtcdController(
 	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory *k8sclient.InformerFactory,
+	namespace string,
 	coreClient *k8sclient.Set,
 	etcdClient *client.EtcdV1alpha2,
 	k8sClient kubernetes.Interface,
@@ -97,8 +98,8 @@ func NewEtcdController(
 	transport http.RoundTripper,
 	mockOpt *MockOption,
 ) (*EtcdController, error) {
-	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
-	etcdClusterInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), etcdClient, metav1.NamespaceAll, 30*time.Second)
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, namespace, 30*time.Second)
+	etcdClusterInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), etcdClient, namespace, 30*time.Second)
 
 	c := &EtcdController{
 		config:               cfg,

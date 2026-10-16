@@ -85,17 +85,18 @@ func NewProxyController(
 	ctx context.Context,
 	sharedInformerFactory *client.InformerFactory,
 	coreSharedInformerFactory *k8sclient.InformerFactory,
+	namespace string,
 	coreClient *k8sclient.Set,
 	clientSet *client.Set,
 	thirdPartyClientSet *thirdpartyclient.Set,
 	k8sClient kubernetes.Interface,
 ) (*ProxyController, error) {
-	proxyInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.ProxyV1alpha2, metav1.NamespaceAll, 30*time.Second)
-	ecInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.EtcdV1alpha2, metav1.NamespaceAll, 30*time.Second)
+	proxyInformer := client.NewProxyV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.ProxyV1alpha2, namespace, 30*time.Second)
+	ecInformer := client.NewEtcdV1alpha2Informer(sharedInformerFactory.Cache(), clientSet.EtcdV1alpha2, namespace, 30*time.Second)
 
-	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, metav1.NamespaceAll, 30*time.Second)
-	networkingv1Informer := k8sclient.NewNetworkingK8sIoV1Informer(coreSharedInformerFactory.Cache(), coreClient.NetworkingK8sIoV1, metav1.NamespaceAll, 30*time.Second)
-	appsv1Informer := k8sclient.NewAppsV1Informer(coreSharedInformerFactory.Cache(), coreClient.AppsV1, metav1.NamespaceAll, 30*time.Second)
+	corev1Informer := k8sclient.NewCoreV1Informer(coreSharedInformerFactory.Cache(), coreClient.CoreV1, namespace, 30*time.Second)
+	networkingv1Informer := k8sclient.NewNetworkingK8sIoV1Informer(coreSharedInformerFactory.Cache(), coreClient.NetworkingK8sIoV1, namespace, 30*time.Second)
+	appsv1Informer := k8sclient.NewAppsV1Informer(coreSharedInformerFactory.Cache(), coreClient.AppsV1, namespace, 30*time.Second)
 
 	c := &ProxyController{
 		client:                 coreClient,
@@ -141,8 +142,8 @@ func NewProxyController(
 	c.discoverPrometheusOperator(apiList)
 
 	if c.enablePrometheusOperator {
-		f := thirdpartyclient.NewInformerFactory(thirdPartyClientSet, thirdpartyclient.NewInformerCache(), metav1.NamespaceAll, 30*time.Second)
-		coreosInformer := thirdpartyclient.NewCoreV1Informer(f.Cache(), thirdPartyClientSet.CoreV1, metav1.NamespaceAll, 30*time.Second)
+		f := thirdpartyclient.NewInformerFactory(thirdPartyClientSet, thirdpartyclient.NewInformerCache(), namespace, 30*time.Second)
+		coreosInformer := thirdpartyclient.NewCoreV1Informer(f.Cache(), thirdPartyClientSet.CoreV1, namespace, 30*time.Second)
 		c.pmLister = coreosInformer.PodMonitorLister()
 		c.pmListerSynced = coreosInformer.PodMonitorInformer().HasSynced
 		f.Run(ctx)

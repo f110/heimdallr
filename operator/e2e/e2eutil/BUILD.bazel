@@ -1,10 +1,11 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "e2eutil",
     srcs = [
         "etcdcluster.go",
         "id.go",
+        "operator.go",
         "proxy.go",
         "webhook.go",
     ],
@@ -12,6 +13,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cert",
+        "//pkg/k8s",
         "//pkg/k8s/api/etcdv1alpha2",
         "//pkg/k8s/api/proxyv1alpha2",
         "//pkg/k8s/client",
@@ -28,6 +30,7 @@ go_library(
         "@io_k8s_api//core/v1:core",
         "@io_k8s_apimachinery//pkg/api/errors",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1/unstructured",
         "@io_k8s_apimachinery//pkg/labels",
         "@io_k8s_client_go//kubernetes",
         "@io_k8s_client_go//rest",
@@ -37,5 +40,17 @@ go_library(
         "@org_golang_google_grpc//credentials",
         "@org_golang_google_grpc//keepalive",
         "@org_uber_go_zap//:zap",
+    ],
+)
+
+go_test(
+    name = "e2eutil_test",
+    srcs = ["operator_test.go"],
+    embed = [":e2eutil"],
+    deps = [
+        "//pkg/cert",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1/unstructured",
     ],
 )

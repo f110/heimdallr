@@ -21,3 +21,17 @@ patchesJson6902:
       - op: add
         path: /spec/template/spec/containers/0/args/-
         value: --log-encoding=console
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --namespace=default
+  - target:
+      version: v1
+      group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: heimdallr-operator-webhook
+    patch: |-
+      - op: add
+        path: /webhooks/0/namespaceSelector
+        value:
+          matchLabels:
+            kubernetes.io/metadata.name: default
