@@ -42,6 +42,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers/controllerbase"
 	"go.f110.dev/heimdallr/pkg/logger"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 const (
@@ -64,6 +65,7 @@ type EtcdController struct {
 	client            *client.EtcdV1alpha2
 	clusterDomain     string
 	runOutsideCluster bool
+	operatorVersion   string
 
 	etcdClusterInformer  cache.SharedIndexInformer
 	clusterLister        *client.EtcdV1alpha2EtcdClusterLister
@@ -123,6 +125,7 @@ func NewEtcdController(
 		serviceAccountSynced: corev1Informer.ServiceAccountInformer().HasSynced,
 		transport:            transport,
 		etcdClientMockOpt:    mockOpt,
+		operatorVersion:      version.Version,
 	}
 
 	c.Controller = controllerbase.NewController(c, k8sClient)
@@ -215,6 +218,15 @@ type internalStateHandleFunc func(ctx context.Context, cluster *EtcdCluster) err
 func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error {
 	c := obj.(*etcdv1alpha2.EtcdCluster)
 	ec.Log(ctx).Debug("syncEtcdCluster", slog.String("namespace", c.Namespace), slog.String("name", c.Name))
+
+	if version.IsNewer(c.Status.OperatorVersion, ec.operatorVersion) {
+		ec.Log(ctx).Info("Skip reconciling because the EtcdCluster is reconciled by a newer operator",
+			slog.String("namespace", c.Namespace),
+			slog.String("name", c.Name),
+			slog.String("operatorVersion", c.Status.OperatorVersion),
+		)
+		return nil
+	}
 
 	if c.Status.Phase == "" || c.Status.Phase == etcdv1alpha2.EtcdClusterPhasePending {
 		c.Status.Phase = etcdv1alpha2.EtcdClusterPhaseInitializing
@@ -1161,6 +1173,9 @@ func (ec *EtcdController) updateStatus(ctx context.Context, cluster *EtcdCluster
 				cluster.Status.Restored.RestoredTime = &now
 			}
 		}
+	}
+	if cluster.Status.Phase == etcdv1alpha2.EtcdClusterPhaseRunning {
+		cluster.Status.OperatorVersion = ec.operatorVersion
 	}
 	ec.Log(ctx).Debug("Current Phase",
 		slog.String("phase", string(cluster.Status.Phase)),

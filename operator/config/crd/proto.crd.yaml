@@ -1674,6 +1674,8 @@ spec:
                       type: string
                   type: object
                 type: array
+              operatorVersion:
+                type: string
               phase:
                 enum:
                 - Pending
@@ -2661,6 +2663,8 @@ spec:
                 type: integer
               numberOfRpcPermissions:
                 type: integer
+              operatorVersion:
+                type: string
               phase:
                 enum:
                 - Creating

@@ -41,7 +41,7 @@ require (
 	go.etcd.io/etcd/server/v3 v3.6.14
 	go.f110.dev/githubmock v0.0.0-20261014135518-8f0db7e6d8f0
 	go.f110.dev/kubeproto v0.0.0-20260921161631-d95e2e53c30e
-	go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e
+	go.f110.dev/protoc-ddl v0.0.0-20261016172055-aa8bde19f76e
 	go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.56.0

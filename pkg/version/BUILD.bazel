@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("//:RELEASE.bzl", "VERSION")
 
 go_library(
@@ -7,4 +7,12 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/version",
     visibility = ["//visibility:public"],
     x_defs = {"Version": VERSION},
+    deps = ["@com_github_masterminds_semver_v3//:semver"],
+)
+
+go_test(
+    name = "version_test",
+    srcs = ["const_test.go"],
+    embed = [":version"],
+    deps = ["@com_github_stretchr_testify//assert"],
 )

@@ -54,6 +54,7 @@ message EtcdClusterStatus {
   optional string                                    client_cert_secret_name    = 8;
   optional BackupStatus                              backup                     = 9;
   optional RestoredStatus                            restored                   = 10;
+  optional string                                    operator_version           = 11;
 }
 
 message BackupSpec {

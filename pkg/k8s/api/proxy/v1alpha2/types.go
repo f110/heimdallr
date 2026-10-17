@@ -178,6 +178,7 @@ type ProxyStatus struct {
 	GithubWebhookSecretName     string     `json:"githubWebhookSecretName,omitempty"`
 	CookieSecretName            string     `json:"cookieSecretName,omitempty"`
 	InternalTokenSecretName     string     `json:"internalTokenSecretName,omitempty"`
+	OperatorVersion             string     `json:"operatorVersion,omitempty"`
 }
 
 // +genclient

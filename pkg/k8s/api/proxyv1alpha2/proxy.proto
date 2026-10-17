@@ -181,6 +181,7 @@ message ProxyStatus {
   optional string     github_webhook_secret_name      = 8;
   optional string     cookie_secret_name              = 9;
   optional string     internal_token_secret_name      = 10;
+  optional string     operator_version                = 11;
 }
 
 message Backend {

@@ -591,8 +591,8 @@ go.f110.dev/githubmock v0.0.0-20261014135518-8f0db7e6d8f0 h1:l+QbJxz/SD8L4F/g/qZ
 go.f110.dev/githubmock v0.0.0-20261014135518-8f0db7e6d8f0/go.mod h1:bEjZJSGhp4EqZsKtdAEQ1JtTJsXDYRcgL5XSD10RkPE=
 go.f110.dev/kubeproto v0.0.0-20260921161631-d95e2e53c30e h1:swOYCVXGINQ7ewq7+iXfb31RUc3OFooMZOQ2YiDJVlY=
 go.f110.dev/kubeproto v0.0.0-20260921161631-d95e2e53c30e/go.mod h1:NMQJ9EFWvp6sj1hbz8iOQ7Fb5u2j4Nnr4wN674kc1qw=
-go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e h1:JktOV2kO997MzXvaL5xEd11vd2M8Eu4XVjklzh/jxMU=
-go.f110.dev/protoc-ddl v0.0.0-20260618032231-28d15745bb9e/go.mod h1:6pxDObNjuB5LNwO/5oevZrrb0vLcC16JTlLZazL6CqM=
+go.f110.dev/protoc-ddl v0.0.0-20261016172055-aa8bde19f76e h1:sDVEvhonPlkxdtmAIS8gb4ygSrDgpK/+5t+hrJs7qaE=
+go.f110.dev/protoc-ddl v0.0.0-20261016172055-aa8bde19f76e/go.mod h1:6pxDObNjuB5LNwO/5oevZrrb0vLcC16JTlLZazL6CqM=
 go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89 h1:vmDGfMJANqslvJr74UdBL8rre7wmZsUSmNvfSDiA6mM=
 go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89/go.mod h1:3yUl7O5IuWwb+EnyHpK/zlyMK8z8s0boTM8skb6UyWg=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=

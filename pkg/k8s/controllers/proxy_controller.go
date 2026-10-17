@@ -33,6 +33,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/cert-manager/certmanagerv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyapi/prometheus-operator/monitoringv1"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
+	"go.f110.dev/heimdallr/pkg/version"
 )
 
 var (
@@ -74,6 +75,7 @@ type ProxyController struct {
 	pmLister       *thirdpartyclient.CoreV1PodMonitorLister
 	pmListerSynced cache.InformerSynced
 
+	operatorVersion          string
 	certManagerVersion       string
 	enablePrometheusOperator bool
 
@@ -126,6 +128,7 @@ func NewProxyController(
 		thirdPartyClientSet:    thirdPartyClientSet,
 		coreSharedInformer:     coreSharedInformerFactory,
 		certManagerVersion:     certManagerGroupVersionOrder[len(certManagerGroupVersionOrder)-1],
+		operatorVersion:        version.Version,
 	}
 	c.Controller = controllerbase.NewController(c, k8sClient)
 
@@ -325,6 +328,15 @@ func (c *ProxyController) UpdateObject(ctx context.Context, obj interface{}) err
 func (c *ProxyController) Reconcile(ctx context.Context, obj interface{}) error {
 	proxy := obj.(*proxyv1alpha2.Proxy)
 	c.Log(ctx).Debug("Reconcile Proxy", slog.String("namespace", proxy.Namespace), slog.String("name", proxy.Name))
+
+	if version.IsNewer(proxy.Status.OperatorVersion, c.operatorVersion) {
+		c.Log(ctx).Info("Skip reconciling because the Proxy is reconciled by a newer operator",
+			slog.String("namespace", proxy.Namespace),
+			slog.String("name", proxy.Name),
+			slog.String("operatorVersion", proxy.Status.OperatorVersion),
+		)
+		return nil
+	}
 
 	if proxy.Status.Phase == "" {
 		proxy.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
@@ -894,6 +906,9 @@ func (c *ProxyController) finishReconcile(ctx context.Context, lp *HeimdallrProx
 	newP.Status.GithubWebhookSecretName = lp.GithubSecretName()
 	newP.Status.CookieSecretName = lp.CookieSecretName()
 	newP.Status.InternalTokenSecretName = lp.InternalTokenSecretName()
+	if newP.Status.Ready {
+		newP.Status.OperatorVersion = c.operatorVersion
+	}
 
 	if !reflect.DeepEqual(newP.Status, lp.Object.Status) {
 		_, err := c.clientset.ProxyV1alpha2.UpdateStatusProxy(ctx, newP, metav1.UpdateOptions{})

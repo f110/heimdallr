@@ -198,6 +198,7 @@ func TestEtcdController(t *testing.T) {
 		updated := e.DeepCopy()
 		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
 		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
+		updated.Status.OperatorVersion = controller.operatorVersion
 		// The member that the operator has added before creating the Pod hasn't joined the cluster yet.
 		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
@@ -1521,6 +1522,114 @@ func TestEtcdController_DiscoveryService(t *testing.T) {
 	got, err := runner.CoreClient.CoreV1.GetService(context.TODO(), e.Namespace, cluster.ServerDiscoveryServiceName(), metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.True(t, got.Spec.PublishNotReadyAddresses)
+}
+
+func TestEtcdController_OperatorVersion(t *testing.T) {
+	newRunner := func(t *testing.T, operatorVersion string) (*controllertest.TestRunner, *EtcdController, *MockCluster) {
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: NewMockMaintenance()}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
+		controller.operatorVersion = operatorVersion
+
+		return runner, controller, etcdMockCluster
+	}
+	newRunningCluster := func(t *testing.T, runner *controllertest.TestRunner, controller *EtcdController, etcdMockCluster *MockCluster, operatorVersion string) *etcdv1alpha2.EtcdCluster {
+		e := etcd.Factory(nil,
+			k8sfactory.Name("test"),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Created,
+			etcd.Member(3),
+			etcd.MemberStatus(nil),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+			etcd.Ready,
+		)
+		e.Status.OperatorVersion = operatorVersion
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
+		for _, v := range cluster.AllMembers() {
+			runner.RegisterFixtures(k8sfactory.PodFactory(v.Pod, k8sfactory.Created, k8sfactory.Ready, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
+			etcdMockCluster.AddMember(&etcdserverpb.Member{Name: v.Pod.Name})
+			e.Status.Members = append(e.Status.Members, etcdv1alpha2.MemberStatus{Name: v.Pod.Name})
+		}
+
+		return e
+	}
+
+	t.Run("RecordWhenRunning", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, etcdMockCluster := newRunner(t, "v0.10.0")
+		e := newRunningCluster(t, runner, controller, etcdMockCluster, "v0.9.0")
+
+		err := runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.TODO(), e.Namespace, e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, etcdv1alpha2.EtcdClusterPhaseRunning, updated.Status.Phase)
+		assert.Equal(t, "v0.10.0", updated.Status.OperatorVersion)
+	})
+
+	t.Run("NotRecordWhenNotRunning", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, _ := newRunner(t, "v0.10.0")
+		e := etcd.Factory(nil,
+			k8sfactory.Name("test"),
+			k8sfactory.Namespace(metav1.NamespaceDefault),
+			k8sfactory.Created,
+			etcd.Member(3),
+			etcd.MemberStatus(nil),
+			etcd.Phase(etcdv1alpha2.EtcdClusterPhasePending),
+		)
+
+		err := runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.TODO(), e.Namespace, e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.NotEqual(t, etcdv1alpha2.EtcdClusterPhaseRunning, updated.Status.Phase)
+		assert.Empty(t, updated.Status.OperatorVersion)
+	})
+
+	t.Run("SkipWhenReconciledByNewerOperator", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, etcdMockCluster := newRunner(t, "v0.9.0")
+		e := newRunningCluster(t, runner, controller, etcdMockCluster, "v0.10.0")
+
+		err := runner.Reconcile(controller, e)
+		require.NoError(t, err)
+		runner.AssertNoUnexpectedAction(t)
+	})
+
+	t.Run("DevelopmentOperatorDoesNotSkip", func(t *testing.T) {
+		t.Parallel()
+
+		runner, controller, etcdMockCluster := newRunner(t, "latest")
+		e := newRunningCluster(t, runner, controller, etcdMockCluster, "v0.10.0")
+
+		err := runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.TODO(), e.Namespace, e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, "latest", updated.Status.OperatorVersion)
+	})
 }
 
 func (c *EtcdCluster) registerBasicObjectOfEtcdCluster(runner *controllertest.TestRunner) {
