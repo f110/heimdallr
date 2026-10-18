@@ -55,6 +55,8 @@ const (
 	InternalStateCreatingMembers     InternalState = "creatingMembers"
 	InternalStateRepair              InternalState = "repair"
 	InternalStateRestore             InternalState = "restore"
+	InternalStateRecreate            InternalState = "recreate"
+	InternalStateUnrecoverable       InternalState = "unrecoverable"
 	InternalStatePreparingUpdate     InternalState = "preparingUpdate"
 	InternalStateUpdatingMember      InternalState = "updatingMember"
 	InternalStateTeardownUpdating    InternalState = "teardownUpdating"
@@ -935,9 +937,12 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 			}
 		}
 
-		// TODO: Handle this case
+		hasRunningPod := slices.ContainsFunc(c.ownedPods, func(p *corev1.Pod) bool { return p.Status.Phase == corev1.PodPhaseRunning })
+		if c.Spec.VolumeClaimTemplate == nil && !hasRunningPod {
+			return InternalStateRecreate
+		}
 		c.log.Info("TODO: Need handle this case")
-		return InternalStateRunning
+		return InternalStateUnrecoverable
 	}
 
 	// Cluster updating works in progress

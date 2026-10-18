@@ -550,6 +550,100 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertNoUnexpectedAction(t)
 	})
 
+	t.Run("LostQuorumWithoutBackup", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			Name          string
+			ClusterTraits []k8sfactory.Trait
+			PodTraits     [][]k8sfactory.Trait
+			Recreate      bool
+		}{
+			{
+				Name:     "NoPods",
+				Recreate: true,
+			},
+			{
+				Name:      "AllPodsFailed",
+				PodTraits: [][]k8sfactory.Trait{{k8sfactory.PodFailed}, {k8sfactory.PodFailed}, {k8sfactory.PodFailed}},
+				Recreate:  true,
+			},
+			{
+				Name:      "MinorityRunning",
+				PodTraits: [][]k8sfactory.Trait{{k8sfactory.Ready}, {k8sfactory.PodFailed}, {k8sfactory.PodFailed}},
+				Recreate:  false,
+			},
+			{
+				Name:          "PersistentData",
+				ClusterTraits: []k8sfactory.Trait{etcd.PersistentData},
+				Recreate:      false,
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+
+				runner := controllertest.NewTestRunner()
+				etcdMockCluster := NewMockCluster()
+				etcdMockMaintenance := NewMockMaintenance()
+				mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+				controller, err := NewEtcdController(
+					runner.SharedInformerFactory,
+					runner.CoreSharedInformerFactory,
+					metav1.NamespaceAll,
+					&runner.CoreClient.Set,
+					runner.Client.EtcdV1alpha2,
+					runner.K8sCoreClient,
+					nil,
+					"cluster.local",
+					false,
+					nil,
+					mockOpt,
+				)
+				require.NoError(t, err)
+
+				e := etcd.Factory(etcdClusterBase, append([]k8sfactory.Trait{
+					k8sfactory.Name(normalizeName(t.Name())),
+					etcd.Phase(etcdv1alpha2.EtcdClusterPhaseRunning),
+					etcd.Ready,
+					etcd.CreatingCompleted,
+				}, tc.ClusterTraits...)...)
+				cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+				cluster.registerBasicObjectOfEtcdCluster(runner)
+				members := cluster.AllMembers()
+				for i, traits := range tc.PodTraits {
+					pod := k8sfactory.PodFactory(members[i].Pod, append([]k8sfactory.Trait{
+						k8sfactory.CreatedAt(time.Now().Add(-6 * time.Minute)),
+						k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339)),
+					}, traits...)...)
+					runner.RegisterFixtures(pod)
+				}
+
+				err = runner.Reconcile(controller, e)
+				require.NoError(t, err)
+
+				for i := range tc.PodTraits {
+					if tc.Recreate {
+						runner.AssertDeleteAction(t, members[i].Pod)
+					} else {
+						_, err := runner.CoreClient.CoreV1.GetPod(context.Background(), e.Namespace, members[i].Pod.Name, metav1.GetOptions{})
+						assert.NoError(t, err)
+					}
+				}
+
+				updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
+				require.NoError(t, err)
+				if tc.Recreate {
+					assert.Nil(t, updated.Status.LastReadyTransitionTime)
+				} else {
+					assert.NotNil(t, updated.Status.LastReadyTransitionTime)
+				}
+				assert.Nil(t, updated.Status.Restored)
+			})
+		}
+	})
+
 	t.Run("WatchOnlyTheNamespace", func(t *testing.T) {
 		t.Parallel()
 
