@@ -272,6 +272,10 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		handler = ec.stateTeardownUpdating
 	case InternalStateRestore:
 		handler = ec.stateRestore
+	case InternalStateRecreate:
+		handler = ec.stateRecreate
+	case InternalStateUnrecoverable:
+		handler = ec.stateUnrecoverable
 	case InternalStateRunning:
 		handler = ec.stateRunning
 	default:
@@ -640,9 +644,32 @@ func (ec *EtcdController) stateRestore(ctx context.Context, cluster *EtcdCluster
 		}
 	}
 
-	members := cluster.AllExistMembers()
+	return ec.resetCluster(ctx, cluster)
+}
 
-	for _, v := range members {
+func (ec *EtcdController) stateRecreate(ctx context.Context, cluster *EtcdCluster) error {
+	ec.EventRecorder().Event(
+		cluster.EtcdCluster,
+		corev1.EventTypeWarning,
+		"Recreating",
+		"The cluster lost the quorum and the data. Recreating the cluster without data.",
+	)
+	return ec.resetCluster(ctx, cluster)
+}
+
+func (ec *EtcdController) stateUnrecoverable(_ context.Context, cluster *EtcdCluster) error {
+	ec.EventRecorder().Event(
+		cluster.EtcdCluster,
+		corev1.EventTypeWarning,
+		"Unrecoverable",
+		"The cluster lost the quorum and has no backup. Manual recovery is required because the data may remain.",
+	)
+	return nil
+}
+
+// resetCluster deletes all members and moves the cluster back to the creating phase.
+func (ec *EtcdController) resetCluster(ctx context.Context, cluster *EtcdCluster) error {
+	for _, v := range cluster.AllExistMembers() {
 		ec.Log(ctx).Debug("Delete pod", slog.String("name", v.Name))
 		if err := ec.coreClient.CoreV1.DeletePod(ctx, v.Namespace, v.Name, metav1.DeleteOptions{}); err != nil {
 			return xerrors.WithStack(err)
