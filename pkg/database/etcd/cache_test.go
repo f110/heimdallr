@@ -10,6 +10,8 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 func TestCache(t *testing.T) {
@@ -180,6 +182,30 @@ func TestCache(t *testing.T) {
 
 		cache.Close()
 	})
+}
+
+func TestCache_KeepConnectionActiveAfterCanceledRequest(t *testing.T) {
+	const idleTimeout = 200 * time.Millisecond
+	c, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{etcdUrl.String()},
+		DialTimeout: 1 * time.Second,
+		DialOptions: []grpc.DialOption{grpc.WithIdleTimeout(idleTimeout)},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { c.Close() })
+
+	cache := NewCache(c, "keep-connection-active/", nil)
+	cache.Start(context.Background())
+	t.Cleanup(cache.Close)
+	waitForSync(t, cache)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = c.Get(ctx, "keep-connection-active/canceled")
+	require.ErrorIs(t, err, context.Canceled)
+
+	time.Sleep(5 * idleTimeout)
+	assert.Equal(t, connectivity.Ready, c.ActiveConnection().GetState())
 }
 
 func newCache(t *testing.T, fakeKV *fakeKV, fakeWatcher *fakeWatcher) *Cache {

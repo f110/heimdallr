@@ -51,5 +51,7 @@ go_test(
         "@io_etcd_go_etcd_api_v3//mvccpb",
         "@io_etcd_go_etcd_client_v3//:client",
         "@io_etcd_go_etcd_server_v3//embed",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//connectivity",
     ],
 )
