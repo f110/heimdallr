@@ -246,6 +246,7 @@ type BackendHTTPSpec struct {
 	Upstream        string           `json:"upstream,omitempty"`
 	Insecure        bool             `json:"insecure,omitempty"`
 	Agent           bool             `json:"agent,omitempty"`
+	PreservePath    bool             `json:"preservePath,omitempty"`
 }
 
 type BackendSocketSpec struct {

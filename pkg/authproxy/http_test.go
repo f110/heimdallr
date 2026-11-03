@@ -44,6 +44,50 @@ func TestNewHttpProxy(t *testing.T) {
 	assert.NotNil(t, p, "NewHttpProxy should return a value")
 }
 
+func TestTransport_RoundTrip(t *testing.T) {
+	var gotPath string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		gotPath = req.URL.Path
+	}))
+	t.Cleanup(upstream.Close)
+
+	conf := &configv2.Config{
+		AccessProxy: &configv2.AccessProxy{ServerNameHost: "example.com"},
+	}
+	err := conf.AccessProxy.Setup([]*configv2.Backend{
+		{
+			Name: "test",
+			HTTP: []*configv2.HTTPBackend{
+				{Path: "/strip", Upstream: upstream.URL},
+				{Path: "/preserve", Upstream: upstream.URL, PreservePath: true},
+			},
+		},
+	})
+	require.NoError(t, err)
+	transport := NewTransport(conf, nil)
+
+	cases := []struct {
+		Path   string
+		Expect string
+	}{
+		{Path: "/strip/foo", Expect: "/foo"},
+		{Path: "/strip", Expect: "/"},
+		{Path: "/preserve/foo", Expect: "/preserve/foo"},
+		{Path: "/preserve", Expect: "/preserve"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.Path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, upstream.URL+tt.Path, nil)
+			req.Host = "test.example.com"
+			req.RequestURI = ""
+			res, err := transport.RoundTrip(req)
+			require.NoError(t, err)
+			res.Body.Close()
+			assert.Equal(t, tt.Expect, gotPath)
+		})
+	}
+}
+
 func TestHttpProxy_ServeHTTP(t *testing.T) {
 	u := memory.NewUserDatabase()
 	_ = u.Set(nil, &database.User{Id: "foobarbaz@example.com", Roles: []string{"test", "unknown"}})

@@ -259,11 +259,12 @@ type Backend struct {
 }
 
 type HTTPBackend struct {
-	Path     string `json:"path"`
-	Default  bool   `json:"default,omitempty"`
-	Upstream string `json:"upstream,omitempty"`
-	Insecure bool   `json:"insecure,omitempty"`
-	Agent    bool   `json:"agent,omitempty"`
+	Path         string `json:"path"`
+	Default      bool   `json:"default,omitempty"`
+	Upstream     string `json:"upstream,omitempty"`
+	Insecure     bool   `json:"insecure,omitempty"`
+	Agent        bool   `json:"agent,omitempty"`
+	PreservePath bool   `json:"preservePath,omitempty"`
 
 	Name      string          `json:"-"`
 	Url       *url.URL        `json:"-"`

@@ -63,10 +63,11 @@ func (ConfigConverter) Proxy(backends []*proxyv1alpha2.Backend, serviceLister *k
 			}
 
 			routing = append(routing, &configv2.HTTPBackend{
-				Path:     r.Path,
-				Upstream: upstream,
-				Insecure: r.Insecure,
-				Agent:    r.Agent,
+				Path:         r.Path,
+				Upstream:     upstream,
+				Insecure:     r.Insecure,
+				Agent:        r.Agent,
+				PreservePath: r.PreservePath,
 			})
 		}
 
