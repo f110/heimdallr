@@ -125,7 +125,9 @@ func NewTransport(conf *configv2.Config, ct *connector.Server) *Transport {
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	b, ok := t.config.AccessProxy.GetBackendByHost(req.Host)
 	httpBackend := b.BackendSelector.Find(req.URL.Path)
-	req.URL.Path = strings.TrimPrefix(req.URL.Path, httpBackend.Path)
+	if !httpBackend.PreservePath {
+		req.URL.Path = strings.TrimPrefix(req.URL.Path, httpBackend.Path)
+	}
 	if len(req.URL.Path) == 0 {
 		req.URL.Path = "/"
 	} else if req.URL.Path[0] != '/' {

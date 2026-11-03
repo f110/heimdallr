@@ -214,6 +214,7 @@ message BackendHTTPSpec {
   optional string          upstream         = 3;
   optional bool            insecure         = 4;
   optional bool            agent            = 5;
+  optional bool            preserve_path    = 6;
 }
 
 message BackendSocketSpec {

@@ -97,6 +97,39 @@ func TestConfigConverter_Proxy(t *testing.T) {
 			},
 		},
 		{
+			Description: "HTTP backend with preserving path",
+			Backends: []*proxyv1alpha2.Backend{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+					Spec: proxyv1alpha2.BackendSpec{
+						HTTP: []proxyv1alpha2.BackendHTTPSpec{
+							{
+								Path:         "/api",
+								Upstream:     "http://127.0.0.1:8080",
+								PreservePath: true,
+							},
+						},
+						Permissions: []proxyv1alpha2.Permission{
+							{Name: "all", Locations: []proxyv1alpha2.Location{{Any: "/"}}},
+						},
+					},
+				},
+			},
+			Expect: []*configv2.Backend{
+				{
+					Name: "test",
+					HTTP: []*configv2.HTTPBackend{
+						{Path: "/api", Upstream: "http://127.0.0.1:8080", PreservePath: true},
+					},
+					Permissions: []*configv2.Permission{
+						{Name: "all", Locations: []configv2.Location{{Any: "/"}}},
+					},
+				},
+			},
+		},
+		{
 			Description: "Socket backend via Service",
 			Backends: []*proxyv1alpha2.Backend{
 				{
