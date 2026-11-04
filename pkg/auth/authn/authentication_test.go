@@ -124,15 +124,16 @@ func Test_Authenticate(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public.proxy.example.com/ok", nil)
-			_, _, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
+			assert.Equal(t, AuthMethod(""), identity.Method)
 		})
 
 		t.Run("with restricted path", func(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/ok", nil)
-			_, _, err := a.Authenticate(context.TODO(), req)
+			_, err := a.Authenticate(context.TODO(), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,7 +143,7 @@ func Test_Authenticate(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, "http://public-path.proxy.example.com/disallow", nil)
-			_, _, err := a.Authenticate(context.TODO(), req)
+			_, err := a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrNotAllowed, err)
 		})
 	})
@@ -158,9 +159,10 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req.AddCookie(c)
 
-			user, _, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
+			assert.Equal(t, AuthMethodCookie, identity.Method)
 		})
 
 		t.Run("normal", func(t *testing.T) {
@@ -171,13 +173,13 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req.AddCookie(c)
 
-			user, _, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
 
-			user, _, err = a.Authenticate(context.TODO(), req)
+			identity, err = a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
 		})
 
 		t.Run("normal with root user", func(t *testing.T) {
@@ -187,10 +189,11 @@ func Test_Authenticate(t *testing.T) {
 			c, err := s.Cookie(session.New("root@example.com"))
 			require.NoError(t, err)
 			req.AddCookie(c)
-			user, _, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "root@example.com", user.Id)
-			assert.True(t, user.RootUser)
+			assert.Equal(t, "root@example.com", identity.User.Id)
+			assert.True(t, identity.User.RootUser)
+			assert.Equal(t, AuthMethodCookie, identity.Method)
 		})
 
 		t.Run("not have cookie", func(t *testing.T) {
@@ -198,7 +201,7 @@ func Test_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 
-			_, _, err := a.Authenticate(context.TODO(), req)
+			_, err := a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrSessionNotFound, err)
 		})
 
@@ -209,7 +212,7 @@ func Test_Authenticate(t *testing.T) {
 			c, err := s.Cookie(session.New("foo@example.com"))
 			require.NoError(t, err)
 			req.AddCookie(c)
-			_, _, err = a.Authenticate(context.TODO(), req)
+			_, err = a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrUserNotFound, err)
 		})
 
@@ -218,7 +221,7 @@ func Test_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://unknownhost.example.com/ok", nil)
 
-			_, _, err := a.Authenticate(context.TODO(), req)
+			_, err := a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrHostnameNotFound, err)
 		})
 	})
@@ -246,9 +249,10 @@ func Test_Authenticate(t *testing.T) {
 			req.TLS = &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{newClientCert(t, "foobar@example.com")},
 			}
-			user, _, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
+			assert.Equal(t, AuthMethodMTLS, identity.Method)
 		})
 
 		t.Run("normal with revoked certificate", func(t *testing.T) {
@@ -261,7 +265,7 @@ func Test_Authenticate(t *testing.T) {
 			req.TLS = &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{clientCert},
 			}
-			_, _, err = a.Authenticate(context.TODO(), req)
+			_, err = a.Authenticate(context.TODO(), req)
 			require.Error(t, err)
 			assert.Equal(t, ErrInvalidCertificate, err)
 		})
@@ -278,8 +282,9 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req.AddCookie(c)
 
-			_, _, err = a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
+			assert.Equal(t, AuthMethodMTLS, identity.Method)
 		})
 	})
 
@@ -293,10 +298,11 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "Bearer "+tk.Token)
-			user, sess, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
-			assert.Equal(t, "foobar@example.com", sess.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
+			assert.Equal(t, "foobar@example.com", identity.Session.Id)
+			assert.Equal(t, AuthMethodToken, identity.Method)
 		})
 
 		t.Run("Basic", func(t *testing.T) {
@@ -306,10 +312,11 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.SetBasicAuth("anything", tk.Token)
-			user, sess, err := a.Authenticate(context.TODO(), req)
+			identity, err := a.Authenticate(context.TODO(), req)
 			require.NoError(t, err)
-			assert.Equal(t, "foobar@example.com", user.Id)
-			assert.Equal(t, "foobar@example.com", sess.Id)
+			assert.Equal(t, "foobar@example.com", identity.User.Id)
+			assert.Equal(t, "foobar@example.com", identity.Session.Id)
+			assert.Equal(t, AuthMethodToken, identity.Method)
 		})
 
 		t.Run("invalid token", func(t *testing.T) {
@@ -317,12 +324,12 @@ func Test_Authenticate(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "Bearer unknown-token")
-			_, _, err = a.Authenticate(context.TODO(), req)
+			_, err = a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrInvalidToken, err)
 
 			req = httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.SetBasicAuth("anything", "unknown-token")
-			_, _, err = a.Authenticate(context.TODO(), req)
+			_, err = a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrInvalidToken, err)
 		})
 
@@ -332,7 +339,7 @@ func Test_Authenticate(t *testing.T) {
 			for _, v := range []string{"Bearer", "Bearer ", "Basic", "Basic !!!", "Basic Zm9vYmFy"} {
 				req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 				req.Header.Set("Authorization", v)
-				_, _, err = a.Authenticate(context.TODO(), req)
+				_, err = a.Authenticate(context.TODO(), req)
 				assert.Equal(t, ErrInvalidToken, err, v)
 			}
 		})
@@ -344,7 +351,7 @@ func Test_Authenticate(t *testing.T) {
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodGet, "http://test.proxy.example.com/ok", nil)
 			req.Header.Set("Authorization", "Bearer "+tk.Token)
-			_, _, err = a.Authenticate(context.TODO(), req)
+			_, err = a.Authenticate(context.TODO(), req)
 			assert.Equal(t, ErrUserNotFound, err)
 		})
 	})

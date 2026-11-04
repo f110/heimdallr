@@ -37,6 +37,7 @@ go_test(
     embed = [":authproxy"],
     deps = [
         "//pkg/auth",
+        "//pkg/auth/authn",
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/database",
@@ -45,6 +46,7 @@ go_test(
         "//pkg/netutil",
         "//pkg/rpc/rpcclient",
         "//pkg/session",
+        "@com_github_golang_jwt_jwt_v4//:jwt",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],

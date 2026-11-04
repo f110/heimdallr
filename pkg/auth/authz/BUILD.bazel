@@ -6,10 +6,10 @@ go_library(
     importpath = "go.f110.dev/heimdallr/pkg/auth/authz",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/auth/authn",
         "//pkg/config/configv2",
         "//pkg/database",
         "//pkg/logger",
-        "//pkg/session",
         "@dev_f110_go_xerrors//:xerrors",
         "@org_golang_google_grpc//:grpc",
     ],
@@ -23,6 +23,7 @@ go_test(
     ],
     embed = [":authz"],
     deps = [
+        "//pkg/auth/authn",
         "//pkg/cert",
         "//pkg/config/configv2",
         "//pkg/database",

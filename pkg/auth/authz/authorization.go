@@ -10,10 +10,10 @@ import (
 	"go.f110.dev/xerrors"
 	"google.golang.org/grpc"
 
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
 	"go.f110.dev/heimdallr/pkg/logger"
-	"go.f110.dev/heimdallr/pkg/session"
 )
 
 var (
@@ -32,15 +32,15 @@ func Init(conf *configv2.Config) {
 	DefaultAuthorization.Config = conf
 }
 
-func Authorization(ctx context.Context, req *http.Request, user *database.User, sess *session.Session) error {
-	return DefaultAuthorization.Authorization(ctx, req, user, sess)
+func Authorization(ctx context.Context, req *http.Request, identity *authn.Identity) error {
+	return DefaultAuthorization.Authorization(ctx, req, identity)
 }
 
 func AuthorizationSocket(ctx context.Context, backend *configv2.Backend, user *database.User) error {
 	return DefaultAuthorization.AuthorizationSocket(ctx, backend, user)
 }
 
-func (a *authorization) Authorization(_ context.Context, req *http.Request, user *database.User, sess *session.Session) error {
+func (a *authorization) Authorization(_ context.Context, req *http.Request, identity *authn.Identity) error {
 	backend, ok := a.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
 		return ErrHostnameNotFound
@@ -57,7 +57,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 		return nil
 	}
 
-	if backend.AllowRootUser && user.RootUser {
+	if backend.AllowRootUser && identity.User.RootUser {
 		return nil
 	}
 
@@ -66,7 +66,7 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 	if len(matched) == 0 {
 		return ErrNotAllowed
 	}
-	for _, r := range user.Roles {
+	for _, r := range identity.User.Roles {
 		role, err := a.Config.AuthorizationEngine.GetRole(r)
 		if errors.Is(err, configv2.ErrRoleNotFound) {
 			continue
@@ -84,17 +84,17 @@ func (a *authorization) Authorization(_ context.Context, req *http.Request, user
 		}
 	}
 	if !checkPermission {
-		logger.Log.Debug("User not permitted", slog.String("user", user.Id), slog.Any("roles", user.Roles))
+		logger.Log.Debug("User not permitted", slog.String("user", identity.User.Id), slog.Any("roles", identity.User.Roles))
 		return ErrNotAllowed
 	}
 
 	if backend.MaxSessionDuration != nil {
-		if sess == nil {
+		if identity.Session == nil {
 			return ErrSessionNotFound
 		}
 
-		if time.Now().After(sess.IssuedAt.Add(backend.MaxSessionDuration.Duration)) {
-			logger.Log.Debug("User authenticated but session is expired", slog.Time("issued_at", sess.IssuedAt))
+		if time.Now().After(identity.Session.IssuedAt.Add(backend.MaxSessionDuration.Duration)) {
+			logger.Log.Debug("User authenticated but session is expired", slog.Time("issued_at", identity.Session.IssuedAt))
 			return ErrSessionNotFound
 		}
 	}

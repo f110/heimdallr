@@ -36,6 +36,24 @@ var (
 	ErrNotAllowed         = xerrors.New("authn: not allowed")
 )
 
+// AuthMethod is the method used to authenticate the request.
+// The value is used as the amr claim (RFC 8176) of the token for the backend.
+type AuthMethod string
+
+const (
+	AuthMethodMTLS   AuthMethod = "mtls"
+	AuthMethodToken  AuthMethod = "token"
+	AuthMethodCookie AuthMethod = "cookie"
+)
+
+// Identity is the result of the authentication of the request.
+type Identity struct {
+	User *database.User
+	// Session is nil if the request is authenticated by the client certificate without the cookie.
+	Session *session.Session
+	Method  AuthMethod
+}
+
 type authentication struct {
 	Config *configv2.Config
 
@@ -61,35 +79,35 @@ func Init(conf *configv2.Config, sessionStore session.Store, userDatabase databa
 	}
 }
 
-func (a *authentication) Authenticate(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
+func (a *authentication) Authenticate(ctx context.Context, req *http.Request) (*Identity, error) {
 	backend, ok := a.Config.AccessProxy.GetBackendByHost(req.Host)
 	if !ok {
-		return nil, nil, ErrHostnameNotFound
+		return nil, ErrHostnameNotFound
 	}
 	if backend.DisableAuthn {
 		if len(backend.Permissions) == 0 {
-			return &database.User{}, nil, nil
+			return &Identity{User: &database.User{}}, nil
 		}
 
 		matched := backend.MatchList(req)
 		if len(matched) == 0 {
-			return nil, nil, ErrNotAllowed
+			return nil, ErrNotAllowed
 		}
-		return &database.User{}, nil, nil
+		return &Identity{User: &database.User{}}, nil
 	}
 
-	user, sess, err := a.findUser(ctx, req)
+	identity, err := a.findUser(ctx, req)
 	if errors.Is(err, ErrUserNotFound) {
-		u, s, rErr := a.findRootUser(req)
+		rootIdentity, rErr := a.findRootUser(req)
 		if rErr != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return u, s, nil
+		return rootIdentity, nil
 	} else if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return user, sess, nil
+	return identity, nil
 }
 
 func (a *authentication) AuthenticateSocket(ctx context.Context, token, host string) (*configv2.Backend, *database.User, error) {
@@ -156,14 +174,14 @@ func (a *authentication) StreamCall(ss grpc.ServerStream) (*database.User, error
 	return user, nil
 }
 
-func (a *authentication) findUser(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
+func (a *authentication) findUser(ctx context.Context, req *http.Request) (*Identity, error) {
 	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
 		logger.Log.Debug("Client Certificate authorization", logger.WithRequestId(ctx))
 		// Client Certificate Authorization
 		cert := req.TLS.PeerCertificates[0]
 		if time.Now().After(cert.NotAfter) || time.Now().Before(cert.NotBefore) {
 			logger.Log.Debug("Expired certificate", logger.WithRequestId(ctx))
-			return nil, nil, ErrInvalidCertificate
+			return nil, ErrInvalidCertificate
 		}
 		_, err := cert.Verify(x509.VerifyOptions{
 			Roots:     a.Config.CertificateAuthority.CertPool,
@@ -171,81 +189,89 @@ func (a *authentication) findUser(ctx context.Context, req *http.Request) (*data
 		})
 		if err != nil {
 			logger.Log.Debug("Failure verify certificate", slog.Any("error", err), logger.WithRequestId(ctx))
-			return nil, nil, ErrInvalidCertificate
+			return nil, ErrInvalidCertificate
 		}
 
 		u, err := a.userDatabase.Get(cert.Subject.CommonName)
 		if err != nil {
-			return nil, nil, ErrUserNotFound
+			return nil, ErrUserNotFound
 		}
 
 		revoked := a.revokedCert.Get()
 		for _, r := range revoked {
 			if r.SerialNumber.Cmp(cert.SerialNumber) == 0 {
 				logger.Log.Debug("Revoked certificate", logger.WithRequestId(ctx))
-				return nil, nil, ErrInvalidCertificate
+				return nil, ErrInvalidCertificate
 			}
 		}
 
 		// Session by cookie is an optional
 		s, err := a.sessionStore.GetSession(req)
 		if err != nil {
-			return u, nil, nil
+			return &Identity{User: u, Method: AuthMethodMTLS}, nil
 		}
 
-		return u, s, nil
+		return &Identity{User: u, Session: s, Method: AuthMethodMTLS}, nil
 	}
 
 	if token, ok, err := tokenFromAuthorizationHeader(req); ok {
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		user, t, err := a.findUserByToken(ctx, token)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
-		return user, &session.Session{
-			Id:       t.UserId,
-			IssuedAt: t.IssuedAt,
+		return &Identity{
+			User: user,
+			Session: &session.Session{
+				Id:       t.UserId,
+				IssuedAt: t.IssuedAt,
+			},
+			Method: AuthMethodToken,
 		}, nil
 	}
 
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
 		logger.Log.Debug("Failed get session", slog.Any("error", err))
-		return nil, nil, ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
 		logger.Log.Debug("Got session but id is empty")
-		return nil, nil, ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 	u, err := a.userDatabase.Get(s.Id)
 	if err != nil {
-		return nil, nil, ErrUserNotFound
+		return nil, ErrUserNotFound
 	}
 
-	return u, s, nil
+	return &Identity{User: u, Session: s, Method: AuthMethodCookie}, nil
 }
 
-func (a *authentication) findRootUser(req *http.Request) (*database.User, *session.Session, error) {
+func (a *authentication) findRootUser(req *http.Request) (*Identity, error) {
 	s, err := a.sessionStore.GetSession(req)
 	if err != nil {
-		return nil, nil, ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 	if s.Id == "" {
-		return nil, nil, ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	asRootUser := slices.Contains(a.Config.AuthorizationEngine.RootUsers, s.Id)
 	if !asRootUser {
-		return nil, nil, ErrUserNotFound
+		return nil, ErrUserNotFound
 	}
 
-	return &database.User{
-		Id:       s.Id,
-		RootUser: true,
-	}, s, nil
+	return &Identity{
+		User: &database.User{
+			Id:       s.Id,
+			RootUser: true,
+		},
+		Session: s,
+		Method:  AuthMethodCookie,
+	}, nil
 }
 
 func (a *authentication) authenticateByMetadata(ctx context.Context, md metadata.MD) (*database.User, error) {
