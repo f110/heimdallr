@@ -200,10 +200,14 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 	}
 
 	var user *database.User
+	var identity *authn.Identity
 	if !isPreflight {
-		u, _, err := auth.Authenticate(ctx, req)
+		id, err := auth.Authenticate(ctx, req)
 		defer p.accessLog(ctx, w, req, user)
-		user = u
+		identity = id
+		if id != nil {
+			user = id.User
+		}
 
 		switch err {
 		case auth.ErrSessionNotFound:
@@ -245,7 +249,7 @@ func (p *HttpProxy) ServeHTTP(ctx context.Context, w http.ResponseWriter, req *h
 		return
 	}
 
-	if err := p.setHeader(req, backend, user); err != nil {
+	if err := p.setHeader(req, backend, identity); err != nil {
 		logger.Log.Warn("Failed to set headers to request of backend", slog.Any("error", err), logger.WithRequestId(ctx))
 		return
 	}
@@ -389,19 +393,20 @@ func (p *HttpProxy) director(req *http.Request) {
 	}
 }
 
-func (p *HttpProxy) setHeader(req *http.Request, backend *configv2.Backend, user *database.User) error {
+func (p *HttpProxy) setHeader(req *http.Request, backend *configv2.Backend, identity *authn.Identity) error {
 	if !backend.DisableAuthn && authn.HasTokenAuthorization(req) {
 		req.Header.Del("Authorization")
 	}
 	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", "https")
 
-	if user != nil && user.Id != "" {
+	if identity != nil && identity.User != nil && identity.User.Id != "" {
 		claim := jwt.NewWithClaims(jwt.SigningMethodES256, &authn.TokenClaims{
-			Subject:   user.Id,
+			Subject:   identity.User.Id,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
-			Roles:     user.Roles,
+			Roles:     identity.User.Roles,
+			AMR:       []string{string(identity.Method)},
 		})
 		token, err := claim.SignedString(p.Config.AccessProxy.Credential.SigningPrivateKey)
 		if err != nil {
@@ -410,7 +415,7 @@ func (p *HttpProxy) setHeader(req *http.Request, backend *configv2.Backend, user
 		}
 
 		req.Header.Set(TokenHeaderName, token)
-		req.Header.Set(UserIdHeaderName, user.Id)
+		req.Header.Set(UserIdHeaderName, identity.User.Id)
 	}
 
 	cookies := req.Cookies()

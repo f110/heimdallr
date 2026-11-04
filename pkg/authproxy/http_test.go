@@ -17,10 +17,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.f110.dev/heimdallr/pkg/auth"
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -432,6 +434,26 @@ func TestHttpProxy_setHeader(t *testing.T) {
 			req.Header.Set("Authorization", in)
 			require.NoError(t, p.setHeader(req, &configv2.Backend{DisableAuthn: true}, nil))
 			assert.Equal(t, in, req.Header.Get("Authorization"), in)
+		}
+	})
+
+	t.Run("AMR", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		p := &HttpProxy{Config: &configv2.Config{AccessProxy: &configv2.AccessProxy{
+			Credential: &configv2.Credential{SigningPrivateKey: privateKey},
+		}}}
+
+		for _, method := range []authn.AuthMethod{authn.AuthMethodMTLS, authn.AuthMethodToken, authn.AuthMethodCookie} {
+			req := httptest.NewRequest(http.MethodGet, "https://test.example.com/", nil)
+			require.NoError(t, p.setHeader(req, &configv2.Backend{}, &authn.Identity{User: &database.User{Id: "foobar@example.com"}, Method: method}))
+
+			claims := &authn.TokenClaims{}
+			_, err := jwt.ParseWithClaims(req.Header.Get(TokenHeaderName), claims, func(_ *jwt.Token) (any, error) {
+				return &privateKey.PublicKey, nil
+			})
+			require.NoError(t, err)
+			assert.Equal(t, []string{string(method)}, claims.AMR, method)
 		}
 	})
 }

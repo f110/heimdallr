@@ -7,4 +7,5 @@ import (
 type TokenClaims struct {
 	jwt.RegisteredClaims
 	Roles []string `json:"roles,omitempty"`
+	AMR   []string `json:"amr,omitempty"`
 }

@@ -60,26 +60,26 @@ func Init(conf *configv2.Config, sessionStore session.Store, userDatabase databa
 	unauthorizedError = v
 }
 
-func Authenticate(ctx context.Context, req *http.Request) (*database.User, *session.Session, error) {
-	user, sess, err := authn.DefaultAuthentication.Authenticate(ctx, req)
+func Authenticate(ctx context.Context, req *http.Request) (*authn.Identity, error) {
+	identity, err := authn.DefaultAuthentication.Authenticate(ctx, req)
 	if err != nil {
 		if v, ok := errorMap[err]; ok {
-			return nil, nil, v
+			return nil, v
 		} else {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	err = authz.DefaultAuthorization.Authorization(ctx, req, user, sess)
+	err = authz.DefaultAuthorization.Authorization(ctx, req, identity)
 	if err != nil {
 		if v, ok := errorMap[err]; ok {
-			return user, sess, v
+			return identity, v
 		} else {
-			return user, sess, err
+			return identity, err
 		}
 	}
 
-	return user, sess, nil
+	return identity, nil
 }
 
 func AuthenticateSocket(ctx context.Context, token, host string) (*configv2.Backend, *database.User, error) {

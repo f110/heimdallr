@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.f110.dev/heimdallr/pkg/auth/authn"
 	"go.f110.dev/heimdallr/pkg/cert"
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/database"
@@ -54,7 +55,7 @@ func TestAuthorization(t *testing.T) {
 
 			a := newAuthorization(t, backend, &configv2.Role{})
 			req := httptest.NewRequest(http.MethodGet, "http://public.proxy.example.com/ok", nil)
-			err := a.Authorization(context.TODO(), req, nil, nil)
+			err := a.Authorization(context.TODO(), req, nil)
 			require.NoError(t, err)
 		})
 
@@ -83,7 +84,7 @@ func TestAuthorization(t *testing.T) {
 
 					a := newAuthorization(t, backend, &configv2.Role{})
 					req := httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+c.Path, nil)
-					err := a.Authorization(context.TODO(), req, nil, nil)
+					err := a.Authorization(context.TODO(), req, nil)
 					if c.ExpectErr == nil {
 						require.NoError(t, err)
 					} else {
@@ -117,11 +118,11 @@ func TestAuthorization(t *testing.T) {
 
 			a := newAuthorization(t, backend, role)
 			req := httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/ok", nil)
-			err := a.Authorization(context.TODO(), req, user, nil)
+			err := a.Authorization(context.TODO(), req, &authn.Identity{User: user})
 			require.NoError(t, err)
 
 			req = httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/user/1", nil)
-			err = a.Authorization(context.TODO(), req, user, nil)
+			err = a.Authorization(context.TODO(), req, &authn.Identity{User: user})
 			require.NoError(t, err)
 		})
 
@@ -144,7 +145,7 @@ func TestAuthorization(t *testing.T) {
 
 			a := newAuthorization(t, backend, role)
 			req := httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/ok", nil)
-			err := a.Authorization(context.TODO(), req, user, nil)
+			err := a.Authorization(context.TODO(), req, &authn.Identity{User: user})
 			require.NoError(t, err)
 		})
 
@@ -181,7 +182,7 @@ func TestAuthorization(t *testing.T) {
 
 					a := newAuthorization(t, backend, role)
 					req := httptest.NewRequest(http.MethodGet, "http://"+backend.Name+"."+serverName+"/ok", nil)
-					err := a.Authorization(context.TODO(), req, user, c.Session)
+					err := a.Authorization(context.TODO(), req, &authn.Identity{User: user, Session: c.Session})
 					if c.ExpectErr != nil {
 						require.Error(t, err, "expected to occurred error")
 						require.Equal(t, c.ExpectErr, err, "expected %v", c.ExpectErr)
