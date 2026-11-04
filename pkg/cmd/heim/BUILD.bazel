@@ -1,8 +1,11 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "heim",
-    srcs = ["login.go"],
+    srcs = [
+        "login.go",
+        "token.go",
+    ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heim",
     visibility = ["//visibility:public"],
     deps = [
@@ -10,5 +13,16 @@ go_library(
         "//pkg/cmd",
         "//pkg/config/userconfig",
         "@dev_f110_go_xerrors//:xerrors",
+    ],
+)
+
+go_test(
+    name = "heim_test",
+    srcs = ["token_test.go"],
+    embed = [":heim"],
+    deps = [
+        "//pkg/config/userconfig",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )
