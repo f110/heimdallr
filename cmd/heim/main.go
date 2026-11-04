@@ -12,6 +12,7 @@ func heimCli(args []string) error {
 	rootCmd := &cmd.Command{Use: "heim"}
 
 	heim.Login(rootCmd)
+	heim.Token(rootCmd)
 
 	return rootCmd.Execute(args)
 }
