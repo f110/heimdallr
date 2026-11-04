@@ -35,5 +35,4 @@ ASSET_FILES = [
     "//cmd/heim-tunnel:heim-tunnel_darwin_arm64",
     "//cmd/heim-tunnel:heim-tunnel_linux_amd64",
     "//cmd/heim-tunnel:heim-tunnel_windows_amd64",
-    "//cmd/heimdallrcontroller",
 ]
