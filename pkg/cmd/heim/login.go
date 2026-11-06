@@ -12,14 +12,14 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
-func login(server, overrideOpenURLCommand string, insecure bool) error {
+func login(ctx context.Context, server, overrideOpenURLCommand string, insecure bool) error {
 	uc, err := userconfig.New()
 	if err != nil {
 		return err
 	}
 
 	endpoint := fmt.Sprintf("https://%s/token", server)
-	t, expiresAt, err := token.NewClient(net.DefaultResolver).RequestToken(endpoint, overrideOpenURLCommand, insecure)
+	t, expiresAt, err := token.NewClient(net.DefaultResolver).RequestToken(ctx, endpoint, overrideOpenURLCommand, insecure)
 	if err != nil {
 		return err
 	}
@@ -36,11 +36,11 @@ func Login(rootCmd *cmd.Command) {
 	loginCmd := &cmd.Command{
 		Use:   "login",
 		Short: "Get a token from the server. e.g. heim login heimdallr.example.com",
-		Run: func(_ context.Context, _ *cmd.Command, args []string) error {
+		Run: func(ctx context.Context, _ *cmd.Command, args []string) error {
 			if len(args) != 1 {
 				return xerrors.New("the server name is required")
 			}
-			return login(args[0], overrideOpenURLCommand, insecure)
+			return login(ctx, args[0], overrideOpenURLCommand, insecure)
 		},
 	}
 	loginCmd.Flags().String("override-open-url-command", "Override command for opening URL").Var(&overrideOpenURLCommand)

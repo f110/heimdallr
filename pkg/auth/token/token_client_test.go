@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -57,10 +58,41 @@ func TestClient_RequestToken(t *testing.T) {
 
 	c := NewClient(net.DefaultResolver)
 	now := time.Now()
-	gotToken, gotExpiresAt, err := c.RequestToken(s.URL, "", false)
+	gotToken, gotExpiresAt, err := c.RequestToken(context.Background(), s.URL, "", false)
 	require.NoError(t, err)
 
 	assert.Equal(t, t.Name(), gotToken)
 	assert.WithinDuration(t, now.Add(time.Hour), gotExpiresAt, 10*time.Second)
 	assert.Equal(t, "test-code", gotCode)
+}
+
+func TestClient_RequestToken_PortInUse(t *testing.T) {
+	forTestMock = true
+
+	u, err := url.Parse(ClientRedirectUrl)
+	require.NoError(t, err)
+	l, err := net.Listen("tcp", u.Host)
+	require.NoError(t, err)
+	t.Cleanup(func() { l.Close() })
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, _, err = NewClient(net.DefaultResolver).RequestToken(ctx, "http://127.0.0.1:1/token", "", false)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestClient_RequestToken_Canceled(t *testing.T) {
+	forTestMock = true
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	_, _, err := NewClient(net.DefaultResolver).RequestToken(ctx, "http://127.0.0.1:1/token", "", false)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	u, err := url.Parse(ClientRedirectUrl)
+	require.NoError(t, err)
+	l, err := net.Listen("tcp", u.Host)
+	require.NoError(t, err, "the callback server should be stopped")
+	l.Close()
 }

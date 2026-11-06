@@ -12,7 +12,7 @@ import (
 	"go.f110.dev/heimdallr/pkg/config/userconfig"
 )
 
-func proxy(args []string, resolverAddr, overrideOpenURLCommand string, insecure bool) error {
+func proxy(ctx context.Context, args []string, resolverAddr, overrideOpenURLCommand string, insecure bool) error {
 	uc, err := userconfig.New()
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ Retry:
 		e, ok := err.(*authproxy.ErrorTokenAuthorization)
 		if ok {
 			tokenClient := token.NewClient(resolver)
-			t, expiresAt, err := tokenClient.RequestToken(e.Endpoint, overrideOpenURLCommand, insecure)
+			t, expiresAt, err := tokenClient.RequestToken(ctx, e.Endpoint, overrideOpenURLCommand, insecure)
 			if err != nil {
 				return err
 			}
@@ -74,9 +74,9 @@ Retry:
 		}
 		return err
 	}
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	pipeCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	err = client.Pipe(ctx)
+	err = client.Pipe(pipeCtx)
 
 	return err
 }
@@ -88,8 +88,8 @@ func Proxy(rootCmd *cmd.Command) {
 	proxyCmd := &cmd.Command{
 		Use:   "proxy",
 		Short: "Proxy to backend",
-		Run: func(_ context.Context, _ *cmd.Command, args []string) error {
-			return proxy(args, resolverAddr, overrideOpenURLCommand, insecure)
+		Run: func(ctx context.Context, _ *cmd.Command, args []string) error {
+			return proxy(ctx, args, resolverAddr, overrideOpenURLCommand, insecure)
 		},
 	}
 	proxyCmd.Flags().String("override-open-url-command", "Override command for opening URL").Var(&overrideOpenURLCommand)

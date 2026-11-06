@@ -4,6 +4,7 @@ go_library(
     name = "heim",
     srcs = [
         "login.go",
+        "mcp.go",
         "token.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heim",
@@ -11,6 +12,7 @@ go_library(
     deps = [
         "//pkg/auth/token",
         "//pkg/cmd",
+        "//pkg/cmd/heim/internal/mcpproxy",
         "//pkg/config/userconfig",
         "@dev_f110_go_xerrors//:xerrors",
     ],
