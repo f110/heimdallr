@@ -36,13 +36,38 @@ func NewClient(resolver *net.Resolver) *Client {
 	return &Client{resolver: resolver}
 }
 
-func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure bool) (string, time.Time, error) {
+// RequestToken opens the browser to authorize and waits for the callback until ctx is done.
+func (c *Client) RequestToken(ctx context.Context, endpoint, overrideOpenURLCommand string, insecure bool) (string, time.Time, error) {
 	verifier := c.newVerifier()
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", time.Time{}, xerrors.WithStack(err)
 	}
+	redirectURL, err := url.Parse(ClientRedirectUrl)
+	if err != nil {
+		return "", time.Time{}, xerrors.WithStack(err)
+	}
+	l, err := net.Listen("tcp", redirectURL.Host)
+	if err != nil {
+		return "", time.Time{}, xerrors.WithStack(err)
+	}
+	codeCh := make(chan string, 1)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		select {
+		case codeCh <- req.URL.Query().Get("code"):
+		default:
+		}
+		io.WriteString(w, `<html><body>Success<br>Close this window</body></html>`)
+	})
+	s := &http.Server{Handler: mux}
+	go s.Serve(l)
+	defer func() {
+		s.Shutdown(context.Background())
+		l.Close()
+	}()
+
 	v := &url.Values{}
 	v.Set("challenge", c.challenge(verifier))
 	v.Set("challenge_method", "S256")
@@ -52,9 +77,11 @@ func (c *Client) RequestToken(endpoint, overrideOpenURLCommand string, insecure 
 		return "", time.Time{}, err
 	}
 
-	code, err := c.getCode()
-	if err != nil {
-		return "", time.Time{}, err
+	var code string
+	select {
+	case code = <-codeCh:
+	case <-ctx.Done():
+		return "", time.Time{}, xerrors.WithStack(ctx.Err())
 	}
 	now := time.Now()
 	res, err := c.exchangeToken(endpoint, code, verifier, insecure)
@@ -96,30 +123,6 @@ func (c *Client) exchangeToken(endpoint, code, codeVerifier string, insecure boo
 	}
 
 	return exchange, nil
-}
-
-func (c *Client) getCode() (string, error) {
-	u, err := url.Parse(ClientRedirectUrl)
-	if err != nil {
-		return "", xerrors.WithStack(err)
-	}
-
-	result := make(chan string)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		result <- req.URL.Query().Get("code")
-		io.WriteString(w, `<html><body>Success<br>Close this window</body></html>`)
-	})
-
-	s := &http.Server{
-		Addr:    u.Host,
-		Handler: mux,
-	}
-	go s.ListenAndServe()
-
-	code := <-result
-	s.Shutdown(context.Background())
-	return code, nil
 }
 
 func (c *Client) newVerifier() string {

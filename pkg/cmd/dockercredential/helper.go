@@ -1,6 +1,7 @@
 package dockercredential
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,7 +45,7 @@ func New() (*Helper, error) {
 	return &Helper{
 		userDir: uc,
 		requestToken: func(endpoint string) (string, time.Time, error) {
-			return token.NewClient(net.DefaultResolver).RequestToken(endpoint, "", false)
+			return token.NewClient(net.DefaultResolver).RequestToken(context.Background(), endpoint, "", false)
 		},
 	}, nil
 }
