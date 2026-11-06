@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcpproxy",
+    srcs = [
+        "proxy.go",
+        "token.go",
+    ],
+    importpath = "go.f110.dev/heimdallr/pkg/cmd/heim/internal/mcpproxy",
+    visibility = ["//pkg/cmd/heim:__subpackages__"],
+    deps = [
+        "//pkg/config/userconfig",
+        "@dev_f110_go_xerrors//:xerrors",
+    ],
+)
+
+go_test(
+    name = "mcpproxy_test",
+    srcs = [
+        "proxy_test.go",
+        "token_test.go",
+    ],
+    embed = [":mcpproxy"],
+    deps = [
+        "//pkg/config/userconfig",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@dev_f110_go_xerrors//:xerrors",
+    ],
+)
