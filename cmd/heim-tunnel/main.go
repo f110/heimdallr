@@ -14,6 +14,7 @@ func tunnelCli(args []string) error {
 	tunnel.Init(rootCmd)
 	tunnel.Info(rootCmd)
 	tunnel.Proxy(rootCmd)
+	tunnel.Version(rootCmd)
 
 	return rootCmd.Execute(args)
 }

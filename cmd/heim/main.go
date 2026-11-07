@@ -14,6 +14,7 @@ func heimCli(args []string) error {
 	heim.Login(rootCmd)
 	heim.Token(rootCmd)
 	heim.MCP(rootCmd)
+	heim.Version(rootCmd)
 
 	return rootCmd.Execute(args)
 }
