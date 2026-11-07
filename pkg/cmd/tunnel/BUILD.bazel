@@ -6,6 +6,7 @@ go_library(
         "info.go",
         "initialize.go",
         "proxy.go",
+        "version.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/tunnel",
     visibility = ["//visibility:public"],
@@ -14,6 +15,7 @@ go_library(
         "//pkg/authproxy",
         "//pkg/cmd",
         "//pkg/config/userconfig",
+        "//pkg/version",
         "@dev_f110_go_xerrors//:xerrors",
     ],
 )
