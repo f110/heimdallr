@@ -74,19 +74,20 @@ func (c *Command) Usage() string {
 	return buf.String()
 }
 
+// Execute runs the command. args must include the program name as the first element like os.Args.
 func (c *Command) Execute(args []string) error {
 	if c.executed {
 		return xerrors.NewWithStack("already executed")
+	}
+	if len(args) == 0 {
+		return xerrors.NewWithStack("the program name is required")
 	}
 
 	c.executed = true
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	cmd, nArgs := c.findCommand(args)
-	if cmd != nil {
-		return cmd.runCommand(ctx, nArgs)
-	}
-	return c.runCommand(ctx, args)
+	cmd, nArgs := c.findCommand(args[1:])
+	return cmd.runCommand(ctx, nArgs)
 }
 
 func (c *Command) runCommand(ctx context.Context, args []string) error {
@@ -175,6 +176,7 @@ func (c *Command) findCommand(args []string) (*Command, []string) {
 				return cmd.findCommand(append(nArgs, args[i+1:]...))
 			}
 		}
+		return c, append(nArgs, args[i:]...)
 	}
 
 	return c, nArgs

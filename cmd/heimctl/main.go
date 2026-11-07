@@ -26,7 +26,7 @@ func cli(args []string) error {
 }
 
 func main() {
-	if err := cli(os.Args[1:]); err != nil {
+	if err := cli(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		os.Exit(1)
 	}

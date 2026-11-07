@@ -19,7 +19,7 @@ func tunnelCli(args []string) error {
 }
 
 func main() {
-	if err := tunnelCli(os.Args[1:]); err != nil {
+	if err := tunnelCli(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		os.Exit(1)
 	}

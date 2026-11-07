@@ -23,7 +23,7 @@ func releaseCmd(args []string) error {
 }
 
 func main() {
-	if err := releaseCmd(os.Args[1:]); err != nil {
+	if err := releaseCmd(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		os.Exit(1)
 	}

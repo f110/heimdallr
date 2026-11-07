@@ -96,12 +96,18 @@ func TestCommand_Execute(t *testing.T) {
 	})
 
 	t.Run("Args", func(t *testing.T) {
-		cases := [][]string{
-			{"ctl", "--override", "foo", "proxy", "--insecure", "localhost"},
-			{"ctl", "--override=foo", "proxy", "--insecure", "localhost"},
+		cases := []struct {
+			Args     []string
+			Insecure bool
+		}{
+			{Args: []string{"ctl", "--override", "foo", "proxy", "--insecure", "localhost"}, Insecure: true},
+			{Args: []string{"ctl", "--override=foo", "proxy", "--insecure", "localhost"}, Insecure: true},
+			{Args: []string{"ctl", "--override", "foo", "proxy", "localhost", "--insecure"}, Insecure: true},
+			{Args: []string{"ctl", "--override=foo", "proxy", "--insecure=true", "localhost"}, Insecure: true},
+			{Args: []string{"ctl", "--override", "foo", "proxy", "localhost"}, Insecure: false},
 		}
 
-		for _, v := range cases {
+		for _, tc := range cases {
 			var override string
 			var insecure bool
 			var args []string
@@ -119,10 +125,10 @@ func TestCommand_Execute(t *testing.T) {
 			c2.Flags().Bool("insecure", "").Var(&insecure)
 			c1.AddCommand(c2)
 
-			err := c1.Execute(v)
+			err := c1.Execute(tc.Args)
 			require.NoError(t, err)
 			assert.Equal(t, "foo", override)
-			assert.True(t, insecure)
+			assert.Equal(t, tc.Insecure, insecure)
 			assert.Equal(t, []string{"localhost"}, args)
 		}
 	})
@@ -143,5 +149,30 @@ func TestCommand_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "foo", override)
 		assert.Equal(t, []string{}, args)
+	})
+
+	t.Run("ArgSameAsCommandName", func(t *testing.T) {
+		var args []string
+		var subExecuted bool
+		c1 := &Command{
+			Use: "ctl",
+			Run: func(_ context.Context, _ *Command, a []string) error {
+				args = a
+				return nil
+			},
+		}
+		c2 := &Command{
+			Use: "proxy",
+			Run: func(_ context.Context, _ *Command, _ []string) error {
+				subExecuted = true
+				return nil
+			},
+		}
+		c1.AddCommand(c2)
+
+		err := c1.Execute([]string{"ctl", "localhost", "proxy"})
+		require.NoError(t, err)
+		assert.False(t, subExecuted)
+		assert.Equal(t, []string{"localhost", "proxy"}, args)
 	})
 }
