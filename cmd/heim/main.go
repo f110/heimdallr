@@ -19,7 +19,7 @@ func heimCli(args []string) error {
 }
 
 func main() {
-	if err := heimCli(os.Args[1:]); err != nil {
+	if err := heimCli(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		os.Exit(1)
 	}
