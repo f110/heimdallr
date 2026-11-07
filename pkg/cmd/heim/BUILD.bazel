@@ -6,6 +6,7 @@ go_library(
         "login.go",
         "mcp.go",
         "token.go",
+        "version.go",
     ],
     importpath = "go.f110.dev/heimdallr/pkg/cmd/heim",
     visibility = ["//visibility:public"],
@@ -14,6 +15,7 @@ go_library(
         "//pkg/cmd",
         "//pkg/cmd/heim/internal/mcpproxy",
         "//pkg/config/userconfig",
+        "//pkg/version",
         "@dev_f110_go_xerrors//:xerrors",
     ],
 )
