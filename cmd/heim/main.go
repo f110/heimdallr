@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
@@ -20,7 +19,7 @@ func heimCli(args []string) error {
 
 func main() {
 	if err := heimCli(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		cmd.PrintError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strconv"
@@ -116,6 +117,15 @@ func (c *Command) runCommand(ctx context.Context, args []string) error {
 
 func (c *Command) printUsage() {
 	_, _ = fmt.Fprint(os.Stderr, c.Usage())
+}
+
+// PrintError writes err to w. The stack trace is included only when the DEBUG environment variable is set.
+func PrintError(w io.Writer, err error) {
+	if os.Getenv("DEBUG") != "" {
+		_, _ = fmt.Fprintf(w, "%+v\n", err)
+		return
+	}
+	_, _ = fmt.Fprintf(w, "%v\n", err)
 }
 
 func (c *Command) Flags() *FlagSet {

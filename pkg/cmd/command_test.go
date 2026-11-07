@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.f110.dev/xerrors"
 )
 
 func TestCommand_Usage(t *testing.T) {
@@ -174,5 +177,24 @@ func TestCommand_Execute(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, subExecuted)
 		assert.Equal(t, []string{"localhost", "proxy"}, args)
+	})
+}
+
+func TestPrintError(t *testing.T) {
+	err := xerrors.NewWithStack("command not found")
+
+	t.Run("Normal", func(t *testing.T) {
+		t.Setenv("DEBUG", "")
+		buf := new(bytes.Buffer)
+		PrintError(buf, err)
+		assert.Equal(t, "command not found\n", buf.String())
+	})
+
+	t.Run("Debug", func(t *testing.T) {
+		t.Setenv("DEBUG", "1")
+		buf := new(bytes.Buffer)
+		PrintError(buf, err)
+		assert.Equal(t, fmt.Sprintf("%+v\n", err), buf.String())
+		assert.Contains(t, buf.String(), "TestPrintError")
 	})
 }
