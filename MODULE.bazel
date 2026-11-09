@@ -122,12 +122,12 @@ git_override(
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "com_google_distroless_base_amd64",
-    digest = "sha256:2fc6702c4a81d196ef1f5a7561b9ab74f243d8633af15aaf7ac0632650fe07b7",  # latest-amd64
+    digest = "sha256:d2add786f2a5f43d1ab3ae54cd3193de929d0d12c378ff60891921f56f3e47ff",  # latest-amd64
     image = "gcr.io/distroless/base-debian12",
 )
 oci.pull(
     name = "com_google_distroless_base_arm64",
-    digest = "sha256:a12a6de828bd0d0fb5f7ad49a161284efc0846b9204beab73ed75100cd1ce51e",  # latest-arm64
+    digest = "sha256:94d5278016c07e4e328da0a983823b92a2341df326d59de3408b8c6fd50bb4b3",  # latest-arm64
     image = "gcr.io/distroless/base-debian12",
 )
 use_repo(oci, "com_google_distroless_base_amd64", "com_google_distroless_base_arm64")
