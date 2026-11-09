@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 func TestNewCompactor(t *testing.T) {
@@ -34,4 +35,30 @@ func TestCompactor_Compaction(t *testing.T) {
 
 	err = c.compact()
 	require.NoError(t, err)
+}
+
+func TestCompactor_ContinueAfterError(t *testing.T) {
+	cl, err := clientv3.New(clientv3.Config{Endpoints: []string{etcdUrl.String()}, DialTimeout: time.Second})
+	require.NoError(t, err)
+	c, err := NewCompactor(cl)
+	require.NoError(t, err)
+	require.NoError(t, cl.Close())
+
+	origInterval := compactionInterval
+	compactionInterval = 10 * time.Millisecond
+	t.Cleanup(func() { compactionInterval = origInterval })
+
+	finished := make(chan struct{})
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	go func() {
+		c.Start(ctx)
+		close(finished)
+	}()
+
+	select {
+	case <-finished:
+		require.Fail(t, "Compactor stopped due to the error")
+	case <-time.After(5 * time.Second):
+	}
 }
