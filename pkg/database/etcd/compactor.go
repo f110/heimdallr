@@ -48,7 +48,7 @@ func (c *Compactor) Start(ctx context.Context) {
 		select {
 		case <-t.C:
 			if err := c.compact(); err != nil {
-				return
+				logger.Log.Warn("Failed to compact", slog.Any("error", err))
 			}
 		case <-ctx.Done():
 			return
