@@ -449,7 +449,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "jW3m6/g1MkuVCrNHyiZ4EJQOvAUToDirFFftOvDpfYs=",
-        "usagesDigest": "ALnvhb6BxjfAP0AKyILkXbSUIx7g2LaM1Hd5C8ODvkY=",
+        "usagesDigest": "t/Mtluolf1EGkYWeh3sCnyl9O43pQiDwxAI0oxL2HgI=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -461,7 +461,7 @@
               "scheme": "https",
               "registry": "gcr.io",
               "repository": "distroless/base-debian12",
-              "identifier": "sha256:2fc6702c4a81d196ef1f5a7561b9ab74f243d8633af15aaf7ac0632650fe07b7",
+              "identifier": "sha256:d2add786f2a5f43d1ab3ae54cd3193de929d0d12c378ff60891921f56f3e47ff",
               "target_name": "com_google_distroless_base_amd64_single",
               "bazel_tags": []
             }
@@ -474,7 +474,7 @@
               "scheme": "https",
               "registry": "gcr.io",
               "repository": "distroless/base-debian12",
-              "identifier": "sha256:2fc6702c4a81d196ef1f5a7561b9ab74f243d8633af15aaf7ac0632650fe07b7",
+              "identifier": "sha256:d2add786f2a5f43d1ab3ae54cd3193de929d0d12c378ff60891921f56f3e47ff",
               "platforms": {},
               "platform": "@@rules_oci+//oci:com_google_distroless_base_amd64_single",
               "bzlmod_repository": "com_google_distroless_base_amd64",
@@ -488,7 +488,7 @@
               "scheme": "https",
               "registry": "gcr.io",
               "repository": "distroless/base-debian12",
-              "identifier": "sha256:a12a6de828bd0d0fb5f7ad49a161284efc0846b9204beab73ed75100cd1ce51e",
+              "identifier": "sha256:94d5278016c07e4e328da0a983823b92a2341df326d59de3408b8c6fd50bb4b3",
               "target_name": "com_google_distroless_base_arm64_single",
               "bazel_tags": []
             }
@@ -501,7 +501,7 @@
               "scheme": "https",
               "registry": "gcr.io",
               "repository": "distroless/base-debian12",
-              "identifier": "sha256:a12a6de828bd0d0fb5f7ad49a161284efc0846b9204beab73ed75100cd1ce51e",
+              "identifier": "sha256:94d5278016c07e4e328da0a983823b92a2341df326d59de3408b8c6fd50bb4b3",
               "platforms": {},
               "platform": "@@rules_oci+//oci:com_google_distroless_base_arm64_single",
               "bzlmod_repository": "com_google_distroless_base_arm64",
