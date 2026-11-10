@@ -1,0 +1,2084 @@
+types:
+- name: heimdallr.api.etcdv1alpha1.EtcdCluster
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.EtcdClusterSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.EtcdClusterStatus
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: generateName
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: selfLink
+      type:
+        scalar: string
+    - name: uid
+      type:
+        scalar: string
+    - name: resourceVersion
+      type:
+        scalar: string
+    - name: generation
+      type:
+        scalar: numeric
+    - name: creationTimestamp
+      type:
+        scalar: string
+    - name: deletionTimestamp
+      type:
+        scalar: string
+    - name: deletionGracePeriodSeconds
+      type:
+        scalar: numeric
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: ownerReferences
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.OwnerReference
+          elementRelationship: associative
+          keys:
+          - uid
+    - name: finalizers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
+    - name: managedFields
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+          elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.OwnerReference
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: uid
+      type:
+        scalar: string
+    - name: controller
+      type:
+        scalar: boolean
+    - name: blockOwnerDeletion
+      type:
+        scalar: boolean
+    elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+  map:
+    fields:
+    - name: manager
+      type:
+        scalar: string
+    - name: operation
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: time
+      type:
+        scalar: string
+    - name: fieldsType
+      type:
+        scalar: string
+    - name: fieldsV1
+      type:
+        namedType: __untyped_deduced_
+    - name: subresource
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.EtcdClusterSpec
+  map:
+    fields:
+    - name: members
+      type:
+        scalar: numeric
+    - name: version
+      type:
+        scalar: string
+    - name: antiAffinity
+      type:
+        scalar: boolean
+    - name: defragmentSchedule
+      type:
+        scalar: string
+    - name: backup
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.BackupSpec
+    - name: volumeClaimTemplate
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimTemplate
+- name: heimdallr.api.etcdv1alpha1.BackupSpec
+  map:
+    fields:
+    - name: intervalInSecond
+      type:
+        scalar: numeric
+    - name: maxBackups
+      type:
+        scalar: numeric
+    - name: storage
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.BackupStorageSpec
+- name: heimdallr.api.etcdv1alpha1.BackupStorageSpec
+  map:
+    fields:
+    - name: minio
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.BackupStorageMinIOSpec
+    - name: gcs
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.BackupStorageGCSSpec
+- name: heimdallr.api.etcdv1alpha1.BackupStorageMinIOSpec
+  map:
+    fields:
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.ObjectSelector
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.AWSCredentialSelector
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: secure
+      type:
+        scalar: boolean
+- name: heimdallr.api.etcdv1alpha1.ObjectSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.AWSCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: accessKeyIDKey
+      type:
+        scalar: string
+    - name: secretAccessKeyKey
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.BackupStorageGCSSpec
+  map:
+    fields:
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.GCPCredentialSelector
+- name: heimdallr.api.etcdv1alpha1.GCPCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: serviceAccountJSONKey
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.PersistentVolumeClaimTemplate
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimSpec
+- name: k8s.io.api.core.v1.PersistentVolumeClaimSpec
+  map:
+    fields:
+    - name: accessModes
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: selector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.VolumeResourceRequirements
+    - name: volumeName
+      type:
+        scalar: string
+    - name: storageClassName
+      type:
+        scalar: string
+    - name: volumeMode
+      type:
+        scalar: string
+    - name: dataSource
+      type:
+        namedType: k8s.io.api.core.v1.TypedLocalObjectReference
+    - name: dataSourceRef
+      type:
+        namedType: k8s.io.api.core.v1.TypedObjectReference
+    - name: volumeAttributesClassName
+      type:
+        scalar: string
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: operator
+      type:
+        scalar: string
+    - name: values
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.VolumeResourceRequirements
+  map:
+    fields:
+    - name: limits
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: requests
+      type:
+        map:
+          elementType:
+            scalar: untyped
+- name: k8s.io.api.core.v1.TypedLocalObjectReference
+  map:
+    fields:
+    - name: apiGroup
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.TypedObjectReference
+  map:
+    fields:
+    - name: apiGroup
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.EtcdClusterStatus
+  map:
+    fields:
+    - name: ready
+      type:
+        scalar: boolean
+    - name: phase
+      type:
+        scalar: string
+    - name: members
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.etcdv1alpha1.MemberStatus
+          elementRelationship: atomic
+    - name: lastReadyTransitionTime
+      type:
+        scalar: string
+    - name: lastDefragmentTime
+      type:
+        scalar: string
+    - name: clientEndpoint
+      type:
+        scalar: string
+    - name: clientCertSecretName
+      type:
+        scalar: string
+    - name: backup
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.BackupStatus
+    - name: restored
+      type:
+        namedType: heimdallr.api.etcdv1alpha1.RestoredStatus
+    - name: restoreFrom
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.MemberStatus
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: name
+      type:
+        scalar: string
+    - name: podName
+      type:
+        scalar: string
+    - name: leader
+      type:
+        scalar: boolean
+    - name: learner
+      type:
+        scalar: boolean
+    - name: version
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.BackupStatus
+  map:
+    fields:
+    - name: succeeded
+      type:
+        scalar: boolean
+    - name: lastSucceededTime
+      type:
+        scalar: string
+    - name: history
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.etcdv1alpha1.BackupStatusHistory
+          elementRelationship: atomic
+- name: heimdallr.api.etcdv1alpha1.BackupStatusHistory
+  map:
+    fields:
+    - name: succeeded
+      type:
+        scalar: boolean
+    - name: executeTime
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: etcdVersion
+      type:
+        scalar: string
+    - name: etcdRevision
+      type:
+        scalar: numeric
+    - name: message
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha1.RestoredStatus
+  map:
+    fields:
+    - name: completed
+      type:
+        scalar: boolean
+    - name: path
+      type:
+        scalar: string
+    - name: backupTime
+      type:
+        scalar: string
+    - name: restoredTime
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.EtcdCluster
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.EtcdClusterSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.EtcdClusterStatus
+- name: heimdallr.api.etcdv1alpha2.EtcdClusterSpec
+  map:
+    fields:
+    - name: members
+      type:
+        scalar: numeric
+    - name: version
+      type:
+        scalar: string
+    - name: antiAffinity
+      type:
+        scalar: boolean
+    - name: defragmentSchedule
+      type:
+        scalar: string
+    - name: template
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.PodTemplateSpec
+    - name: backup
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.BackupSpec
+    - name: volumeClaimTemplate
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimTemplate
+    - name: development
+      type:
+        scalar: boolean
+- name: heimdallr.api.etcdv1alpha2.PodTemplateSpec
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.ObjectMeta
+- name: heimdallr.api.etcdv1alpha2.ObjectMeta
+  map:
+    fields:
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: heimdallr.api.etcdv1alpha2.BackupSpec
+  map:
+    fields:
+    - name: intervalInSeconds
+      type:
+        scalar: numeric
+    - name: maxBackups
+      type:
+        scalar: numeric
+    - name: storage
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.BackupStorageSpec
+- name: heimdallr.api.etcdv1alpha2.BackupStorageSpec
+  map:
+    fields:
+    - name: minio
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.BackupStorageMinIOSpec
+    - name: gcs
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.BackupStorageGCSSpec
+- name: heimdallr.api.etcdv1alpha2.BackupStorageMinIOSpec
+  map:
+    fields:
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.ObjectSelector
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.AWSCredentialSelector
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: secure
+      type:
+        scalar: boolean
+- name: heimdallr.api.etcdv1alpha2.ObjectSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.AWSCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: accessKeyIDKey
+      type:
+        scalar: string
+    - name: secretAccessKeyKey
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.BackupStorageGCSSpec
+  map:
+    fields:
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.GCPCredentialSelector
+- name: heimdallr.api.etcdv1alpha2.GCPCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: serviceAccountJSONKey
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.EtcdClusterStatus
+  map:
+    fields:
+    - name: ready
+      type:
+        scalar: boolean
+    - name: phase
+      type:
+        scalar: string
+    - name: members
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.etcdv1alpha2.MemberStatus
+          elementRelationship: atomic
+    - name: lastReadyTransitionTime
+      type:
+        scalar: string
+    - name: lastDefragmentTime
+      type:
+        scalar: string
+    - name: creatingCompleted
+      type:
+        scalar: boolean
+    - name: clientEndpoint
+      type:
+        scalar: string
+    - name: clientCertSecretName
+      type:
+        scalar: string
+    - name: backup
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.BackupStatus
+    - name: restored
+      type:
+        namedType: heimdallr.api.etcdv1alpha2.RestoredStatus
+    - name: operatorVersion
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.MemberStatus
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: name
+      type:
+        scalar: string
+    - name: podName
+      type:
+        scalar: string
+    - name: leader
+      type:
+        scalar: boolean
+    - name: learner
+      type:
+        scalar: boolean
+    - name: version
+      type:
+        scalar: string
+    - name: dbSize
+      type:
+        scalar: numeric
+    - name: inUseSize
+      type:
+        scalar: numeric
+- name: heimdallr.api.etcdv1alpha2.BackupStatus
+  map:
+    fields:
+    - name: succeeded
+      type:
+        scalar: boolean
+    - name: lastSucceededTime
+      type:
+        scalar: string
+    - name: backupStatusHistory
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.etcdv1alpha2.BackupStatusHistory
+          elementRelationship: atomic
+- name: heimdallr.api.etcdv1alpha2.BackupStatusHistory
+  map:
+    fields:
+    - name: succeeded
+      type:
+        scalar: boolean
+    - name: executeTime
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: etcdVersion
+      type:
+        scalar: string
+    - name: etcdRevision
+      type:
+        scalar: numeric
+    - name: message
+      type:
+        scalar: string
+- name: heimdallr.api.etcdv1alpha2.RestoredStatus
+  map:
+    fields:
+    - name: completed
+      type:
+        scalar: boolean
+    - name: path
+      type:
+        scalar: string
+    - name: backupTime
+      type:
+        scalar: string
+    - name: restoredTime
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.Backend
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.BackendSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.BackendStatus
+- name: heimdallr.api.proxyv1alpha1.BackendSpec
+  map:
+    fields:
+    - name: fqdn
+      type:
+        scalar: string
+    - name: layer
+      type:
+        scalar: string
+    - name: upstream
+      type:
+        scalar: string
+    - name: socketTimeout
+      type:
+        scalar: string
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.ServiceSelector
+    - name: webhook
+      type:
+        scalar: string
+    - name: webhookPath
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: allowRootUser
+      type:
+        scalar: boolean
+    - name: agent
+      type:
+        scalar: boolean
+    - name: socket
+      type:
+        scalar: boolean
+    - name: disableAuthn
+      type:
+        scalar: boolean
+    - name: insecure
+      type:
+        scalar: boolean
+    - name: allowHttp
+      type:
+        scalar: boolean
+    - name: permissions
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha1.Permission
+          elementRelationship: atomic
+    - name: webhookConfiguration
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.WebhookConfiguration
+    - name: maxSessionDuration
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.ServiceSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    - name: namespace
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.Permission
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: locations
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha1.Location
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha1.Location
+  map:
+    fields:
+    - name: any
+      type:
+        scalar: string
+    - name: get
+      type:
+        scalar: string
+    - name: post
+      type:
+        scalar: string
+    - name: put
+      type:
+        scalar: string
+    - name: delete
+      type:
+        scalar: string
+    - name: head
+      type:
+        scalar: string
+    - name: connect
+      type:
+        scalar: string
+    - name: options
+      type:
+        scalar: string
+    - name: trace
+      type:
+        scalar: string
+    - name: patch
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.WebhookConfiguration
+  map:
+    fields:
+    - name: repositories
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: path
+      type:
+        scalar: string
+    - name: events
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: contentType
+      type:
+        scalar: string
+    - name: credentialSecretName
+      type:
+        scalar: string
+    - name: credentialSecretNamespace
+      type:
+        scalar: string
+    - name: appIdKey
+      type:
+        scalar: string
+    - name: installationIdKey
+      type:
+        scalar: string
+    - name: privateKeyKey
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.BackendStatus
+  map:
+    fields:
+    - name: deployedBy
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha1.ProxyReference
+          elementRelationship: atomic
+    - name: webhookConfigurations
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha1.WebhookConfigurationStatus
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha1.ProxyReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: url
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.WebhookConfigurationStatus
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: repository
+      type:
+        scalar: string
+    - name: updateTime
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.Proxy
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.ProxySpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.ProxyStatus
+- name: heimdallr.api.proxyv1alpha1.ProxySpec
+  map:
+    fields:
+    - name: domain
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: numeric
+    - name: httpPort
+      type:
+        scalar: numeric
+    - name: version
+      type:
+        scalar: string
+    - name: etcdVersion
+      type:
+        scalar: string
+    - name: dataStore
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.ProxyDataStoreSpec
+    - name: loadBalancerIp
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: organization
+      type:
+        scalar: string
+    - name: administratorUnit
+      type:
+        scalar: string
+    - name: country
+      type:
+        scalar: string
+    - name: issuerRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+    - name: identityProvider
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.IdentityProviderSpec
+    - name: rootUsers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: session
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.SessionSpec
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: dashboardReplicas
+      type:
+        scalar: numeric
+    - name: backendSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.LabelSelector
+    - name: roleSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.LabelSelector
+    - name: rpcPermissionSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.LabelSelector
+    - name: defragment
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.DefragmentSpec
+    - name: monitor
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.MonitorSpec
+    - name: backup
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.BackupSpec
+    - name: proxyResources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: rpcServerResources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: development
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha1.ProxyDataStoreSpec
+  map:
+    fields:
+    - name: etcd
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.ProxyDataStoreEtcdSpec
+- name: heimdallr.api.proxyv1alpha1.ProxyDataStoreEtcdSpec
+  map:
+    fields:
+    - name: version
+      type:
+        scalar: string
+    - name: defragment
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.DefragmentSpec
+    - name: antiAffinity
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha1.DefragmentSpec
+  map:
+    fields:
+    - name: schedule
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: group
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.IdentityProviderSpec
+  map:
+    fields:
+    - name: provider
+      type:
+        scalar: string
+    - name: clientId
+      type:
+        scalar: string
+    - name: clientSecretRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.SecretSelector
+    - name: redirectUrl
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.SecretSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.SessionSpec
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: keySecretRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.SecretSelector
+- name: heimdallr.api.proxyv1alpha1.LabelSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.MonitorSpec
+  map:
+    fields:
+    - name: prometheusMonitoring
+      type:
+        scalar: boolean
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: heimdallr.api.proxyv1alpha1.BackupSpec
+  map:
+    fields:
+    - name: intervalInSecond
+      type:
+        scalar: numeric
+    - name: maxBackups
+      type:
+        scalar: numeric
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: credentialRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.SecretSelector
+    - name: endpoint
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ResourceRequirements
+  map:
+    fields:
+    - name: limits
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: requests
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: claims
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.ResourceClaim
+          elementRelationship: associative
+          keys:
+          - name
+- name: k8s.io.api.core.v1.ResourceClaim
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: request
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.ProxyStatus
+  map:
+    fields:
+    - name: ready
+      type:
+        scalar: boolean
+    - name: phase
+      type:
+        scalar: string
+    - name: numberOfBackends
+      type:
+        scalar: numeric
+    - name: numberOfRoles
+      type:
+        scalar: numeric
+    - name: numberOfRpcPermissions
+      type:
+        scalar: numeric
+    - name: caSecretName
+      type:
+        scalar: string
+    - name: signingPrivateKeySecretName
+      type:
+        scalar: string
+    - name: githubWebhookSecretName
+      type:
+        scalar: string
+    - name: cookieSecretName
+      type:
+        scalar: string
+    - name: internalTokenSecretName
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.Role
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.RoleSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.RoleStatus
+- name: heimdallr.api.proxyv1alpha1.RoleSpec
+  map:
+    fields:
+    - name: title
+      type:
+        scalar: string
+    - name: description
+      type:
+        scalar: string
+    - name: allowDashboard
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha1.RoleStatus
+  map:
+    fields:
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.RpcPermissionSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.RpcPermissionStatus
+- name: heimdallr.api.proxyv1alpha1.RpcPermissionSpec
+  map:
+    fields:
+    - name: allow
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha1.RpcPermissionStatus
+  map: {}
+- name: heimdallr.api.proxyv1alpha1.RoleBinding
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: subjects
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha1.Subject
+          elementRelationship: atomic
+    - name: roleRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha1.RoleRef
+- name: heimdallr.api.proxyv1alpha1.Subject
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: permission
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.RoleRef
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha1.RpcPermission
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+- name: heimdallr.api.proxyv1alpha2.Backend
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.BackendSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.BackendStatus
+- name: heimdallr.api.proxyv1alpha2.BackendSpec
+  map:
+    fields:
+    - name: fqdn
+      type:
+        scalar: string
+    - name: layer
+      type:
+        scalar: string
+    - name: allowRootUser
+      type:
+        scalar: boolean
+    - name: disableAuthn
+      type:
+        scalar: boolean
+    - name: allowHttp
+      type:
+        scalar: boolean
+    - name: allowPreflight
+      type:
+        scalar: boolean
+    - name: permissions
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.Permission
+          elementRelationship: atomic
+    - name: maxSessionDuration
+      type:
+        scalar: string
+    - name: http
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.BackendHTTPSpec
+          elementRelationship: atomic
+    - name: socket
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.BackendSocketSpec
+- name: heimdallr.api.proxyv1alpha2.Permission
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: webhook
+      type:
+        scalar: string
+    - name: webhookConfiguration
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.WebhookConfiguration
+    - name: locations
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.Location
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha2.WebhookConfiguration
+  map:
+    fields:
+    - name: github
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.GitHubHookConfiguration
+- name: heimdallr.api.proxyv1alpha2.GitHubHookConfiguration
+  map:
+    fields:
+    - name: repositories
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: path
+      type:
+        scalar: string
+    - name: events
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: contentType
+      type:
+        scalar: string
+    - name: credentialSecretName
+      type:
+        scalar: string
+    - name: credentialSecretNamespace
+      type:
+        scalar: string
+    - name: appIdKey
+      type:
+        scalar: string
+    - name: installationIdKey
+      type:
+        scalar: string
+    - name: privateKeyKey
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.Location
+  map:
+    fields:
+    - name: any
+      type:
+        scalar: string
+    - name: get
+      type:
+        scalar: string
+    - name: post
+      type:
+        scalar: string
+    - name: put
+      type:
+        scalar: string
+    - name: delete
+      type:
+        scalar: string
+    - name: head
+      type:
+        scalar: string
+    - name: connect
+      type:
+        scalar: string
+    - name: options
+      type:
+        scalar: string
+    - name: trace
+      type:
+        scalar: string
+    - name: patch
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.BackendHTTPSpec
+  map:
+    fields:
+    - name: path
+      type:
+        scalar: string
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ServiceSelector
+    - name: upstream
+      type:
+        scalar: string
+    - name: insecure
+      type:
+        scalar: boolean
+    - name: agent
+      type:
+        scalar: boolean
+    - name: preservePath
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha2.ServiceSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    - name: namespace
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.BackendSocketSpec
+  map:
+    fields:
+    - name: upstream
+      type:
+        scalar: string
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ServiceSelector
+    - name: timeout
+      type:
+        scalar: string
+    - name: agent
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha2.BackendStatus
+  map:
+    fields:
+    - name: deployedBy
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.ProxyReference
+          elementRelationship: atomic
+    - name: webhookConfiguration
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.WebhookConfigurationStatus
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha2.ProxyReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: url
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.WebhookConfigurationStatus
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: repository
+      type:
+        scalar: string
+    - name: updateTime
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.Proxy
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ProxySpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ProxyStatus
+- name: heimdallr.api.proxyv1alpha2.ProxySpec
+  map:
+    fields:
+    - name: domain
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: numeric
+    - name: httpPort
+      type:
+        scalar: numeric
+    - name: version
+      type:
+        scalar: string
+    - name: dataStore
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ProxyDataStoreSpec
+    - name: loadBalancerIp
+      type:
+        scalar: string
+    - name: certificateAuthority
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.CertificateAuthoritySpec
+    - name: issuerRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+    - name: identityProvider
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.IdentityProviderSpec
+    - name: rootUsers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: session
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.SessionSpec
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: rpcReplicas
+      type:
+        scalar: numeric
+    - name: dashboardReplicas
+      type:
+        scalar: numeric
+    - name: backendSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.LabelSelector
+    - name: roleSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.LabelSelector
+    - name: rpcPermissionSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.LabelSelector
+    - name: antiAffinity
+      type:
+        scalar: boolean
+    - name: monitor
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.MonitorSpec
+    - name: backup
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.BackupSpec
+    - name: proxyResources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: rpcServerResources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: development
+      type:
+        scalar: boolean
+    - name: tokenExpiration
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.ProxyDataStoreSpec
+  map:
+    fields:
+    - name: etcd
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ProxyDataStoreEtcdSpec
+- name: heimdallr.api.proxyv1alpha2.ProxyDataStoreEtcdSpec
+  map:
+    fields:
+    - name: version
+      type:
+        scalar: string
+    - name: defragment
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.DefragmentSpec
+    - name: antiAffinity
+      type:
+        scalar: boolean
+    - name: backup
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.EtcdBackupSpec
+- name: heimdallr.api.proxyv1alpha2.DefragmentSpec
+  map:
+    fields:
+    - name: schedule
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.EtcdBackupSpec
+  map:
+    fields:
+    - name: intervalInSeconds
+      type:
+        scalar: numeric
+    - name: maxBackups
+      type:
+        scalar: numeric
+    - name: storage
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.EtcdBackupStorageSpec
+- name: heimdallr.api.proxyv1alpha2.EtcdBackupStorageSpec
+  map:
+    fields:
+    - name: minio
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.EtcdBackupMinIOSpec
+    - name: gcs
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.EtcdBackupGCSSpec
+- name: heimdallr.api.proxyv1alpha2.EtcdBackupMinIOSpec
+  map:
+    fields:
+    - name: serviceSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.ObjectSelector
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.AWSCredentialSelector
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: secure
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha2.ObjectSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.AWSCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: accessKeyIDKey
+      type:
+        scalar: string
+    - name: secretAccessKeyKey
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.EtcdBackupGCSSpec
+  map:
+    fields:
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: credentialSelector
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.GCPCredentialSelector
+- name: heimdallr.api.proxyv1alpha2.GCPCredentialSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: serviceAccountJSONKey
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.CertificateAuthoritySpec
+  map:
+    fields:
+    - name: local
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.LocalCertificateAuthoritySpec
+    - name: vault
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.VaultCertificateAuthoritySpec
+- name: heimdallr.api.proxyv1alpha2.LocalCertificateAuthoritySpec
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: organization
+      type:
+        scalar: string
+    - name: administratorUnit
+      type:
+        scalar: string
+    - name: country
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.VaultCertificateAuthoritySpec
+  map:
+    fields:
+    - name: addr
+      type:
+        scalar: string
+    - name: token
+      type:
+        scalar: string
+    - name: role
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.IdentityProviderSpec
+  map:
+    fields:
+    - name: provider
+      type:
+        scalar: string
+    - name: clientId
+      type:
+        scalar: string
+    - name: clientSecretRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.SecretSelector
+    - name: redirectUrl
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.SecretSelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.SessionSpec
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: keySecretRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.SecretSelector
+- name: heimdallr.api.proxyv1alpha2.LabelSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.MonitorSpec
+  map:
+    fields:
+    - name: prometheusMonitoring
+      type:
+        scalar: boolean
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: heimdallr.api.proxyv1alpha2.BackupSpec
+  map:
+    fields:
+    - name: intervalInSeconds
+      type:
+        scalar: numeric
+    - name: maxBackups
+      type:
+        scalar: numeric
+    - name: bucket
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: credentialRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.SecretSelector
+    - name: endpoint
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.ProxyStatus
+  map:
+    fields:
+    - name: ready
+      type:
+        scalar: boolean
+    - name: phase
+      type:
+        scalar: string
+    - name: numberOfBackends
+      type:
+        scalar: numeric
+    - name: numberOfRoles
+      type:
+        scalar: numeric
+    - name: numberOfRpcPermissions
+      type:
+        scalar: numeric
+    - name: caSecretName
+      type:
+        scalar: string
+    - name: signingPrivateKeySecretName
+      type:
+        scalar: string
+    - name: githubWebhookSecretName
+      type:
+        scalar: string
+    - name: cookieSecretName
+      type:
+        scalar: string
+    - name: internalTokenSecretName
+      type:
+        scalar: string
+    - name: operatorVersion
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.Role
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.RoleSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.RoleStatus
+- name: heimdallr.api.proxyv1alpha2.RoleSpec
+  map:
+    fields:
+    - name: title
+      type:
+        scalar: string
+    - name: description
+      type:
+        scalar: string
+    - name: allowDashboard
+      type:
+        scalar: boolean
+- name: heimdallr.api.proxyv1alpha2.RoleStatus
+  map:
+    fields:
+    - name: backends
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha2.RoleBinding
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: subjects
+      type:
+        list:
+          elementType:
+            namedType: heimdallr.api.proxyv1alpha2.Subject
+          elementRelationship: atomic
+    - name: roleRef
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.RoleRef
+- name: heimdallr.api.proxyv1alpha2.Subject
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: permission
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.RoleRef
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: heimdallr.api.proxyv1alpha2.RpcPermission
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.RpcPermissionSpec
+    - name: status
+      type:
+        namedType: heimdallr.api.proxyv1alpha2.RpcPermissionStatus
+- name: heimdallr.api.proxyv1alpha2.RpcPermissionSpec
+  map:
+    fields:
+    - name: allow
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: heimdallr.api.proxyv1alpha2.RpcPermissionStatus
+  map: {}
+- name: __untyped_atomic_
+  scalar: untyped
+  list:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+  map:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+- name: __untyped_deduced_
+  scalar: untyped
+  list:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+  map:
+    elementType:
+      namedType: __untyped_deduced_
+    elementRelationship: separable

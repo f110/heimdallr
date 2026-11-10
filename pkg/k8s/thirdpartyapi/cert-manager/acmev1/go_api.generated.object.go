@@ -7,6 +7,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"maps"
 )
 
 const GroupName = "cert-manager.io."
@@ -32,8 +33,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 type ACMEChallengeType string
 
 const (
-	ACMEChallengeTypeHttp01 ACMEChallengeType = "HTTP-01"
-	ACMEChallengeTypeDns01  ACMEChallengeType = "DNS-01"
+	ACMEChallengeTypeHTTP01 ACMEChallengeType = "HTTP-01"
+	ACMEChallengeTypeDNS01  ACMEChallengeType = "DNS-01"
 )
 
 type AzureDNSEnvironment string
@@ -56,7 +57,7 @@ const (
 type State string
 
 const (
-	StateUNKNOWN    State = "UNKNOWN"
+	StateUnknown    State = "Unknown"
 	StateValid      State = "valid"
 	StateReady      State = "ready"
 	StatePending    State = "pending"
@@ -90,7 +91,7 @@ type ACMEAuthorization struct {
 	// One of these challenge types will be selected when validating the DNS
 	// name and an appropriate Challenge resource will be created to perform
 	// the ACME challenge process.
-	Challenges []ACMEChallenge `json:"challenges"`
+	Challenges []ACMEChallenge `json:"challenges,omitempty"`
 }
 
 func (in *ACMEAuthorization) DeepCopyInto(out *ACMEAuthorization) {
@@ -322,9 +323,7 @@ func (in *ACMEChallengeSolverHTTP01GatewayHTTPRoute) DeepCopyInto(out *ACMEChall
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -394,16 +393,12 @@ func (in *ACMEChallengeSolverHTTP01IngressObjectMeta) DeepCopyInto(out *ACMEChal
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -428,16 +423,12 @@ func (in *ACMEChallengeSolverHTTP01IngressPodObjectMeta) DeepCopyInto(out *ACMEC
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -458,7 +449,7 @@ type ACMEChallengeSolverHTTP01IngressPodSpec struct {
 	// If specified, the pod's scheduling constraints
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// If specified, the pod's priorityClassName.
 	PriorityClassName string `json:"priorityClassName,omitempty"`
 	// If specified, the pod's service account
@@ -470,9 +461,7 @@ func (in *ACMEChallengeSolverHTTP01IngressPodSpec) DeepCopyInto(out *ACMEChallen
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
@@ -622,7 +611,7 @@ type ACMEIssuer struct {
 	// Solver configurations must be provided in order to obtain certificates
 	// from an ACME server.
 	// For more information, see: https://cert-manager.io/docs/configuration/acme/
-	Solvers []ACMEChallengeSolver `json:"solvers"`
+	Solvers []ACMEChallengeSolver `json:"solvers,omitempty"`
 	// Enables or disables generating a new ACME account key.
 	// If true, the Issuer resource will *not* request a new account but will expect
 	// the account key to be supplied via an existing secret.
@@ -987,7 +976,7 @@ type CertificateDNSNameSelector struct {
 	// with the most matching labels in matchLabels will be selected.
 	// If neither has more matches, the solver defined earlier in the list
 	// will be selected.
-	DNSNames []string `json:"dnsNames"`
+	DNSNames []string `json:"dnsNames,omitempty"`
 	// List of DNSZones that this solver will be used to solve.
 	// The most specific DNS zone match specified here will take precedence
 	// over other DNS zone matches, so a solver specifying sys.example.com
@@ -997,7 +986,7 @@ type CertificateDNSNameSelector struct {
 	// with the most matching labels in matchLabels will be selected.
 	// If neither has more matches, the solver defined earlier in the list
 	// will be selected.
-	DNSZones []string `json:"dnsZones"`
+	DNSZones []string `json:"dnsZones,omitempty"`
 }
 
 func (in *CertificateDNSNameSelector) DeepCopyInto(out *CertificateDNSNameSelector) {
@@ -1005,9 +994,7 @@ func (in *CertificateDNSNameSelector) DeepCopyInto(out *CertificateDNSNameSelect
 	if in.MatchLabels != nil {
 		in, out := &in.MatchLabels, &out.MatchLabels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.DNSNames != nil {
 		t := make([]string, len(in.DNSNames))
@@ -1061,10 +1048,14 @@ func (in *Challenge) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Challenge) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.acmev1.Challenge"
+}
+
 type ChallengeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Challenge `json:"items"`
+	Items           []Challenge `json:"items,omitempty"`
 }
 
 func (in *ChallengeList) DeepCopyInto(out *ChallengeList) {
@@ -1094,6 +1085,10 @@ func (in *ChallengeList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *ChallengeList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.acmev1.ChallengeList"
 }
 
 type ChallengeSpec struct {
@@ -1217,10 +1212,14 @@ func (in *Order) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Order) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.acmev1.Order"
+}
+
 type OrderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Order `json:"items"`
+	Items           []Order `json:"items,omitempty"`
 }
 
 func (in *OrderList) DeepCopyInto(out *OrderList) {
@@ -1252,6 +1251,10 @@ func (in *OrderList) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *OrderList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.acmev1.OrderList"
+}
+
 type OrderSpec struct {
 	// Certificate signing request bytes in DER encoding.
 	// This will be used when finalizing the order.
@@ -1270,11 +1273,11 @@ type OrderSpec struct {
 	// DNSNames is a list of DNS names that should be included as part of the Order
 	// validation process.
 	// This field must match the corresponding field on the DER encoded CSR.
-	DNSNames []string `json:"dnsNames"`
+	DNSNames []string `json:"dnsNames,omitempty"`
 	// IPAddresses is a list of IP addresses that should be included as part of the Order
 	// validation process.
 	// This field must match the corresponding field on the DER encoded CSR.
-	IPAddresses []string `json:"ipAddresses"`
+	IPAddresses []string `json:"ipAddresses,omitempty"`
 	// Duration is the duration for the not after date for the requested certificate.
 	// this is set on order creation as pe the ACME spec.
 	Duration *metav1.Duration `json:"duration,omitempty"`
@@ -1321,7 +1324,7 @@ type OrderStatus struct {
 	// Authorizations contains data returned from the ACME server on what
 	// authorizations must be completed in order to validate the DNS names
 	// specified on the Order.
-	Authorizations []ACMEAuthorization `json:"authorizations"`
+	Authorizations []ACMEAuthorization `json:"authorizations,omitempty"`
 	// Certificate is a copy of the PEM encoded certificate for this Order.
 	// This field will be populated after the order has been successfully
 	// finalized with the ACME server, and the order has transitioned to the

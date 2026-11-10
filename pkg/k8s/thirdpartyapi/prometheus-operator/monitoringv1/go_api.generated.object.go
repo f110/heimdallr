@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilintstr "k8s.io/apimachinery/pkg/util/intstr"
+	"maps"
 )
 
 const GroupName = "monitoring.coreos.com"
@@ -95,10 +96,14 @@ func (in *Alertmanager) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Alertmanager) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Alertmanager"
+}
+
 type AlertmanagerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Alertmanager `json:"items"`
+	Items           []Alertmanager `json:"items,omitempty"`
 }
 
 func (in *AlertmanagerList) DeepCopyInto(out *AlertmanagerList) {
@@ -128,6 +133,10 @@ func (in *AlertmanagerList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *AlertmanagerList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerList"
 }
 
 type PodMonitor struct {
@@ -160,10 +169,14 @@ func (in *PodMonitor) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *PodMonitor) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMonitor"
+}
+
 type PodMonitorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []PodMonitor `json:"items"`
+	Items           []PodMonitor `json:"items,omitempty"`
 }
 
 func (in *PodMonitorList) DeepCopyInto(out *PodMonitorList) {
@@ -193,6 +206,10 @@ func (in *PodMonitorList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *PodMonitorList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMonitorList"
 }
 
 type Probe struct {
@@ -225,10 +242,14 @@ func (in *Probe) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Probe) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Probe"
+}
+
 type ProbeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Probe `json:"items"`
+	Items           []Probe `json:"items,omitempty"`
 }
 
 func (in *ProbeList) DeepCopyInto(out *ProbeList) {
@@ -258,6 +279,10 @@ func (in *ProbeList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *ProbeList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeList"
 }
 
 type Prometheus struct {
@@ -300,10 +325,14 @@ func (in *Prometheus) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Prometheus) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Prometheus"
+}
+
 type PrometheusList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Prometheus `json:"items"`
+	Items           []Prometheus `json:"items,omitempty"`
 }
 
 func (in *PrometheusList) DeepCopyInto(out *PrometheusList) {
@@ -333,6 +362,10 @@ func (in *PrometheusList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *PrometheusList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusList"
 }
 
 type PrometheusRule struct {
@@ -365,10 +398,14 @@ func (in *PrometheusRule) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *PrometheusRule) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRule"
+}
+
 type PrometheusRuleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []PrometheusRule `json:"items"`
+	Items           []PrometheusRule `json:"items,omitempty"`
 }
 
 func (in *PrometheusRuleList) DeepCopyInto(out *PrometheusRuleList) {
@@ -398,6 +435,10 @@ func (in *PrometheusRuleList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *PrometheusRuleList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleList"
 }
 
 type ServiceMonitor struct {
@@ -431,10 +472,14 @@ func (in *ServiceMonitor) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *ServiceMonitor) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ServiceMonitor"
+}
+
 type ServiceMonitorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []ServiceMonitor `json:"items"`
+	Items           []ServiceMonitor `json:"items,omitempty"`
 }
 
 func (in *ServiceMonitorList) DeepCopyInto(out *ServiceMonitorList) {
@@ -464,6 +509,10 @@ func (in *ServiceMonitorList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *ServiceMonitorList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ServiceMonitorList"
 }
 
 type ThanosRuler struct {
@@ -507,10 +556,14 @@ func (in *ThanosRuler) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *ThanosRuler) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRuler"
+}
+
 type ThanosRulerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []ThanosRuler `json:"items"`
+	Items           []ThanosRuler `json:"items,omitempty"`
 }
 
 func (in *ThanosRulerList) DeepCopyInto(out *ThanosRulerList) {
@@ -542,6 +595,10 @@ func (in *ThanosRulerList) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *ThanosRulerList) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRulerList"
+}
+
 type AlertmanagerSpec struct {
 	// PodMetadata configures Labels and Annotations which are propagated to the alertmanager pods.
 	PodMetadata *EmbeddedObjectMetadata `json:"podMetadata,omitempty"`
@@ -557,7 +614,7 @@ type AlertmanagerSpec struct {
 	// Deprecated: use 'image' instead.  The image tag can be specified
 	// as part of the image URL.
 	Tag string `json:"tag,omitempty"`
-	// SHA of Alertmanager container image to be deployed. Defaults to the value of `version`.
+	// Sha of Alertmanager container image to be deployed. Defaults to the value of `version`.
 	// Similar to a tag, but the SHA explicitly deploys an immutable container image.
 	// Version and Tag are ignored if SHA is set.
 	// Deprecated: use 'image' instead.  The image digest can be specified
@@ -569,15 +626,15 @@ type AlertmanagerSpec struct {
 	// An optional list of references to secrets in the same namespace
 	// to use for pulling prometheus and alertmanager images from registries
 	// see http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// Secrets is a list of Secrets in the same namespace as the Alertmanager
 	// object, which shall be mounted into the Alertmanager Pods.
 	// The Secrets are mounted into /etc/alertmanager/secrets/<secret-name>.
-	Secrets []string `json:"secrets"`
+	Secrets []string `json:"secrets,omitempty"`
 	// ConfigMaps is a list of ConfigMaps in the same namespace as the Alertmanager
 	// object, which shall be mounted into the Alertmanager Pods.
 	// The ConfigMaps are mounted into /etc/alertmanager/configmaps/<configmap-name>.
-	ConfigMaps []string `json:"configMaps"`
+	ConfigMaps []string `json:"configMaps,omitempty"`
 	// ConfigSecret is the name of a Kubernetes Secret in the same namespace as the
 	// Alertmanager object, which contains the configuration for this Alertmanager
 	// instance. If empty, it defaults to 'alertmanager-<alertmanager-name>'.
@@ -605,11 +662,11 @@ type AlertmanagerSpec struct {
 	// Volumes allows configuration of additional volumes on the output StatefulSet definition.
 	// Volumes specified will be appended to other volumes that are generated as a result of
 	// StorageSpec objects.
-	Volumes []corev1.Volume `json:"volumes"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// VolumeMounts allows configuration of additional VolumeMounts on the output StatefulSet definition.
 	// VolumeMounts specified will be appended to other VolumeMounts in the alertmanager container,
 	// that are generated as a result of StorageSpec objects.
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts"`
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 	// The external URL the Alertmanager instances will be available under. This is
 	// necessary to generate correct URLs. This is necessary if Alertmanager is not
 	// served from root of a DNS name.
@@ -629,9 +686,9 @@ type AlertmanagerSpec struct {
 	// If specified, the pod's scheduling constraints.
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// If specified, the pod's topology spread constraints.
-	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints"`
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// This defaults to the default PodSecurityContext.
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
@@ -650,18 +707,18 @@ type AlertmanagerSpec struct {
 	// `config-reloader`. Overriding containers is entirely outside the scope
 	// of what the maintainers will support and by doing so, you accept that
 	// this behaviour may break at any time without notice.
-	Containers []corev1.Container `json:"containers"`
+	Containers []corev1.Container `json:"containers,omitempty"`
 	// InitContainers allows adding initContainers to the pod definition. Those can be used to e.g.
 	// fetch secrets for injection into the Alertmanager configuration from external sources. Any
 	// errors during the execution of an initContainer will lead to a restart of the Pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 	// Using initContainers for any use case other then secret fetching is entirely outside the scope
 	// of what the maintainers will support and by doing so, you accept that this behaviour may break
 	// at any time without notice.
-	InitContainers []corev1.Container `json:"initContainers"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// Priority class assigned to the Pods
 	PriorityClassName string `json:"priorityClassName,omitempty"`
 	// AdditionalPeers allows injecting a set of additional Alertmanagers to peer with to form a highly available cluster.
-	AdditionalPeers []string `json:"additionalPeers"`
+	AdditionalPeers []string `json:"additionalPeers,omitempty"`
 	// ClusterAdvertiseAddress is the explicit address to advertise in cluster.
 	// Needs to be provided for non RFC1918 [1] (public) addresses.
 	// [1] RFC1918: https://tools.ietf.org/html/rfc1918
@@ -689,7 +746,7 @@ type AlertmanagerSpec struct {
 	// This is an alpha field and requires enabling StatefulSetMinReadySeconds feature gate.
 	MinReadySeconds uint32 `json:"minReadySeconds,omitempty"`
 	// Pods' hostAliases configuration
-	HostAliases []HostAlias `json:"hostAliases"`
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
 	// Defines the web command line flags when starting Alertmanager.
 	Web *AlertmanagerWebSpec `json:"web,omitempty"`
 	// EXPERIMENTAL: alertmanagerConfiguration specifies the configuration of Alertmanager.
@@ -744,9 +801,7 @@ func (in *AlertmanagerSpec) DeepCopyInto(out *AlertmanagerSpec) {
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
@@ -868,9 +923,9 @@ type PodMonitorSpec struct {
 	// The label to use to retrieve the job name from.
 	JobLabel string `json:"jobLabel,omitempty"`
 	// PodTargetLabels transfers labels on the Kubernetes Pod onto the target.
-	PodTargetLabels []string `json:"podTargetLabels"`
+	PodTargetLabels []string `json:"podTargetLabels,omitempty"`
 	// A list of endpoints allowed as part of this PodMonitor.
-	PodMetricsEndpoints []PodMetricsEndpoint `json:"podMetricsEndpoints"`
+	PodMetricsEndpoints []PodMetricsEndpoint `json:"podMetricsEndpoints,omitempty"`
 	// Selector to select Pod objects.
 	Selector metav1.LabelSelector `json:"selector"`
 	// Selector to select which namespaces the Endpoints objects are discovered from.
@@ -959,7 +1014,7 @@ type ProbeSpec struct {
 	// Oauth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
 	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
 	// MetricRelabelConfigs to apply to samples before ingestion.
-	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings"`
+	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings,omitempty"`
 	// Authorization section for this endpoint
 	Authorization *SafeAuthorization `json:"authorization,omitempty"`
 	// SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
@@ -1042,7 +1097,7 @@ type PrometheusSpec struct {
 	// Deprecated: use 'image' instead.  The image tag can be specified
 	// as part of the image URL.
 	Tag string `json:"tag,omitempty"`
-	// SHA of Prometheus container image to be deployed. Defaults to the value of `version`.
+	// Sha of Prometheus container image to be deployed. Defaults to the value of `version`.
 	// Similar to a tag, but the SHA explicitly deploys an immutable container image.
 	// Version and Tag are ignored if SHA is set.
 	// Deprecated: use 'image' instead.  The image digest can be specified
@@ -1062,7 +1117,7 @@ type PrometheusSpec struct {
 	// of adding namespace labels. Works only if enforcedNamespaceLabel set to true.
 	// Make sure both ruleNamespace and ruleName are set for each pair.
 	// Deprecated: use excludedFromEnforcement instead.
-	PrometheusRulesExcludedFromEnforce []PrometheusRuleExcludeConfig `json:"prometheusRulesExcludedFromEnforce"`
+	PrometheusRulesExcludedFromEnforce []PrometheusRuleExcludeConfig `json:"prometheusRulesExcludedFromEnforce,omitempty"`
 	// QuerySpec defines the query command line flags when starting Prometheus.
 	Query *QuerySpec `json:"query,omitempty"`
 	// A selector to select which PrometheusRules to mount for loading alerting/recording
@@ -1077,7 +1132,7 @@ type PrometheusSpec struct {
 	// Define details regarding alerting.
 	Alerting *AlertingSpec `json:"alerting,omitempty"`
 	// remoteRead is the list of remote read configurations.
-	RemoteRead []RemoteReadSpec `json:"remoteRead"`
+	RemoteRead []RemoteReadSpec `json:"remoteRead,omitempty"`
 	// AdditionalAlertRelabelConfigs allows specifying a key of a Secret containing
 	// additional Prometheus alert relabel configurations. Alert relabel configurations
 	// specified are appended to the configurations generated by the Prometheus
@@ -1224,9 +1279,9 @@ type PrometheusStatus struct {
 	// Total number of unavailable pods targeted by this Prometheus deployment.
 	UnavailableReplicas int `json:"unavailableReplicas"`
 	// The current state of the Prometheus deployment.
-	Conditions []PrometheusCondition `json:"conditions"`
+	Conditions []PrometheusCondition `json:"conditions,omitempty"`
 	// The list has one entry per shard. Each entry provides a summary of the shard status.
-	ShardStatuses []ShardStatus `json:"shardStatuses"`
+	ShardStatuses []ShardStatus `json:"shardStatuses,omitempty"`
 }
 
 func (in *PrometheusStatus) DeepCopyInto(out *PrometheusStatus) {
@@ -1258,7 +1313,7 @@ func (in *PrometheusStatus) DeepCopy() *PrometheusStatus {
 
 type PrometheusRuleSpec struct {
 	// Content of Prometheus rule file
-	Groups []RuleGroup `json:"groups"`
+	Groups []RuleGroup `json:"groups,omitempty"`
 }
 
 func (in *PrometheusRuleSpec) DeepCopyInto(out *PrometheusRuleSpec) {
@@ -1289,11 +1344,11 @@ type ServiceMonitorSpec struct {
 	// If the value of this field is empty or if the label doesn't exist for the given Service, the `job` label of the metrics defaults to the name of the Kubernetes Service.
 	JobLabel string `json:"jobLabel,omitempty"`
 	// TargetLabels transfers labels from the Kubernetes `Service` onto the created metrics.
-	TargetLabels []string `json:"targetLabels"`
+	TargetLabels []string `json:"targetLabels,omitempty"`
 	// PodTargetLabels transfers labels on the Kubernetes `Pod` onto the created metrics.
-	PodTargetLabels []string `json:"podTargetLabels"`
+	PodTargetLabels []string `json:"podTargetLabels,omitempty"`
 	// A list of endpoints allowed as part of this ServiceMonitor.
-	Endpoints []Endpoint `json:"endpoints"`
+	Endpoints []Endpoint `json:"endpoints,omitempty"`
 	// Selector to select Endpoints objects.
 	Selector metav1.LabelSelector `json:"selector"`
 	// Selector to select which namespaces the Kubernetes Endpoints objects are discovered from.
@@ -1357,7 +1412,7 @@ type ThanosRulerSpec struct {
 	// An optional list of references to secrets in the same namespace
 	// to use for pulling thanos images from registries
 	// see http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// When a ThanosRuler deployment is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	Paused bool `json:"paused,omitempty"`
@@ -1371,9 +1426,9 @@ type ThanosRulerSpec struct {
 	// If specified, the pod's scheduling constraints.
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// If specified, the pod's topology spread constraints.
-	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints"`
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// This defaults to the default PodSecurityContext.
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
@@ -1386,7 +1441,7 @@ type ThanosRulerSpec struct {
 	Storage *StorageSpec `json:"storage,omitempty"`
 	// Volumes allows configuration of additional volumes on the output StatefulSet definition. Volumes specified will
 	// be appended to other volumes that are generated as a result of StorageSpec objects.
-	Volumes []corev1.Volume `json:"volumes"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// ObjectStorageConfig configures object storage in Thanos.
 	// Alternative to ObjectStorageConfigFile, and lower order priority.
 	ObjectStorageConfig *corev1.SecretKeySelector `json:"objectStorageConfig,omitempty"`
@@ -1398,7 +1453,7 @@ type ThanosRulerSpec struct {
 	ListenLocal bool `json:"listenLocal,omitempty"`
 	// QueryEndpoints defines Thanos querier endpoints from which to query metrics.
 	// Maps to the --query flag of thanos ruler.
-	QueryEndpoints []string `json:"queryEndpoints"`
+	QueryEndpoints []string `json:"queryEndpoints,omitempty"`
 	// Define configuration for connecting to thanos query instances.
 	// If this is defined, the QueryEndpoints field will be ignored.
 	// Maps to the `query.config` CLI argument.
@@ -1408,7 +1463,7 @@ type ThanosRulerSpec struct {
 	// AlertManagersConfig should be used instead.  Note: this field will be ignored
 	// if AlertManagersConfig is specified.
 	// Maps to the `alertmanagers.url` arg.
-	AlertManagersURL []string `json:"alertmanagersUrl"`
+	AlertManagersURL []string `json:"alertmanagersUrl,omitempty"`
 	// Define configuration for connecting to alertmanager.  Only available with thanos v0.10.0
 	// and higher.  Maps to the `alertmanagers.config` arg.
 	AlertManagersConfig *corev1.SecretKeySelector `json:"alertmanagersConfig,omitempty"`
@@ -1425,12 +1480,12 @@ type ThanosRulerSpec struct {
 	// List of references to PrometheusRule objects
 	// to be excluded from enforcing a namespace label of origin.
 	// Applies only if enforcedNamespaceLabel set to true.
-	ExcludedFromEnforcement []ObjectReference `json:"excludedFromEnforcement"`
+	ExcludedFromEnforcement []ObjectReference `json:"excludedFromEnforcement,omitempty"`
 	// PrometheusRulesExcludedFromEnforce - list of Prometheus rules to be excluded from enforcing
 	// of adding namespace labels. Works only if enforcedNamespaceLabel set to true.
 	// Make sure both ruleNamespace and ruleName are set for each pair
 	// Deprecated: use excludedFromEnforcement instead.
-	PrometheusRulesExcludedFromEnforce []PrometheusRuleExcludeConfig `json:"prometheusRulesExcludedFromEnforce"`
+	PrometheusRulesExcludedFromEnforce []PrometheusRuleExcludeConfig `json:"prometheusRulesExcludedFromEnforce,omitempty"`
 	// Log level for ThanosRuler to be configured with.
 	LogLevel string `json:"logLevel,omitempty"`
 	// Log format for ThanosRuler to be configured with.
@@ -1450,7 +1505,7 @@ type ThanosRulerSpec struct {
 	// strategic merge patch. The current container names are: `thanos-ruler` and `config-reloader`.
 	// Overriding containers is entirely outside the scope of what the maintainers will support and by doing
 	// so, you accept that this behaviour may break at any time without notice.
-	Containers []corev1.Container `json:"containers"`
+	Containers []corev1.Container `json:"containers,omitempty"`
 	// InitContainers allows adding initContainers to the pod definition. Those can be used to e.g.
 	// fetch secrets for injection into the ThanosRuler configuration from external sources. Any
 	// errors during the execution of an initContainer will lead to a restart of the Pod.
@@ -1458,7 +1513,7 @@ type ThanosRulerSpec struct {
 	// Using initContainers for any use case other then secret fetching is entirely outside the scope
 	// of what the maintainers will support and by doing so, you accept that this behaviour may break
 	// at any time without notice.
-	InitContainers []corev1.Container `json:"initContainers"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// TracingConfig configures tracing in Thanos. This is an experimental feature, it may change in any upcoming release in a breaking way.
 	TracingConfig *corev1.SecretKeySelector `json:"tracingConfig,omitempty"`
 	// TracingConfig specifies the path of the tracing configuration file.
@@ -1469,7 +1524,7 @@ type ThanosRulerSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// AlertDropLabels configure the label names which should be dropped in ThanosRuler alerts.
 	// The replica label `thanos_ruler_replica` will always be dropped in alerts.
-	AlertDropLabels []string `json:"alertDropLabels"`
+	AlertDropLabels []string `json:"alertDropLabels,omitempty"`
 	// The external URL the Thanos Ruler instances will be available under. This is
 	// necessary to generate correct URLs. This is necessary if Thanos Ruler is not
 	// served from root of a DNS name.
@@ -1499,7 +1554,7 @@ type ThanosRulerSpec struct {
 	// When used alongside with AlertRelabelConfigs, alertRelabelConfigFile takes precedence.
 	AlertRelabelConfigFile string `json:"alertRelabelConfigFile,omitempty"`
 	// Pods' hostAliases configuration
-	HostAliases []HostAlias `json:"hostAliases"`
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
 }
 
 func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
@@ -1519,9 +1574,7 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
@@ -1635,9 +1688,7 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.AlertDropLabels != nil {
 		t := make([]string, len(in.AlertDropLabels))
@@ -1727,16 +1778,12 @@ func (in *EmbeddedObjectMetadata) DeepCopyInto(out *EmbeddedObjectMetadata) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -1796,7 +1843,7 @@ type HostAlias struct {
 	// IP address of the host file entry.
 	IP string `json:"ip"`
 	// Hostnames for the above IP address.
-	Hostnames []string `json:"hostnames"`
+	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 func (in *HostAlias) DeepCopyInto(out *HostAlias) {
@@ -1899,12 +1946,12 @@ type PodMetricsEndpoint struct {
 	// Authorization section for this endpoint
 	Authorization *SafeAuthorization `json:"authorization,omitempty"`
 	// MetricRelabelConfigs to apply to samples before ingestion.
-	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings"`
+	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings,omitempty"`
 	// RelabelConfigs to apply to samples before scraping.
 	// Prometheus Operator automatically adds relabelings for a few standard Kubernetes fields.
 	// The original scrape job's name is available via the `__tmp_prometheus_job_name` label.
 	// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
-	RelabelConfigs []RelabelConfig `json:"relabelings"`
+	RelabelConfigs []RelabelConfig `json:"relabelings,omitempty"`
 	// ProxyURL eg http://proxyserver:2195 Directs scrapes to proxy through this endpoint.
 	ProxyURL string `json:"proxyUrl,omitempty"`
 	// FollowRedirects configures whether scrape requests follow HTTP 3xx redirects.
@@ -1975,7 +2022,7 @@ type NamespaceSelector struct {
 	// list restricting them.
 	Any bool `json:"any,omitempty"`
 	// List of namespace names to select from.
-	MatchNames []string `json:"matchNames"`
+	MatchNames []string `json:"matchNames,omitempty"`
 }
 
 func (in *NamespaceSelector) DeepCopyInto(out *NamespaceSelector) {
@@ -2133,7 +2180,7 @@ type OAuth2 struct {
 	// The URL to fetch the token from
 	TokenURL string `json:"tokenUrl"`
 	// OAuth2 scopes used for the token request
-	Scopes []string `json:"scopes"`
+	Scopes []string `json:"scopes,omitempty"`
 	// Parameters to append to the token URL
 	EndpointParams map[string]string `json:"endpointParams,omitempty"`
 }
@@ -2150,9 +2197,7 @@ func (in *OAuth2) DeepCopyInto(out *OAuth2) {
 	if in.EndpointParams != nil {
 		in, out := &in.EndpointParams, &out.EndpointParams
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -2169,7 +2214,7 @@ type RelabelConfig struct {
 	// The source labels select values from existing labels. Their content is concatenated
 	// using the configured separator and matched against the configured regular expression
 	// for the replace, keep, and drop actions.
-	SourceLabels []string `json:"sourceLabels"`
+	SourceLabels []string `json:"sourceLabels,omitempty"`
 	// Separator placed between concatenated source label values. default is ';'.
 	Separator string `json:"separator,omitempty"`
 	// Label to which the resulting value is written in a replace action.
@@ -2265,7 +2310,7 @@ type CommonPrometheusFields struct {
 	// An optional list of references to secrets in the same namespace
 	// to use for pulling prometheus and alertmanager images from registries
 	// see http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// Number of replicas of each shard to deploy for a Prometheus deployment.
 	// Number of replicas multiplied by shards is the total number of Pods
 	// created.
@@ -2311,7 +2356,7 @@ type CommonPrometheusFields struct {
 	// support and by doing so, you accept that this behaviour may break at any
 	// time without notice.
 	// For more information see https://prometheus.io/docs/prometheus/latest/disabled_features/
-	EnableFeatures []string `json:"enableFeatures"`
+	EnableFeatures []string `json:"enableFeatures,omitempty"`
 	// The external URL the Prometheus instances will be available under. This is
 	// necessary to generate correct URLs. This is necessary if Prometheus is not
 	// served from root of a DNS name.
@@ -2325,11 +2370,11 @@ type CommonPrometheusFields struct {
 	Storage *StorageSpec `json:"storage,omitempty"`
 	// Volumes allows configuration of additional volumes on the output StatefulSet definition. Volumes specified will
 	// be appended to other volumes that are generated as a result of StorageSpec objects.
-	Volumes []corev1.Volume `json:"volumes"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 	// VolumeMounts allows configuration of additional VolumeMounts on the output StatefulSet definition.
 	// VolumeMounts specified will be appended to other VolumeMounts in the prometheus container,
 	// that are generated as a result of StorageSpec objects.
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts"`
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 	// Defines the web command line flags when starting Prometheus.
 	Web *PrometheusWebSpec `json:"web,omitempty"`
 	// Define resources requests and limits for single Pods.
@@ -2342,19 +2387,19 @@ type CommonPrometheusFields struct {
 	// Secrets is a list of Secrets in the same namespace as the Prometheus
 	// object, which shall be mounted into the Prometheus Pods.
 	// The Secrets are mounted into /etc/prometheus/secrets/<secret-name>.
-	Secrets []string `json:"secrets"`
+	Secrets []string `json:"secrets,omitempty"`
 	// ConfigMaps is a list of ConfigMaps in the same namespace as the Prometheus
 	// object, which shall be mounted into the Prometheus Pods.
 	// The ConfigMaps are mounted into /etc/prometheus/configmaps/<configmap-name>.
-	ConfigMaps []string `json:"configMaps"`
+	ConfigMaps []string `json:"configMaps,omitempty"`
 	// If specified, the pod's scheduling constraints.
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// If specified, the pod's topology spread constraints.
-	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints"`
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// remoteWrite is the list of remote write configurations.
-	RemoteWrite []RemoteWriteSpec `json:"remoteWrite"`
+	RemoteWrite []RemoteWriteSpec `json:"remoteWrite,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// This defaults to the default PodSecurityContext.
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
@@ -2371,7 +2416,7 @@ type CommonPrometheusFields struct {
 	// containers is entirely outside the scope of what the maintainers will
 	// support and by doing so, you accept that this behaviour may break at any
 	// time without notice.
-	Containers []corev1.Container `json:"containers"`
+	Containers []corev1.Container `json:"containers,omitempty"`
 	// InitContainers allows adding initContainers to the pod definition. Those can be used to e.g.
 	// fetch secrets for injection into the Prometheus configuration from external sources. Any errors
 	// during the execution of an initContainer will lead to a restart of the Pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
@@ -2381,7 +2426,7 @@ type CommonPrometheusFields struct {
 	// `init-config-reloader`. Overriding init containers is entirely outside the
 	// scope of what the maintainers will support and by doing so, you accept that
 	// this behaviour may break at any time without notice.
-	InitContainers []corev1.Container `json:"initContainers"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// AdditionalScrapeConfigs allows specifying a key of a Secret containing
 	// additional Prometheus scrape configurations. Scrape configurations
 	// specified are appended to the configurations generated by the Prometheus
@@ -2475,7 +2520,7 @@ type CommonPrometheusFields struct {
 	// This is an alpha field and requires enabling StatefulSetMinReadySeconds feature gate.
 	MinReadySeconds uint32 `json:"minReadySeconds,omitempty"`
 	// Pods' hostAliases configuration
-	HostAliases []HostAlias `json:"hostAliases"`
+	HostAliases []HostAlias `json:"hostAliases,omitempty"`
 	// AdditionalArgs allows setting additional arguments for the Prometheus container.
 	// It is intended for e.g. activating hidden flags which are not supported by
 	// the dedicated configuration options yet. The arguments are passed as-is to the
@@ -2484,14 +2529,14 @@ type CommonPrometheusFields struct {
 	// In case of an argument conflict (e.g. an argument which is already set by the
 	// operator itself) or when providing an invalid argument the reconciliation will
 	// fail and an error will be logged.
-	AdditionalArgs []Argument `json:"additionalArgs"`
+	AdditionalArgs []Argument `json:"additionalArgs,omitempty"`
 	// Enable compression of the write-ahead log using Snappy. This flag is
 	// only available in versions of Prometheus >= 2.11.0.
 	WALCompression bool `json:"walCompression,omitempty"`
 	// List of references to PodMonitor, ServiceMonitor, Probe and PrometheusRule objects
 	// to be excluded from enforcing a namespace label of origin.
 	// Applies only if enforcedNamespaceLabel set to true.
-	ExcludedFromEnforcement []ObjectReference `json:"excludedFromEnforcement"`
+	ExcludedFromEnforcement []ObjectReference `json:"excludedFromEnforcement,omitempty"`
 }
 
 func (in *CommonPrometheusFields) DeepCopyInto(out *CommonPrometheusFields) {
@@ -2541,9 +2586,7 @@ func (in *CommonPrometheusFields) DeepCopyInto(out *CommonPrometheusFields) {
 	if in.ExternalLabels != nil {
 		in, out := &in.ExternalLabels, &out.ExternalLabels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.EnableFeatures != nil {
 		t := make([]string, len(in.EnableFeatures))
@@ -2582,9 +2625,7 @@ func (in *CommonPrometheusFields) DeepCopyInto(out *CommonPrometheusFields) {
 	if in.NodeSelector != nil {
 		in, out := &in.NodeSelector, &out.NodeSelector
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Secrets != nil {
 		t := make([]string, len(in.Secrets))
@@ -2756,7 +2797,7 @@ func (in *QuerySpec) DeepCopy() *QuerySpec {
 
 type AlertingSpec struct {
 	// AlertmanagerEndpoints Prometheus should fire alerts against.
-	Alertmanagers []AlertmanagerEndpoints `json:"alertmanagers"`
+	Alertmanagers []AlertmanagerEndpoints `json:"alertmanagers,omitempty"`
 }
 
 func (in *AlertingSpec) DeepCopyInto(out *AlertingSpec) {
@@ -2819,16 +2860,12 @@ func (in *RemoteReadSpec) DeepCopyInto(out *RemoteReadSpec) {
 	if in.RequiredMatchers != nil {
 		in, out := &in.RequiredMatchers, &out.RequiredMatchers
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.BasicAuth != nil {
 		in, out := &in.BasicAuth, &out.BasicAuth
@@ -2874,7 +2911,7 @@ type ThanosSpec struct {
 	// Deprecated: use 'image' instead.  The image tag can be specified
 	// as part of the image URL.
 	Tag string `json:"tag,omitempty"`
-	// SHA of Thanos container image to be deployed. Defaults to the value of `version`.
+	// Sha of Thanos container image to be deployed. Defaults to the value of `version`.
 	// Similar to a tag, but the SHA explicitly deploys an immutable container image.
 	// Version and Tag are ignored if SHA is set.
 	// Deprecated: use 'image' instead.  The image digest can be specified
@@ -2915,14 +2952,14 @@ type ThanosSpec struct {
 	ReadyTimeout string `json:"readyTimeout"`
 	// VolumeMounts allows configuration of additional VolumeMounts on the output StatefulSet definition.
 	// VolumeMounts specified will be appended to other VolumeMounts in the thanos-sidecar container.
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts"`
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 	// AdditionalArgs allows setting additional arguments for the Thanos container.
 	// The arguments are passed as-is to the Thanos container which may cause issues
 	// if they are invalid or not supporeted the given Thanos version.
 	// In case of an argument conflict (e.g. an argument which is already set by the
 	// operator itself) or when providing an invalid argument the reconciliation will
 	// fail and an error will be logged.
-	AdditionalArgs []Argument `json:"additionalArgs"`
+	AdditionalArgs []Argument `json:"additionalArgs,omitempty"`
 }
 
 func (in *ThanosSpec) DeepCopyInto(out *ThanosSpec) {
@@ -3050,7 +3087,7 @@ func (in *ShardStatus) DeepCopy() *ShardStatus {
 type RuleGroup struct {
 	Name                    string `json:"name"`
 	Interval                string `json:"interval,omitempty"`
-	Rules                   []Rule `json:"rules"`
+	Rules                   []Rule `json:"rules,omitempty"`
 	PartialResponseStrategy string `json:"partial_response_strategy,omitempty"`
 }
 
@@ -3113,12 +3150,12 @@ type Endpoint struct {
 	// Oauth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
 	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
 	// MetricRelabelConfigs to apply to samples before ingestion.
-	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings"`
+	MetricRelabelConfigs []RelabelConfig `json:"metricRelabelings,omitempty"`
 	// RelabelConfigs to apply to samples before scraping.
 	// Prometheus Operator automatically adds relabelings for a few standard Kubernetes fields.
 	// The original scrape job's name is available via the `__tmp_prometheus_job_name` label.
 	// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
-	RelabelConfigs []RelabelConfig `json:"relabelings"`
+	RelabelConfigs []RelabelConfig `json:"relabelings,omitempty"`
 	// ProxyURL eg http://proxyserver:2195 Directs scrapes to proxy through this endpoint.
 	ProxyURL string `json:"proxyUrl,omitempty"`
 	// FollowRedirects configures whether scrape requests follow HTTP 3xx redirects.
@@ -3282,6 +3319,10 @@ func (in *EmbeddedPersistentVolumeClaim) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *EmbeddedPersistentVolumeClaim) OpenAPIModelName() string {
+	return "github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedPersistentVolumeClaim"
+}
+
 type WebConfigFileFields struct {
 	// Defines the TLS parameters for HTTPS.
 	TLSConfig *WebTLSConfig `json:"tlsConfig,omitempty"`
@@ -3359,13 +3400,13 @@ func (in *PodMetricsEndpointTLSConfig) DeepCopy() *PodMetricsEndpointTLSConfig {
 
 type ProbeTargetStaticConfig struct {
 	// The list of hosts to probe.
-	Targets []string `json:"static"`
+	Targets []string `json:"static,omitempty"`
 	// Labels assigned to all metrics scraped from the targets.
 	Labels map[string]string `json:"labels,omitempty"`
 	// RelabelConfigs to apply to the label set of the targets before it gets
 	// scraped.
 	// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
-	RelabelConfigs []RelabelConfig `json:"relabelingConfigs"`
+	RelabelConfigs []RelabelConfig `json:"relabelingConfigs,omitempty"`
 }
 
 func (in *ProbeTargetStaticConfig) DeepCopyInto(out *ProbeTargetStaticConfig) {
@@ -3378,9 +3419,7 @@ func (in *ProbeTargetStaticConfig) DeepCopyInto(out *ProbeTargetStaticConfig) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.RelabelConfigs != nil {
 		l := make([]RelabelConfig, len(in.RelabelConfigs))
@@ -3412,7 +3451,7 @@ type ProbeTargetIngress struct {
 	// probed URL.
 	// The original scrape job's name is available via the `__tmp_prometheus_job_name` label.
 	// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
-	RelabelConfigs []RelabelConfig `json:"relabelingConfigs"`
+	RelabelConfigs []RelabelConfig `json:"relabelingConfigs,omitempty"`
 }
 
 func (in *ProbeTargetIngress) DeepCopyInto(out *ProbeTargetIngress) {
@@ -3446,7 +3485,7 @@ func (in *ProbeTargetIngress) DeepCopy() *ProbeTargetIngress {
 }
 
 type SafeTLSConfig struct {
-	// Struct containing the CA cert to use for the targets.
+	// Struct containing the Ca cert to use for the targets.
 	CA *SecretOrConfigMap `json:"ca,omitempty"`
 	// Struct containing the client cert file for the targets.
 	Cert *SecretOrConfigMap `json:"cert,omitempty"`
@@ -3555,7 +3594,7 @@ type RemoteWriteSpec struct {
 	// Only valid in Prometheus versions 2.25.0 and newer.
 	Headers map[string]string `json:"headers,omitempty"`
 	// The list of remote write relabel configurations.
-	WriteRelabelConfigs []RelabelConfig `json:"writeRelabelConfigs"`
+	WriteRelabelConfigs []RelabelConfig `json:"writeRelabelConfigs,omitempty"`
 	// Oauth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
 	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
 	// BasicAuth for the URL.
@@ -3583,9 +3622,7 @@ func (in *RemoteWriteSpec) DeepCopyInto(out *RemoteWriteSpec) {
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.WriteRelabelConfigs != nil {
 		l := make([]RelabelConfig, len(in.WriteRelabelConfigs))
@@ -3828,16 +3865,12 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -3868,7 +3901,7 @@ type WebTLSConfig struct {
 	// List of supported cipher suites for TLS versions up to TLS 1.2. If empty,
 	// Go default cipher suites are used. Available cipher suites are documented
 	// in the go documentation: https://golang.org/pkg/crypto/tls/#pkg-constants
-	CipherSuites []string `json:"cipherSuites"`
+	CipherSuites []string `json:"cipherSuites,omitempty"`
 	// Controls whether the server selects the
 	// client's most preferred cipher suite, or the server's most preferred
 	// cipher suite. If true then the server's preference, as expressed in
@@ -3877,7 +3910,7 @@ type WebTLSConfig struct {
 	// Elliptic curves that will be used in an ECDHE handshake, in preference
 	// order. Available curves are documented in the go documentation:
 	// https://golang.org/pkg/crypto/tls/#CurveID
-	CurvePreferences []string `json:"curvePreferences"`
+	CurvePreferences []string `json:"curvePreferences,omitempty"`
 }
 
 func (in *WebTLSConfig) DeepCopyInto(out *WebTLSConfig) {

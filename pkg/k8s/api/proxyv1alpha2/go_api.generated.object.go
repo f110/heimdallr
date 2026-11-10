@@ -6,6 +6,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"maps"
 )
 
 const GroupName = "proxy.f110.dev"
@@ -74,10 +75,14 @@ func (in *Backend) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Backend) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.Backend"
+}
+
 type BackendList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Backend `json:"items"`
+	Items           []Backend `json:"items,omitempty"`
 }
 
 func (in *BackendList) DeepCopyInto(out *BackendList) {
@@ -107,6 +112,10 @@ func (in *BackendList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *BackendList) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.BackendList"
 }
 
 type Proxy struct {
@@ -140,10 +149,14 @@ func (in *Proxy) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Proxy) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.Proxy"
+}
+
 type ProxyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Proxy `json:"items"`
+	Items           []Proxy `json:"items,omitempty"`
 }
 
 func (in *ProxyList) DeepCopyInto(out *ProxyList) {
@@ -173,6 +186,10 @@ func (in *ProxyList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *ProxyList) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.ProxyList"
 }
 
 type Role struct {
@@ -206,10 +223,14 @@ func (in *Role) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Role) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.Role"
+}
+
 type RoleBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Subjects          []Subject `json:"subjects"`
+	Subjects          []Subject `json:"subjects,omitempty"`
 	RoleRef           RoleRef   `json:"roleRef"`
 }
 
@@ -243,10 +264,14 @@ func (in *RoleBinding) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *RoleBinding) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.RoleBinding"
+}
+
 type RoleBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []RoleBinding `json:"items"`
+	Items           []RoleBinding `json:"items,omitempty"`
 }
 
 func (in *RoleBindingList) DeepCopyInto(out *RoleBindingList) {
@@ -278,10 +303,14 @@ func (in *RoleBindingList) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *RoleBindingList) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.RoleBindingList"
+}
+
 type RoleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Role `json:"items"`
+	Items           []Role `json:"items,omitempty"`
 }
 
 func (in *RoleList) DeepCopyInto(out *RoleList) {
@@ -311,6 +340,10 @@ func (in *RoleList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *RoleList) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.RoleList"
 }
 
 type RpcPermission struct {
@@ -344,10 +377,14 @@ func (in *RpcPermission) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *RpcPermission) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.RpcPermission"
+}
+
 type RpcPermissionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []RpcPermission `json:"items"`
+	Items           []RpcPermission `json:"items,omitempty"`
 }
 
 func (in *RpcPermissionList) DeepCopyInto(out *RpcPermissionList) {
@@ -379,6 +416,10 @@ func (in *RpcPermissionList) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *RpcPermissionList) OpenAPIModelName() string {
+	return "heimdallr.api.proxyv1alpha2.RpcPermissionList"
+}
+
 type BackendSpec struct {
 	FQDN               string             `json:"fqdn,omitempty"`
 	Layer              string             `json:"layer,omitempty"`
@@ -386,9 +427,9 @@ type BackendSpec struct {
 	DisableAuthn       bool               `json:"disableAuthn,omitempty"`
 	AllowHttp          bool               `json:"allowHttp,omitempty"`
 	AllowPreflight     bool               `json:"allowPreflight,omitempty"`
-	Permissions        []Permission       `json:"permissions"`
+	Permissions        []Permission       `json:"permissions,omitempty"`
 	MaxSessionDuration *metav1.Duration   `json:"maxSessionDuration,omitempty"`
-	HTTP               []BackendHTTPSpec  `json:"http"`
+	HTTP               []BackendHTTPSpec  `json:"http,omitempty"`
 	Socket             *BackendSocketSpec `json:"socket,omitempty"`
 }
 
@@ -430,8 +471,8 @@ func (in *BackendSpec) DeepCopy() *BackendSpec {
 }
 
 type BackendStatus struct {
-	DeployedBy           []ProxyReference             `json:"deployedBy"`
-	WebhookConfiguration []WebhookConfigurationStatus `json:"webhookConfiguration"`
+	DeployedBy           []ProxyReference             `json:"deployedBy,omitempty"`
+	WebhookConfiguration []WebhookConfigurationStatus `json:"webhookConfiguration,omitempty"`
 }
 
 func (in *BackendStatus) DeepCopyInto(out *BackendStatus) {
@@ -471,7 +512,7 @@ type ProxySpec struct {
 	CertificateAuthority  *CertificateAuthoritySpec    `json:"certificateAuthority,omitempty"`
 	IssuerRef             metav1_1.ObjectReference     `json:"issuerRef"`
 	IdentityProvider      IdentityProviderSpec         `json:"identityProvider"`
-	RootUsers             []string                     `json:"rootUsers"`
+	RootUsers             []string                     `json:"rootUsers,omitempty"`
 	Session               SessionSpec                  `json:"session"`
 	Replicas              int                          `json:"replicas"`
 	RPCReplicas           int                          `json:"rpcReplicas,omitempty"`
@@ -606,7 +647,7 @@ func (in *RoleSpec) DeepCopy() *RoleSpec {
 }
 
 type RoleStatus struct {
-	Backends []string `json:"backends"`
+	Backends []string `json:"backends,omitempty"`
 }
 
 func (in *RoleStatus) DeepCopyInto(out *RoleStatus) {
@@ -666,7 +707,7 @@ func (in *RoleRef) DeepCopy() *RoleRef {
 }
 
 type RpcPermissionSpec struct {
-	Allow []string `json:"allow"`
+	Allow []string `json:"allow,omitempty"`
 }
 
 func (in *RpcPermissionSpec) DeepCopyInto(out *RpcPermissionSpec) {
@@ -707,7 +748,7 @@ type Permission struct {
 	Name                 string                `json:"name,omitempty"`
 	Webhook              string                `json:"webhook,omitempty"`
 	WebhookConfiguration *WebhookConfiguration `json:"webhookConfiguration,omitempty"`
-	Locations            []Location            `json:"locations"`
+	Locations            []Location            `json:"locations,omitempty"`
 }
 
 func (in *Permission) DeepCopyInto(out *Permission) {
@@ -968,9 +1009,7 @@ func (in *MonitorSpec) DeepCopyInto(out *MonitorSpec) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -1168,9 +1207,9 @@ func (in *SecretSelector) DeepCopy() *SecretSelector {
 }
 
 type GitHubHookConfiguration struct {
-	Repositories              []string `json:"repositories"`
+	Repositories              []string `json:"repositories,omitempty"`
 	Path                      string   `json:"path,omitempty"`
-	Events                    []string `json:"events"`
+	Events                    []string `json:"events,omitempty"`
 	ContentType               string   `json:"contentType,omitempty"`
 	CredentialSecretName      string   `json:"credentialSecretName,omitempty"`
 	CredentialSecretNamespace string   `json:"credentialSecretNamespace,omitempty"`

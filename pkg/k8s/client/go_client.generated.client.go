@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"sync"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -57,6 +59,7 @@ type Backend interface {
 	Create(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
 	Update(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateStatus(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	Apply(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error)
 	Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error
 	Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error)
 	GetClusterScoped(ctx context.Context, resourceName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
@@ -64,6 +67,7 @@ type Backend interface {
 	CreateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateStatusClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	ApplyClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error)
 	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
 	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
 
@@ -203,6 +207,27 @@ func (r *restBackend) UpdateStatus(ctx context.Context, resourceName string, obj
 		Into(result)
 }
 
+func (r *restBackend) Apply(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	meta := m.GetObjectMeta()
+	patch, err := encodeApplyPatch(obj)
+	if err != nil {
+		return nil, err
+	}
+	patchOpts := opts.ToPatchOptions()
+	return result, r.client.Patch(types.ApplyPatchType).
+		Namespace(meta.Namespace).
+		Resource(resourceName).
+		Name(meta.Name).
+		VersionedParams(&patchOpts, ParameterCodec).
+		Body(patch).
+		Do(ctx).
+		Into(result)
+}
+
 func (r *restBackend) Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error {
 	return r.client.Delete().
 		Namespace(namespace).
@@ -289,6 +314,39 @@ func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceNam
 		Into(result)
 }
 
+func (r *restBackend) ApplyClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	meta := m.GetObjectMeta()
+	patch, err := encodeApplyPatch(obj)
+	if err != nil {
+		return nil, err
+	}
+	patchOpts := opts.ToPatchOptions()
+	return result, r.client.Patch(types.ApplyPatchType).
+		Resource(resourceName).
+		Name(meta.Name).
+		VersionedParams(&patchOpts, ParameterCodec).
+		Body(patch).
+		Do(ctx).
+		Into(result)
+}
+
+// encodeApplyPatch encodes obj into the body of the apply request.
+// The body is passed as []byte because rest.Request overwrites Content-Type when the body is runtime.Object.
+// The apply request requires apiVersion and kind, so they are set from Scheme.
+func encodeApplyPatch(obj runtime.Object) ([]byte, error) {
+	gvks, _, err := Scheme.ObjectKinds(obj)
+	if err != nil {
+		return nil, err
+	}
+	obj = obj.DeepCopyObject()
+	obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+	return json.Marshal(obj)
+}
+
 func (r *restBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error {
 	return r.client.Delete().
 		Resource(gvr.Resource).
@@ -356,6 +414,14 @@ func (c *EtcdV1alpha1) UpdateStatusEtcdCluster(ctx context.Context, v *etcdv1alp
 	return result.(*etcdv1alpha1.EtcdCluster), nil
 }
 
+func (c *EtcdV1alpha1) ApplyEtcdCluster(ctx context.Context, v *etcdv1alpha1.EtcdCluster, opts metav1.ApplyOptions) (*etcdv1alpha1.EtcdCluster, error) {
+	result, err := c.backend.Apply(ctx, "etcdclusters", v, opts, &etcdv1alpha1.EtcdCluster{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*etcdv1alpha1.EtcdCluster), nil
+}
+
 func (c *EtcdV1alpha1) DeleteEtcdCluster(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "etcd.f110.dev", Version: "v1alpha1", Resource: "etcdclusters"}, namespace, name, opts)
 }
@@ -407,6 +473,14 @@ func (c *EtcdV1alpha2) UpdateEtcdCluster(ctx context.Context, v *etcdv1alpha2.Et
 
 func (c *EtcdV1alpha2) UpdateStatusEtcdCluster(ctx context.Context, v *etcdv1alpha2.EtcdCluster, opts metav1.UpdateOptions) (*etcdv1alpha2.EtcdCluster, error) {
 	result, err := c.backend.UpdateStatus(ctx, "etcdclusters", v, opts, &etcdv1alpha2.EtcdCluster{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*etcdv1alpha2.EtcdCluster), nil
+}
+
+func (c *EtcdV1alpha2) ApplyEtcdCluster(ctx context.Context, v *etcdv1alpha2.EtcdCluster, opts metav1.ApplyOptions) (*etcdv1alpha2.EtcdCluster, error) {
+	result, err := c.backend.Apply(ctx, "etcdclusters", v, opts, &etcdv1alpha2.EtcdCluster{})
 	if err != nil {
 		return nil, err
 	}
@@ -470,6 +544,14 @@ func (c *ProxyV1alpha1) UpdateStatusBackend(ctx context.Context, v *proxyv1alpha
 	return result.(*proxyv1alpha1.Backend), nil
 }
 
+func (c *ProxyV1alpha1) ApplyBackend(ctx context.Context, v *proxyv1alpha1.Backend, opts metav1.ApplyOptions) (*proxyv1alpha1.Backend, error) {
+	result, err := c.backend.Apply(ctx, "backends", v, opts, &proxyv1alpha1.Backend{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha1.Backend), nil
+}
+
 func (c *ProxyV1alpha1) DeleteBackend(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "proxy.f110.dev", Version: "v1alpha1", Resource: "backends"}, namespace, name, opts)
 }
@@ -512,6 +594,14 @@ func (c *ProxyV1alpha1) UpdateProxy(ctx context.Context, v *proxyv1alpha1.Proxy,
 
 func (c *ProxyV1alpha1) UpdateStatusProxy(ctx context.Context, v *proxyv1alpha1.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha1.Proxy, error) {
 	result, err := c.backend.UpdateStatus(ctx, "proxies", v, opts, &proxyv1alpha1.Proxy{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha1.Proxy), nil
+}
+
+func (c *ProxyV1alpha1) ApplyProxy(ctx context.Context, v *proxyv1alpha1.Proxy, opts metav1.ApplyOptions) (*proxyv1alpha1.Proxy, error) {
+	result, err := c.backend.Apply(ctx, "proxies", v, opts, &proxyv1alpha1.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -566,6 +656,14 @@ func (c *ProxyV1alpha1) UpdateStatusRole(ctx context.Context, v *proxyv1alpha1.R
 	return result.(*proxyv1alpha1.Role), nil
 }
 
+func (c *ProxyV1alpha1) ApplyRole(ctx context.Context, v *proxyv1alpha1.Role, opts metav1.ApplyOptions) (*proxyv1alpha1.Role, error) {
+	result, err := c.backend.Apply(ctx, "roles", v, opts, &proxyv1alpha1.Role{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha1.Role), nil
+}
+
 func (c *ProxyV1alpha1) DeleteRole(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "proxy.f110.dev", Version: "v1alpha1", Resource: "roles"}, namespace, name, opts)
 }
@@ -606,6 +704,14 @@ func (c *ProxyV1alpha1) UpdateRoleBinding(ctx context.Context, v *proxyv1alpha1.
 	return result.(*proxyv1alpha1.RoleBinding), nil
 }
 
+func (c *ProxyV1alpha1) ApplyRoleBinding(ctx context.Context, v *proxyv1alpha1.RoleBinding, opts metav1.ApplyOptions) (*proxyv1alpha1.RoleBinding, error) {
+	result, err := c.backend.Apply(ctx, "rolebindings", v, opts, &proxyv1alpha1.RoleBinding{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha1.RoleBinding), nil
+}
+
 func (c *ProxyV1alpha1) DeleteRoleBinding(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "proxy.f110.dev", Version: "v1alpha1", Resource: "rolebindings"}, namespace, name, opts)
 }
@@ -640,6 +746,14 @@ func (c *ProxyV1alpha1) CreateRpcPermission(ctx context.Context, v *proxyv1alpha
 
 func (c *ProxyV1alpha1) UpdateRpcPermission(ctx context.Context, v *proxyv1alpha1.RpcPermission, opts metav1.UpdateOptions) (*proxyv1alpha1.RpcPermission, error) {
 	result, err := c.backend.Update(ctx, "rpcpermissions", v, opts, &proxyv1alpha1.RpcPermission{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha1.RpcPermission), nil
+}
+
+func (c *ProxyV1alpha1) ApplyRpcPermission(ctx context.Context, v *proxyv1alpha1.RpcPermission, opts metav1.ApplyOptions) (*proxyv1alpha1.RpcPermission, error) {
+	result, err := c.backend.Apply(ctx, "rpcpermissions", v, opts, &proxyv1alpha1.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}
@@ -703,6 +817,14 @@ func (c *ProxyV1alpha2) UpdateStatusBackend(ctx context.Context, v *proxyv1alpha
 	return result.(*proxyv1alpha2.Backend), nil
 }
 
+func (c *ProxyV1alpha2) ApplyBackend(ctx context.Context, v *proxyv1alpha2.Backend, opts metav1.ApplyOptions) (*proxyv1alpha2.Backend, error) {
+	result, err := c.backend.Apply(ctx, "backends", v, opts, &proxyv1alpha2.Backend{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha2.Backend), nil
+}
+
 func (c *ProxyV1alpha2) DeleteBackend(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "proxy.f110.dev", Version: "v1alpha2", Resource: "backends"}, namespace, name, opts)
 }
@@ -745,6 +867,14 @@ func (c *ProxyV1alpha2) UpdateProxy(ctx context.Context, v *proxyv1alpha2.Proxy,
 
 func (c *ProxyV1alpha2) UpdateStatusProxy(ctx context.Context, v *proxyv1alpha2.Proxy, opts metav1.UpdateOptions) (*proxyv1alpha2.Proxy, error) {
 	result, err := c.backend.UpdateStatus(ctx, "proxies", v, opts, &proxyv1alpha2.Proxy{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha2.Proxy), nil
+}
+
+func (c *ProxyV1alpha2) ApplyProxy(ctx context.Context, v *proxyv1alpha2.Proxy, opts metav1.ApplyOptions) (*proxyv1alpha2.Proxy, error) {
+	result, err := c.backend.Apply(ctx, "proxies", v, opts, &proxyv1alpha2.Proxy{})
 	if err != nil {
 		return nil, err
 	}
@@ -799,6 +929,14 @@ func (c *ProxyV1alpha2) UpdateStatusRole(ctx context.Context, v *proxyv1alpha2.R
 	return result.(*proxyv1alpha2.Role), nil
 }
 
+func (c *ProxyV1alpha2) ApplyRole(ctx context.Context, v *proxyv1alpha2.Role, opts metav1.ApplyOptions) (*proxyv1alpha2.Role, error) {
+	result, err := c.backend.Apply(ctx, "roles", v, opts, &proxyv1alpha2.Role{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha2.Role), nil
+}
+
 func (c *ProxyV1alpha2) DeleteRole(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "proxy.f110.dev", Version: "v1alpha2", Resource: "roles"}, namespace, name, opts)
 }
@@ -833,6 +971,14 @@ func (c *ProxyV1alpha2) CreateRoleBinding(ctx context.Context, v *proxyv1alpha2.
 
 func (c *ProxyV1alpha2) UpdateRoleBinding(ctx context.Context, v *proxyv1alpha2.RoleBinding, opts metav1.UpdateOptions) (*proxyv1alpha2.RoleBinding, error) {
 	result, err := c.backend.Update(ctx, "rolebindings", v, opts, &proxyv1alpha2.RoleBinding{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha2.RoleBinding), nil
+}
+
+func (c *ProxyV1alpha2) ApplyRoleBinding(ctx context.Context, v *proxyv1alpha2.RoleBinding, opts metav1.ApplyOptions) (*proxyv1alpha2.RoleBinding, error) {
+	result, err := c.backend.Apply(ctx, "rolebindings", v, opts, &proxyv1alpha2.RoleBinding{})
 	if err != nil {
 		return nil, err
 	}
@@ -881,6 +1027,14 @@ func (c *ProxyV1alpha2) UpdateRpcPermission(ctx context.Context, v *proxyv1alpha
 
 func (c *ProxyV1alpha2) UpdateStatusRpcPermission(ctx context.Context, v *proxyv1alpha2.RpcPermission, opts metav1.UpdateOptions) (*proxyv1alpha2.RpcPermission, error) {
 	result, err := c.backend.UpdateStatus(ctx, "rpcpermissions", v, opts, &proxyv1alpha2.RpcPermission{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*proxyv1alpha2.RpcPermission), nil
+}
+
+func (c *ProxyV1alpha2) ApplyRpcPermission(ctx context.Context, v *proxyv1alpha2.RpcPermission, opts metav1.ApplyOptions) (*proxyv1alpha2.RpcPermission, error) {
+	result, err := c.backend.Apply(ctx, "rpcpermissions", v, opts, &proxyv1alpha2.RpcPermission{})
 	if err != nil {
 		return nil, err
 	}

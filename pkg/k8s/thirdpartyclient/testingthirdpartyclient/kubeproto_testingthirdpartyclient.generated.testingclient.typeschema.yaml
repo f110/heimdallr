@@ -1,0 +1,4782 @@
+types:
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Alertmanager
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerSpec
+    - name: status
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerStatus
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: generateName
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: selfLink
+      type:
+        scalar: string
+    - name: uid
+      type:
+        scalar: string
+    - name: resourceVersion
+      type:
+        scalar: string
+    - name: generation
+      type:
+        scalar: numeric
+    - name: creationTimestamp
+      type:
+        scalar: string
+    - name: deletionTimestamp
+      type:
+        scalar: string
+    - name: deletionGracePeriodSeconds
+      type:
+        scalar: numeric
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: ownerReferences
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.OwnerReference
+          elementRelationship: associative
+          keys:
+          - uid
+    - name: finalizers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
+    - name: managedFields
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+          elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.OwnerReference
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: uid
+      type:
+        scalar: string
+    - name: controller
+      type:
+        scalar: boolean
+    - name: blockOwnerDeletion
+      type:
+        scalar: boolean
+    elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+  map:
+    fields:
+    - name: manager
+      type:
+        scalar: string
+    - name: operation
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: time
+      type:
+        scalar: string
+    - name: fieldsType
+      type:
+        scalar: string
+    - name: fieldsV1
+      type:
+        namedType: __untyped_deduced_
+    - name: subresource
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerSpec
+  map:
+    fields:
+    - name: podMetadata
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedObjectMetadata
+    - name: image
+      type:
+        scalar: string
+    - name: version
+      type:
+        scalar: string
+    - name: tag
+      type:
+        scalar: string
+    - name: sha
+      type:
+        scalar: string
+    - name: baseImage
+      type:
+        scalar: string
+    - name: imagePullSecrets
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.LocalObjectReference
+          elementRelationship: atomic
+    - name: secrets
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: configMaps
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: configSecret
+      type:
+        scalar: string
+    - name: logLevel
+      type:
+        scalar: string
+    - name: logFormat
+      type:
+        scalar: string
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: retention
+      type:
+        scalar: string
+    - name: storage
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.StorageSpec
+    - name: volumes
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Volume
+          elementRelationship: atomic
+    - name: volumeMounts
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeMount
+          elementRelationship: atomic
+    - name: externalUrl
+      type:
+        scalar: string
+    - name: routePrefix
+      type:
+        scalar: string
+    - name: paused
+      type:
+        scalar: boolean
+    - name: nodeSelector
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: affinity
+      type:
+        namedType: k8s.io.api.core.v1.Affinity
+    - name: tolerations
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Toleration
+          elementRelationship: atomic
+    - name: topologySpreadConstraints
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.TopologySpreadConstraint
+          elementRelationship: atomic
+    - name: securityContext
+      type:
+        namedType: k8s.io.api.core.v1.PodSecurityContext
+    - name: serviceAccountName
+      type:
+        scalar: string
+    - name: listenLocal
+      type:
+        scalar: boolean
+    - name: containers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: initContainers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: priorityClassName
+      type:
+        scalar: string
+    - name: additionalPeers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: clusterAdvertiseAddress
+      type:
+        scalar: string
+    - name: clusterGossipInterval
+      type:
+        scalar: string
+    - name: clusterPushpullInterval
+      type:
+        scalar: string
+    - name: clusterPeerTimeout
+      type:
+        scalar: string
+    - name: portName
+      type:
+        scalar: string
+    - name: forceEnableClusterMode
+      type:
+        scalar: boolean
+    - name: alertmanagerConfigSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: alertmanagerConfigNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: minReadySeconds
+      type:
+        scalar: numeric
+    - name: hostAliases
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HostAlias
+          elementRelationship: associative
+          keys:
+          - ip
+    - name: web
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerWebSpec
+    - name: alertmanagerConfiguration
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerConfiguration
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedObjectMetadata
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: k8s.io.api.core.v1.LocalObjectReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.StorageSpec
+  map:
+    fields:
+    - name: disableMountSubPath
+      type:
+        scalar: boolean
+    - name: emptyDir
+      type:
+        namedType: k8s.io.api.core.v1.EmptyDirVolumeSource
+    - name: ephemeral
+      type:
+        namedType: k8s.io.api.core.v1.EphemeralVolumeSource
+    - name: volumeClaimTemplate
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedPersistentVolumeClaim
+- name: k8s.io.api.core.v1.EmptyDirVolumeSource
+  map:
+    fields:
+    - name: medium
+      type:
+        scalar: string
+    - name: sizeLimit
+      type:
+        scalar: untyped
+- name: k8s.io.api.core.v1.EphemeralVolumeSource
+  map:
+    fields:
+    - name: volumeClaimTemplate
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimTemplate
+- name: k8s.io.api.core.v1.PersistentVolumeClaimTemplate
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimSpec
+- name: k8s.io.api.core.v1.PersistentVolumeClaimSpec
+  map:
+    fields:
+    - name: accessModes
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: selector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.VolumeResourceRequirements
+    - name: volumeName
+      type:
+        scalar: string
+    - name: storageClassName
+      type:
+        scalar: string
+    - name: volumeMode
+      type:
+        scalar: string
+    - name: dataSource
+      type:
+        namedType: k8s.io.api.core.v1.TypedLocalObjectReference
+    - name: dataSourceRef
+      type:
+        namedType: k8s.io.api.core.v1.TypedObjectReference
+    - name: volumeAttributesClassName
+      type:
+        scalar: string
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    elementRelationship: atomic
+- name: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: operator
+      type:
+        scalar: string
+    - name: values
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.VolumeResourceRequirements
+  map:
+    fields:
+    - name: limits
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: requests
+      type:
+        map:
+          elementType:
+            scalar: untyped
+- name: k8s.io.api.core.v1.TypedLocalObjectReference
+  map:
+    fields:
+    - name: apiGroup
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.TypedObjectReference
+  map:
+    fields:
+    - name: apiGroup
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedPersistentVolumeClaim
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedObjectMetadata
+    - name: spec
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimSpec
+    - name: status
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimStatus
+- name: k8s.io.api.core.v1.PersistentVolumeClaimStatus
+  map:
+    fields:
+    - name: phase
+      type:
+        scalar: string
+    - name: accessModes
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: capacity
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.PersistentVolumeClaimCondition
+          elementRelationship: associative
+          keys:
+          - type
+    - name: allocatedResources
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: allocatedResourceStatuses
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: currentVolumeAttributesClassName
+      type:
+        scalar: string
+    - name: modifyVolumeStatus
+      type:
+        namedType: k8s.io.api.core.v1.ModifyVolumeStatus
+- name: k8s.io.api.core.v1.PersistentVolumeClaimCondition
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+    - name: lastProbeTime
+      type:
+        scalar: string
+    - name: lastTransitionTime
+      type:
+        scalar: string
+    - name: reason
+      type:
+        scalar: string
+    - name: message
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ModifyVolumeStatus
+  map:
+    fields:
+    - name: targetVolumeAttributesClassName
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.Volume
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: hostPath
+      type:
+        namedType: k8s.io.api.core.v1.HostPathVolumeSource
+    - name: emptyDir
+      type:
+        namedType: k8s.io.api.core.v1.EmptyDirVolumeSource
+    - name: gcePersistentDisk
+      type:
+        namedType: k8s.io.api.core.v1.GCEPersistentDiskVolumeSource
+    - name: awsElasticBlockStore
+      type:
+        namedType: k8s.io.api.core.v1.AWSElasticBlockStoreVolumeSource
+    - name: gitRepo
+      type:
+        namedType: k8s.io.api.core.v1.GitRepoVolumeSource
+    - name: secret
+      type:
+        namedType: k8s.io.api.core.v1.SecretVolumeSource
+    - name: nfs
+      type:
+        namedType: k8s.io.api.core.v1.NFSVolumeSource
+    - name: iscsi
+      type:
+        namedType: k8s.io.api.core.v1.ISCSIVolumeSource
+    - name: glusterfs
+      type:
+        namedType: k8s.io.api.core.v1.GlusterfsVolumeSource
+    - name: persistentVolumeClaim
+      type:
+        namedType: k8s.io.api.core.v1.PersistentVolumeClaimVolumeSource
+    - name: rbd
+      type:
+        namedType: k8s.io.api.core.v1.RBDVolumeSource
+    - name: flexVolume
+      type:
+        namedType: k8s.io.api.core.v1.FlexVolumeSource
+    - name: cinder
+      type:
+        namedType: k8s.io.api.core.v1.CinderVolumeSource
+    - name: cephfs
+      type:
+        namedType: k8s.io.api.core.v1.CephFSVolumeSource
+    - name: flocker
+      type:
+        namedType: k8s.io.api.core.v1.FlockerVolumeSource
+    - name: downwardAPI
+      type:
+        namedType: k8s.io.api.core.v1.DownwardAPIVolumeSource
+    - name: fc
+      type:
+        namedType: k8s.io.api.core.v1.FCVolumeSource
+    - name: azureFile
+      type:
+        namedType: k8s.io.api.core.v1.AzureFileVolumeSource
+    - name: configMap
+      type:
+        namedType: k8s.io.api.core.v1.ConfigMapVolumeSource
+    - name: vsphereVolume
+      type:
+        namedType: k8s.io.api.core.v1.VsphereVirtualDiskVolumeSource
+    - name: quobyte
+      type:
+        namedType: k8s.io.api.core.v1.QuobyteVolumeSource
+    - name: azureDisk
+      type:
+        namedType: k8s.io.api.core.v1.AzureDiskVolumeSource
+    - name: photonPersistentDisk
+      type:
+        namedType: k8s.io.api.core.v1.PhotonPersistentDiskVolumeSource
+    - name: projected
+      type:
+        namedType: k8s.io.api.core.v1.ProjectedVolumeSource
+    - name: portworxVolume
+      type:
+        namedType: k8s.io.api.core.v1.PortworxVolumeSource
+    - name: scaleIO
+      type:
+        namedType: k8s.io.api.core.v1.ScaleIOVolumeSource
+    - name: storageos
+      type:
+        namedType: k8s.io.api.core.v1.StorageOSVolumeSource
+    - name: csi
+      type:
+        namedType: k8s.io.api.core.v1.CSIVolumeSource
+    - name: ephemeral
+      type:
+        namedType: k8s.io.api.core.v1.EphemeralVolumeSource
+    - name: image
+      type:
+        namedType: k8s.io.api.core.v1.ImageVolumeSource
+- name: k8s.io.api.core.v1.HostPathVolumeSource
+  map:
+    fields:
+    - name: path
+      type:
+        scalar: string
+    - name: type
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.GCEPersistentDiskVolumeSource
+  map:
+    fields:
+    - name: pdName
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: partition
+      type:
+        scalar: numeric
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.AWSElasticBlockStoreVolumeSource
+  map:
+    fields:
+    - name: volumeID
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: partition
+      type:
+        scalar: numeric
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.GitRepoVolumeSource
+  map:
+    fields:
+    - name: repository
+      type:
+        scalar: string
+    - name: revision
+      type:
+        scalar: string
+    - name: directory
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.SecretVolumeSource
+  map:
+    fields:
+    - name: secretName
+      type:
+        scalar: string
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.KeyToPath
+          elementRelationship: atomic
+    - name: defaultMode
+      type:
+        scalar: numeric
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.KeyToPath
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: mode
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.NFSVolumeSource
+  map:
+    fields:
+    - name: server
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.ISCSIVolumeSource
+  map:
+    fields:
+    - name: targetPortal
+      type:
+        scalar: string
+    - name: iqn
+      type:
+        scalar: string
+    - name: lun
+      type:
+        scalar: numeric
+    - name: iscsiInterface
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: portals
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: chapAuthDiscovery
+      type:
+        scalar: boolean
+    - name: chapAuthSession
+      type:
+        scalar: boolean
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+    - name: initiatorName
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.GlusterfsVolumeSource
+  map:
+    fields:
+    - name: endpoints
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.PersistentVolumeClaimVolumeSource
+  map:
+    fields:
+    - name: claimName
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.RBDVolumeSource
+  map:
+    fields:
+    - name: monitors
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: image
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: pool
+      type:
+        scalar: string
+    - name: user
+      type:
+        scalar: string
+    - name: keyring
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.FlexVolumeSource
+  map:
+    fields:
+    - name: driver
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: options
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: k8s.io.api.core.v1.CinderVolumeSource
+  map:
+    fields:
+    - name: volumeID
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+- name: k8s.io.api.core.v1.CephFSVolumeSource
+  map:
+    fields:
+    - name: monitors
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: path
+      type:
+        scalar: string
+    - name: user
+      type:
+        scalar: string
+    - name: secretFile
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.FlockerVolumeSource
+  map:
+    fields:
+    - name: datasetName
+      type:
+        scalar: string
+    - name: datasetUUID
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.DownwardAPIVolumeSource
+  map:
+    fields:
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.DownwardAPIVolumeFile
+          elementRelationship: atomic
+    - name: defaultMode
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.DownwardAPIVolumeFile
+  map:
+    fields:
+    - name: path
+      type:
+        scalar: string
+    - name: fieldRef
+      type:
+        namedType: k8s.io.api.core.v1.ObjectFieldSelector
+    - name: resourceFieldRef
+      type:
+        namedType: k8s.io.api.core.v1.ResourceFieldSelector
+    - name: mode
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.ObjectFieldSelector
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: fieldPath
+      type:
+        scalar: string
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.ResourceFieldSelector
+  map:
+    fields:
+    - name: containerName
+      type:
+        scalar: string
+    - name: resource
+      type:
+        scalar: string
+    - name: divisor
+      type:
+        scalar: untyped
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.FCVolumeSource
+  map:
+    fields:
+    - name: targetWWNs
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: lun
+      type:
+        scalar: numeric
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: wwids
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.AzureFileVolumeSource
+  map:
+    fields:
+    - name: secretName
+      type:
+        scalar: string
+    - name: shareName
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.ConfigMapVolumeSource
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.KeyToPath
+          elementRelationship: atomic
+    - name: defaultMode
+      type:
+        scalar: numeric
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.VsphereVirtualDiskVolumeSource
+  map:
+    fields:
+    - name: volumePath
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: storagePolicyName
+      type:
+        scalar: string
+    - name: storagePolicyID
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.QuobyteVolumeSource
+  map:
+    fields:
+    - name: registry
+      type:
+        scalar: string
+    - name: volume
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: user
+      type:
+        scalar: string
+    - name: group
+      type:
+        scalar: string
+    - name: tenant
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.AzureDiskVolumeSource
+  map:
+    fields:
+    - name: diskName
+      type:
+        scalar: string
+    - name: diskURI
+      type:
+        scalar: string
+    - name: cachingMode
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: kind
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.PhotonPersistentDiskVolumeSource
+  map:
+    fields:
+    - name: pdID
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ProjectedVolumeSource
+  map:
+    fields:
+    - name: sources
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeProjection
+          elementRelationship: atomic
+    - name: defaultMode
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.VolumeProjection
+  map:
+    fields:
+    - name: secret
+      type:
+        namedType: k8s.io.api.core.v1.SecretProjection
+    - name: downwardAPI
+      type:
+        namedType: k8s.io.api.core.v1.DownwardAPIProjection
+    - name: configMap
+      type:
+        namedType: k8s.io.api.core.v1.ConfigMapProjection
+    - name: serviceAccountToken
+      type:
+        namedType: k8s.io.api.core.v1.ServiceAccountTokenProjection
+    - name: clusterTrustBundle
+      type:
+        namedType: k8s.io.api.core.v1.ClusterTrustBundleProjection
+    - name: podCertificate
+      type:
+        namedType: k8s.io.api.core.v1.PodCertificateProjection
+- name: k8s.io.api.core.v1.SecretProjection
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.KeyToPath
+          elementRelationship: atomic
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.DownwardAPIProjection
+  map:
+    fields:
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.DownwardAPIVolumeFile
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.ConfigMapProjection
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.KeyToPath
+          elementRelationship: atomic
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.ServiceAccountTokenProjection
+  map:
+    fields:
+    - name: audience
+      type:
+        scalar: string
+    - name: expirationSeconds
+      type:
+        scalar: numeric
+    - name: path
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ClusterTrustBundleProjection
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: signerName
+      type:
+        scalar: string
+    - name: labelSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: optional
+      type:
+        scalar: boolean
+    - name: path
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.PodCertificateProjection
+  map:
+    fields:
+    - name: signerName
+      type:
+        scalar: string
+    - name: keyType
+      type:
+        scalar: string
+    - name: maxExpirationSeconds
+      type:
+        scalar: numeric
+    - name: credentialBundlePath
+      type:
+        scalar: string
+    - name: keyPath
+      type:
+        scalar: string
+    - name: certificateChainPath
+      type:
+        scalar: string
+    - name: userAnnotations
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: k8s.io.api.core.v1.PortworxVolumeSource
+  map:
+    fields:
+    - name: volumeID
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.ScaleIOVolumeSource
+  map:
+    fields:
+    - name: gateway
+      type:
+        scalar: string
+    - name: system
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+    - name: sslEnabled
+      type:
+        scalar: boolean
+    - name: protectionDomain
+      type:
+        scalar: string
+    - name: storagePool
+      type:
+        scalar: string
+    - name: storageMode
+      type:
+        scalar: string
+    - name: volumeName
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.StorageOSVolumeSource
+  map:
+    fields:
+    - name: volumeName
+      type:
+        scalar: string
+    - name: volumeNamespace
+      type:
+        scalar: string
+    - name: fsType
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+- name: k8s.io.api.core.v1.CSIVolumeSource
+  map:
+    fields:
+    - name: driver
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: fsType
+      type:
+        scalar: string
+    - name: volumeAttributes
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: nodePublishSecretRef
+      type:
+        namedType: k8s.io.api.core.v1.LocalObjectReference
+- name: k8s.io.api.core.v1.ImageVolumeSource
+  map:
+    fields:
+    - name: reference
+      type:
+        scalar: string
+    - name: pullPolicy
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.VolumeMount
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: readOnly
+      type:
+        scalar: boolean
+    - name: recursiveReadOnly
+      type:
+        scalar: string
+    - name: mountPath
+      type:
+        scalar: string
+    - name: subPath
+      type:
+        scalar: string
+    - name: mountPropagation
+      type:
+        scalar: string
+    - name: subPathExpr
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ResourceRequirements
+  map:
+    fields:
+    - name: limits
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: requests
+      type:
+        map:
+          elementType:
+            scalar: untyped
+    - name: claims
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.ResourceClaim
+          elementRelationship: associative
+          keys:
+          - name
+- name: k8s.io.api.core.v1.ResourceClaim
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: request
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.Affinity
+  map:
+    fields:
+    - name: nodeAffinity
+      type:
+        namedType: k8s.io.api.core.v1.NodeAffinity
+    - name: podAffinity
+      type:
+        namedType: k8s.io.api.core.v1.PodAffinity
+    - name: podAntiAffinity
+      type:
+        namedType: k8s.io.api.core.v1.PodAntiAffinity
+- name: k8s.io.api.core.v1.NodeAffinity
+  map:
+    fields:
+    - name: requiredDuringSchedulingIgnoredDuringExecution
+      type:
+        namedType: k8s.io.api.core.v1.NodeSelector
+    - name: preferredDuringSchedulingIgnoredDuringExecution
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.PreferredSchedulingTerm
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.NodeSelector
+  map:
+    fields:
+    - name: nodeSelectorTerms
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.NodeSelectorTerm
+          elementRelationship: atomic
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.NodeSelectorTerm
+  map:
+    fields:
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.NodeSelectorRequirement
+          elementRelationship: atomic
+    - name: matchFields
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.NodeSelectorRequirement
+          elementRelationship: atomic
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.NodeSelectorRequirement
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: operator
+      type:
+        scalar: string
+    - name: values
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.PreferredSchedulingTerm
+  map:
+    fields:
+    - name: weight
+      type:
+        scalar: numeric
+    - name: preference
+      type:
+        namedType: k8s.io.api.core.v1.NodeSelectorTerm
+- name: k8s.io.api.core.v1.PodAffinity
+  map:
+    fields:
+    - name: requiredDuringSchedulingIgnoredDuringExecution
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.PodAffinityTerm
+          elementRelationship: atomic
+    - name: preferredDuringSchedulingIgnoredDuringExecution
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.WeightedPodAffinityTerm
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.PodAffinityTerm
+  map:
+    fields:
+    - name: labelSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: namespaces
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: topologyKey
+      type:
+        scalar: string
+    - name: namespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: matchLabelKeys
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: mismatchLabelKeys
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.WeightedPodAffinityTerm
+  map:
+    fields:
+    - name: weight
+      type:
+        scalar: numeric
+    - name: podAffinityTerm
+      type:
+        namedType: k8s.io.api.core.v1.PodAffinityTerm
+- name: k8s.io.api.core.v1.PodAntiAffinity
+  map:
+    fields:
+    - name: requiredDuringSchedulingIgnoredDuringExecution
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.PodAffinityTerm
+          elementRelationship: atomic
+    - name: preferredDuringSchedulingIgnoredDuringExecution
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.WeightedPodAffinityTerm
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.Toleration
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: operator
+      type:
+        scalar: string
+    - name: value
+      type:
+        scalar: string
+    - name: effect
+      type:
+        scalar: string
+    - name: tolerationSeconds
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.TopologySpreadConstraint
+  map:
+    fields:
+    - name: maxSkew
+      type:
+        scalar: numeric
+    - name: topologyKey
+      type:
+        scalar: string
+    - name: whenUnsatisfiable
+      type:
+        scalar: string
+    - name: labelSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: minDomains
+      type:
+        scalar: numeric
+    - name: nodeAffinityPolicy
+      type:
+        scalar: string
+    - name: nodeTaintsPolicy
+      type:
+        scalar: string
+    - name: matchLabelKeys
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.PodSecurityContext
+  map:
+    fields:
+    - name: seLinuxOptions
+      type:
+        namedType: k8s.io.api.core.v1.SELinuxOptions
+    - name: windowsOptions
+      type:
+        namedType: k8s.io.api.core.v1.WindowsSecurityContextOptions
+    - name: runAsUser
+      type:
+        scalar: numeric
+    - name: runAsGroup
+      type:
+        scalar: numeric
+    - name: runAsNonRoot
+      type:
+        scalar: boolean
+    - name: supplementalGroups
+      type:
+        list:
+          elementType:
+            scalar: numeric
+          elementRelationship: atomic
+    - name: supplementalGroupsPolicy
+      type:
+        scalar: string
+    - name: fsGroup
+      type:
+        scalar: numeric
+    - name: sysctls
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Sysctl
+          elementRelationship: atomic
+    - name: fsGroupChangePolicy
+      type:
+        scalar: string
+    - name: seccompProfile
+      type:
+        namedType: k8s.io.api.core.v1.SeccompProfile
+    - name: appArmorProfile
+      type:
+        namedType: k8s.io.api.core.v1.AppArmorProfile
+    - name: seLinuxChangePolicy
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.SELinuxOptions
+  map:
+    fields:
+    - name: user
+      type:
+        scalar: string
+    - name: role
+      type:
+        scalar: string
+    - name: type
+      type:
+        scalar: string
+    - name: level
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.WindowsSecurityContextOptions
+  map:
+    fields:
+    - name: gmsaCredentialSpecName
+      type:
+        scalar: string
+    - name: gmsaCredentialSpec
+      type:
+        scalar: string
+    - name: runAsUserName
+      type:
+        scalar: string
+    - name: hostProcess
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.Sysctl
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: value
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.SeccompProfile
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: localhostProfile
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.AppArmorProfile
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: localhostProfile
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.Container
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: image
+      type:
+        scalar: string
+    - name: command
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: args
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: workingDir
+      type:
+        scalar: string
+    - name: ports
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.ContainerPort
+          elementRelationship: associative
+          keys:
+          - containerPort
+          - protocol
+    - name: envFrom
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.EnvFromSource
+          elementRelationship: atomic
+    - name: env
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.EnvVar
+          elementRelationship: associative
+          keys:
+          - name
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: resizePolicy
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.ContainerResizePolicy
+          elementRelationship: atomic
+    - name: restartPolicy
+      type:
+        scalar: string
+    - name: restartPolicyRules
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.ContainerRestartRule
+          elementRelationship: atomic
+    - name: volumeMounts
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeMount
+          elementRelationship: associative
+          keys:
+          - mountPath
+    - name: volumeDevices
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeDevice
+          elementRelationship: associative
+          keys:
+          - devicePath
+    - name: livenessProbe
+      type:
+        namedType: k8s.io.api.core.v1.Probe
+    - name: readinessProbe
+      type:
+        namedType: k8s.io.api.core.v1.Probe
+    - name: startupProbe
+      type:
+        namedType: k8s.io.api.core.v1.Probe
+    - name: lifecycle
+      type:
+        namedType: k8s.io.api.core.v1.Lifecycle
+    - name: terminationMessagePath
+      type:
+        scalar: string
+    - name: terminationMessagePolicy
+      type:
+        scalar: string
+    - name: imagePullPolicy
+      type:
+        scalar: string
+    - name: securityContext
+      type:
+        namedType: k8s.io.api.core.v1.SecurityContext
+    - name: stdin
+      type:
+        scalar: boolean
+    - name: stdinOnce
+      type:
+        scalar: boolean
+    - name: tty
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.ContainerPort
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: hostPort
+      type:
+        scalar: numeric
+    - name: containerPort
+      type:
+        scalar: numeric
+    - name: protocol
+      type:
+        scalar: string
+    - name: hostIP
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.EnvFromSource
+  map:
+    fields:
+    - name: prefix
+      type:
+        scalar: string
+    - name: configMapRef
+      type:
+        namedType: k8s.io.api.core.v1.ConfigMapEnvSource
+    - name: secretRef
+      type:
+        namedType: k8s.io.api.core.v1.SecretEnvSource
+- name: k8s.io.api.core.v1.ConfigMapEnvSource
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.SecretEnvSource
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+- name: k8s.io.api.core.v1.EnvVar
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: value
+      type:
+        scalar: string
+    - name: valueFrom
+      type:
+        namedType: k8s.io.api.core.v1.EnvVarSource
+- name: k8s.io.api.core.v1.EnvVarSource
+  map:
+    fields:
+    - name: fieldRef
+      type:
+        namedType: k8s.io.api.core.v1.ObjectFieldSelector
+    - name: resourceFieldRef
+      type:
+        namedType: k8s.io.api.core.v1.ResourceFieldSelector
+    - name: configMapKeyRef
+      type:
+        namedType: k8s.io.api.core.v1.ConfigMapKeySelector
+    - name: secretKeyRef
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: fileKeyRef
+      type:
+        namedType: k8s.io.api.core.v1.FileKeySelector
+- name: k8s.io.api.core.v1.ConfigMapKeySelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.SecretKeySelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.FileKeySelector
+  map:
+    fields:
+    - name: volumeName
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+    elementRelationship: atomic
+- name: k8s.io.api.core.v1.ContainerResizePolicy
+  map:
+    fields:
+    - name: resourceName
+      type:
+        scalar: string
+    - name: restartPolicy
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.ContainerRestartRule
+  map:
+    fields:
+    - name: action
+      type:
+        scalar: string
+    - name: exitCodes
+      type:
+        namedType: k8s.io.api.core.v1.ContainerRestartRuleOnExitCodes
+- name: k8s.io.api.core.v1.ContainerRestartRuleOnExitCodes
+  map:
+    fields:
+    - name: operator
+      type:
+        scalar: string
+    - name: values
+      type:
+        list:
+          elementType:
+            scalar: numeric
+          elementRelationship: associative
+- name: k8s.io.api.core.v1.VolumeDevice
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: devicePath
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.Probe
+  map:
+    fields:
+    - name: exec
+      type:
+        namedType: k8s.io.api.core.v1.ExecAction
+    - name: httpGet
+      type:
+        namedType: k8s.io.api.core.v1.HTTPGetAction
+    - name: tcpSocket
+      type:
+        namedType: k8s.io.api.core.v1.TCPSocketAction
+    - name: grpc
+      type:
+        namedType: k8s.io.api.core.v1.GRPCAction
+    - name: initialDelaySeconds
+      type:
+        scalar: numeric
+    - name: timeoutSeconds
+      type:
+        scalar: numeric
+    - name: periodSeconds
+      type:
+        scalar: numeric
+    - name: successThreshold
+      type:
+        scalar: numeric
+    - name: failureThreshold
+      type:
+        scalar: numeric
+    - name: terminationGracePeriodSeconds
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.ExecAction
+  map:
+    fields:
+    - name: command
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.HTTPGetAction
+  map:
+    fields:
+    - name: path
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: untyped
+    - name: host
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+    - name: httpHeaders
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.HTTPHeader
+          elementRelationship: atomic
+- name: k8s.io.api.core.v1.HTTPHeader
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: value
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.TCPSocketAction
+  map:
+    fields:
+    - name: port
+      type:
+        scalar: untyped
+    - name: host
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.GRPCAction
+  map:
+    fields:
+    - name: port
+      type:
+        scalar: numeric
+    - name: service
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.Lifecycle
+  map:
+    fields:
+    - name: postStart
+      type:
+        namedType: k8s.io.api.core.v1.LifecycleHandler
+    - name: preStop
+      type:
+        namedType: k8s.io.api.core.v1.LifecycleHandler
+    - name: stopSignal
+      type:
+        scalar: string
+- name: k8s.io.api.core.v1.LifecycleHandler
+  map:
+    fields:
+    - name: exec
+      type:
+        namedType: k8s.io.api.core.v1.ExecAction
+    - name: httpGet
+      type:
+        namedType: k8s.io.api.core.v1.HTTPGetAction
+    - name: tcpSocket
+      type:
+        namedType: k8s.io.api.core.v1.TCPSocketAction
+    - name: sleep
+      type:
+        namedType: k8s.io.api.core.v1.SleepAction
+- name: k8s.io.api.core.v1.SleepAction
+  map:
+    fields:
+    - name: seconds
+      type:
+        scalar: numeric
+- name: k8s.io.api.core.v1.SecurityContext
+  map:
+    fields:
+    - name: capabilities
+      type:
+        namedType: k8s.io.api.core.v1.Capabilities
+    - name: privileged
+      type:
+        scalar: boolean
+    - name: seLinuxOptions
+      type:
+        namedType: k8s.io.api.core.v1.SELinuxOptions
+    - name: windowsOptions
+      type:
+        namedType: k8s.io.api.core.v1.WindowsSecurityContextOptions
+    - name: runAsUser
+      type:
+        scalar: numeric
+    - name: runAsGroup
+      type:
+        scalar: numeric
+    - name: runAsNonRoot
+      type:
+        scalar: boolean
+    - name: readOnlyRootFilesystem
+      type:
+        scalar: boolean
+    - name: allowPrivilegeEscalation
+      type:
+        scalar: boolean
+    - name: procMount
+      type:
+        scalar: string
+    - name: seccompProfile
+      type:
+        namedType: k8s.io.api.core.v1.SeccompProfile
+    - name: appArmorProfile
+      type:
+        namedType: k8s.io.api.core.v1.AppArmorProfile
+- name: k8s.io.api.core.v1.Capabilities
+  map:
+    fields:
+    - name: add
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: drop
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HostAlias
+  map:
+    fields:
+    - name: ip
+      type:
+        scalar: string
+    - name: hostnames
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerWebSpec
+  map:
+    fields:
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebTLSConfig
+    - name: httpConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebHTTPConfig
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebTLSConfig
+  map:
+    fields:
+    - name: keySecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: cert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: clientAuthType
+      type:
+        scalar: string
+    - name: client_ca
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: minVersion
+      type:
+        scalar: string
+    - name: maxVersion
+      type:
+        scalar: string
+    - name: cipherSuites
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: preferServerCipherSuites
+      type:
+        scalar: boolean
+    - name: curvePreferences
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+  map:
+    fields:
+    - name: secret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: configMap
+      type:
+        namedType: k8s.io.api.core.v1.ConfigMapKeySelector
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebHTTPConfig
+  map:
+    fields:
+    - name: http2
+      type:
+        scalar: boolean
+    - name: headers
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebHTTPHeaders
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebHTTPHeaders
+  map:
+    fields:
+    - name: contentSecurityPolicy
+      type:
+        scalar: string
+    - name: xFrameOptions
+      type:
+        scalar: string
+    - name: xContentTypeOptions
+      type:
+        scalar: string
+    - name: xXSSProtection
+      type:
+        scalar: string
+    - name: strictTransportSecurity
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerConfiguration
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: global
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerGlobalConfig
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerGlobalConfig
+  map:
+    fields:
+    - name: resolveTimeout
+      type:
+        scalar: string
+    - name: httpConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HTTPConfig
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HTTPConfig
+  map:
+    fields:
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: bearerTokenSecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeTLSConfig
+    - name: proxyURL
+      type:
+        scalar: string
+    - name: followRedirects
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: credentials
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+  map:
+    fields:
+    - name: username
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: password
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+  map:
+    fields:
+    - name: clientId
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: clientSecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: tokenUrl
+      type:
+        scalar: string
+    - name: scopes
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: endpointParams
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeTLSConfig
+  map:
+    fields:
+    - name: ca
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: cert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: keySecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: serverName
+      type:
+        scalar: string
+    - name: insecureSkipVerify
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerStatus
+  map:
+    fields:
+    - name: paused
+      type:
+        scalar: boolean
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: updatedReplicas
+      type:
+        scalar: numeric
+    - name: availableReplicas
+      type:
+        scalar: numeric
+    - name: unavailableReplicas
+      type:
+        scalar: numeric
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMonitor
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMonitorSpec
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMonitorSpec
+  map:
+    fields:
+    - name: jobLabel
+      type:
+        scalar: string
+    - name: podTargetLabels
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: podMetricsEndpoints
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMetricsEndpoint
+          elementRelationship: atomic
+    - name: selector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: namespaceSelector
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.NamespaceSelector
+    - name: sampleLimit
+      type:
+        scalar: numeric
+    - name: targetLimit
+      type:
+        scalar: numeric
+    - name: labelLimit
+      type:
+        scalar: numeric
+    - name: labelNameLengthLimit
+      type:
+        scalar: numeric
+    - name: labelValueLengthLimit
+      type:
+        scalar: numeric
+    - name: attachMetadata
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AttachMetadata
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMetricsEndpoint
+  map:
+    fields:
+    - name: port
+      type:
+        scalar: string
+    - name: targetPort
+      type:
+        scalar: untyped
+    - name: path
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+    - name: interval
+      type:
+        scalar: string
+    - name: scrapeTimeout
+      type:
+        scalar: string
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMetricsEndpointTLSConfig
+    - name: bearerTokenSecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: honorLabels
+      type:
+        scalar: boolean
+    - name: honorTimestamps
+      type:
+        scalar: boolean
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+    - name: metricRelabelings
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: relabelings
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: proxyUrl
+      type:
+        scalar: string
+    - name: followRedirects
+      type:
+        scalar: boolean
+    - name: enableHttp2
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PodMetricsEndpointTLSConfig
+  map:
+    fields:
+    - name: ca
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: cert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: keySecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: serverName
+      type:
+        scalar: string
+    - name: insecureSkipVerify
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+  map:
+    fields:
+    - name: sourceLabels
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: separator
+      type:
+        scalar: string
+    - name: targetLabel
+      type:
+        scalar: string
+    - name: regex
+      type:
+        scalar: string
+    - name: modulus
+      type:
+        scalar: numeric
+    - name: replacement
+      type:
+        scalar: string
+    - name: action
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.NamespaceSelector
+  map:
+    fields:
+    - name: any
+      type:
+        scalar: boolean
+    - name: matchNames
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AttachMetadata
+  map:
+    fields:
+    - name: node
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Probe
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeSpec
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeSpec
+  map:
+    fields:
+    - name: jobName
+      type:
+        scalar: string
+    - name: prober
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProberSpec
+    - name: module
+      type:
+        scalar: string
+    - name: targets
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargets
+    - name: interval
+      type:
+        scalar: string
+    - name: scrapeTimeout
+      type:
+        scalar: string
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTLSConfig
+    - name: bearerTokenSecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: metricRelabelings
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+    - name: sampleLimit
+      type:
+        scalar: numeric
+    - name: targetLimit
+      type:
+        scalar: numeric
+    - name: labelLimit
+      type:
+        scalar: numeric
+    - name: labelNameLengthLimit
+      type:
+        scalar: numeric
+    - name: labelValueLengthLimit
+      type:
+        scalar: numeric
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProberSpec
+  map:
+    fields:
+    - name: url
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: proxyUrl
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargets
+  map:
+    fields:
+    - name: staticConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargetStaticConfig
+    - name: ingress
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargetIngress
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargetStaticConfig
+  map:
+    fields:
+    - name: static
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: relabelingConfigs
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTargetIngress
+  map:
+    fields:
+    - name: selector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: namespaceSelector
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.NamespaceSelector
+    - name: relabelingConfigs
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ProbeTLSConfig
+  map:
+    fields:
+    - name: ca
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: cert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: keySecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: serverName
+      type:
+        scalar: string
+    - name: insecureSkipVerify
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Prometheus
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusSpec
+    - name: status
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusStatus
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusSpec
+  map:
+    fields:
+    - name: podMetadata
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedObjectMetadata
+    - name: serviceMonitorSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: serviceMonitorNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: podMonitorSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: podMonitorNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: probeSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: probeNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: version
+      type:
+        scalar: string
+    - name: paused
+      type:
+        scalar: boolean
+    - name: image
+      type:
+        scalar: string
+    - name: imagePullSecrets
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.LocalObjectReference
+          elementRelationship: atomic
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: shards
+      type:
+        scalar: numeric
+    - name: replicaExternalLabelName
+      type:
+        scalar: string
+    - name: prometheusExternalLabelName
+      type:
+        scalar: string
+    - name: logLevel
+      type:
+        scalar: string
+    - name: logFormat
+      type:
+        scalar: string
+    - name: scrapeInterval
+      type:
+        scalar: string
+    - name: scrapeTimeout
+      type:
+        scalar: string
+    - name: externalLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: enableRemoteWriteReceiver
+      type:
+        scalar: boolean
+    - name: enableFeatures
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: externalUrl
+      type:
+        scalar: string
+    - name: routePrefix
+      type:
+        scalar: string
+    - name: storage
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.StorageSpec
+    - name: volumes
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Volume
+          elementRelationship: atomic
+    - name: volumeMounts
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeMount
+          elementRelationship: atomic
+    - name: web
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusWebSpec
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: nodeSelector
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: serviceAccountName
+      type:
+        scalar: string
+    - name: secrets
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: configMaps
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: affinity
+      type:
+        namedType: k8s.io.api.core.v1.Affinity
+    - name: tolerations
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Toleration
+          elementRelationship: atomic
+    - name: topologySpreadConstraints
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.TopologySpreadConstraint
+          elementRelationship: atomic
+    - name: remoteWrite
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RemoteWriteSpec
+          elementRelationship: atomic
+    - name: securityContext
+      type:
+        namedType: k8s.io.api.core.v1.PodSecurityContext
+    - name: listenLocal
+      type:
+        scalar: boolean
+    - name: containers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: initContainers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: additionalScrapeConfigs
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: apiserverConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.APIServerConfig
+    - name: priorityClassName
+      type:
+        scalar: string
+    - name: portName
+      type:
+        scalar: string
+    - name: arbitraryFSAccessThroughSMs
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ArbitraryFSAccessThroughSMsConfig
+    - name: overrideHonorLabels
+      type:
+        scalar: boolean
+    - name: overrideHonorTimestamps
+      type:
+        scalar: boolean
+    - name: ignoreNamespaceSelectors
+      type:
+        scalar: boolean
+    - name: enforcedNamespaceLabel
+      type:
+        scalar: string
+    - name: enforcedSampleLimit
+      type:
+        scalar: numeric
+    - name: enforcedTargetLimit
+      type:
+        scalar: numeric
+    - name: enforcedLabelLimit
+      type:
+        scalar: numeric
+    - name: enforcedLabelNameLengthLimit
+      type:
+        scalar: numeric
+    - name: enforcedLabelValueLengthLimit
+      type:
+        scalar: numeric
+    - name: enforcedBodySizeLimit
+      type:
+        scalar: string
+    - name: minReadySeconds
+      type:
+        scalar: numeric
+    - name: hostAliases
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HostAlias
+          elementRelationship: associative
+          keys:
+          - ip
+    - name: additionalArgs
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Argument
+          elementRelationship: atomic
+    - name: walCompression
+      type:
+        scalar: boolean
+    - name: excludedFromEnforcement
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ObjectReference
+          elementRelationship: atomic
+    - name: baseImage
+      type:
+        scalar: string
+    - name: tag
+      type:
+        scalar: string
+    - name: sha
+      type:
+        scalar: string
+    - name: retention
+      type:
+        scalar: string
+    - name: retentionSize
+      type:
+        scalar: string
+    - name: disableCompaction
+      type:
+        scalar: boolean
+    - name: rules
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Rules
+    - name: prometheusRulesExcludedFromEnforce
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleExcludeConfig
+          elementRelationship: atomic
+    - name: query
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.QuerySpec
+    - name: ruleSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: ruleNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: alerting
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertingSpec
+    - name: remoteRead
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RemoteReadSpec
+          elementRelationship: atomic
+    - name: additionalAlertRelabelConfigs
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: additionalAlertManagerConfigs
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: thanos
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosSpec
+    - name: queryLogFile
+      type:
+        scalar: string
+    - name: allowOverlappingBlocks
+      type:
+        scalar: boolean
+    - name: exemplars
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Exemplars
+    - name: evaluationInterval
+      type:
+        scalar: string
+    - name: enableAdminAPI
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusWebSpec
+  map:
+    fields:
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebTLSConfig
+    - name: httpConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.WebHTTPConfig
+    - name: pageTitle
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RemoteWriteSpec
+  map:
+    fields:
+    - name: url
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: sendExemplars
+      type:
+        scalar: boolean
+    - name: remoteTimeout
+      type:
+        scalar: string
+    - name: headers
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: writeRelabelConfigs
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: bearerToken
+      type:
+        scalar: string
+    - name: bearerTokenFile
+      type:
+        scalar: string
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Authorization
+    - name: sigv4
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Sigv4
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: proxyUrl
+      type:
+        scalar: string
+    - name: queueConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.QueueConfig
+    - name: metadataConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.MetadataConfig
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Authorization
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: credentials
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: credentialsFile
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Sigv4
+  map:
+    fields:
+    - name: region
+      type:
+        scalar: string
+    - name: accessKey
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: secretKey
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: profile
+      type:
+        scalar: string
+    - name: roleArn
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+  map:
+    fields:
+    - name: ca
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: cert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SecretOrConfigMap
+    - name: keySecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: serverName
+      type:
+        scalar: string
+    - name: insecureSkipVerify
+      type:
+        scalar: boolean
+    - name: caFile
+      type:
+        scalar: string
+    - name: certFile
+      type:
+        scalar: string
+    - name: keyFile
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.QueueConfig
+  map:
+    fields:
+    - name: capacity
+      type:
+        scalar: numeric
+    - name: minShards
+      type:
+        scalar: numeric
+    - name: maxShards
+      type:
+        scalar: numeric
+    - name: maxSamplesPerSend
+      type:
+        scalar: numeric
+    - name: batchSendDeadline
+      type:
+        scalar: string
+    - name: maxRetries
+      type:
+        scalar: numeric
+    - name: minBackoff
+      type:
+        scalar: string
+    - name: maxBackoff
+      type:
+        scalar: string
+    - name: retryOnRateLimit
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.MetadataConfig
+  map:
+    fields:
+    - name: send
+      type:
+        scalar: boolean
+    - name: sendInterval
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.APIServerConfig
+  map:
+    fields:
+    - name: host
+      type:
+        scalar: string
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: bearerToken
+      type:
+        scalar: string
+    - name: bearerTokenFile
+      type:
+        scalar: string
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Authorization
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ArbitraryFSAccessThroughSMsConfig
+  map:
+    fields:
+    - name: deny
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Argument
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: value
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ObjectReference
+  map:
+    fields:
+    - name: group
+      type:
+        scalar: string
+    - name: resource
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Rules
+  map:
+    fields:
+    - name: alert
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RulesAlert
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RulesAlert
+  map:
+    fields:
+    - name: forOutageTolerance
+      type:
+        scalar: string
+    - name: forGracePeriod
+      type:
+        scalar: string
+    - name: resendDelay
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleExcludeConfig
+  map:
+    fields:
+    - name: ruleNamespace
+      type:
+        scalar: string
+    - name: ruleName
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.QuerySpec
+  map:
+    fields:
+    - name: lookbackDelta
+      type:
+        scalar: string
+    - name: maxConcurrency
+      type:
+        scalar: numeric
+    - name: maxSamples
+      type:
+        scalar: numeric
+    - name: timeout
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertingSpec
+  map:
+    fields:
+    - name: alertmanagers
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerEndpoints
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.AlertmanagerEndpoints
+  map:
+    fields:
+    - name: namespace
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: port
+      type:
+        scalar: untyped
+    - name: scheme
+      type:
+        scalar: string
+    - name: pathPrefix
+      type:
+        scalar: string
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: bearerTokenFile
+      type:
+        scalar: string
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: timeout
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RemoteReadSpec
+  map:
+    fields:
+    - name: url
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: requiredMatchers
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: remoteTimeout
+      type:
+        scalar: string
+    - name: headers
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: readRecent
+      type:
+        scalar: boolean
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: bearerToken
+      type:
+        scalar: string
+    - name: bearerTokenFile
+      type:
+        scalar: string
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Authorization
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: proxyUrl
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosSpec
+  map:
+    fields:
+    - name: image
+      type:
+        scalar: string
+    - name: version
+      type:
+        scalar: string
+    - name: tag
+      type:
+        scalar: string
+    - name: sha
+      type:
+        scalar: string
+    - name: baseImage
+      type:
+        scalar: string
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: objectStorageConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: objectStorageConfigFile
+      type:
+        scalar: string
+    - name: listenLocal
+      type:
+        scalar: boolean
+    - name: tracingConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: tracingConfigFile
+      type:
+        scalar: string
+    - name: grpcServerTlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: logLevel
+      type:
+        scalar: string
+    - name: logFormat
+      type:
+        scalar: string
+    - name: minTime
+      type:
+        scalar: string
+    - name: readyTimeout
+      type:
+        scalar: string
+    - name: volumeMounts
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.VolumeMount
+          elementRelationship: atomic
+    - name: additionalArgs
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Argument
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Exemplars
+  map:
+    fields:
+    - name: maxSize
+      type:
+        scalar: numeric
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusStatus
+  map:
+    fields:
+    - name: paused
+      type:
+        scalar: boolean
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: updatedReplicas
+      type:
+        scalar: numeric
+    - name: availableReplicas
+      type:
+        scalar: numeric
+    - name: unavailableReplicas
+      type:
+        scalar: numeric
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusCondition
+          elementRelationship: associative
+          keys:
+          - type
+    - name: shardStatuses
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ShardStatus
+          elementRelationship: associative
+          keys:
+          - shardID
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusCondition
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+    - name: lastTransitionTime
+      type:
+        scalar: string
+    - name: reason
+      type:
+        scalar: string
+    - name: message
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ShardStatus
+  map:
+    fields:
+    - name: shardID
+      type:
+        scalar: string
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: updatedReplicas
+      type:
+        scalar: numeric
+    - name: availableReplicas
+      type:
+        scalar: numeric
+    - name: unavailableReplicas
+      type:
+        scalar: numeric
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRule
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleSpec
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleSpec
+  map:
+    fields:
+    - name: groups
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RuleGroup
+          elementRelationship: atomic
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RuleGroup
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: interval
+      type:
+        scalar: string
+    - name: rules
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Rule
+          elementRelationship: atomic
+    - name: partial_response_strategy
+      type:
+        scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Rule
+  map:
+    fields:
+    - name: record
+      type:
+        scalar: string
+    - name: alert
+      type:
+        scalar: string
+    - name: expr
+      type:
+        scalar: untyped
+    - name: for
+      type:
+        scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ServiceMonitor
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ServiceMonitorSpec
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ServiceMonitorSpec
+  map:
+    fields:
+    - name: jobLabel
+      type:
+        scalar: string
+    - name: targetLabels
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: podTargetLabels
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: endpoints
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Endpoint
+          elementRelationship: atomic
+    - name: selector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: namespaceSelector
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.NamespaceSelector
+    - name: sampleLimit
+      type:
+        scalar: numeric
+    - name: targetLimit
+      type:
+        scalar: numeric
+    - name: labelLimit
+      type:
+        scalar: numeric
+    - name: labelNameLengthLimit
+      type:
+        scalar: numeric
+    - name: labelValueLengthLimit
+      type:
+        scalar: numeric
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.Endpoint
+  map:
+    fields:
+    - name: port
+      type:
+        scalar: string
+    - name: targetPort
+      type:
+        scalar: untyped
+    - name: path
+      type:
+        scalar: string
+    - name: scheme
+      type:
+        scalar: string
+    - name: interval
+      type:
+        scalar: string
+    - name: scrapeTimeout
+      type:
+        scalar: string
+    - name: tlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: bearerTokenFile
+      type:
+        scalar: string
+    - name: bearerTokenSecret
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: authorization
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.SafeAuthorization
+    - name: honorLabels
+      type:
+        scalar: boolean
+    - name: honorTimestamps
+      type:
+        scalar: boolean
+    - name: basicAuth
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.BasicAuth
+    - name: oauth2
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.OAuth2
+    - name: metricRelabelings
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: relabelings
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.RelabelConfig
+          elementRelationship: atomic
+    - name: proxyUrl
+      type:
+        scalar: string
+    - name: followRedirects
+      type:
+        scalar: boolean
+    - name: enableHttp2
+      type:
+        scalar: boolean
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRuler
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRulerSpec
+    - name: status
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRulerStatus
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRulerSpec
+  map:
+    fields:
+    - name: podMetadata
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.EmbeddedObjectMetadata
+    - name: image
+      type:
+        scalar: string
+    - name: imagePullSecrets
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.LocalObjectReference
+          elementRelationship: atomic
+    - name: paused
+      type:
+        scalar: boolean
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: nodeSelector
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: resources
+      type:
+        namedType: k8s.io.api.core.v1.ResourceRequirements
+    - name: affinity
+      type:
+        namedType: k8s.io.api.core.v1.Affinity
+    - name: tolerations
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Toleration
+          elementRelationship: atomic
+    - name: topologySpreadConstraints
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.TopologySpreadConstraint
+          elementRelationship: atomic
+    - name: securityContext
+      type:
+        namedType: k8s.io.api.core.v1.PodSecurityContext
+    - name: priorityClassName
+      type:
+        scalar: string
+    - name: serviceAccountName
+      type:
+        scalar: string
+    - name: storage
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.StorageSpec
+    - name: volumes
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Volume
+          elementRelationship: atomic
+    - name: objectStorageConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: objectStorageConfigFile
+      type:
+        scalar: string
+    - name: listenLocal
+      type:
+        scalar: boolean
+    - name: queryEndpoints
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: queryConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: alertmanagersUrl
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: alertmanagersConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: ruleSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: ruleNamespaceSelector
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: enforcedNamespaceLabel
+      type:
+        scalar: string
+    - name: excludedFromEnforcement
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ObjectReference
+          elementRelationship: atomic
+    - name: prometheusRulesExcludedFromEnforce
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.PrometheusRuleExcludeConfig
+          elementRelationship: atomic
+    - name: logLevel
+      type:
+        scalar: string
+    - name: logFormat
+      type:
+        scalar: string
+    - name: portName
+      type:
+        scalar: string
+    - name: evaluationInterval
+      type:
+        scalar: string
+    - name: retention
+      type:
+        scalar: string
+    - name: containers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: initContainers
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Container
+          elementRelationship: atomic
+    - name: tracingConfig
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: tracingConfigFile
+      type:
+        scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: alertDropLabels
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: externalPrefix
+      type:
+        scalar: string
+    - name: routePrefix
+      type:
+        scalar: string
+    - name: grpcServerTlsConfig
+      type:
+        namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.TLSConfig
+    - name: alertQueryUrl
+      type:
+        scalar: string
+    - name: minReadySeconds
+      type:
+        scalar: numeric
+    - name: alertRelabelConfigs
+      type:
+        namedType: k8s.io.api.core.v1.SecretKeySelector
+    - name: alertRelabelConfigFile
+      type:
+        scalar: string
+    - name: hostAliases
+      type:
+        list:
+          elementType:
+            namedType: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.HostAlias
+          elementRelationship: associative
+          keys:
+          - ip
+- name: github.com.prometheus_operator.prometheus_operator.pkg.apis.monitoringv1.ThanosRulerStatus
+  map:
+    fields:
+    - name: paused
+      type:
+        scalar: boolean
+    - name: replicas
+      type:
+        scalar: numeric
+    - name: updatedReplicas
+      type:
+        scalar: numeric
+    - name: availableReplicas
+      type:
+        scalar: numeric
+    - name: unavailableReplicas
+      type:
+        scalar: numeric
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.Certificate
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateSpec
+    - name: status
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateStatus
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateSpec
+  map:
+    fields:
+    - name: subject
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.X509Subject
+    - name: commonName
+      type:
+        scalar: string
+    - name: duration
+      type:
+        scalar: string
+    - name: renewBefore
+      type:
+        scalar: string
+    - name: dnsNames
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: ipAddresses
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: uris
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: emailAddresses
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: secretName
+      type:
+        scalar: string
+    - name: secretTemplate
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateSecretTemplate
+    - name: keystores
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateKeystores
+    - name: issuerRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+    - name: isCA
+      type:
+        scalar: boolean
+    - name: usages
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: privateKey
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificatePrivateKey
+    - name: encodeUsagesInRequest
+      type:
+        scalar: boolean
+    - name: revisionHistoryLimit
+      type:
+        scalar: numeric
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.X509Subject
+  map:
+    fields:
+    - name: organizations
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: countries
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: organizationalUnits
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: localities
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: provinces
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: streetAddresses
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: postalCodes
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: serialNumber
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateSecretTemplate
+  map:
+    fields:
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateKeystores
+  map:
+    fields:
+    - name: jks
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.JKSKeystore
+    - name: pkcs12
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.PKCS12Keystore
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.JKSKeystore
+  map:
+    fields:
+    - name: create
+      type:
+        scalar: boolean
+    - name: passwordSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.PKCS12Keystore
+  map:
+    fields:
+    - name: create
+      type:
+        scalar: boolean
+    - name: passwordSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: group
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificatePrivateKey
+  map:
+    fields:
+    - name: rotationPolicy
+      type:
+        scalar: string
+    - name: encoding
+      type:
+        scalar: string
+    - name: algorithm
+      type:
+        scalar: string
+    - name: size
+      type:
+        scalar: numeric
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateCondition
+          elementRelationship: atomic
+    - name: lastFailureTime
+      type:
+        scalar: string
+    - name: notBefore
+      type:
+        scalar: string
+    - name: notAfter
+      type:
+        scalar: string
+    - name: renewalTime
+      type:
+        scalar: string
+    - name: revision
+      type:
+        scalar: numeric
+    - name: nextPrivateKeySecretName
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateCondition
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+    - name: lastTransitionTime
+      type:
+        scalar: string
+    - name: reason
+      type:
+        scalar: string
+    - name: message
+      type:
+        scalar: string
+    - name: observedGeneration
+      type:
+        scalar: numeric
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequest
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestSpec
+    - name: status
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestStatus
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestSpec
+  map:
+    fields:
+    - name: duration
+      type:
+        scalar: string
+    - name: issuerRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.ObjectReference
+    - name: request
+      type:
+        scalar: string
+    - name: isCA
+      type:
+        scalar: boolean
+    - name: usages
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: username
+      type:
+        scalar: string
+    - name: uid
+      type:
+        scalar: string
+    - name: groups
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestCondition
+          elementRelationship: atomic
+    - name: certificate
+      type:
+        scalar: string
+    - name: ca
+      type:
+        scalar: string
+    - name: failureTime
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestCondition
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+    - name: lastTransitionTime
+      type:
+        scalar: string
+    - name: reason
+      type:
+        scalar: string
+    - name: message
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.ClusterIssuer
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerSpec
+    - name: status
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerStatus
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerSpec
+  map:
+    fields:
+    - name: acme
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuer
+    - name: ca
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CAIssuer
+    - name: vault
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultIssuer
+    - name: selfSigned
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.SelfSignedIssuer
+    - name: venafi
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiIssuer
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuer
+  map:
+    fields:
+    - name: email
+      type:
+        scalar: string
+    - name: server
+      type:
+        scalar: string
+    - name: preferredChain
+      type:
+        scalar: string
+    - name: skipTLSVerify
+      type:
+        scalar: boolean
+    - name: externalAccountBinding
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEExternalAccountBinding
+    - name: privateKeySecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: solvers
+      type:
+        list:
+          elementType:
+            namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolver
+          elementRelationship: atomic
+    - name: disableAccountKeyGeneration
+      type:
+        scalar: boolean
+    - name: enableDurationFeature
+      type:
+        scalar: boolean
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEExternalAccountBinding
+  map:
+    fields:
+    - name: keyID
+      type:
+        scalar: string
+    - name: keySecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: keyAlgorithm
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolver
+  map:
+    fields:
+    - name: selector
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.CertificateDNSNameSelector
+    - name: http01
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01
+    - name: dns01
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverDNS01
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.CertificateDNSNameSelector
+  map:
+    fields:
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: dnsNames
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: dnsZones
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01
+  map:
+    fields:
+    - name: ingress
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01Ingress
+    - name: gatewayHTTPRoute
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01GatewayHTTPRoute
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01Ingress
+  map:
+    fields:
+    - name: serviceType
+      type:
+        scalar: string
+    - name: class
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: podTemplate
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodTemplate
+    - name: ingressTemplate
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressTemplate
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodTemplate
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodSpec
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodObjectMeta
+  map:
+    fields:
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressPodSpec
+  map:
+    fields:
+    - name: nodeSelector
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: affinity
+      type:
+        namedType: k8s.io.api.core.v1.Affinity
+    - name: tolerations
+      type:
+        list:
+          elementType:
+            namedType: k8s.io.api.core.v1.Toleration
+          elementRelationship: atomic
+    - name: priorityClassName
+      type:
+        scalar: string
+    - name: serviceAccountName
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressTemplate
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressObjectMeta
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01IngressObjectMeta
+  map:
+    fields:
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverHTTP01GatewayHTTPRoute
+  map:
+    fields:
+    - name: serviceType
+      type:
+        scalar: string
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEChallengeSolverDNS01
+  map:
+    fields:
+    - name: cnameStrategy
+      type:
+        scalar: string
+    - name: akamai
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAkamai
+    - name: cloudDNS
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderCloudDNS
+    - name: cloudflare
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderCloudflare
+    - name: route53
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderRoute53
+    - name: azureDNS
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAzureDNS
+    - name: digitalocean
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderDigitalOcean
+    - name: acmeDNS
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAcmeDNS
+    - name: rfc2136
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderRFC2136
+    - name: webhook
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderWebhook
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAkamai
+  map:
+    fields:
+    - name: serviceConsumerDomain
+      type:
+        scalar: string
+    - name: clientTokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: clientSecretSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: accessTokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderCloudDNS
+  map:
+    fields:
+    - name: serviceAccountSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: project
+      type:
+        scalar: string
+    - name: hostedZoneName
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderCloudflare
+  map:
+    fields:
+    - name: email
+      type:
+        scalar: string
+    - name: apiKeySecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: apiTokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderRoute53
+  map:
+    fields:
+    - name: accessKeyID
+      type:
+        scalar: string
+    - name: secretAccessKeySecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: role
+      type:
+        scalar: string
+    - name: hostedZoneID
+      type:
+        scalar: string
+    - name: region
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAzureDNS
+  map:
+    fields:
+    - name: clientID
+      type:
+        scalar: string
+    - name: clientSecretSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: subscriptionID
+      type:
+        scalar: string
+    - name: tenantID
+      type:
+        scalar: string
+    - name: resourceGroupName
+      type:
+        scalar: string
+    - name: hostedZoneName
+      type:
+        scalar: string
+    - name: environment
+      type:
+        scalar: string
+    - name: managedIdentity
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.AzureManagedIdentity
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.AzureManagedIdentity
+  map:
+    fields:
+    - name: clientID
+      type:
+        scalar: string
+    - name: resourceID
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderDigitalOcean
+  map:
+    fields:
+    - name: tokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderAcmeDNS
+  map:
+    fields:
+    - name: host
+      type:
+        scalar: string
+    - name: accountSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderRFC2136
+  map:
+    fields:
+    - name: nameserver
+      type:
+        scalar: string
+    - name: tsigSecretSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: tsigKeyName
+      type:
+        scalar: string
+    - name: tsigAlgorithm
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerDNS01ProviderWebhook
+  map:
+    fields:
+    - name: groupName
+      type:
+        scalar: string
+    - name: solverName
+      type:
+        scalar: string
+    - name: config
+      type:
+        namedType: __untyped_atomic_
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CAIssuer
+  map:
+    fields:
+    - name: secretName
+      type:
+        scalar: string
+    - name: crlDistributionPoints
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+    - name: ocspServers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultIssuer
+  map:
+    fields:
+    - name: auth
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultAuth
+    - name: server
+      type:
+        scalar: string
+    - name: path
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: caBundle
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultAuth
+  map:
+    fields:
+    - name: tokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: appRole
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultAppRole
+    - name: kubernetes
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultKubernetesAuth
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultAppRole
+  map:
+    fields:
+    - name: path
+      type:
+        scalar: string
+    - name: roleId
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VaultKubernetesAuth
+  map:
+    fields:
+    - name: mountPath
+      type:
+        scalar: string
+    - name: secretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+    - name: role
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.SelfSignedIssuer
+  map:
+    fields:
+    - name: crlDistributionPoints
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiIssuer
+  map:
+    fields:
+    - name: zone
+      type:
+        scalar: string
+    - name: tpp
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiTPP
+    - name: cloud
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiCloud
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiTPP
+  map:
+    fields:
+    - name: url
+      type:
+        scalar: string
+    - name: credentialsRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.LocalObjectReference
+    - name: caBundle
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.metav1.LocalObjectReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.VenafiCloud
+  map:
+    fields:
+    - name: url
+      type:
+        scalar: string
+    - name: apiTokenSecretRef
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.metav1.SecretKeySelector
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerCondition
+          elementRelationship: atomic
+    - name: acme
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerStatus
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerCondition
+  map:
+    fields:
+    - name: type
+      type:
+        scalar: string
+    - name: status
+      type:
+        scalar: string
+    - name: lastTransitionTime
+      type:
+        scalar: string
+    - name: reason
+      type:
+        scalar: string
+    - name: message
+      type:
+        scalar: string
+    - name: observedGeneration
+      type:
+        scalar: numeric
+- name: github.com.jetstack.cert_manager.pkg.apis.acmev1.ACMEIssuerStatus
+  map:
+    fields:
+    - name: uri
+      type:
+        scalar: string
+    - name: lastRegisteredEmail
+      type:
+        scalar: string
+- name: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.Issuer
+  map:
+    fields:
+    - name: kind
+      type:
+        scalar: string
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerSpec
+    - name: status
+      type:
+        namedType: github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerStatus
+- name: __untyped_atomic_
+  scalar: untyped
+  list:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+  map:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+- name: __untyped_deduced_
+  scalar: untyped
+  list:
+    elementType:
+      namedType: __untyped_atomic_
+    elementRelationship: atomic
+  map:
+    elementType:
+      namedType: __untyped_deduced_
+    elementRelationship: separable

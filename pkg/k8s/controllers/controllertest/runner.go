@@ -513,10 +513,10 @@ func (r *TestRunner) editActions() []*Action {
 }
 
 func fuzzyEqual(left, right runtime.Object) bool {
-	return reflect.DeepEqual(excludeTimeFields(left), excludeTimeFields(right))
+	return reflect.DeepEqual(excludeServerSetFields(left), excludeServerSetFields(right))
 }
 
-func excludeTimeFields(v runtime.Object) runtime.Object {
+func excludeServerSetFields(v runtime.Object) runtime.Object {
 	obj := v.DeepCopyObject()
 	m, ok := obj.(metav1.Object)
 	if !ok {
@@ -524,5 +524,6 @@ func excludeTimeFields(v runtime.Object) runtime.Object {
 	}
 
 	m.GetObjectMeta().CreationTimestamp = nil
+	m.GetObjectMeta().ManagedFields = nil
 	return obj
 }

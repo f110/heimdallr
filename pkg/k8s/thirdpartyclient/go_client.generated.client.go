@@ -2,6 +2,7 @@ package thirdpartyclient
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"sync"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -51,6 +53,7 @@ type Backend interface {
 	Create(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
 	Update(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateStatus(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	Apply(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error)
 	Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error
 	Watch(ctx context.Context, gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) (watch.Interface, error)
 	GetClusterScoped(ctx context.Context, resourceName, name string, opts metav1.GetOptions, result runtime.Object) (runtime.Object, error)
@@ -58,6 +61,7 @@ type Backend interface {
 	CreateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.CreateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
 	UpdateStatusClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.UpdateOptions, result runtime.Object) (runtime.Object, error)
+	ApplyClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error)
 	DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error
 	WatchClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, opts metav1.ListOptions) (watch.Interface, error)
 
@@ -173,6 +177,27 @@ func (r *restBackend) UpdateStatus(ctx context.Context, resourceName string, obj
 		Into(result)
 }
 
+func (r *restBackend) Apply(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	meta := m.GetObjectMeta()
+	patch, err := encodeApplyPatch(obj)
+	if err != nil {
+		return nil, err
+	}
+	patchOpts := opts.ToPatchOptions()
+	return result, r.client.Patch(types.ApplyPatchType).
+		Namespace(meta.Namespace).
+		Resource(resourceName).
+		Name(meta.Name).
+		VersionedParams(&patchOpts, ParameterCodec).
+		Body(patch).
+		Do(ctx).
+		Into(result)
+}
+
 func (r *restBackend) Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, opts metav1.DeleteOptions) error {
 	return r.client.Delete().
 		Namespace(namespace).
@@ -259,6 +284,39 @@ func (r *restBackend) UpdateStatusClusterScoped(ctx context.Context, resourceNam
 		Into(result)
 }
 
+func (r *restBackend) ApplyClusterScoped(ctx context.Context, resourceName string, obj runtime.Object, opts metav1.ApplyOptions, result runtime.Object) (runtime.Object, error) {
+	m := obj.(metav1.Object)
+	if m == nil {
+		return nil, errors.New("obj is not implement metav1.Object")
+	}
+	meta := m.GetObjectMeta()
+	patch, err := encodeApplyPatch(obj)
+	if err != nil {
+		return nil, err
+	}
+	patchOpts := opts.ToPatchOptions()
+	return result, r.client.Patch(types.ApplyPatchType).
+		Resource(resourceName).
+		Name(meta.Name).
+		VersionedParams(&patchOpts, ParameterCodec).
+		Body(patch).
+		Do(ctx).
+		Into(result)
+}
+
+// encodeApplyPatch encodes obj into the body of the apply request.
+// The body is passed as []byte because rest.Request overwrites Content-Type when the body is runtime.Object.
+// The apply request requires apiVersion and kind, so they are set from Scheme.
+func encodeApplyPatch(obj runtime.Object) ([]byte, error) {
+	gvks, _, err := Scheme.ObjectKinds(obj)
+	if err != nil {
+		return nil, err
+	}
+	obj = obj.DeepCopyObject()
+	obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+	return json.Marshal(obj)
+}
+
 func (r *restBackend) DeleteClusterScoped(ctx context.Context, gvr schema.GroupVersionResource, name string, opts metav1.DeleteOptions) error {
 	return r.client.Delete().
 		Resource(gvr.Resource).
@@ -326,6 +384,14 @@ func (c *CoreV1) UpdateStatusAlertmanager(ctx context.Context, v *monitoringv1.A
 	return result.(*monitoringv1.Alertmanager), nil
 }
 
+func (c *CoreV1) ApplyAlertmanager(ctx context.Context, v *monitoringv1.Alertmanager, opts metav1.ApplyOptions) (*monitoringv1.Alertmanager, error) {
+	result, err := c.backend.Apply(ctx, "alertmanagers", v, opts, &monitoringv1.Alertmanager{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Alertmanager), nil
+}
+
 func (c *CoreV1) DeleteAlertmanager(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "alertmanagers"}, namespace, name, opts)
 }
@@ -366,6 +432,14 @@ func (c *CoreV1) UpdatePodMonitor(ctx context.Context, v *monitoringv1.PodMonito
 	return result.(*monitoringv1.PodMonitor), nil
 }
 
+func (c *CoreV1) ApplyPodMonitor(ctx context.Context, v *monitoringv1.PodMonitor, opts metav1.ApplyOptions) (*monitoringv1.PodMonitor, error) {
+	result, err := c.backend.Apply(ctx, "podmonitors", v, opts, &monitoringv1.PodMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PodMonitor), nil
+}
+
 func (c *CoreV1) DeletePodMonitor(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "podmonitors"}, namespace, name, opts)
 }
@@ -400,6 +474,14 @@ func (c *CoreV1) CreateProbe(ctx context.Context, v *monitoringv1.Probe, opts me
 
 func (c *CoreV1) UpdateProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.UpdateOptions) (*monitoringv1.Probe, error) {
 	result, err := c.backend.Update(ctx, "probes", v, opts, &monitoringv1.Probe{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Probe), nil
+}
+
+func (c *CoreV1) ApplyProbe(ctx context.Context, v *monitoringv1.Probe, opts metav1.ApplyOptions) (*monitoringv1.Probe, error) {
+	result, err := c.backend.Apply(ctx, "probes", v, opts, &monitoringv1.Probe{})
 	if err != nil {
 		return nil, err
 	}
@@ -454,6 +536,14 @@ func (c *CoreV1) UpdateStatusPrometheus(ctx context.Context, v *monitoringv1.Pro
 	return result.(*monitoringv1.Prometheus), nil
 }
 
+func (c *CoreV1) ApplyPrometheus(ctx context.Context, v *monitoringv1.Prometheus, opts metav1.ApplyOptions) (*monitoringv1.Prometheus, error) {
+	result, err := c.backend.Apply(ctx, "prometheuses", v, opts, &monitoringv1.Prometheus{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.Prometheus), nil
+}
+
 func (c *CoreV1) DeletePrometheus(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheuses"}, namespace, name, opts)
 }
@@ -494,6 +584,14 @@ func (c *CoreV1) UpdatePrometheusRule(ctx context.Context, v *monitoringv1.Prome
 	return result.(*monitoringv1.PrometheusRule), nil
 }
 
+func (c *CoreV1) ApplyPrometheusRule(ctx context.Context, v *monitoringv1.PrometheusRule, opts metav1.ApplyOptions) (*monitoringv1.PrometheusRule, error) {
+	result, err := c.backend.Apply(ctx, "prometheusrules", v, opts, &monitoringv1.PrometheusRule{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.PrometheusRule), nil
+}
+
 func (c *CoreV1) DeletePrometheusRule(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: ".monitoring.coreos.com", Version: "v1", Resource: "prometheusrules"}, namespace, name, opts)
 }
@@ -528,6 +626,14 @@ func (c *CoreV1) CreateServiceMonitor(ctx context.Context, v *monitoringv1.Servi
 
 func (c *CoreV1) UpdateServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.UpdateOptions) (*monitoringv1.ServiceMonitor, error) {
 	result, err := c.backend.Update(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ServiceMonitor), nil
+}
+
+func (c *CoreV1) ApplyServiceMonitor(ctx context.Context, v *monitoringv1.ServiceMonitor, opts metav1.ApplyOptions) (*monitoringv1.ServiceMonitor, error) {
+	result, err := c.backend.Apply(ctx, "servicemonitors", v, opts, &monitoringv1.ServiceMonitor{})
 	if err != nil {
 		return nil, err
 	}
@@ -576,6 +682,14 @@ func (c *CoreV1) UpdateThanosRuler(ctx context.Context, v *monitoringv1.ThanosRu
 
 func (c *CoreV1) UpdateStatusThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.UpdateOptions) (*monitoringv1.ThanosRuler, error) {
 	result, err := c.backend.UpdateStatus(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*monitoringv1.ThanosRuler), nil
+}
+
+func (c *CoreV1) ApplyThanosRuler(ctx context.Context, v *monitoringv1.ThanosRuler, opts metav1.ApplyOptions) (*monitoringv1.ThanosRuler, error) {
+	result, err := c.backend.Apply(ctx, "thanosrulers", v, opts, &monitoringv1.ThanosRuler{})
 	if err != nil {
 		return nil, err
 	}
@@ -639,6 +753,14 @@ func (c *CertManagerV1) UpdateStatusCertificate(ctx context.Context, v *certmana
 	return result.(*certmanagerv1.Certificate), nil
 }
 
+func (c *CertManagerV1) ApplyCertificate(ctx context.Context, v *certmanagerv1.Certificate, opts metav1.ApplyOptions) (*certmanagerv1.Certificate, error) {
+	result, err := c.backend.Apply(ctx, "certificates", v, opts, &certmanagerv1.Certificate{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*certmanagerv1.Certificate), nil
+}
+
 func (c *CertManagerV1) DeleteCertificate(ctx context.Context, namespace, name string, opts metav1.DeleteOptions) error {
 	return c.backend.Delete(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}, namespace, name, opts)
 }
@@ -681,6 +803,14 @@ func (c *CertManagerV1) UpdateCertificateRequest(ctx context.Context, v *certman
 
 func (c *CertManagerV1) UpdateStatusCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.UpdateOptions) (*certmanagerv1.CertificateRequest, error) {
 	result, err := c.backend.UpdateStatus(ctx, "certificaterequests", v, opts, &certmanagerv1.CertificateRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*certmanagerv1.CertificateRequest), nil
+}
+
+func (c *CertManagerV1) ApplyCertificateRequest(ctx context.Context, v *certmanagerv1.CertificateRequest, opts metav1.ApplyOptions) (*certmanagerv1.CertificateRequest, error) {
+	result, err := c.backend.Apply(ctx, "certificaterequests", v, opts, &certmanagerv1.CertificateRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -735,6 +865,14 @@ func (c *CertManagerV1) UpdateStatusClusterIssuer(ctx context.Context, v *certma
 	return result.(*certmanagerv1.ClusterIssuer), nil
 }
 
+func (c *CertManagerV1) ApplyClusterIssuer(ctx context.Context, v *certmanagerv1.ClusterIssuer, opts metav1.ApplyOptions) (*certmanagerv1.ClusterIssuer, error) {
+	result, err := c.backend.ApplyClusterScoped(ctx, "clusterissuers", v, opts, &certmanagerv1.ClusterIssuer{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*certmanagerv1.ClusterIssuer), nil
+}
+
 func (c *CertManagerV1) DeleteClusterIssuer(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.backend.DeleteClusterScoped(ctx, schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "clusterissuers"}, name, opts)
 }
@@ -777,6 +915,14 @@ func (c *CertManagerV1) UpdateIssuer(ctx context.Context, v *certmanagerv1.Issue
 
 func (c *CertManagerV1) UpdateStatusIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.UpdateOptions) (*certmanagerv1.Issuer, error) {
 	result, err := c.backend.UpdateStatus(ctx, "issuers", v, opts, &certmanagerv1.Issuer{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*certmanagerv1.Issuer), nil
+}
+
+func (c *CertManagerV1) ApplyIssuer(ctx context.Context, v *certmanagerv1.Issuer, opts metav1.ApplyOptions) (*certmanagerv1.Issuer, error) {
+	result, err := c.backend.Apply(ctx, "issuers", v, opts, &certmanagerv1.Issuer{})
 	if err != nil {
 		return nil, err
 	}

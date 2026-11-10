@@ -40,7 +40,7 @@ require (
 	go.etcd.io/etcd/etcdutl/v3 v3.6.14
 	go.etcd.io/etcd/server/v3 v3.6.14
 	go.f110.dev/githubmock v0.0.0-20261014135518-8f0db7e6d8f0
-	go.f110.dev/kubeproto v0.0.0-20260921161631-d95e2e53c30e
+	go.f110.dev/kubeproto v0.0.0-20261110150342-9ea0ac9e60e9
 	go.f110.dev/protoc-ddl v0.0.0-20261016172055-aa8bde19f76e
 	go.f110.dev/xerrors v0.0.0-20260430154500-93b3f86ffe89
 	go.uber.org/zap v1.28.0
@@ -58,6 +58,7 @@ require (
 	k8s.io/klog/v2 v2.140.0
 	nhooyr.io/websocket v1.8.17
 	sigs.k8s.io/kind v0.32.0
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.3
 	sigs.k8s.io/yaml v1.6.0
 	software.sslmate.com/src/go-pkcs12 v0.7.3
 )
@@ -195,5 +196,4 @@ require (
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.3 // indirect
 )
