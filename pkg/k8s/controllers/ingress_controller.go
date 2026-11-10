@@ -11,7 +11,6 @@ import (
 	"go.f110.dev/kubeproto/go/apis/networkingv1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
@@ -189,24 +188,8 @@ func (ic *IngressController) Reconcile(ctx context.Context, obj interface{}) err
 	}
 
 	for _, b := range backends {
-		backend, err := ic.backendLister.Get(b.Namespace, b.Name)
-		if err != nil && apierrors.IsNotFound(err) {
-			_, err = ic.proxyClient.CreateBackend(ctx, b, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
-			continue
-		} else if err != nil {
+		if _, err := ic.proxyClient.ApplyBackend(ctx, b, applyOptions); err != nil {
 			return xerrors.WithStack(err)
-		}
-
-		updatedB := backend.DeepCopy()
-		updatedB.Spec = b.Spec
-		if !reflect.DeepEqual(updatedB, backend) {
-			_, err = ic.proxyClient.UpdateBackend(ctx, updatedB, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
 		}
 	}
 

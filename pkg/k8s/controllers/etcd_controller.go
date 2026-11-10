@@ -955,7 +955,7 @@ func (ec *EtcdController) ensureService(ctx context.Context, cluster *EtcdCluste
 
 func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdCluster) error {
 	found := true
-	cj, err := ec.coreClient.BatchV1.GetCronJob(ctx, cluster.Namespace, cluster.DefragmentCronJobName(), metav1.GetOptions{})
+	_, err := ec.coreClient.BatchV1.GetCronJob(ctx, cluster.Namespace, cluster.DefragmentCronJobName(), metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		found = false
 	} else if err != nil {
@@ -974,22 +974,12 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 		return nil
 	}
 
-	if found {
-		if !reflect.DeepEqual(cj.Spec, cluster.DefragmentCronJob().Spec) {
-			_, err := ec.coreClient.BatchV1.UpdateCronJob(ctx, cluster.DefragmentCronJob(), metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
-		}
-	} else {
-		_, err := ec.coreClient.BatchV1.CreateCronJob(ctx, cluster.DefragmentCronJob(), metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
+	if _, err := ec.coreClient.BatchV1.ApplyCronJob(ctx, cluster.DefragmentCronJob(), applyOptions); err != nil {
+		return xerrors.WithStack(err)
 	}
-
 	return nil
 }
+
 
 func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *EtcdCluster) error {
 	sa, err := ec.serviceAccountLister.Get(cluster.Namespace, cluster.ServiceAccountName())
@@ -1016,26 +1006,9 @@ func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *Etc
 }
 
 func (ec *EtcdController) ensureDiscoveryService(ctx context.Context, cluster *EtcdCluster) error {
-	svc, err := ec.serviceLister.Get(cluster.Namespace, cluster.ServerDiscoveryServiceName())
-	if err != nil && apierrors.IsNotFound(err) {
-		_, err = ec.coreClient.CoreV1.CreateService(ctx, cluster.DiscoveryService(), metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-		return nil
-	} else if err != nil {
+	if _, err := ec.coreClient.CoreV1.ApplyService(ctx, cluster.DiscoveryService(), applyOptions); err != nil {
 		return xerrors.WithStack(err)
 	}
-
-	// The members have to be able to resolve the name of the Pod that isn't ready yet to join the cluster.
-	if !svc.Spec.PublishNotReadyAddresses {
-		updated := svc.DeepCopy()
-		updated.Spec.PublishNotReadyAddresses = true
-		if _, err := ec.coreClient.CoreV1.UpdateService(ctx, updated, metav1.UpdateOptions{}); err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
 	return nil
 }
 

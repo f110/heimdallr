@@ -40,7 +40,7 @@ func TestProxyController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-github-secret", p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-cookie-secret", p.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.SecretFactory(nil, k8sfactory.Namef("%s-internal-token", p.Name), namespace))
-		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+		runner.AssertApplyAction(t, &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: p.Namespace,
@@ -128,7 +128,7 @@ func TestProxyController(t *testing.T) {
 		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		runner.AssertUpdateAction(t, "status", p)
 		runner.AssertUpdateAction(t, "", k8sfactory.SecretFactory(caSecret, k8sfactory.ClearOwnerReference))
-		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+		runner.AssertApplyAction(t, &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: p.Namespace,
@@ -172,7 +172,7 @@ func TestProxyController(t *testing.T) {
 
 		p.Status.Phase = proxyv1alpha2.ProxyPhaseCreating
 		runner.AssertUpdateAction(t, "status", p)
-		runner.AssertCreateAction(t, &certmanagerv1.Certificate{
+		runner.AssertApplyAction(t, &certmanagerv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: p.Namespace,
@@ -202,6 +202,7 @@ func TestProxyController(t *testing.T) {
 				Namespace: p.Namespace,
 			},
 		})
+		runner.AssertApplyAction(t, ec)
 		runner.AssertNoUnexpectedAction(t)
 
 		etcdC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), ec.Namespace, ec.Name, metav1.GetOptions{})
@@ -255,11 +256,13 @@ func TestProxyController(t *testing.T) {
 		namespace := k8sfactory.Namespace(p.Namespace)
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating)))
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating), setProxyStatus))
-		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-proxy", p.Name), namespace))
+		runner.AssertApplyAction(t, ec)
+		runner.AssertApplyAction(t, hp.Certificate())
+		runner.AssertApplyAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-proxy", p.Name), namespace))
 		runner.AssertNoUnexpectedAction(t)
 
 		updatedP, err := runner.Client.ProxyV1alpha2.GetProxy(context.Background(), p.Namespace, p.Name, metav1.GetOptions{})
@@ -324,15 +327,23 @@ func TestProxyController(t *testing.T) {
 		namespace := k8sfactory.Namespace(p.Namespace)
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseCreating)))
 		runner.AssertUpdateAction(t, "status", proxy.Factory(p, proxy.Phase(proxyv1alpha2.ProxyPhaseRunning), setProxyStatus, setProxyStatusNumberOf))
-		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Name(p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Name(p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Name(p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-internal", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Name(p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertApplyAction(t, ec)
+		runner.AssertApplyAction(t, hp.Certificate())
+		runner.AssertApplyAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-rpcserver", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Name(hp.ReverseProxyConfigName()), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Name(hp.ReverseProxyConfigName()), namespace))
+		runner.AssertApplyAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-internal", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Name(p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.DeploymentFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.PodDisruptionBudgetFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ConfigMapFactory(nil, k8sfactory.Namef("%s-dashboard", p.Name), namespace))
 		updatedBackend := backends[0].DeepCopy()
 		updatedBackend.Status.DeployedBy = []proxyv1alpha2.ProxyReference{
 			{Name: p.Name, Namespace: p.Namespace, Url: fmt.Sprintf("https://%s.%s.%s", updatedBackend.Name, updatedBackend.Spec.Layer, p.Spec.Domain)},

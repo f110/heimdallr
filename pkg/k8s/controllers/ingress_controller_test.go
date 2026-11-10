@@ -46,7 +46,7 @@ func TestIngressController(t *testing.T) {
 		assert.Equal(t, svcWeb.Name, updatedB.Spec.HTTP[1].ServiceSelector.Name)
 
 		//runner.AssertUpdateAction(t, "status", ing)
-		runner.AssertCreateAction(t, proxy.BackendFactory(nil, k8sfactory.Namef("%s", ing.Name), k8sfactory.Namespace(ing.Namespace)))
+		runner.AssertApplyAction(t, proxy.BackendFactory(nil, k8sfactory.Namef("%s", ing.Name), k8sfactory.Namespace(ing.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 	})
 
