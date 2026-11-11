@@ -21,6 +21,7 @@ import (
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/gengo/namer"
@@ -42,6 +43,7 @@ const (
 	ActionUpdate ActionVerb = "update"
 	ActionCreate ActionVerb = "create"
 	ActionDelete ActionVerb = "delete"
+	ActionApply  ActionVerb = "apply"
 )
 
 func (a ActionVerb) String() string {
@@ -314,6 +316,21 @@ func (r *TestRunner) AssertCreateAction(t *testing.T, obj runtime.Object) bool {
 	})
 }
 
+func (r *TestRunner) AssertApplyAction(t *testing.T, obj runtime.Object) bool {
+	t.Helper()
+
+	m, ok := obj.(metav1.Object)
+	if !ok {
+		assert.Failf(t, "Failed type assertion", "%T is not metav1.Object", obj)
+	}
+	return r.AssertAction(t, Action{
+		Verb:      ActionApply,
+		Object:    obj,
+		Name:      m.GetObjectMeta().Name,
+		Namespace: m.GetObjectMeta().Namespace,
+	})
+}
+
 func (r *TestRunner) AssertDeleteAction(t *testing.T, obj runtime.Object) bool {
 	t.Helper()
 
@@ -382,7 +399,7 @@ Match:
 				got.Visited = true
 				break Match
 			}
-		case ActionDelete:
+		case ActionApply, ActionDelete:
 			expectMeta, ok := expect.Object.(metav1.Object)
 			if !ok {
 				continue
@@ -433,7 +450,7 @@ func (r *TestRunner) AssertNoUnexpectedAction(t *testing.T) {
 			if v.Name != "" && v.Namespace != "" {
 				key = fmt.Sprintf("%s/%s", v.Namespace, v.Name)
 			}
-			kind := ""
+			kind := v.GroupVersionResource.Resource
 			if v.Object != nil {
 				kind = reflect.TypeOf(v.Object).Elem().Name()
 			}
@@ -497,6 +514,17 @@ func (r *TestRunner) editActions() []*Action {
 				Name:        name,
 				Namespace:   namespace,
 			})
+		case k8stesting.PatchActionImpl:
+			if a.GetPatchType() != k8stypes.ApplyPatchType {
+				continue
+			}
+			actions = append(actions, &Action{
+				Verb:                 ActionApply,
+				Subresource:          v.GetSubresource(),
+				GroupVersionResource: a.Resource,
+				Name:                 a.Name,
+				Namespace:            a.Namespace,
+			})
 		case k8stesting.DeleteActionImpl:
 			actions = append(actions, &Action{
 				Verb:                 ActionVerb(v.GetVerb()),
@@ -513,10 +541,10 @@ func (r *TestRunner) editActions() []*Action {
 }
 
 func fuzzyEqual(left, right runtime.Object) bool {
-	return reflect.DeepEqual(excludeTimeFields(left), excludeTimeFields(right))
+	return reflect.DeepEqual(excludeServerSetFields(left), excludeServerSetFields(right))
 }
 
-func excludeTimeFields(v runtime.Object) runtime.Object {
+func excludeServerSetFields(v runtime.Object) runtime.Object {
 	obj := v.DeepCopyObject()
 	m, ok := obj.(metav1.Object)
 	if !ok {
@@ -524,5 +552,6 @@ func excludeTimeFields(v runtime.Object) runtime.Object {
 	}
 
 	m.GetObjectMeta().CreationTimestamp = nil
+	m.GetObjectMeta().ManagedFields = nil
 	return obj
 }

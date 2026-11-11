@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager"
 	"go.f110.dev/kubeproto/go/apis/appsv1"
 	"go.f110.dev/kubeproto/go/apis/corev1"
@@ -548,7 +547,7 @@ func (c *ProxyController) prepare(ctx context.Context, lp *HeimdallrProxy) error
 	}
 
 	serverCert := lp.Certificate()
-	if err := c.createOrUpdateCertificate(ctx, lp, serverCert); err != nil {
+	if err := c.applyCertificate(ctx, lp, serverCert); err != nil {
 		return err
 	}
 
@@ -654,56 +653,17 @@ func (c *ProxyController) reconcileFundamentalResources(ctx context.Context, lp 
 func (c *ProxyController) reconcileEtcdCluster(ctx context.Context, lp *HeimdallrProxy) error {
 	newC, newPM := lp.EtcdCluster()
 
-	cluster, err := c.ecLister.Get(lp.Namespace, lp.EtcdClusterName())
+	cluster, err := c.clientset.EtcdV1alpha2.ApplyEtcdCluster(ctx, newC, applyOptions)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			cluster, err = c.clientset.EtcdV1alpha2.CreateEtcdCluster(ctx, newC, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
-
-			return controllerbase.WrapRetryError(xerrors.WithStack(ErrEtcdClusterIsNotReady))
-		}
-
 		return xerrors.WithStack(err)
 	}
-
 	if !cluster.Status.Ready {
 		return controllerbase.WrapRetryError(xerrors.WithStack(ErrEtcdClusterIsNotReady))
 	}
 
-	var podMonitor *monitoringv1.PodMonitor
-	if c.enablePrometheusOperator && lp.Spec.Monitor.PrometheusMonitoring {
-		podMonitor, err = c.pmLister.Get(lp.Namespace, newPM.Name)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				_, err = c.thirdPartyClientSet.CoreV1.CreatePodMonitor(ctx, newPM, metav1.CreateOptions{})
-				if err != nil {
-					return xerrors.WithStack(err)
-				}
-				return nil
-			}
-
+	if c.enablePrometheusOperator && lp.Spec.Monitor.PrometheusMonitoring && newPM != nil {
+		if _, err := c.thirdPartyClientSet.CoreV1.ApplyPodMonitor(ctx, newPM, applyOptions); err != nil {
 			return xerrors.WithStack(err)
-		}
-	}
-
-	if !reflect.DeepEqual(newC.Spec, cluster.Spec) {
-		cluster.Spec = newC.Spec
-		_, err = c.clientset.EtcdV1alpha2.UpdateEtcdCluster(ctx, cluster, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
-	if podMonitor != nil && newPM != nil {
-		if !reflect.DeepEqual(podMonitor.Labels, newPM.Labels) || !reflect.DeepEqual(podMonitor.Spec, newPM.Spec) {
-			podMonitor.Spec = newPM.Spec
-			podMonitor.Labels = newPM.Labels
-			_, err = c.thirdPartyClientSet.CoreV1.UpdatePodMonitor(ctx, podMonitor, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
 		}
 	}
 
@@ -935,7 +895,7 @@ func (c *ProxyController) isReady(lp *HeimdallrProxy) bool {
 }
 
 func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
-	if d.Status.ReadyReplicas < d.Spec.Replicas {
+	if d.Status == nil || d.Status.ReadyReplicas < d.Spec.Replicas {
 		return false
 	}
 
@@ -944,13 +904,13 @@ func (c *ProxyController) isReadyDeployment(d *appsv1.Deployment) bool {
 
 func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrProxy, p *process) error {
 	if p.Deployment != nil {
-		if err := c.createOrUpdateDeployment(ctx, lp, p.Deployment); err != nil {
+		if err := c.applyDeployment(ctx, lp, p.Deployment); err != nil {
 			return err
 		}
 	}
 
 	if p.PodDisruptionBudget != nil {
-		if err := c.createOrUpdatePodDisruptionBudget(ctx, lp, p.PodDisruptionBudget); err != nil {
+		if err := c.applyPodDisruptionBudget(ctx, lp, p.PodDisruptionBudget); err != nil {
 			return err
 		}
 	}
@@ -960,7 +920,7 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 			continue
 		}
 
-		if err := c.createOrUpdateService(ctx, lp, svc); err != nil {
+		if err := c.applyService(ctx, lp, svc); err != nil {
 			return err
 		}
 	}
@@ -970,13 +930,13 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 			continue
 		}
 
-		if err := c.createOrUpdateConfigMap(ctx, lp, v); err != nil {
+		if err := c.applyConfigMap(ctx, lp, v); err != nil {
 			return err
 		}
 	}
 
 	if p.Certificate != nil {
-		if err := c.createOrUpdateCertificate(ctx, lp, p.Certificate); err != nil {
+		if err := c.applyCertificate(ctx, lp, p.Certificate); err != nil {
 			return err
 		}
 	}
@@ -987,7 +947,7 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 				continue
 			}
 
-			if err := c.createOrUpdateServiceMonitor(ctx, lp, v); err != nil {
+			if err := c.applyServiceMonitor(ctx, lp, v); err != nil {
 				return err
 			}
 		}
@@ -996,178 +956,58 @@ func (c *ProxyController) reconcileProcess(ctx context.Context, lp *HeimdallrPro
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateDeployment(ctx context.Context, lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
-	d, err := c.deploymentLister.Get(deployment.Namespace, deployment.Name)
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(deployment)
-
-		newD, err := c.client.AppsV1.CreateDeployment(ctx, deployment, metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-
-		deployment.Status = newD.Status
-		return nil
-	} else if err != nil {
+func (c *ProxyController) applyDeployment(ctx context.Context, lp *HeimdallrProxy, deployment *appsv1.Deployment) error {
+	lp.ControlObject(deployment)
+	d, err := c.client.AppsV1.ApplyDeployment(ctx, deployment, applyOptions)
+	if err != nil {
 		return xerrors.WithStack(err)
-	}
-
-	newD := d.DeepCopy()
-	newD.Spec = deployment.Spec
-	if !reflect.DeepEqual(newD.Spec, d.Spec) {
-		_, err = c.client.AppsV1.UpdateDeployment(ctx, newD, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
 	}
 	deployment.Status = d.Status
 
 	return nil
 }
 
-func (c *ProxyController) createOrUpdatePodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1.PodDisruptionBudget) error {
-	p, err := c.client.PolicyV1.GetPodDisruptionBudget(ctx, pdb.Namespace, pdb.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(pdb)
-
-		_, err = c.client.PolicyV1.CreatePodDisruptionBudget(ctx, pdb, metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-
-		return nil
-	} else if err != nil {
+func (c *ProxyController) applyPodDisruptionBudget(ctx context.Context, lp *HeimdallrProxy, pdb *policyv1.PodDisruptionBudget) error {
+	lp.ControlObject(pdb)
+	if _, err := c.client.PolicyV1.ApplyPodDisruptionBudget(ctx, pdb, applyOptions); err != nil {
 		return xerrors.WithStack(err)
 	}
-
-	newPDB := p.DeepCopy()
-	newPDB.Spec = pdb.Spec
-	if !reflect.DeepEqual(newPDB.Spec, pdb.Spec) {
-		_, err = c.client.PolicyV1.UpdatePodDisruptionBudget(ctx, newPDB, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateService(ctx context.Context, lp *HeimdallrProxy, svc *corev1.Service) error {
-	s, err := c.serviceLister.Get(svc.Namespace, svc.Name)
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(svc)
-
-		_, err = c.client.CoreV1.CreateService(ctx, svc, metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-
-		return nil
-	} else if err != nil {
+func (c *ProxyController) applyService(ctx context.Context, lp *HeimdallrProxy, svc *corev1.Service) error {
+	lp.ControlObject(svc)
+	if _, err := c.client.CoreV1.ApplyService(ctx, svc, applyOptions); err != nil {
 		return xerrors.WithStack(err)
 	}
-
-	newS := s.DeepCopy()
-	newS.Labels = svc.Labels
-	newS.Spec.Selector = svc.Spec.Selector
-	newS.Spec.Type = svc.Spec.Type
-	newS.Spec.Ports = svc.Spec.Ports
-	if !c.equalService(newS, s) {
-		_, err = c.client.CoreV1.UpdateService(ctx, newS, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateConfigMap(ctx context.Context, lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
-	cm, err := c.configMapLister.Get(configMap.Namespace, configMap.Name)
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(configMap)
-
-		_, err = c.client.CoreV1.CreateConfigMap(ctx, configMap, metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-
-		return nil
-	} else if err != nil {
+func (c *ProxyController) applyConfigMap(ctx context.Context, lp *HeimdallrProxy, configMap *corev1.ConfigMap) error {
+	lp.ControlObject(configMap)
+	if _, err := c.client.CoreV1.ApplyConfigMap(ctx, configMap, applyOptions); err != nil {
 		return xerrors.WithStack(err)
 	}
-
-	newCM := cm.DeepCopy()
-	newCM.Data = configMap.Data
-
-	if !reflect.DeepEqual(newCM.Data, cm.Data) {
-		c.Log(ctx).Debug("Will update ConfigMap", slog.String("diff", cmp.Diff(cm.Data, newCM.Data)))
-		_, err = c.client.CoreV1.UpdateConfigMap(ctx, newCM, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateCertificate(ctx context.Context, lp *HeimdallrProxy, obj runtime.Object) error {
+func (c *ProxyController) applyCertificate(ctx context.Context, lp *HeimdallrProxy, obj runtime.Object) error {
 	switch certificate := obj.(type) {
 	case *certmanagerv1.Certificate:
-		crt, err := c.thirdPartyClientSet.CertManagerV1.GetCertificate(ctx, certificate.Namespace, certificate.Name, metav1.GetOptions{})
-		if err != nil && apierrors.IsNotFound(err) {
-			lp.ControlObject(certificate)
-
-			_, err = c.thirdPartyClientSet.CertManagerV1.CreateCertificate(ctx, certificate, metav1.CreateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
-
-			return nil
-		} else if err != nil {
+		lp.ControlObject(certificate)
+		if _, err := c.thirdPartyClientSet.CertManagerV1.ApplyCertificate(ctx, certificate, applyOptions); err != nil {
 			return xerrors.WithStack(err)
-		}
-
-		newCRT := crt.DeepCopy()
-		newCRT.Spec = certificate.Spec
-
-		if !reflect.DeepEqual(newCRT.Spec, crt.Spec) {
-			_, err = c.thirdPartyClientSet.CertManagerV1.UpdateCertificate(ctx, newCRT, metav1.UpdateOptions{})
-			if err != nil {
-				return xerrors.WithStack(err)
-			}
 		}
 	}
 
 	return nil
 }
 
-func (c *ProxyController) createOrUpdateServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
-	sm, err := c.thirdPartyClientSet.CoreV1.GetServiceMonitor(ctx, serviceMonitor.Namespace, serviceMonitor.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		lp.ControlObject(serviceMonitor)
-
-		_, err = c.thirdPartyClientSet.CoreV1.CreateServiceMonitor(ctx, serviceMonitor, metav1.CreateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-
-		return nil
-	} else if err != nil {
+func (c *ProxyController) applyServiceMonitor(ctx context.Context, lp *HeimdallrProxy, serviceMonitor *monitoringv1.ServiceMonitor) error {
+	lp.ControlObject(serviceMonitor)
+	if _, err := c.thirdPartyClientSet.CoreV1.ApplyServiceMonitor(ctx, serviceMonitor, applyOptions); err != nil {
 		return xerrors.WithStack(err)
 	}
-
-	newSM := sm.DeepCopy()
-	newSM.Labels = serviceMonitor.Labels
-	newSM.Spec = serviceMonitor.Spec
-
-	if !reflect.DeepEqual(newSM.Spec, sm.Spec) || !reflect.DeepEqual(newSM.ObjectMeta, sm.ObjectMeta) {
-		_, err = c.thirdPartyClientSet.CoreV1.UpdateServiceMonitor(ctx, newSM, metav1.UpdateOptions{})
-		if err != nil {
-			return xerrors.WithStack(err)
-		}
-	}
-
 	return nil
 }
 
@@ -1193,46 +1033,4 @@ Item:
 	}
 
 	return targets, nil
-}
-
-func (c *ProxyController) equalService(left, right *corev1.Service) bool {
-	return reflect.DeepEqual(left.Labels, right.Labels) &&
-		reflect.DeepEqual(left.Spec.Selector, right.Spec.Selector) &&
-		left.Spec.Type == right.Spec.Type &&
-		c.equalServicePort(left.Spec.Ports, right.Spec.Ports)
-}
-
-func (c *ProxyController) equalServicePort(left, right []corev1.ServicePort) bool {
-	l := servicePortMap(left)
-	r := servicePortMap(right)
-	if len(l) != len(r) {
-		return false
-	}
-	for key := range l {
-		if _, ok := r[key]; !ok {
-			return false
-		}
-		if l[key].Protocol != r[key].Protocol {
-			return false
-		}
-		leftTP := l[key].TargetPort
-		rightTP := r[key].TargetPort
-		if leftTP != nil && rightTP != nil && leftTP.IntValue() != rightTP.IntValue() {
-			return false
-		}
-		if l[key].Port != r[key].Port {
-			return false
-		}
-	}
-
-	return true
-}
-
-func servicePortMap(ports []corev1.ServicePort) map[string]corev1.ServicePort {
-	result := make(map[string]corev1.ServicePort)
-	for _, v := range ports {
-		result[v.Name] = v
-	}
-
-	return result
 }

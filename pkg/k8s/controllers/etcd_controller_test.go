@@ -80,7 +80,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.RoleFactory(nil, k8sfactory.Namef("%s-etcd", e.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.RoleBindingFactory(nil, k8sfactory.Namef("%s-etcd", e.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), namespace))
-		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), namespace))
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), namespace))
 		runner.AssertCreateAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-client", e.Name), namespace))
 		updated = etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseInitializing))
 		runner.AssertUpdateAction(t, "status", updated)
@@ -134,6 +134,7 @@ func TestEtcdController(t *testing.T) {
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "", k8sfactory.PodFactory(member.Pod, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))))
 		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 
 		pods, err := runner.CoreClient.CoreV1.ListPod(context.TODO(), e.Namespace, metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
@@ -203,6 +204,7 @@ func TestEtcdController(t *testing.T) {
 		updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 		runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 
 		pods, err := runner.CoreClient.CoreV1.ListPod(context.TODO(), e.Namespace, metav1.ListOptions{LabelSelector: etcd.LabelNameClusterName + "=" + e.Name})
@@ -272,6 +274,7 @@ func TestEtcdController(t *testing.T) {
 			updated.Status.Members = updated.Status.Members[1:]
 			runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
+			runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertNoUnexpectedAction(t)
 		})
 
@@ -322,6 +325,7 @@ func TestEtcdController(t *testing.T) {
 			updated.Status.Members = append([]etcdv1alpha2.MemberStatus{{}}, updated.Status.Members...)
 			runner.AssertCreateAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertUpdateAction(t, "status", updated)
+			runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 			runner.AssertNoUnexpectedAction(t)
 		})
 	})
@@ -365,6 +369,7 @@ func TestEtcdController(t *testing.T) {
 		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseUpdating), etcd.CreatedStatus)
 		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-4", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 	})
 
@@ -470,6 +475,7 @@ func TestEtcdController(t *testing.T) {
 				updated.Status.Members = updated.Status.Members[1:]
 				runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 				runner.AssertUpdateAction(t, "status", updated)
+				runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 				runner.AssertNoUnexpectedAction(t)
 			})
 		}
@@ -547,6 +553,7 @@ func TestEtcdController(t *testing.T) {
 		updated.Status.Restored = &etcdv1alpha2.RestoredStatus{Path: "backup/latest"}
 		runner.AssertUpdateAction(t, "status", updated)
 		runner.AssertDeleteAction(t, tempMemberPod)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 	})
 
@@ -755,6 +762,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 
 		updatedEC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), cluster.Namespace, cluster.Name, metav1.GetOptions{})
@@ -834,6 +842,7 @@ func TestEtcdController_Backup(t *testing.T) {
 		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 		runner.AssertNoUnexpectedAction(t)
 	})
 }
@@ -1109,6 +1118,7 @@ func TestEtcdController_Restore(t *testing.T) {
 	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
 	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
 	runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-3", e.Name), k8sfactory.Namespace(e.Namespace)))
+	runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
 	runner.AssertNoUnexpectedAction(t)
 
 	updatedEC, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), cluster.Namespace, cluster.Name, metav1.GetOptions{})

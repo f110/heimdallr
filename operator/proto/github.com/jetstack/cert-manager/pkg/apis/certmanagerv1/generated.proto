@@ -14,19 +14,19 @@ import "operator/proto/github.com/jetstack/cert-manager/pkg/apis/acmev1/generate
 import "operator/proto/github.com/jetstack/cert-manager/pkg/apis/metav1/generated.proto";
 
 enum CertificateConditionType {
-CERTIFICATE_CONDITION_TYPE_READY = 0 [(dev.f110.kubeproto.value) = {value: "Ready"}];
-CERTIFICATE_CONDITION_TYPE_ISSUING = 1 [(dev.f110.kubeproto.value) = {value: "Issuing"}];
+CERTIFICATE_CONDITION_TYPE_READY = 0;
+CERTIFICATE_CONDITION_TYPE_ISSUING = 1;
 }
 
 enum CertificateRequestConditionType {
-CERTIFICATE_REQUEST_CONDITION_TYPE_READY = 0 [(dev.f110.kubeproto.value) = {value: "Ready"}];
+CERTIFICATE_REQUEST_CONDITION_TYPE_READY = 0;
 CERTIFICATE_REQUEST_CONDITION_TYPE_INVALID_REQUEST = 1;
-CERTIFICATE_REQUEST_CONDITION_TYPE_APPROVED = 2 [(dev.f110.kubeproto.value) = {value: "Approved"}];
-CERTIFICATE_REQUEST_CONDITION_TYPE_DENIED = 3 [(dev.f110.kubeproto.value) = {value: "Denied"}];
+CERTIFICATE_REQUEST_CONDITION_TYPE_APPROVED = 2;
+CERTIFICATE_REQUEST_CONDITION_TYPE_DENIED = 3;
 }
 
 enum IssuerConditionType {
-ISSUER_CONDITION_TYPE_READY = 0 [(dev.f110.kubeproto.value) = {value: "Ready"}];
+ISSUER_CONDITION_TYPE_READY = 0;
 }
 
 enum KeyUsage {
@@ -227,7 +227,7 @@ optional string username = 6 [(dev.f110.kubeproto.field) = {go_name: "Username",
 optional string uid = 7 [(dev.f110.kubeproto.field) = {go_name: "UID", api_field_name: "uid", inline: false}];
 // Groups contains group membership of the user that created the CertificateRequest.
 // Populated by the cert-manager webhook on creation and immutable.
-repeated string groups = 8 [(dev.f110.kubeproto.field) = {go_name: "Groups", api_field_name: "groups", inline: false}];
+repeated string groups = 8 [(dev.f110.kubeproto.field) = {go_name: "Groups", api_field_name: "groups", list_type: LIST_TYPE_ATOMIC, inline: false}];
 // Extra contains extra attributes of the user that created the CertificateRequest.
 // Populated by the cert-manager webhook on creation and immutable.
 // This field can not be represented by protobuf.

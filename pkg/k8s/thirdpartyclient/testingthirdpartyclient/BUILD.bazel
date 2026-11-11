@@ -21,6 +21,7 @@ vendor_kubeproto(
 go_library(
     name = "testingthirdpartyclient",
     srcs = ["kubeproto_testingthirdpartyclient.generated.testingclient.go"],
+    embedsrcs = ["kubeproto_testingthirdpartyclient.generated.testingclient.typeschema.yaml"],
     importpath = "go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient/testingthirdpartyclient",
     visibility = ["//visibility:public"],
     deps = [
@@ -32,8 +33,11 @@ go_library(
         "@io_k8s_apimachinery//pkg/runtime",
         "@io_k8s_apimachinery//pkg/runtime/schema",
         "@io_k8s_apimachinery//pkg/runtime/serializer",
+        "@io_k8s_apimachinery//pkg/types",
+        "@io_k8s_apimachinery//pkg/util/managedfields",
         "@io_k8s_apimachinery//pkg/watch",
         "@io_k8s_client_go//rest",
         "@io_k8s_client_go//testing",
+        "@io_k8s_sigs_structured_merge_diff_v6//typed",
     ],
 )

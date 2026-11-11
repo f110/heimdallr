@@ -6,6 +6,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"maps"
 )
 
 const GroupName = "cert-manager.io"
@@ -85,8 +86,8 @@ const (
 type PrivateKeyAlgorithm string
 
 const (
-	PrivateKeyAlgorithmRSA     PrivateKeyAlgorithm = "RSA"
-	PrivateKeyAlgorithmECDSA   PrivateKeyAlgorithm = "ECDSA"
+	PrivateKeyAlgorithmRsa     PrivateKeyAlgorithm = "RSA"
+	PrivateKeyAlgorithmEcdsa   PrivateKeyAlgorithm = "ECDSA"
 	PrivateKeyAlgorithmEd25519 PrivateKeyAlgorithm = "Ed25519"
 )
 
@@ -130,10 +131,14 @@ func (in *Certificate) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Certificate) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.Certificate"
+}
+
 type CertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Certificate `json:"items"`
+	Items           []Certificate `json:"items,omitempty"`
 }
 
 func (in *CertificateList) DeepCopyInto(out *CertificateList) {
@@ -163,6 +168,10 @@ func (in *CertificateList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *CertificateList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateList"
 }
 
 type CertificateRequest struct {
@@ -198,10 +207,14 @@ func (in *CertificateRequest) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *CertificateRequest) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequest"
+}
+
 type CertificateRequestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []CertificateRequest `json:"items"`
+	Items           []CertificateRequest `json:"items,omitempty"`
 }
 
 func (in *CertificateRequestList) DeepCopyInto(out *CertificateRequestList) {
@@ -231,6 +244,10 @@ func (in *CertificateRequestList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *CertificateRequestList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.CertificateRequestList"
 }
 
 type ClusterIssuer struct {
@@ -266,10 +283,14 @@ func (in *ClusterIssuer) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *ClusterIssuer) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.ClusterIssuer"
+}
+
 type ClusterIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []ClusterIssuer `json:"items"`
+	Items           []ClusterIssuer `json:"items,omitempty"`
 }
 
 func (in *ClusterIssuerList) DeepCopyInto(out *ClusterIssuerList) {
@@ -299,6 +320,10 @@ func (in *ClusterIssuerList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *ClusterIssuerList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.ClusterIssuerList"
 }
 
 type Issuer struct {
@@ -334,10 +359,14 @@ func (in *Issuer) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *Issuer) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.Issuer"
+}
+
 type IssuerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []Issuer `json:"items"`
+	Items           []Issuer `json:"items,omitempty"`
 }
 
 func (in *IssuerList) DeepCopyInto(out *IssuerList) {
@@ -369,6 +398,10 @@ func (in *IssuerList) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *IssuerList) OpenAPIModelName() string {
+	return "github.com.jetstack.cert_manager.pkg.apis.certmanagerv1.IssuerList"
+}
+
 type CertificateSpec struct {
 	// Full X509 name specification (https://golang.org/pkg/crypto/x509/pkix/#Name).
 	Subject *X509Subject `json:"subject,omitempty"`
@@ -392,13 +425,13 @@ type CertificateSpec struct {
 	// https://golang.org/pkg/time/#ParseDuration
 	RenewBefore *metav1.Duration `json:"renewBefore,omitempty"`
 	// DNSNames is a list of DNS subjectAltNames to be set on the Certificate.
-	DNSNames []string `json:"dnsNames"`
+	DNSNames []string `json:"dnsNames,omitempty"`
 	// IPAddresses is a list of IP address subjectAltNames to be set on the Certificate.
-	IPAddresses []string `json:"ipAddresses"`
+	IPAddresses []string `json:"ipAddresses,omitempty"`
 	// URIs is a list of URI subjectAltNames to be set on the Certificate.
-	URIs []string `json:"uris"`
+	URIs []string `json:"uris,omitempty"`
 	// EmailAddresses is a list of email subjectAltNames to be set on the Certificate.
-	EmailAddresses []string `json:"emailAddresses"`
+	EmailAddresses []string `json:"emailAddresses,omitempty"`
 	// SecretName is the name of the secret resource that will be automatically
 	// created and managed by this Certificate resource.
 	// It will be populated with a private key and certificate, signed by the
@@ -424,7 +457,7 @@ type CertificateSpec struct {
 	IsCA bool `json:"isCA,omitempty"`
 	// Usages is the set of x509 usages that are requested for the certificate.
 	// Defaults to `digital signature` and `key encipherment` if not specified.
-	Usages []KeyUsage `json:"usages"`
+	Usages []KeyUsage `json:"usages,omitempty"`
 	// Options to control private keys used for the Certificate.
 	PrivateKey *CertificatePrivateKey `json:"privateKey,omitempty"`
 	// EncodeUsagesInRequest controls whether key usages should be present
@@ -512,7 +545,7 @@ func (in *CertificateSpec) DeepCopy() *CertificateSpec {
 type CertificateStatus struct {
 	// List of status conditions to indicate the status of certificates.
 	// Known condition types are `Ready` and `Issuing`.
-	Conditions []CertificateCondition `json:"conditions"`
+	Conditions []CertificateCondition `json:"conditions,omitempty"`
 	// LastFailureTime is the time as recorded by the Certificate controller
 	// of the most recent failure to complete a CertificateRequest for this
 	// Certificate resource.
@@ -612,7 +645,7 @@ type CertificateRequestSpec struct {
 	// Usages is the set of x509 usages that are requested for the certificate.
 	// If usages are set they SHOULD be encoded inside the CSR spec
 	// Defaults to `digital signature` and `key encipherment` if not specified.
-	Usages []KeyUsage `json:"usages"`
+	Usages []KeyUsage `json:"usages,omitempty"`
 	// Username contains the name of the user that created the CertificateRequest.
 	// Populated by the cert-manager webhook on creation and immutable.
 	Username string `json:"username,omitempty"`
@@ -621,7 +654,7 @@ type CertificateRequestSpec struct {
 	UID string `json:"uid,omitempty"`
 	// Groups contains group membership of the user that created the CertificateRequest.
 	// Populated by the cert-manager webhook on creation and immutable.
-	Groups []string `json:"groups"`
+	Groups []string `json:"groups,omitempty"`
 }
 
 func (in *CertificateRequestSpec) DeepCopyInto(out *CertificateRequestSpec) {
@@ -656,14 +689,14 @@ func (in *CertificateRequestSpec) DeepCopy() *CertificateRequestSpec {
 type CertificateRequestStatus struct {
 	// List of status conditions to indicate the status of a CertificateRequest.
 	// Known condition types are `Ready` and `InvalidRequest`.
-	Conditions []CertificateRequestCondition `json:"conditions"`
+	Conditions []CertificateRequestCondition `json:"conditions,omitempty"`
 	// The PEM encoded x509 certificate resulting from the certificate
 	// signing request.
 	// If not set, the CertificateRequest has either not been completed or has
 	// failed. More information on failure can be found by checking the
 	// `conditions` field.
 	Certificate []byte `json:"certificate,omitempty"`
-	// The PEM encoded x509 certificate of the signer, also known as the CA
+	// The PEM encoded x509 certificate of the signer, also known as the Ca
 	// (Certificate Authority).
 	// This is set on a best-effort basis by different issuers.
 	// If not set, the CA is assumed to be unknown/not available.
@@ -719,7 +752,7 @@ func (in *IssuerSpec) DeepCopy() *IssuerSpec {
 type IssuerStatus struct {
 	// List of status conditions to indicate the status of a CertificateRequest.
 	// Known condition types are `Ready`.
-	Conditions []IssuerCondition `json:"conditions"`
+	Conditions []IssuerCondition `json:"conditions,omitempty"`
 	// ACME specific status options.
 	// This field should only be set if the Issuer is configured to use an ACME
 	// server to issue certificates.
@@ -753,19 +786,19 @@ func (in *IssuerStatus) DeepCopy() *IssuerStatus {
 
 type X509Subject struct {
 	// Organizations to be used on the Certificate.
-	Organizations []string `json:"organizations"`
+	Organizations []string `json:"organizations,omitempty"`
 	// Countries to be used on the Certificate.
-	Countries []string `json:"countries"`
+	Countries []string `json:"countries,omitempty"`
 	// Organizational Units to be used on the Certificate.
-	OrganizationalUnits []string `json:"organizationalUnits"`
+	OrganizationalUnits []string `json:"organizationalUnits,omitempty"`
 	// Cities to be used on the Certificate.
-	Localities []string `json:"localities"`
+	Localities []string `json:"localities,omitempty"`
 	// State/Provinces to be used on the Certificate.
-	Provinces []string `json:"provinces"`
+	Provinces []string `json:"provinces,omitempty"`
 	// Street addresses to be used on the Certificate.
-	StreetAddresses []string `json:"streetAddresses"`
+	StreetAddresses []string `json:"streetAddresses,omitempty"`
 	// Postal codes to be used on the Certificate.
-	PostalCodes []string `json:"postalCodes"`
+	PostalCodes []string `json:"postalCodes,omitempty"`
 	// Serial number to be used on the Certificate.
 	SerialNumber string `json:"serialNumber,omitempty"`
 }
@@ -830,16 +863,12 @@ func (in *CertificateSecretTemplate) DeepCopyInto(out *CertificateSecretTemplate
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 
@@ -853,7 +882,7 @@ func (in *CertificateSecretTemplate) DeepCopy() *CertificateSecretTemplate {
 }
 
 type CertificateKeystores struct {
-	// JKS configures options for storing a JKS keystore in the
+	// Jks configures options for storing a JKS keystore in the
 	// `spec.secretName` Secret resource.
 	JKS *JKSKeystore `json:"jks,omitempty"`
 	// Pkcs12 configures options for storing a PKCS12 keystore in the
@@ -1010,7 +1039,7 @@ type IssuerConfig struct {
 	// ACME configures this issuer to communicate with a RFC8555 (ACME) server
 	// to obtain signed x509 certificates.
 	ACME *acmev1.ACMEIssuer `json:"acme,omitempty"`
-	// CA configures this issuer to sign certificates using a signing CA keypair
+	// Ca configures this issuer to sign certificates using a signing CA keypair
 	// stored in a Secret resource.
 	// This is used to build internal PKIs that are managed by cert-manager.
 	CA *CAIssuer `json:"ca,omitempty"`
@@ -1168,13 +1197,13 @@ type CAIssuer struct {
 	// The CRL distribution points is an X.509 v3 certificate extension which identifies
 	// the location of the CRL from which the revocation of this certificate can be checked.
 	// If not set, certificates will be issued without distribution points set.
-	CRLDistributionPoints []string `json:"crlDistributionPoints"`
+	CRLDistributionPoints []string `json:"crlDistributionPoints,omitempty"`
 	// The OCSP server list is an X.509 v3 extension that defines a list of
 	// URLs of OCSP responders. The OCSP responders can be queried for the
 	// revocation status of an issued certificate. If not set, the
 	// certificate will be issued with no OCSP servers set. For example, an
 	// OCSP server URL could be "http://ocsp.int-x3.letsencrypt.org".
-	OCSPServers []string `json:"ocspServers"`
+	OCSPServers []string `json:"ocspServers,omitempty"`
 }
 
 func (in *CAIssuer) DeepCopyInto(out *CAIssuer) {
@@ -1236,7 +1265,7 @@ type SelfSignedIssuer struct {
 	// The CRL distribution points is an X.509 v3 certificate extension which identifies
 	// the location of the CRL from which the revocation of this certificate can be checked.
 	// If not set certificate will be issued without CDP. Values are strings.
-	CRLDistributionPoints []string `json:"crlDistributionPoints"`
+	CRLDistributionPoints []string `json:"crlDistributionPoints,omitempty"`
 }
 
 func (in *SelfSignedIssuer) DeepCopyInto(out *SelfSignedIssuer) {
@@ -1263,7 +1292,7 @@ type VenafiIssuer struct {
 	// zone policy.
 	// This field is required.
 	Zone string `json:"zone"`
-	// TPP specifies Trust Protection Platform configuration settings.
+	// Tpp specifies Trust Protection Platform configuration settings.
 	// Only one of TPP or Cloud may be specified.
 	TPP *VenafiTPP `json:"tpp,omitempty"`
 	// Cloud specifies the Venafi cloud configuration settings.

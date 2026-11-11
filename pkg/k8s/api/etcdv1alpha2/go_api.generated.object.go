@@ -5,6 +5,7 @@ import (
 	"go.f110.dev/kubeproto/go/apis/metav1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"maps"
 )
 
 const GroupName = "etcd.f110.dev"
@@ -67,10 +68,14 @@ func (in *EtcdCluster) DeepCopyObject() runtime.Object {
 	return nil
 }
 
+func (in *EtcdCluster) OpenAPIModelName() string {
+	return "heimdallr.api.etcdv1alpha2.EtcdCluster"
+}
+
 type EtcdClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []EtcdCluster `json:"items"`
+	Items           []EtcdCluster `json:"items,omitempty"`
 }
 
 func (in *EtcdClusterList) DeepCopyInto(out *EtcdClusterList) {
@@ -100,6 +105,10 @@ func (in *EtcdClusterList) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
+}
+
+func (in *EtcdClusterList) OpenAPIModelName() string {
+	return "heimdallr.api.etcdv1alpha2.EtcdClusterList"
 }
 
 type EtcdClusterSpec struct {
@@ -144,7 +153,7 @@ func (in *EtcdClusterSpec) DeepCopy() *EtcdClusterSpec {
 type EtcdClusterStatus struct {
 	Ready                   bool             `json:"ready"`
 	Phase                   EtcdClusterPhase `json:"phase,omitempty"`
-	Members                 []MemberStatus   `json:"members"`
+	Members                 []MemberStatus   `json:"members,omitempty"`
 	LastReadyTransitionTime *metav1.Time     `json:"lastReadyTransitionTime,omitempty"`
 	LastDefragmentTime      *metav1.Time     `json:"lastDefragmentTime,omitempty"`
 	CreatingCompleted       bool             `json:"creatingCompleted,omitempty"`
@@ -268,7 +277,7 @@ func (in *MemberStatus) DeepCopy() *MemberStatus {
 type BackupStatus struct {
 	Succeeded         bool                  `json:"succeeded,omitempty"`
 	LastSucceededTime *metav1.Time          `json:"lastSucceededTime,omitempty"`
-	History           []BackupStatusHistory `json:"backupStatusHistory"`
+	History           []BackupStatusHistory `json:"backupStatusHistory,omitempty"`
 }
 
 func (in *BackupStatus) DeepCopyInto(out *BackupStatus) {
@@ -336,16 +345,12 @@ func (in *ObjectMeta) DeepCopyInto(out *ObjectMeta) {
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
-		for k, v := range *in {
-			(*out)[k] = v
-		}
+		maps.Copy(*out, *in)
 	}
 }
 

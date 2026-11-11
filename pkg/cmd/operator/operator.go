@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -8,17 +9,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.f110.dev/kubeproto/go/apis/metav1"
 	"go.f110.dev/kubeproto/go/k8sclient"
 	"go.f110.dev/xerrors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 
 	"go.f110.dev/heimdallr/pkg/cmd"
 	"go.f110.dev/heimdallr/pkg/fsm"
+	"go.f110.dev/heimdallr/pkg/k8s/api/etcdv1alpha2"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxy"
+	"go.f110.dev/heimdallr/pkg/k8s/api/proxyv1alpha2"
 	"go.f110.dev/heimdallr/pkg/k8s/client"
 	"go.f110.dev/heimdallr/pkg/k8s/controllers"
 	"go.f110.dev/heimdallr/pkg/k8s/thirdpartyclient"
@@ -32,6 +40,7 @@ const (
 	stateStartProbe
 	stateStartWebhook
 	stateLeaderElection
+	stateMigrate
 	stateStartWorkers
 	stateShutdown
 )
@@ -91,6 +100,7 @@ func New() *mainProcess {
 		stateStartProbe:     m.startProbe,
 		stateStartWebhook:   m.startWebhook,
 		stateLeaderElection: m.leaderElection,
+		stateMigrate:        m.migrate,
 		stateStartWorkers:   m.startWorkers,
 		stateShutdown:       m.shutdown,
 	},
@@ -124,6 +134,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 	if err != nil {
 		return fsm.UnknownState, xerrors.WithStack(err)
 	}
+	cfg.UserAgent = controllers.FieldManager
 	m.restCfg = cfg
 
 	m.k8sCoreClient, err = kubernetes.NewForConfig(cfg)
@@ -179,11 +190,11 @@ func (m *mainProcess) startWebhook() (fsm.State, error) {
 func (m *mainProcess) leaderElection() (fsm.State, error) {
 	// In development mode, we don't attempt the leader election.
 	if m.dev {
-		return stateStartWorkers, nil
+		return stateMigrate, nil
 	}
 
 	lock := &resourcelock.LeaseLock{
-		LeaseMeta: metav1.ObjectMeta{
+		LeaseMeta: k8smetav1.ObjectMeta{
 			Name:      m.leaseLockName,
 			Namespace: m.leaseLockNamespace,
 		},
@@ -221,7 +232,110 @@ func (m *mainProcess) leaderElection() (fsm.State, error) {
 		return fsm.UnknownState, nil
 	}
 
+	return stateMigrate, nil
+}
+
+// migrate runs the migrations which have to be finished before starting the controllers.
+func (m *mainProcess) migrate() (fsm.State, error) {
+	migrations := []func(context.Context) error{
+		m.migrateManagedFields,
+	}
+	for _, v := range migrations {
+		if err := v(m.ctx); err != nil {
+			return fsm.UnknownState, err
+		}
+	}
+
 	return stateStartWorkers, nil
+}
+
+// migrateManagedFields transfers the ownership of the fields which the older operator has updated without Server-Side Apply
+// to controllers.FieldManager.
+// Otherwise, the fields which the operator no longer sets aren't removed by Server-Side Apply.
+func (m *mainProcess) migrateManagedFields(ctx context.Context) error {
+	ns := m.watchNamespace
+	opts := metav1.ListOptions{}
+
+	deployments, err := m.coreClient.AppsV1.ListDeployment(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(deployments.Items, isControlledByOperator), m.coreClient.AppsV1.UpdateDeployment); err != nil {
+		return err
+	}
+	pdbs, err := m.coreClient.PolicyV1.ListPodDisruptionBudget(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(pdbs.Items, isControlledByOperator), m.coreClient.PolicyV1.UpdatePodDisruptionBudget); err != nil {
+		return err
+	}
+	services, err := m.coreClient.CoreV1.ListService(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(services.Items, isControlledByOperator), m.coreClient.CoreV1.UpdateService); err != nil {
+		return err
+	}
+	configMaps, err := m.coreClient.CoreV1.ListConfigMap(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(configMaps.Items, isControlledByOperator), m.coreClient.CoreV1.UpdateConfigMap); err != nil {
+		return err
+	}
+	cronJobs, err := m.coreClient.BatchV1.ListCronJob(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(cronJobs.Items, isControlledByOperator), m.coreClient.BatchV1.UpdateCronJob); err != nil {
+		return err
+	}
+	etcdClusters, err := m.client.EtcdV1alpha2.ListEtcdCluster(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(etcdClusters.Items, isControlledByOperator), m.client.EtcdV1alpha2.UpdateEtcdCluster); err != nil {
+		return err
+	}
+	backends, err := m.client.ProxyV1alpha2.ListBackend(ctx, ns, opts)
+	if err != nil {
+		return xerrors.WithStack(err)
+	}
+	if err := upgradeManagedFieldsOf(ctx, filter(backends.Items, isCreatedByIngressController), m.client.ProxyV1alpha2.UpdateBackend); err != nil {
+		return err
+	}
+
+	// The custom resources of the third party may not be installed.
+	certificates, err := m.thirdPartyClient.CertManagerV1.ListCertificate(ctx, ns, opts)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return xerrors.WithStack(err)
+	}
+	if err == nil {
+		if err := upgradeManagedFieldsOf(ctx, filter(certificates.Items, isControlledByOperator), m.thirdPartyClient.CertManagerV1.UpdateCertificate); err != nil {
+			return err
+		}
+	}
+	serviceMonitors, err := m.thirdPartyClient.CoreV1.ListServiceMonitor(ctx, ns, opts)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return xerrors.WithStack(err)
+	}
+	if err == nil {
+		if err := upgradeManagedFieldsOf(ctx, filter(serviceMonitors.Items, isControlledByOperator), m.thirdPartyClient.CoreV1.UpdateServiceMonitor); err != nil {
+			return err
+		}
+	}
+	podMonitors, err := m.thirdPartyClient.CoreV1.ListPodMonitor(ctx, ns, opts)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return xerrors.WithStack(err)
+	}
+	if err == nil {
+		if err := upgradeManagedFieldsOf(ctx, filter(podMonitors.Items, isControlledByOperator), m.thirdPartyClient.CoreV1.UpdatePodMonitor); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *mainProcess) startWorkers() (fsm.State, error) {
@@ -314,4 +428,140 @@ func (m *mainProcess) Flags(fs *cmd.FlagSet) {
 	fs.String("key", "Private key for server certificate").Var(&m.keyFile).Default(m.keyFile)
 
 	logger.Flags(fs)
+}
+
+// legacyFieldManagers are the names that were recorded when the operator updated the objects before using Server-Side Apply.
+var legacyFieldManagers = map[string]struct{}{"heimdallrcontroller": {}, "Go-http-client": {}}
+
+// ownerAPIGroups are the API groups of the objects which control the objects applied by the operator.
+var ownerAPIGroups = map[string]struct{}{proxyv1alpha2.GroupName: {}, etcdv1alpha2.GroupName: {}}
+
+var finalizersPath = fieldpath.NewSet(fieldpath.MakePathOrDie("metadata", "finalizers"))
+
+// filter returns the pointers to the items which f returns true.
+func filter[E any, T interface {
+	*E
+	metav1.Object
+}](items []E, f func(metav1.Object) bool) []T {
+	filtered := make([]T, 0, len(items))
+	for i := range items {
+		if v := T(&items[i]); f(v) {
+			filtered = append(filtered, v)
+		}
+	}
+	return filtered
+}
+
+func upgradeManagedFieldsOf[T metav1.Object](ctx context.Context, items []T, update func(context.Context, T, metav1.UpdateOptions) (T, error)) error {
+	for _, v := range items {
+		managedFields, upgraded, err := upgradeManagedFields(v.GetObjectMeta().ManagedFields)
+		if err != nil {
+			return err
+		}
+		if !upgraded {
+			continue
+		}
+		v.GetObjectMeta().ManagedFields = managedFields
+		if _, err := update(ctx, v, metav1.UpdateOptions{}); err != nil {
+			return xerrors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
+// isControlledByOperator returns true if the controller of obj is the custom resource of the operator.
+// The legacy field manager "Go-http-client" is the default User-Agent of Go, so the objects which aren't created by the operator have to be excluded.
+func isControlledByOperator(obj metav1.Object) bool {
+	for _, v := range obj.GetObjectMeta().OwnerReferences {
+		if !v.Controller {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(v.APIVersion)
+		if err != nil {
+			continue
+		}
+		if _, ok := ownerAPIGroups[gv.Group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isCreatedByIngressController(obj metav1.Object) bool {
+	_, ok := obj.GetObjectMeta().Annotations[proxy.AnnotationKeyIngressName]
+	return ok
+}
+
+// upgradeManagedFields merges the fields of the entries of legacyFieldManagers into the entry of controllers.FieldManager
+// and removes the entries of legacyFieldManagers.
+// The fields of the entries which have the different API version from the entry of controllers.FieldManager are discarded
+// because the field paths may differ between the versions.
+// The ownership of finalizers isn't transferred because the controllers still add finalizers by Update.
+func upgradeManagedFields(entries []metav1.ManagedFieldsEntry) ([]metav1.ManagedFieldsEntry, bool, error) {
+	var applied *metav1.ManagedFieldsEntry
+	var legacy []metav1.ManagedFieldsEntry
+	upgraded := make([]metav1.ManagedFieldsEntry, 0, len(entries))
+	for _, v := range entries {
+		if v.Subresource != "" {
+			upgraded = append(upgraded, v)
+			continue
+		}
+
+		_, isLegacy := legacyFieldManagers[v.Manager]
+		switch {
+		case isLegacy && v.Operation == metav1.ManagedFieldsOperationTypeUpdate:
+			legacy = append(legacy, v)
+		case applied == nil && v.Manager == controllers.FieldManager && v.Operation == metav1.ManagedFieldsOperationTypeApply:
+			applied = &v
+		default:
+			upgraded = append(upgraded, v)
+		}
+	}
+	if len(legacy) == 0 {
+		return nil, false, nil
+	}
+	if applied == nil {
+		applied = &metav1.ManagedFieldsEntry{
+			Manager:    controllers.FieldManager,
+			Operation:  metav1.ManagedFieldsOperationTypeApply,
+			APIVersion: legacy[0].APIVersion,
+			Time:       legacy[0].Time,
+			FieldsType: legacy[0].FieldsType,
+		}
+	}
+
+	fields, err := decodeFieldsV1(applied)
+	if err != nil {
+		return nil, false, err
+	}
+	for _, v := range legacy {
+		if v.APIVersion != applied.APIVersion {
+			continue
+		}
+		s, err := decodeFieldsV1(&v)
+		if err != nil {
+			return nil, false, err
+		}
+		fields = fields.Union(s)
+	}
+	raw, err := fields.RecursiveDifference(finalizersPath).ToJSON()
+	if err != nil {
+		return nil, false, xerrors.WithStack(err)
+	}
+	applied.FieldsV1 = &metav1.FieldsV1{Raw: raw}
+
+	return append(upgraded, *applied), true, nil
+}
+
+func decodeFieldsV1(entry *metav1.ManagedFieldsEntry) (*fieldpath.Set, error) {
+	s := &fieldpath.Set{}
+	if entry.FieldsV1 == nil {
+		return s, nil
+	}
+	if err := s.FromJSON(bytes.NewReader(entry.FieldsV1.Raw)); err != nil {
+		return nil, xerrors.WithStack(err)
+	}
+	return s, nil
 }

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "operator",
@@ -8,6 +8,9 @@ go_library(
     deps = [
         "//pkg/cmd",
         "//pkg/fsm",
+        "//pkg/k8s/api/etcdv1alpha2",
+        "//pkg/k8s/api/proxy",
+        "//pkg/k8s/api/proxyv1alpha2",
         "//pkg/k8s/client",
         "//pkg/k8s/controllers",
         "//pkg/k8s/thirdpartyclient",
@@ -15,12 +18,34 @@ go_library(
         "//pkg/logger",
         "@com_github_google_uuid//:uuid",
         "@dev_f110_go_xerrors//:xerrors",
+        "@dev_f110_kubeproto//go/apis/metav1",
         "@dev_f110_kubeproto//go/k8sclient",
+        "@io_k8s_apimachinery//pkg/api/errors",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_apimachinery//pkg/runtime/schema",
         "@io_k8s_client_go//kubernetes",
         "@io_k8s_client_go//rest",
         "@io_k8s_client_go//tools/clientcmd",
         "@io_k8s_client_go//tools/leaderelection",
         "@io_k8s_client_go//tools/leaderelection/resourcelock",
+        "@io_k8s_sigs_structured_merge_diff_v6//fieldpath",
+    ],
+)
+
+go_test(
+    name = "operator_test",
+    srcs = ["operator_test.go"],
+    embed = [":operator"],
+    deps = [
+        "//pkg/k8s/api/proxy",
+        "//pkg/k8s/api/proxyv1alpha2",
+        "//pkg/k8s/client/testingclient",
+        "//pkg/k8s/controllers",
+        "//pkg/k8s/thirdpartyclient/testingthirdpartyclient",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@dev_f110_kubeproto//go/apis/corev1",
+        "@dev_f110_kubeproto//go/apis/metav1",
+        "@dev_f110_kubeproto//go/k8stestingclient",
     ],
 )

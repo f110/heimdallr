@@ -95,6 +95,7 @@ use_repo(
     "io_k8s_gengo",
     "io_k8s_klog_v2",
     "io_k8s_sigs_kind",
+    "io_k8s_sigs_structured_merge_diff_v6",
     "io_k8s_sigs_yaml",
     "io_nhooyr_websocket",
     "org_golang_google_api",
@@ -115,7 +116,7 @@ git_override(
 
 git_override(
     module_name = "dev_f110_kubeproto",
-    commit = "d95e2e53c30e8582095fdb559529d94d9a4cf0bf",
+    commit = "9ea0ac9e60e9d56b7afe43add83a183051faf41b",
     remote = "https://github.com/f110/kubeproto",
 )
 

@@ -13,15 +13,15 @@ import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 
 enum PrometheusConditionStatus {
-PROMETHEUS_CONDITION_STATUS_TRUE = 0 [(dev.f110.kubeproto.value) = {value: "True"}];
-PROMETHEUS_CONDITION_STATUS_DEGRADED = 1 [(dev.f110.kubeproto.value) = {value: "Degraded"}];
-PROMETHEUS_CONDITION_STATUS_FALSE = 2 [(dev.f110.kubeproto.value) = {value: "False"}];
-PROMETHEUS_CONDITION_STATUS_UNKNOWN = 3 [(dev.f110.kubeproto.value) = {value: "Unknown"}];
+PROMETHEUS_CONDITION_STATUS_TRUE = 0;
+PROMETHEUS_CONDITION_STATUS_DEGRADED = 1;
+PROMETHEUS_CONDITION_STATUS_FALSE = 2;
+PROMETHEUS_CONDITION_STATUS_UNKNOWN = 3;
 }
 
 enum PrometheusConditionType {
-PROMETHEUS_CONDITION_TYPE_AVAILABLE = 0 [(dev.f110.kubeproto.value) = {value: "Available"}];
-PROMETHEUS_CONDITION_TYPE_RECONCILED = 1 [(dev.f110.kubeproto.value) = {value: "Reconciled"}];
+PROMETHEUS_CONDITION_TYPE_AVAILABLE = 0;
+PROMETHEUS_CONDITION_TYPE_RECONCILED = 1;
 }
 
 message APIServerConfig {
@@ -258,7 +258,7 @@ optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector alertmanager_config
 // This is an alpha field and requires enabling StatefulSetMinReadySeconds feature gate.
 optional uint32 min_ready_seconds = 41 [(dev.f110.kubeproto.field) = {go_name: "MinReadySeconds", api_field_name: "minReadySeconds", inline: false}];
 // Pods' hostAliases configuration
-repeated HostAlias host_aliases = 42 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", inline: false}];
+repeated HostAlias host_aliases = 42 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", list_type: LIST_TYPE_MAP, list_map_keys: ["ip"], inline: false}];
 // Defines the web command line flags when starting Alertmanager.
 optional AlertmanagerWebSpec web = 43 [(dev.f110.kubeproto.field) = {go_name: "Web", api_field_name: "web", inline: false}];
 // EXPERIMENTAL: alertmanagerConfiguration specifies the configuration of Alertmanager.
@@ -566,7 +566,7 @@ string enforced_body_size_limit = 56 [(dev.f110.kubeproto.field) = {go_name: "En
 // This is an alpha field and requires enabling StatefulSetMinReadySeconds feature gate.
 optional uint32 min_ready_seconds = 57 [(dev.f110.kubeproto.field) = {go_name: "MinReadySeconds", api_field_name: "minReadySeconds", inline: false}];
 // Pods' hostAliases configuration
-repeated HostAlias host_aliases = 58 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", inline: false}];
+repeated HostAlias host_aliases = 58 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", list_type: LIST_TYPE_MAP, list_map_keys: ["ip"], inline: false}];
 // AdditionalArgs allows setting additional arguments for the Prometheus container.
 // It is intended for e.g. activating hidden flags which are not supported by
 // the dedicated configuration options yet. The arguments are passed as-is to the
@@ -1157,9 +1157,9 @@ int32 available_replicas = 4 [(dev.f110.kubeproto.field) = {go_name: "AvailableR
 // Total number of unavailable pods targeted by this Prometheus deployment.
 int32 unavailable_replicas = 5 [(dev.f110.kubeproto.field) = {go_name: "UnavailableReplicas", api_field_name: "unavailableReplicas", inline: false}];
 // The current state of the Prometheus deployment.
-repeated PrometheusCondition conditions = 6 [(dev.f110.kubeproto.field) = {go_name: "Conditions", api_field_name: "conditions", inline: false}];
+repeated PrometheusCondition conditions = 6 [(dev.f110.kubeproto.field) = {go_name: "Conditions", api_field_name: "conditions", list_type: LIST_TYPE_MAP, list_map_keys: ["type"], inline: false}];
 // The list has one entry per shard. Each entry provides a summary of the shard status.
-repeated ShardStatus shard_statuses = 7 [(dev.f110.kubeproto.field) = {go_name: "ShardStatuses", api_field_name: "shardStatuses", inline: false}];
+repeated ShardStatus shard_statuses = 7 [(dev.f110.kubeproto.field) = {go_name: "ShardStatuses", api_field_name: "shardStatuses", list_type: LIST_TYPE_MAP, list_map_keys: ["shardID"], inline: false}];
 }
 
 message PrometheusWebSpec {
@@ -1640,7 +1640,7 @@ optional .k8s.io.api.core.v1.SecretKeySelector alert_relabel_configs = 44 [(dev.
 // When used alongside with AlertRelabelConfigs, alertRelabelConfigFile takes precedence.
 optional string alert_relabel_config_file = 45 [(dev.f110.kubeproto.field) = {go_name: "AlertRelabelConfigFile", api_field_name: "alertRelabelConfigFile", inline: false}];
 // Pods' hostAliases configuration
-repeated HostAlias host_aliases = 46 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", inline: false}];
+repeated HostAlias host_aliases = 46 [(dev.f110.kubeproto.field) = {go_name: "HostAliases", api_field_name: "hostAliases", list_type: LIST_TYPE_MAP, list_map_keys: ["ip"], inline: false}];
 }
 
 message ThanosRulerStatus {
