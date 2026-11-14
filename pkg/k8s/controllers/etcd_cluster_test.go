@@ -34,7 +34,7 @@ func TestEtcdCluster_CurrentPhase(t *testing.T) {
 	}{
 		{
 			Name:        "Doesn't have any pod",
-			ExpectPhase: etcdv1alpha2.EtcdClusterPhasePending,
+			ExpectPhase: etcdv1alpha2.EtcdClusterPhaseInitializing,
 		},
 		{
 			Name: "One pod created",
