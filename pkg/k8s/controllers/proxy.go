@@ -1294,7 +1294,7 @@ func (r *HeimdallrProxy) IdealRPCServer() (*process, error) {
 		k8sfactory.Name("rpcserver"),
 		k8sfactory.Image(fmt.Sprintf("%s:%s", RPCServerImageRepository, r.Version()), []string{rpcServerCommand}),
 		k8sfactory.Args("-c", fmt.Sprintf("%s/%s", configMountPath, configFilename)),
-		k8sfactory.LivenessProbe(k8sfactory.GRPCProbe(rpcMetricsServerPort)),
+		k8sfactory.LivenessProbe(k8sfactory.TCPProbe(rpcMetricsServerPort)),
 		k8sfactory.ReadinessProbe(k8sfactory.GRPCProbe(rpcMetricsServerPort)),
 		k8sfactory.Port("https", corev1.ProtocolTCP, rpcServerPort),
 		k8sfactory.Port("metrics", corev1.ProtocolTCP, rpcMetricsServerPort),
