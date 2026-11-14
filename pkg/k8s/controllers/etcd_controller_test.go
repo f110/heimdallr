@@ -160,6 +160,49 @@ func TestEtcdController(t *testing.T) {
 		assert.Contains(t, portNames, "metrics")
 	})
 
+	t.Run("RetryCreating", func(t *testing.T) {
+		t.Parallel()
+
+		runner := controllertest.NewTestRunner()
+		etcdMockCluster := NewMockCluster()
+		etcdMockMaintenance := NewMockMaintenance()
+		mockOpt := &MockOption{Cluster: etcdMockCluster, Maintenance: etcdMockMaintenance}
+		controller, err := NewEtcdController(
+			runner.SharedInformerFactory,
+			runner.CoreSharedInformerFactory,
+			metav1.NamespaceAll,
+			&runner.CoreClient.Set,
+			runner.Client.EtcdV1alpha2,
+			runner.K8sCoreClient,
+			nil,
+			"cluster.local",
+			false,
+			nil,
+			mockOpt,
+		)
+		require.NoError(t, err)
+
+		e := etcd.Factory(etcdClusterBase, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseCreating))
+		cluster := NewEtcdCluster(e, controller.clusterDomain, logger.Log, nil)
+		cluster.registerBasicObjectOfEtcdCluster(runner)
+		members := cluster.AllMembers()
+		runner.RegisterFixtures(
+			k8sfactory.PodFactory(members[0].Pod, k8sfactory.Created, k8sfactory.NotReady, k8sfactory.Annotation(etcd.PodAnnotationKeyRunningAt, runner.Now.Format(time.RFC3339))),
+			k8sfactory.PodFactory(members[1].Pod, k8sfactory.Created, k8sfactory.PodFailed),
+		)
+
+		err = runner.Reconcile(controller, e)
+		require.NoError(t, err)
+
+		updated, err := runner.Client.EtcdV1alpha2.GetEtcdCluster(context.Background(), e.Namespace, e.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-1", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertDeleteAction(t, k8sfactory.PodFactory(nil, k8sfactory.Namef("%s-2", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertUpdateAction(t, "status", updated)
+		runner.AssertApplyAction(t, k8sfactory.ServiceFactory(nil, k8sfactory.Namef("%s-discovery", e.Name), k8sfactory.Namespace(e.Namespace)))
+		runner.AssertNoUnexpectedAction(t)
+	})
+
 	t.Run("PreparingUpdate", func(t *testing.T) {
 		t.Parallel()
 

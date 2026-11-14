@@ -53,6 +53,7 @@ type InternalState string
 const (
 	InternalStateCreatingFirstMember InternalState = "creatingFirstNode"
 	InternalStateCreatingMembers     InternalState = "creatingMembers"
+	InternalStateRetryCreating       InternalState = "retryCreating"
 	InternalStateRepair              InternalState = "repair"
 	InternalStateRestore             InternalState = "restore"
 	InternalStateRecreate            InternalState = "recreate"
@@ -979,9 +980,15 @@ func (c *EtcdCluster) CurrentInternalState() InternalState {
 	return InternalStateRunning
 }
 
+// currentInternalStateCreating returns the internal state of the cluster that has never been ready.
 func (c *EtcdCluster) currentInternalStateCreating() InternalState {
 	if len(c.ownedPods) == 0 {
 		return InternalStateCreatingFirstMember
+	}
+	if slices.ContainsFunc(c.ownedPods, func(p *corev1.Pod) bool {
+		return p.Status.Phase == corev1.PodPhaseFailed || p.Status.Phase == corev1.PodPhaseSucceeded
+	}) {
+		return InternalStateRetryCreating
 	}
 	if len(c.ownedPods) == 1 {
 		if c.IsPodReady(c.ownedPods[0]) {
