@@ -262,6 +262,8 @@ func (ec *EtcdController) Reconcile(ctx context.Context, obj interface{}) error 
 		handler = ec.stateCreatingFirstMember
 	case InternalStateCreatingMembers:
 		handler = ec.stateCreatingMembers
+	case InternalStateRetryCreating:
+		handler = ec.stateRetryCreating
 	case InternalStateRepair:
 		handler = ec.stateRepair
 	case InternalStatePreparingUpdate:
@@ -475,6 +477,16 @@ func (ec *EtcdController) stateCreatingMembers(ctx context.Context, cluster *Etc
 	}
 
 	return nil
+}
+
+func (ec *EtcdController) stateRetryCreating(ctx context.Context, cluster *EtcdCluster) error {
+	ec.EventRecorder().Event(
+		cluster.EtcdCluster,
+		corev1.EventTypeWarning,
+		"RetryCreating",
+		"The member has terminated while creating the cluster. Creating the cluster again.",
+	)
+	return ec.resetCluster(ctx, cluster)
 }
 
 func (ec *EtcdController) stateRepair(ctx context.Context, cluster *EtcdCluster) error {
@@ -979,7 +991,6 @@ func (ec *EtcdController) setupDefragmentJob(ctx context.Context, cluster *EtcdC
 	}
 	return nil
 }
-
 
 func (ec *EtcdController) ensureServiceAccount(ctx context.Context, cluster *EtcdCluster) error {
 	sa, err := ec.serviceAccountLister.Get(cluster.Namespace, cluster.ServiceAccountName())
