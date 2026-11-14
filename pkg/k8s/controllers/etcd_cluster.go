@@ -845,7 +845,7 @@ func (c *EtcdCluster) ClientService() *corev1.Service {
 
 func (c *EtcdCluster) CurrentPhase() etcdv1alpha2.EtcdClusterPhase {
 	if len(c.ownedPods) == 0 {
-		return etcdv1alpha2.EtcdClusterPhasePending
+		return etcdv1alpha2.EtcdClusterPhaseInitializing
 	}
 
 	if len(c.ownedPods) == 1 && !c.IsPodReady(c.ownedPods[0]) {

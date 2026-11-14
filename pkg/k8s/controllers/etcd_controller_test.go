@@ -68,7 +68,7 @@ func TestEtcdController(t *testing.T) {
 		err = runner.Reconcile(controller, e)
 		require.NoError(t, err)
 
-		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhasePending))
+		updated := etcd.Factory(e, etcd.Phase(etcdv1alpha2.EtcdClusterPhaseInitializing))
 		updated.Status.ClientEndpoint = fmt.Sprintf("https://%s-client.%s.svc.cluster.local:2379", e.Name, e.Namespace)
 		updated.Status.ClientCertSecretName = fmt.Sprintf("etcd-%s-client-cert", e.Name)
 		runner.AssertUpdateAction(t, "status", updated)
