@@ -13,13 +13,13 @@ import (
 
 func TestRelayLocator(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
-		rl, err := NewRelayLocator(context.Background(), client)
+		rl, err := NewRelayLocator(context.Background(), client, observer)
 		require.NoError(t, err)
 		require.NotNil(t, rl)
 	})
 
 	t.Run("GetAndSet", func(t *testing.T) {
-		rl, err := NewRelayLocator(context.Background(), client)
+		rl, err := NewRelayLocator(context.Background(), client, observer)
 		require.NoError(t, err)
 		waitForSync(t, rl.cache)
 
@@ -48,7 +48,7 @@ func TestRelayLocator(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
-		rl, err := NewRelayLocator(context.Background(), client)
+		rl, err := NewRelayLocator(context.Background(), client, observer)
 		require.NoError(t, err)
 		waitForSync(t, rl.cache)
 

@@ -9,6 +9,7 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/server/v3/embed"
+	"google.golang.org/grpc"
 
 	"go.f110.dev/heimdallr/pkg/config/configv2"
 	"go.f110.dev/heimdallr/pkg/logger"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	etcdUrl *url.URL
-	client  *clientv3.Client
+	etcdUrl  *url.URL
+	client   *clientv3.Client
+	observer = NewWatchStreamObserver()
 )
 
 func TestMain(m *testing.M) {
@@ -61,6 +63,7 @@ func TestMain(m *testing.M) {
 	client, err = clientv3.New(clientv3.Config{
 		Endpoints:   []string{etcdUrl.String()},
 		DialTimeout: 1 * time.Second,
+		DialOptions: []grpc.DialOption{grpc.WithChainStreamInterceptor(observer.StreamInterceptor())},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed connect to etcd: %v\n", err)

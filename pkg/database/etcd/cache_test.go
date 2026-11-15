@@ -2,6 +2,9 @@ package etcd
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -10,8 +13,11 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/server/v3/embed"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+
+	"go.f110.dev/heimdallr/pkg/netutil"
 )
 
 func TestCache(t *testing.T) {
@@ -19,7 +25,7 @@ func TestCache(t *testing.T) {
 		t.Parallel()
 
 		watchCh := make(chan clientv3.WatchResponse)
-		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh})
+		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh}, NewWatchStreamObserver())
 
 		notify := cache.Notify()
 
@@ -97,6 +103,7 @@ func TestCache(t *testing.T) {
 				},
 			}},
 			&fakeWatcher{ch: watchCh},
+			NewWatchStreamObserver(),
 		)
 
 		notify := cache.Notify()
@@ -120,7 +127,7 @@ func TestCache(t *testing.T) {
 		watchCh := make(chan clientv3.WatchResponse)
 		watcher := &fakeWatcher{ch: watchCh}
 		kv := &fakeKV{}
-		cache := newCache(t, kv, watcher)
+		cache := newCache(t, kv, watcher, NewWatchStreamObserver())
 
 		notify := cache.Notify()
 
@@ -158,7 +165,7 @@ func TestCache(t *testing.T) {
 		t.Parallel()
 
 		watchCh := make(chan clientv3.WatchResponse)
-		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh})
+		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh}, NewWatchStreamObserver())
 
 		stopped := cache.Notify()
 		notify := cache.Notify()
@@ -174,14 +181,101 @@ func TestCache(t *testing.T) {
 		waitNotify(t, notify)
 	})
 
+	t.Run("StreamReopened", func(t *testing.T) {
+		t.Parallel()
+
+		watchCh := make(chan clientv3.WatchResponse)
+		kv := &fakeKV{}
+		observer := NewWatchStreamObserver()
+		cache := newCache(t, kv, &fakeWatcher{ch: watchCh}, observer)
+
+		notify := cache.Notify()
+
+		kv.kvs = append(kv.kvs, &mvccpb.KeyValue{
+			Version: 1,
+			Key:     []byte("test/restored"),
+			Value:   []byte("foobar"),
+		})
+		openWatchStream(t, observer)
+		waitNotify(t, notify)
+
+		assert.NotNil(t, cache.Get([]byte("test/restored")))
+		assert.Nil(t, cache.Get([]byte("test/readiness")))
+	})
+
+	t.Run("WatchError", func(t *testing.T) {
+		t.Parallel()
+
+		watchCh := make(chan clientv3.WatchResponse)
+		kv := &fakeKV{}
+		cache := newCache(t, kv, &fakeWatcher{ch: watchCh}, NewWatchStreamObserver())
+
+		notify := cache.Notify()
+
+		kv.kvs = append(kv.kvs, &mvccpb.KeyValue{
+			Version: 1,
+			Key:     []byte("test/compacted"),
+			Value:   []byte("foobar"),
+		})
+		watchCh <- clientv3.WatchResponse{CompactRevision: 10}
+		waitNotify(t, notify)
+
+		assert.NotNil(t, cache.Get([]byte("test/compacted")))
+		assert.Nil(t, cache.Get([]byte("test/readiness")))
+	})
+
 	t.Run("Close", func(t *testing.T) {
 		t.Parallel()
 
 		watchCh := make(chan clientv3.WatchResponse)
-		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh})
+		cache := newCache(t, &fakeKV{}, &fakeWatcher{ch: watchCh}, NewWatchStreamObserver())
 
 		cache.Close()
 	})
+}
+
+// TestCache_RestoredDatastore replaces etcd with the empty one, which is the same situation as restoring from the backup.
+// The revision of the new etcd is older than the revision that the cache has seen.
+func TestCache_RestoredDatastore(t *testing.T) {
+	port, err := netutil.FindUnusedPort()
+	require.NoError(t, err)
+	u, err := url.Parse(fmt.Sprintf("http://localhost:%d", port))
+	require.NoError(t, err)
+
+	e := startEtcd(t, u)
+
+	observer := NewWatchStreamObserver()
+	c, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{u.String()},
+		DialTimeout: 1 * time.Second,
+		DialOptions: []grpc.DialOption{grpc.WithChainStreamInterceptor(observer.StreamInterceptor())},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { c.Close() })
+
+	for i := range 10 {
+		_, err := c.Put(context.Background(), "restore/old", strconv.Itoa(i))
+		require.NoError(t, err)
+	}
+
+	cache := NewCache(c, observer, "restore/", nil)
+	cache.Start(context.Background())
+	t.Cleanup(cache.Close)
+	waitForSync(t, cache)
+	require.NotNil(t, cache.Get([]byte("restore/old")))
+
+	e.Close()
+	e = startEtcd(t, u)
+	t.Cleanup(e.Close)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = c.Put(ctx, "restore/new", "foobar")
+	require.NoError(t, err)
+
+	assert.Eventually(t, func() bool {
+		return cache.Get([]byte("restore/new")) != nil && cache.Get([]byte("restore/old")) == nil
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func TestCache_KeepConnectionActiveAfterCanceledRequest(t *testing.T) {
@@ -194,7 +288,7 @@ func TestCache_KeepConnectionActiveAfterCanceledRequest(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { c.Close() })
 
-	cache := NewCache(c, "keep-connection-active/", nil)
+	cache := NewCache(c, NewWatchStreamObserver(), "keep-connection-active/", nil)
 	cache.Start(context.Background())
 	t.Cleanup(cache.Close)
 	waitForSync(t, cache)
@@ -208,12 +302,12 @@ func TestCache_KeepConnectionActiveAfterCanceledRequest(t *testing.T) {
 	assert.Equal(t, connectivity.Ready, c.ActiveConnection().GetState())
 }
 
-func newCache(t *testing.T, fakeKV *fakeKV, fakeWatcher *fakeWatcher) *Cache {
+func newCache(t *testing.T, fakeKV *fakeKV, fakeWatcher *fakeWatcher, observer *WatchStreamObserver) *Cache {
 	c := &clientv3.Client{
 		KV:      fakeKV,
 		Watcher: fakeWatcher,
 	}
-	cache := NewCache(c, "test/", nil)
+	cache := NewCache(c, observer, "test/", nil)
 	cache.Start(context.Background())
 
 	notify := cache.Notify()
@@ -244,6 +338,37 @@ func waitForSync(t *testing.T, c *Cache) {
 	defer cancel()
 
 	require.NoError(t, c.WaitForSync(ctx))
+}
+
+func startEtcd(t *testing.T, u *url.URL) *embed.Etcd {
+	t.Helper()
+
+	c := embed.NewConfig()
+	c.Dir = t.TempDir()
+	c.LogLevel = "fatal"
+	c.ListenPeerUrls[0].Host = "localhost:0"
+	c.ListenClientUrls[0] = *u
+
+	e, err := embed.StartEtcd(c)
+	require.NoError(t, err)
+
+	select {
+	case <-e.Server.ReadyNotify():
+	case <-time.After(10 * time.Second):
+		require.Fail(t, "Failed start embed etcd")
+	}
+
+	return e
+}
+
+func openWatchStream(t *testing.T, o *WatchStreamObserver) {
+	t.Helper()
+
+	streamer := func(_ context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+		return nil, nil
+	}
+	_, err := o.StreamInterceptor()(context.Background(), &grpc.StreamDesc{}, nil, "/etcdserverpb.Watch/Watch", streamer)
+	require.NoError(t, err)
 }
 
 func waitNotify(t *testing.T, ch chan struct{}) {

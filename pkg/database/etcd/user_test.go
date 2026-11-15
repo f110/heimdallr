@@ -12,14 +12,14 @@ import (
 )
 
 func TestNewUserDatabase(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client, database.SystemUser)
+	u, err := NewUserDatabase(context.Background(), client, observer, database.SystemUser)
 	require.NoError(t, err)
 	require.NotNil(t, u)
 }
 
 func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	Id := "test@example.com"
-	u, err := NewUserDatabase(context.Background(), client)
+	u, err := NewUserDatabase(context.Background(), client, observer)
 	require.NoError(t, err)
 	waitForSync(t, u.cache)
 	notify := u.cache.Notify()
@@ -59,13 +59,13 @@ func TestUserDatabase_SetAndGetUser(t *testing.T) {
 	_, err = u.Get(Id)
 	require.ErrorIs(t, err, database.ErrUserNotFound)
 
-	u, err = NewUserDatabase(context.Background(), client)
+	u, err = NewUserDatabase(context.Background(), client, observer)
 	require.NoError(t, err)
 	require.NotNil(t, u)
 }
 
 func TestUserDatabase_GetAndSetState(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client)
+	u, err := NewUserDatabase(context.Background(), client, observer)
 	require.NoError(t, err)
 
 	_, err = u.GetState(context.Background(), "")
@@ -90,7 +90,7 @@ func TestUserDatabase_GetAndSetState(t *testing.T) {
 }
 
 func TestUserDatabase_Delete(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client)
+	u, err := NewUserDatabase(context.Background(), client, observer)
 	require.NoError(t, err)
 	waitForSync(t, u.cache)
 	notify := u.cache.Notify()
@@ -111,7 +111,7 @@ func TestUserDatabase_Delete(t *testing.T) {
 }
 
 func TestUserDatabase_Close(t *testing.T) {
-	u, err := NewUserDatabase(context.Background(), client)
+	u, err := NewUserDatabase(context.Background(), client, observer)
 	require.NoError(t, err)
 	waitForSync(t, u.cache)
 

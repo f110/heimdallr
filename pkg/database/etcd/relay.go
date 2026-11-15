@@ -26,10 +26,10 @@ type RelayLocator struct {
 
 var _ database.RelayLocator = &RelayLocator{}
 
-func NewRelayLocator(_ context.Context, client *clientv3.Client) (*RelayLocator, error) {
+func NewRelayLocator(_ context.Context, client *clientv3.Client, observer *WatchStreamObserver) (*RelayLocator, error) {
 	rl := &RelayLocator{
 		client:         client,
-		cache:          NewCache(client, "relay/", nil),
+		cache:          NewCache(client, observer, "relay/", nil),
 		gone:           make(chan *database.Relay),
 		myListenedAddr: make([]string, 0),
 	}

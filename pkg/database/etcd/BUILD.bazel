@@ -7,6 +7,7 @@ go_library(
         "cache.go",
         "cluster.go",
         "compactor.go",
+        "observer.go",
         "relay.go",
         "token.go",
         "user.go",
@@ -22,6 +23,7 @@ go_library(
         "@io_etcd_go_etcd_api_v3//mvccpb",
         "@io_etcd_go_etcd_client_v3//:client",
         "@io_k8s_sigs_yaml//:yaml",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 
@@ -32,6 +34,7 @@ go_test(
         "cache_test.go",
         "cluster_test.go",
         "compactor_test.go",
+        "observer_test.go",
         "relay_test.go",
         "token_test.go",
         "user_test.go",
