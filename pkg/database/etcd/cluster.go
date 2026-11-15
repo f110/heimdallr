@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.f110.dev/xerrors"
@@ -15,7 +16,9 @@ import (
 type ClusterDatabase struct {
 	client *clientv3.Client
 
-	id     string
+	id string
+
+	mu     sync.Mutex
 	cancel context.CancelFunc
 }
 
@@ -35,6 +38,9 @@ func (d *ClusterDatabase) Id() string {
 }
 
 func (d *ClusterDatabase) Join(ctx context.Context) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if d.cancel != nil {
 		return xerrors.NewWithStack("etcd: already joined")
 	}
@@ -58,8 +64,12 @@ func (d *ClusterDatabase) Join(ctx context.Context) error {
 	kaCtx, cancelFunc := context.WithCancel(context.Background())
 	go func() {
 		defer func() {
+			d.mu.Lock()
+			if kaCtx.Err() == nil {
+				d.cancel = nil
+			}
+			d.mu.Unlock()
 			cancelFunc()
-			d.cancel = nil
 		}()
 
 		resCh, err := d.client.KeepAlive(kaCtx, lease.ID)
@@ -88,6 +98,9 @@ func (d *ClusterDatabase) Leave(ctx context.Context) error {
 	if err != nil {
 		return xerrors.WithStack(err)
 	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	if d.cancel != nil {
 		d.cancel()
 		d.cancel = nil
@@ -114,9 +127,8 @@ func (d *ClusterDatabase) MemberList(ctx context.Context) ([]*database.Member, e
 }
 
 func (d *ClusterDatabase) Alive() bool {
-	if d.cancel == nil {
-		return false
-	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
-	return true
+	return d.cancel != nil
 }
