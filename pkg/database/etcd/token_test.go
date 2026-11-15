@@ -31,14 +31,14 @@ func TestTemporaryToken_IssueToken(t *testing.T) {
 	t.Run("Failed verify", func(t *testing.T) {
 		t.Parallel()
 
-		_, err = token.IssueToken(context.Background(), code.Code, "failure")
+		_, err := token.IssueToken(context.Background(), code.Code, "failure")
 		assert.Error(t, err)
 	})
 
 	t.Run("Unknown code", func(t *testing.T) {
 		t.Parallel()
 
-		_, err = token.IssueToken(context.Background(), "unknown", "ch")
+		_, err := token.IssueToken(context.Background(), "unknown", "ch")
 		assert.Error(t, err)
 	})
 
