@@ -1,7 +1,31 @@
 load("@rules_go//go:def.bzl", "go_test")
 load("//build/rules:release.bzl", "prepare_release_assets")
 
+# gazelle:exclude proxy-restore_test.go
+
 K8S_CLUSTER_VERSION = "v1.35.8"
+
+E2E_ARGS = [
+    "-test.v=true",
+    "-crd=$(location //operator/config/crd:crd)",
+    "-cluster-version=" + K8S_CLUSTER_VERSION,
+    "-kind-file=$(location @kind//:file)",
+    "-proxy-image=container/proxy",
+    "-rpc-image=container/rpcserver",
+    "-dashboard-image=container/dashboard",
+    "-operator-image=container/operator",
+    "-all-in-one-manifest=$(location :release_assets)",
+]
+
+E2E_DATA = [
+    ":release_assets",
+    "//container:dashboard",
+    "//container:operator",
+    "//container:proxy",
+    "//container:rpcserver",
+    "//operator/config/crd",
+    "@kind//:file",
+]
 
 prepare_release_assets(
     name = "release_assets",
@@ -20,26 +44,8 @@ go_test(
         "namespaced-operator_test.go",
         "proxy-controller_test.go",
     ],
-    args = [
-        "-test.v=true",
-        "-crd=$(location //operator/config/crd:crd)",
-        "-cluster-version=" + K8S_CLUSTER_VERSION,
-        "-kind-file=$(location @kind//:file)",
-        "-proxy-image=container/proxy",
-        "-rpc-image=container/rpcserver",
-        "-dashboard-image=container/dashboard",
-        "-operator-image=container/operator",
-        "-all-in-one-manifest=$(location :release_assets)",
-    ],
-    data = [
-        ":release_assets",
-        "//container:dashboard",
-        "//container:operator",
-        "//container:proxy",
-        "//container:rpcserver",
-        "//operator/config/crd",
-        "@kind//:file",
-    ],
+    args = E2E_ARGS,
+    data = E2E_DATA,
     rundir = ".",
     # The sandbox stages the OCI layout as a tree of symlinks and go-containerregistry refuses to
     # read a blob that is a symlink.
@@ -61,6 +67,41 @@ go_test(
         "//pkg/logger",
         "//pkg/testing/btesting",
         "@io_etcd_go_etcd_client_v3//:client",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
+        "@io_k8s_client_go//rest",
+    ],
+)
+
+go_test(
+    name = "fault_test",
+    timeout = "eternal",
+    srcs = [
+        "main_test.go",
+        "proxy-restore_test.go",
+    ],
+    args = E2E_ARGS,
+    data = E2E_DATA,
+    rundir = ".",
+    # The sandbox stages the OCI layout as a tree of symlinks and go-containerregistry refuses to
+    # read a blob that is a symlink.
+    tags = [
+        "e2e-fault",
+        "no-sandbox",
+    ],
+    deps = [
+        "//operator/e2e/e2eutil",
+        "//operator/e2e/framework",
+        "//pkg/config/configv2",
+        "//pkg/k8s",
+        "//pkg/k8s/api/etcdv1alpha2",
+        "//pkg/k8s/api/proxy",
+        "//pkg/k8s/api/proxyv1alpha2",
+        "//pkg/k8s/controllers",
+        "//pkg/k8s/kind",
+        "//pkg/k8s/registry",
+        "//pkg/logger",
+        "//pkg/testing/btesting",
+        "@io_k8s_api//core/v1:core",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:meta",
         "@io_k8s_client_go//rest",
     ],
