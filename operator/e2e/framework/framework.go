@@ -155,11 +155,13 @@ type Proxy struct {
 	coreClient *kubernetes.Clientset
 
 	proxy          *proxyv1alpha2.Proxy
+	testUserId     string
 	userClientCert *tls.Certificate
 	Backend        *proxyv1alpha2.Backend
 }
 
-func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
+func (p *Proxy) Setup(m *btesting.Matcher, testUserId string, traits ...k8sfactory.Trait) bool {
+	p.testUserId = testUserId
 	clientSecret := &corev1.Secret{
 		ObjectMeta: k8smetav1.ObjectMeta{
 			Name:      "e2e-client-secret",
@@ -177,6 +179,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 		proxy.RootUsers([]string{testUserId}),
 		proxy.Version(Config.ProxyVersion),
 	)
+	proxySpec = proxy.Factory(proxySpec, traits...)
 	p.proxy = proxySpec
 	testServiceBackend, err := e2eutil.DeployTestService(p.coreClient, p.client, proxySpec, "hello")
 	m.NoError(err)
@@ -221,6 +224,7 @@ func (p *Proxy) Setup(m *btesting.Matcher, testUserId string) bool {
 	m.NoError(e2eutil.WaitForReadyOfProxy(p.client, proxySpec, 10*time.Minute))
 	proxySpec, err = p.client.ProxyV1alpha2.GetProxy(context.TODO(), proxySpec.Namespace, proxySpec.Name, metav1.GetOptions{})
 	m.NoError(err)
+	p.proxy = proxySpec
 
 	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, proxySpec, testUserId)
 	m.NoError(err)
@@ -236,12 +240,31 @@ func (p *Proxy) Agent(clientCert bool) *Agent {
 	if clientCert {
 		cert = p.userClientCert
 	}
+	return p.AgentWithCert(cert)
+}
+
+// AgentWithCert returns the agent that sends requests with the client certificate. cert can be nil.
+func (p *Proxy) AgentWithCert(cert *tls.Certificate) *Agent {
 	return &Agent{
 		clientCert: cert,
 		coreClient: p.coreClient,
 		restConfig: p.restConfig,
 		proxy:      p.proxy,
 	}
+}
+
+// RPCClient returns the client of the rpcserver authorized as the test user.
+func (p *Proxy) RPCClient(m *btesting.Matcher) *e2eutil.RPCClient {
+	rpcClient, err := e2eutil.DialRPCServer(p.restConfig, p.coreClient, p.proxy, p.testUserId)
+	m.Must(err)
+	return rpcClient
+}
+
+// Datastore returns the EtcdCluster that the proxy uses as the datastore.
+func (p *Proxy) Datastore(m *btesting.Matcher) *etcdv1alpha2.EtcdCluster {
+	ec, err := p.client.EtcdV1alpha2.GetEtcdCluster(context.TODO(), p.proxy.Namespace, p.proxy.Name+"-datastore", metav1.GetOptions{})
+	m.Must(err)
+	return ec
 }
 
 type Agent struct {

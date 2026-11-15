@@ -34,7 +34,7 @@ type UserDatabase struct {
 
 var _ database.UserDatabase = &UserDatabase{}
 
-func NewUserDatabase(_ context.Context, client *clientv3.Client, systemUsers ...*database.User) (*UserDatabase, error) {
+func NewUserDatabase(_ context.Context, client *clientv3.Client, observer *WatchStreamObserver, systemUsers ...*database.User) (*UserDatabase, error) {
 	initData := make([]*mvccpb.KeyValue, 0, len(systemUsers))
 	for _, v := range systemUsers {
 		value, err := database.MarshalUser(v)
@@ -51,7 +51,7 @@ func NewUserDatabase(_ context.Context, client *clientv3.Client, systemUsers ...
 
 	u := &UserDatabase{
 		client: client,
-		cache:  NewCache(client, "user/", initData),
+		cache:  NewCache(client, observer, "user/", initData),
 	}
 	go u.cache.Start(context.Background())
 

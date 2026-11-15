@@ -31,8 +31,8 @@ func init() {
 	gob.Register(rsa.PublicKey{})
 }
 
-func NewCA(client *clientv3.Client) *CA {
-	ca := &CA{client: client, cache: NewCache(client, "ca/revoke/", nil)}
+func NewCA(client *clientv3.Client, observer *WatchStreamObserver) *CA {
+	ca := &CA{client: client, cache: NewCache(client, observer, "ca/revoke/", nil)}
 	ca.cache.Start(context.Background())
 
 	return ca

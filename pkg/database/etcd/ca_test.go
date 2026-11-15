@@ -32,13 +32,13 @@ func newCertificate(t *testing.T) *x509.Certificate {
 }
 
 func TestNewCA(t *testing.T) {
-	ca := NewCA(client)
+	ca := NewCA(client, observer)
 	defer ca.Close()
 	assert.NotNil(t, ca)
 }
 
 func TestCA(t *testing.T) {
-	ca := NewCA(client)
+	ca := NewCA(client, observer)
 	defer ca.Close()
 
 	err := ca.SetSignedCertificate(context.Background(), &database.SignedCertificate{
@@ -71,7 +71,7 @@ func TestCA(t *testing.T) {
 }
 
 func TestCA_NewSerialNumber(t *testing.T) {
-	ca := NewCA(client)
+	ca := NewCA(client, observer)
 	defer ca.Close()
 
 	serial, err := ca.NewSerialNumber(context.Background())

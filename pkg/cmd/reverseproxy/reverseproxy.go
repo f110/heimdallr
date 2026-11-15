@@ -527,7 +527,8 @@ func (m *mainProcess) setup() (fsm.State, error) {
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
 
-		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger)
+		observer := etcd.NewWatchStreamObserver()
+		client, err := m.config.Datastore.GetEtcdClient(m.config.Logger, grpc.WithChainStreamInterceptor(observer.StreamInterceptor()))
 		if err != nil {
 			return fsm.UnknownState, err
 		}
@@ -535,11 +536,11 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 		m.etcdClient = client
 
-		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, database.SystemUser)
+		m.userDatabase, err = etcd.NewUserDatabase(ctx, client, observer, database.SystemUser)
 		if err != nil {
 			return fsm.UnknownState, err
 		}
-		caDatabase = etcd.NewCA(client)
+		caDatabase = etcd.NewCA(client, observer)
 		m.clusterDatabase, err = etcd.NewClusterDatabase(context.Background(), client)
 		if err != nil {
 			return fsm.UnknownState, err
@@ -547,7 +548,7 @@ func (m *mainProcess) setup() (fsm.State, error) {
 
 		if m.config.AccessProxy.HTTP.Bind != "" {
 			m.tokenDatabase = etcd.NewTemporaryToken(client, m.config.AccessProxy.GetTokenExpiration())
-			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client)
+			m.relayLocator, err = etcd.NewRelayLocator(context.Background(), client, observer)
 			if err != nil {
 				return fsm.UnknownState, err
 			}

@@ -6,6 +6,7 @@ go_library(
         "etcdcluster.go",
         "id.go",
         "operator.go",
+        "pod.go",
         "proxy.go",
         "webhook.go",
     ],

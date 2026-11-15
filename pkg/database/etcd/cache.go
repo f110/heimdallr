@@ -17,6 +17,7 @@ import (
 
 type Cache struct {
 	client   *clientv3.Client
+	observer *WatchStreamObserver
 	prefix   string
 	initData []*mvccpb.KeyValue
 
@@ -29,9 +30,10 @@ type Cache struct {
 	synced chan struct{}
 }
 
-func NewCache(client *clientv3.Client, keyPrefix string, initData []*mvccpb.KeyValue) *Cache {
+func NewCache(client *clientv3.Client, observer *WatchStreamObserver, keyPrefix string, initData []*mvccpb.KeyValue) *Cache {
 	return &Cache{
 		client:   client,
+		observer: observer,
 		prefix:   keyPrefix,
 		initData: initData,
 		once:     &sync.Once{},
@@ -158,7 +160,10 @@ func (c *Cache) watch(ctx context.Context) error {
 		c.mu.Unlock()
 	}()
 
-	for {
+	streamOpened := c.observer.Subscribe()
+	defer c.observer.Unsubscribe(streamOpened)
+
+	for relisted := false; ; relisted = true {
 		res, err := c.client.Get(wCtx, c.prefix, clientv3.WithPrefix())
 		if err != nil {
 			return xerrors.WithStack(err)
@@ -169,8 +174,11 @@ func (c *Cache) watch(ctx context.Context) error {
 		c.once.Do(func() {
 			close(c.synced)
 		})
+		if relisted {
+			c.sendNotify()
+		}
 
-		err = c.startWatch(wCtx, res.Header.Revision+1)
+		err = c.startWatch(wCtx, res.Header.Revision+1, streamOpened)
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil
 		}
@@ -180,14 +188,28 @@ func (c *Cache) watch(ctx context.Context) error {
 	}
 }
 
-func (c *Cache) startWatch(ctx context.Context, revision int64) error {
+// startWatch applies the changes to the cache until the watch has to be restarted from fetching all keys.
+// clientv3 resumes the watch from the last revision when the stream is reopened. If etcd has been restored from the backup,
+// the revision is the future for etcd and the watch never receives any events. Hence the watch is restarted every time the stream is opened.
+// The stream opened until Watch returns is the one for this watch itself, so the notification for it is discarded.
+func (c *Cache) startWatch(ctx context.Context, revision int64, streamOpened chan struct{}) error {
 	logger.Log.Debug("Start watch", slog.String("prefix", c.prefix))
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	watchCh := c.client.Watch(ctx, c.prefix, clientv3.WithPrefix(), clientv3.WithRev(revision))
+	select {
+	case <-streamOpened:
+	default:
+	}
 	for {
 		select {
 		case res, ok := <-watchCh:
 			if !ok {
 				logger.Log.Debug("Watch channel was closed")
+				return nil
+			}
+			if err := res.Err(); err != nil {
+				logger.Log.Info("Restart watch", slog.String("prefix", c.prefix), slog.Any("error", err))
 				return nil
 			}
 
@@ -225,6 +247,9 @@ func (c *Cache) startWatch(ctx context.Context, revision int64) error {
 			if applied > 0 {
 				c.sendNotify()
 			}
+		case <-streamOpened:
+			logger.Log.Info("Restart watch because the stream was reopened", slog.String("prefix", c.prefix))
+			return nil
 		case <-ctx.Done():
 			return xerrors.WithStack(ctx.Err())
 		}

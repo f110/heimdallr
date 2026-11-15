@@ -82,12 +82,13 @@ func WaitForBackup(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, af
 }
 
 func WaitForRestore(client *client.Set, etcdCluster *etcdv1alpha2.EtcdCluster, after time.Time) error {
-	return poll.PollImmediate(context.TODO(), 10*time.Second, 2*time.Minute, func(ctx context.Context) (bool, error) {
+	return poll.PollImmediate(context.TODO(), 10*time.Second, 10*time.Minute, func(ctx context.Context) (bool, error) {
 		e, err := client.EtcdV1alpha2.GetEtcdCluster(ctx, etcdCluster.Namespace, etcdCluster.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
 		}
-		if e.Status.Restored != nil && !e.Status.Restored.Completed {
+		r := e.Status.Restored
+		if r != nil && r.Completed && r.RestoredTime != nil && after.Before(r.RestoredTime.Time) {
 			return true, nil
 		}
 

@@ -28,6 +28,7 @@ import (
 	"go.f110.dev/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
 	"sigs.k8s.io/yaml"
 
 	"go.f110.dev/heimdallr/pkg/cert/vault"
@@ -960,7 +961,8 @@ func (d *Datastore) Load(dir string) error {
 	return nil
 }
 
-func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) {
+// GetEtcdClient returns the client of etcd. The client is created at the first call and opts are used only at that time.
+func (d *Datastore) GetEtcdClient(loggerConf *Logger, opts ...grpc.DialOption) (*clientv3.Client, error) {
 	if d.etcdClient != nil {
 		return d.etcdClient, nil
 	}
@@ -990,6 +992,7 @@ func (d *Datastore) GetEtcdClient(loggerConf *Logger) (*clientv3.Client, error) 
 		DialTimeout: 1 * time.Second,
 		LogConfig:   loggerConf.ZapConfig(encoder),
 		TLS:         tlsConfig,
+		DialOptions: opts,
 	})
 	if err != nil {
 		return nil, xerrors.WithStack(err)
