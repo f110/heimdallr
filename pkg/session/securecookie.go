@@ -91,7 +91,8 @@ func (s *SecureCookieStore) Cookie(sess *Session) (*http.Cookie, error) {
 
 	// Calculate HMAC
 	h := hmac.New(sha256.New, s.hashKey)
-	mac := h.Sum(ciphertext)
+	h.Write(ciphertext)
+	mac := h.Sum(nil)
 
 	// Encode segment
 	value := fmt.Sprintf("%s.%s", base64.URLEncoding.EncodeToString(ciphertext), base64.URLEncoding.EncodeToString(mac))
@@ -120,13 +121,15 @@ func (s *SecureCookieStore) DecodeValue(value string) (*Session, error) {
 	if err != nil {
 		return nil, xerrors.WithStack(err)
 	}
-	calculatedMac := hmac.New(sha256.New, s.hashKey).Sum(cipherValue)
+	h := hmac.New(sha256.New, s.hashKey)
+	h.Write(cipherValue)
+	calculatedMac := h.Sum(nil)
 	if !hmac.Equal(calculatedMac, mac) {
 		return nil, xerrors.NewWithStack("invalid session value")
 	}
 	iv := cipherValue[:s.cipherBlock.BlockSize()]
 	stream := cipher.NewCTR(s.cipherBlock, iv)
-	plain := make([]byte, len(value)-s.cipherBlock.BlockSize())
+	plain := make([]byte, len(cipherValue)-s.cipherBlock.BlockSize())
 	stream.XORKeyStream(plain, cipherValue[s.cipherBlock.BlockSize():])
 
 	sess := &Session{}
